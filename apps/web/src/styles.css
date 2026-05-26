@@ -352,6 +352,10 @@ select:focus {
   grid-column: 1 / -1;
 }
 
+.audit-panel {
+  grid-column: 1 / -1;
+}
+
 .document-layout {
   display: grid;
   grid-template-columns: minmax(260px, 0.9fr) minmax(320px, 1.1fr);
@@ -425,6 +429,39 @@ select:focus {
   margin-top: 18px;
   border-top: 1px solid var(--line);
   padding-top: 18px;
+}
+
+.audit-list {
+  display: grid;
+  gap: 12px;
+}
+
+.audit-item {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(140px, 0.6fr) minmax(260px, 1fr) minmax(120px, 0.5fr);
+  gap: 12px;
+  border: 1px solid rgba(6, 24, 35, 0.09);
+  border-radius: 22px;
+  padding: 14px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.78), rgba(230, 242, 240, 0.5)),
+    rgba(255, 255, 255, 0.66);
+}
+
+.audit-item span {
+  display: block;
+  margin-bottom: 6px;
+  color: #657789;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.audit-item strong {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--harbor-blue);
+  font-size: 0.95rem;
+  line-height: 1.35;
 }
 
 .fhir-panel {
@@ -535,6 +572,7 @@ pre {
   .document-layout,
   .document-meta,
   .document-form,
+  .audit-item,
   .reference-list {
     grid-template-columns: 1fr;
   }

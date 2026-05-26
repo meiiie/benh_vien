@@ -9,14 +9,29 @@ import {
   Patient,
   mapPatientToFhir
 } from "@benh-vien-so/domain";
-import type { PatientRepository, PatientSnapshot } from "@benh-vien-so/domain";
+import type {
+  AuditEventRepository,
+  PatientRepository,
+  PatientSnapshot
+} from "@benh-vien-so/domain";
+import { recordAuditEvent } from "../audit-events/audit-context.js";
 
 export async function registerPatientRoutes(
   app: FastifyInstance,
-  repository: PatientRepository
+  repository: PatientRepository,
+  auditRepository: AuditEventRepository
 ): Promise<void> {
-  app.get("/patients", async () => {
+  app.get("/patients", async (request) => {
     const patients = await repository.findAll();
+    await recordAuditEvent(auditRepository, request, {
+      action: "patient.list",
+      resourceType: "Patient",
+      resourceId: "collection",
+      metadata: {
+        returnedCount: patients.length
+      }
+    });
+
     return {
       items: patients.map(toPatientResponse)
     };
@@ -39,6 +54,15 @@ export async function registerPatientRoutes(
       });
 
       await repository.save(patient);
+      await recordAuditEvent(auditRepository, request, {
+        action: "patient.create",
+        resourceType: "Patient",
+        resourceId: patient.id,
+        patientId: patient.id,
+        metadata: {
+          managingOrganizationId: patient.toSnapshot().managingOrganizationId
+        }
+      });
 
       return reply.status(201).send(toPatientResponse(patient));
     } catch (error) {
@@ -63,6 +87,13 @@ export async function registerPatientRoutes(
       });
     }
 
+    await recordAuditEvent(auditRepository, request, {
+      action: "patient.read",
+      resourceType: "Patient",
+      resourceId: patient.id,
+      patientId: patient.id
+    });
+
     return toPatientResponse(patient);
   });
 
@@ -76,6 +107,17 @@ export async function registerPatientRoutes(
       });
     }
 
+    await recordAuditEvent(auditRepository, request, {
+      action: "patient.fhir-export",
+      resourceType: "Patient",
+      resourceId: patient.id,
+      patientId: patient.id,
+      metadata: {
+        standard: "HL7 FHIR R4",
+        resourceType: "Patient"
+      }
+    });
+
     return mapPatientToFhir(patient);
   });
 }
@@ -83,4 +125,3 @@ export async function registerPatientRoutes(
 function toPatientResponse(patient: Patient): PatientSnapshot {
   return patient.toSnapshot();
 }
-

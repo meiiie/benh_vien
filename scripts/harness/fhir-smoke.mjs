@@ -8,7 +8,7 @@ if (!existsSync(domainEntry)) {
   throw new Error("packages/domain/dist/index.js was not found. Run `pnpm build` first.");
 }
 
-const { ClinicalDocument, Patient, mapClinicalDocumentToFhir, mapPatientToFhir } =
+const { AuditEvent, ClinicalDocument, Patient, mapClinicalDocumentToFhir, mapPatientToFhir } =
   await import(pathToFileURL(domainEntry).href);
 
 const patient = Patient.register({
@@ -66,15 +66,36 @@ if (fhirDocumentReference.docStatus !== "final") {
   throw new Error(`Expected docStatus final, received ${fhirDocumentReference.docStatus}`);
 }
 
+const auditEvent = AuditEvent.record({
+  actorId: "practitioner-harness-001",
+  action: "clinical-document.fhir-export",
+  resourceType: "ClinicalDocument",
+  resourceId: document.id,
+  patientId: patient.id,
+  purposeOfUse: "TREATMENT",
+  metadata: {
+    resourceType: "DocumentReference"
+  }
+});
+
+if (auditEvent.toSnapshot().patientId !== "patient-harness-001") {
+  throw new Error(`Expected audit patientId patient-harness-001.`);
+}
+
+if (auditEvent.toSnapshot().action !== "clinical-document.fhir-export") {
+  throw new Error(`Expected audit action clinical-document.fhir-export.`);
+}
+
 console.log(
   JSON.stringify(
     {
       status: "ok",
-      check: "FHIR Patient and DocumentReference mapping smoke test",
+      check: "FHIR Patient, DocumentReference and AuditEvent smoke test",
       patientId: fhirPatient.id,
       patientResourceType: fhirPatient.resourceType,
       documentId: fhirDocumentReference.id,
-      documentResourceType: fhirDocumentReference.resourceType
+      documentResourceType: fhirDocumentReference.resourceType,
+      auditAction: auditEvent.toSnapshot().action
     },
     null,
     2

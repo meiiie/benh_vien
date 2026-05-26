@@ -8,6 +8,13 @@ API hiện tại là prototype tối thiểu để kiểm chứng hướng kiế
 curl http://localhost:7310/health
 ```
 
+Các ví dụ nghiệp vụ có thể gửi thêm header audit tối thiểu:
+
+```bash
+-H "x-actor-id: practitioner-demo-001" \
+-H "x-purpose-of-use: TREATMENT"
+```
+
 ## Lấy danh sách bệnh nhân
 
 ```bash
@@ -77,3 +84,13 @@ curl http://localhost:7310/api/v1/clinical-documents/clinical-document-demo-001/
 ```
 
 Kết quả mong muốn là JSON có `resourceType` bằng `DocumentReference`, có `subject` trỏ về `Patient`, có `author`, `status`, `docStatus` và `content.attachment.url`. Đây là nền để về sau kết nối HAPI FHIR hoặc luồng chia sẻ tài liệu kiểu IHE MHD.
+
+## Xem nhật ký kiểm toán của bệnh nhân
+
+```bash
+curl http://localhost:7310/api/v1/patients/patient-demo-001/audit-events \
+  -H "x-actor-id: security-officer-demo" \
+  -H "x-purpose-of-use: AUDIT"
+```
+
+Kết quả mong muốn là danh sách sự kiện có `actorId`, `action`, `resourceType`, `resourceId`, `patientId`, `purposeOfUse` và thời điểm `occurredAt`. Ở bản prototype, nếu không truyền `x-actor-id`, API dùng actor mặc định `demo-clinician`; khi lên môi trường thật, giá trị này phải đến từ lớp xác thực/IAM.

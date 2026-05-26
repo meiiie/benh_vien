@@ -11,15 +11,18 @@ import {
   mapClinicalDocumentToFhir
 } from "@benh-vien-so/domain";
 import type {
+  AuditEventRepository,
   ClinicalDocumentRepository,
   ClinicalDocumentSnapshot,
   PatientRepository
 } from "@benh-vien-so/domain";
+import { recordAuditEvent } from "../audit-events/audit-context.js";
 
 export async function registerClinicalDocumentRoutes(
   app: FastifyInstance,
   patientRepository: PatientRepository,
-  documentRepository: ClinicalDocumentRepository
+  documentRepository: ClinicalDocumentRepository,
+  auditRepository: AuditEventRepository
 ): Promise<void> {
   app.get("/patients/:patientId/documents", async (request, reply) => {
     const params = PatientDocumentsParamsSchema.parse(request.params);
@@ -32,6 +35,15 @@ export async function registerClinicalDocumentRoutes(
     }
 
     const documents = await documentRepository.findByPatientId(params.patientId);
+    await recordAuditEvent(auditRepository, request, {
+      action: "clinical-document.list",
+      resourceType: "ClinicalDocument",
+      resourceId: "collection",
+      patientId: params.patientId,
+      metadata: {
+        returnedCount: documents.length
+      }
+    });
 
     return {
       items: documents.map(toClinicalDocumentResponse)
@@ -65,6 +77,16 @@ export async function registerClinicalDocumentRoutes(
       });
 
       await documentRepository.save(document);
+      await recordAuditEvent(auditRepository, request, {
+        action: "clinical-document.create",
+        resourceType: "ClinicalDocument",
+        resourceId: document.id,
+        patientId: document.patientId,
+        metadata: {
+          documentType: document.toSnapshot().type,
+          encounterId: document.toSnapshot().encounterId
+        }
+      });
 
       return reply.status(201).send(toClinicalDocumentResponse(document));
     } catch (error) {
@@ -92,6 +114,15 @@ export async function registerClinicalDocumentRoutes(
     try {
       document.sign();
       await documentRepository.save(document);
+      await recordAuditEvent(auditRepository, request, {
+        action: "clinical-document.sign",
+        resourceType: "ClinicalDocument",
+        resourceId: document.id,
+        patientId: document.patientId,
+        metadata: {
+          status: document.status
+        }
+      });
 
       return toClinicalDocumentResponse(document);
     } catch (error) {
@@ -115,6 +146,17 @@ export async function registerClinicalDocumentRoutes(
         error: "CLINICAL_DOCUMENT_NOT_FOUND"
       });
     }
+
+    await recordAuditEvent(auditRepository, request, {
+      action: "clinical-document.fhir-export",
+      resourceType: "ClinicalDocument",
+      resourceId: document.id,
+      patientId: document.patientId,
+      metadata: {
+        standard: "HL7 FHIR R4",
+        resourceType: "DocumentReference"
+      }
+    });
 
     return mapClinicalDocumentToFhir(document);
   });

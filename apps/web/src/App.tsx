@@ -45,12 +45,43 @@ type ClinicalDocument = {
   readonly updatedAt: string;
 };
 
+type AuditAction =
+  | "patient.list"
+  | "patient.create"
+  | "patient.read"
+  | "patient.fhir-export"
+  | "clinical-document.list"
+  | "clinical-document.create"
+  | "clinical-document.sign"
+  | "clinical-document.fhir-export"
+  | "audit-event.list";
+
+type AuditResourceType = "Patient" | "ClinicalDocument" | "AuditEvent";
+
+type AuditEvent = {
+  readonly id?: string;
+  readonly occurredAt: string;
+  readonly actorId: string;
+  readonly action: AuditAction;
+  readonly resourceType: AuditResourceType;
+  readonly resourceId: string;
+  readonly patientId?: string;
+  readonly purposeOfUse?: string;
+  readonly ipAddress?: string;
+  readonly userAgent?: string;
+  readonly metadata: Record<string, unknown>;
+};
+
 type PatientsResponse = {
   readonly items: readonly Patient[];
 };
 
 type ClinicalDocumentsResponse = {
   readonly items: readonly ClinicalDocument[];
+};
+
+type AuditEventsResponse = {
+  readonly items: readonly AuditEvent[];
 };
 
 type NewPatientForm = {
@@ -95,6 +126,16 @@ const apiBaseUrl =
   import.meta.env.VITE_API_BASE_URL ??
   (window.location.port === "7311" ? "http://localhost:7310/api/v1" : "/api/v1");
 
+const treatmentAuditHeaders = {
+  "x-actor-id": "practitioner-demo-001",
+  "x-purpose-of-use": "TREATMENT"
+};
+
+const auditReviewHeaders = {
+  "x-actor-id": "security-officer-demo",
+  "x-purpose-of-use": "AUDIT"
+};
+
 const referenceSignals = [
   {
     name: "OpenEMR",
@@ -126,6 +167,7 @@ export function App() {
   const [patients, setPatients] = useState<readonly Patient[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string>();
   const [clinicalDocuments, setClinicalDocuments] = useState<readonly ClinicalDocument[]>([]);
+  const [auditEvents, setAuditEvents] = useState<readonly AuditEvent[]>([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string>();
   const [patientFhirPreview, setPatientFhirPreview] = useState<unknown>();
   const [documentFhirPreview, setDocumentFhirPreview] = useState<unknown>();
@@ -135,6 +177,7 @@ export function App() {
   const [statusMessage, setStatusMessage] = useState("Đang kết nối API...");
   const [isLoadingPatients, setIsLoadingPatients] = useState(true);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const [isLoadingAuditEvents, setIsLoadingAuditEvents] = useState(false);
   const [isSubmittingPatient, setIsSubmittingPatient] = useState(false);
   const [isSubmittingDocument, setIsSubmittingDocument] = useState(false);
   const [isSigningDocument, setIsSigningDocument] = useState(false);
@@ -150,12 +193,14 @@ export function App() {
     if (!selectedPatientId) {
       setPatientFhirPreview(undefined);
       setClinicalDocuments([]);
+      setAuditEvents([]);
       setSelectedDocumentId(undefined);
       return;
     }
 
     void loadPatientFhirPreview(selectedPatientId);
     void loadClinicalDocuments(selectedPatientId);
+    void loadAuditEvents(selectedPatientId);
   }, [selectedPatientId]);
 
   useEffect(() => {
@@ -171,7 +216,9 @@ export function App() {
     setIsLoadingPatients(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients`);
+      const response = await fetch(`${apiBaseUrl}/patients`, {
+        headers: treatmentAuditHeaders
+      });
 
       if (!response.ok) {
         throw new Error(`API trả về HTTP ${response.status}`);
@@ -196,7 +243,9 @@ export function App() {
     setIsLoadingDocuments(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/documents`);
+      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/documents`, {
+        headers: treatmentAuditHeaders
+      });
 
       if (!response.ok) {
         throw new Error(`API trả về HTTP ${response.status}`);
@@ -218,9 +267,37 @@ export function App() {
     }
   }
 
+  async function loadAuditEvents(patientId: string) {
+    setIsLoadingAuditEvents(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/audit-events`, {
+        headers: auditReviewHeaders
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      const data = (await response.json()) as AuditEventsResponse;
+      setAuditEvents(data.items);
+    } catch (error) {
+      setAuditEvents([]);
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể tải nhật ký kiểm toán: ${error.message}`
+          : "Không thể tải nhật ký kiểm toán."
+      );
+    } finally {
+      setIsLoadingAuditEvents(false);
+    }
+  }
+
   async function loadPatientFhirPreview(patientId: string) {
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/fhir`);
+      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/fhir`, {
+        headers: treatmentAuditHeaders
+      });
 
       if (!response.ok) {
         throw new Error(`API trả về HTTP ${response.status}`);
@@ -239,7 +316,9 @@ export function App() {
 
   async function loadDocumentFhirPreview(documentId: string) {
     try {
-      const response = await fetch(`${apiBaseUrl}/clinical-documents/${documentId}/fhir`);
+      const response = await fetch(`${apiBaseUrl}/clinical-documents/${documentId}/fhir`, {
+        headers: treatmentAuditHeaders
+      });
 
       if (!response.ok) {
         throw new Error(`API trả về HTTP ${response.status}`);
@@ -277,6 +356,7 @@ export function App() {
       const response = await fetch(`${apiBaseUrl}/patients`, {
         method: "POST",
         headers: {
+          ...treatmentAuditHeaders,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
@@ -297,6 +377,7 @@ export function App() {
 
       const createdPatient = (await response.json()) as Patient;
       await loadPatients(createdPatient.id);
+      await loadAuditEvents(createdPatient.id);
       setStatusMessage(`Đã tạo hồ sơ ${createdPatient.fullName} và chọn ngay trên giao diện.`);
     } catch (error) {
       setStatusMessage(
@@ -323,6 +404,7 @@ export function App() {
       const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/documents`, {
         method: "POST",
         headers: {
+          ...treatmentAuditHeaders,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
@@ -341,6 +423,7 @@ export function App() {
 
       const createdDocument = (await response.json()) as ClinicalDocument;
       await loadClinicalDocuments(selectedPatient.id, createdDocument.id);
+      await loadAuditEvents(selectedPatient.id);
       setStatusMessage(`Đã tạo tài liệu "${createdDocument.title}" ở trạng thái nháp.`);
     } catch (error) {
       setStatusMessage(
@@ -358,7 +441,8 @@ export function App() {
 
     try {
       const response = await fetch(`${apiBaseUrl}/clinical-documents/${documentId}/sign`, {
-        method: "POST"
+        method: "POST",
+        headers: treatmentAuditHeaders
       });
 
       if (!response.ok) {
@@ -369,6 +453,7 @@ export function App() {
       const signedDocument = (await response.json()) as ClinicalDocument;
       await loadClinicalDocuments(signedDocument.patientId, signedDocument.id);
       await loadDocumentFhirPreview(signedDocument.id);
+      await loadAuditEvents(signedDocument.patientId);
       setStatusMessage(`Đã ký tài liệu "${signedDocument.title}".`);
     } catch (error) {
       setStatusMessage(
@@ -585,6 +670,53 @@ export function App() {
           </form>
         </article>
 
+        <article className="panel audit-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Security trace</p>
+              <h2>Nhật ký kiểm toán</h2>
+            </div>
+            <button
+              className="ghost-button"
+              type="button"
+              disabled={!selectedPatient || isLoadingAuditEvents}
+              onClick={() => selectedPatient && void loadAuditEvents(selectedPatient.id)}
+            >
+              {isLoadingAuditEvents ? "Đang tải..." : "Tải audit"}
+            </button>
+          </div>
+
+          <div className="audit-list">
+            {auditEvents.map((event) => (
+              <div className="audit-item" key={event.id ?? `${event.occurredAt}:${event.action}`}>
+                <div>
+                  <span>{formatDateTime(event.occurredAt)}</span>
+                  <strong>{formatAuditAction(event.action)}</strong>
+                </div>
+                <div>
+                  <span>Actor</span>
+                  <strong>{event.actorId}</strong>
+                </div>
+                <div>
+                  <span>Tài nguyên</span>
+                  <strong>
+                    {formatAuditResourceType(event.resourceType)} · {event.resourceId}
+                  </strong>
+                </div>
+                <div>
+                  <span>Mục đích</span>
+                  <strong>{event.purposeOfUse ?? "Chưa khai báo"}</strong>
+                </div>
+              </div>
+            ))}
+            {auditEvents.length === 0 ? (
+              <p className="empty-state">
+                Chưa có audit event cho bệnh nhân đang chọn. Hãy xem FHIR, tạo tài liệu hoặc ký tài liệu để phát sinh log.
+              </p>
+            ) : null}
+          </div>
+        </article>
+
         <article className="panel create-panel">
           <div>
             <p className="eyebrow">Intake</p>
@@ -774,6 +906,32 @@ function formatDocumentStatus(status: ClinicalDocumentStatus): string {
   };
 
   return labels[status];
+}
+
+function formatAuditAction(action: AuditAction): string {
+  const labels: Record<AuditAction, string> = {
+    "patient.list": "Tải danh sách bệnh nhân",
+    "patient.create": "Tạo hồ sơ bệnh nhân",
+    "patient.read": "Xem hồ sơ bệnh nhân",
+    "patient.fhir-export": "Xuất FHIR Patient",
+    "clinical-document.list": "Tải tài liệu bệnh án",
+    "clinical-document.create": "Tạo tài liệu bệnh án",
+    "clinical-document.sign": "Ký tài liệu bệnh án",
+    "clinical-document.fhir-export": "Xuất FHIR DocumentReference",
+    "audit-event.list": "Xem nhật ký kiểm toán"
+  };
+
+  return labels[action];
+}
+
+function formatAuditResourceType(resourceType: AuditResourceType): string {
+  const labels: Record<AuditResourceType, string> = {
+    Patient: "Bệnh nhân",
+    ClinicalDocument: "Tài liệu",
+    AuditEvent: "Audit"
+  };
+
+  return labels[resourceType];
 }
 
 function formatDateTime(value: string): string {
