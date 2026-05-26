@@ -1,8 +1,10 @@
-# Bệnh viện số
+# WiiiCare Nexus
 
-![Bệnh viện số social preview](docs/assets/github-social-preview.png)
+![WiiiCare Nexus social preview](docs/assets/github-social-preview.png)
 
-Dự án khởi đầu cho hệ thống hồ sơ bệnh án điện tử và liên thông dữ liệu y tế. Mục tiêu trước mắt là tạo một nền tảng monorepo đủ rõ ràng để trình bày, thử nghiệm và mở rộng; chưa giả định đây là phần mềm đạt điều kiện triển khai sản xuất tại bệnh viện.
+**WiiiCare Nexus** là dự án nền tảng bệnh viện số do **HoLiLiHu** thuộc **The Wiii Lab** phát triển, tập trung vào hồ sơ bệnh án điện tử, liên thông dữ liệu y tế và kiến trúc mở cho EMR/FHIR/PACS.
+
+Mục tiêu trước mắt là tạo một nền tảng monorepo đủ rõ ràng để trình bày, thử nghiệm và mở rộng; chưa giả định đây là phần mềm đạt điều kiện triển khai sản xuất tại bệnh viện.
 
 ## Định hướng kiến trúc
 

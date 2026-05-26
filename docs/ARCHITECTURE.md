@@ -32,7 +32,7 @@ flowchart LR
   Admin["Nhân sự hành chính"]
   Portal["Cổng người bệnh"]
   Web["Web App"]
-  Api["Bệnh viện số API"]
+  Api["WiiiCare Nexus API"]
   Domain["Domain modules"]
   Db[("PostgreSQL")]
   ObjectStore[("MinIO / Object Storage")]
@@ -58,7 +58,7 @@ flowchart LR
 ```mermaid
 sequenceDiagram
   actor User as Nhân viên y tế
-  participant App as Ứng dụng bệnh viện số
+  participant App as Ứng dụng WiiiCare Nexus
   participant EMR as Clinical Records
   participant Audit as Audit & Compliance
   participant FHIR as FHIR facade

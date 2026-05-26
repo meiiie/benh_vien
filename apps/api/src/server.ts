@@ -22,7 +22,7 @@ export async function buildServer(options: ServerOptions = {}) {
   await app.register(swagger, {
     openapi: {
       info: {
-        title: "Bệnh viện số API",
+        title: "WiiiCare Nexus API",
         version: "0.2.0",
         description: "API thử nghiệm cho hồ sơ bệnh án điện tử và liên thông FHIR."
       },
