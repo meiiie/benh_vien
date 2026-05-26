@@ -12,5 +12,10 @@
 - `contact-sheet/logo-concepts-round-01.png`
 - `contact-sheet/logo-concepts-round-02.png`
 - `contact-sheet/color-palette-round-02.png`
+- `contact-sheet/logo-concepts-round-03-light.png`
 
 Các ảnh concept được tạo bằng `imagegen` và chỉ dùng để nghiên cứu hình dáng. Không dùng trực tiếp làm logo cuối.
+
+## Final
+
+- `final/wiiicare-nexus-final-logo-source-imagegen.png`: logo nguồn đã chốt.

@@ -1,0 +1,72 @@
+{
+  "$schema": "https://tokens.studio/schemas/tokens.json",
+  "brand": {
+    "color": {
+      "clinicalWhite": {
+        "$type": "color",
+        "$value": "#FBFAF6",
+        "$description": "Nền chính sáng, sạch, phù hợp bệnh viện và tài liệu."
+      },
+      "chartPaper": {
+        "$type": "color",
+        "$value": "#F6F2E8",
+        "$description": "Surface ấm giống giấy hồ sơ bệnh án."
+      },
+      "seaMist": {
+        "$type": "color",
+        "$value": "#E6F2F0",
+        "$description": "Nền phụ dịu, gợi không gian lâm sàng và biển/cảng."
+      },
+      "harborInk": {
+        "$type": "color",
+        "$value": "#061823",
+        "$description": "Chữ chính, logo đơn sắc và cảm giác tin cậy."
+      },
+      "harborBlue": {
+        "$type": "color",
+        "$value": "#0B3A53",
+        "$description": "Cấu trúc, heading, khung logo và liên tưởng Hải Phòng/cảng."
+      },
+      "clinicalTeal": {
+        "$type": "color",
+        "$value": "#08757C",
+        "$description": "Liên thông dữ liệu đủ tương phản trên nền sáng."
+      },
+      "dataCyan": {
+        "$type": "color",
+        "$value": "#1FB8C0",
+        "$description": "Accent luồng dữ liệu/FHIR/API, không dùng làm chữ nhỏ trên nền sáng."
+      },
+      "careGreen": {
+        "$type": "color",
+        "$value": "#176B4D",
+        "$description": "Success text/icon và trạng thái hồ sơ hợp lệ trên nền sáng."
+      },
+      "careMint": {
+        "$type": "color",
+        "$value": "#2FB879",
+        "$description": "Accent chăm sóc tươi, dùng tiết chế."
+      },
+      "auditAmber": {
+        "$type": "color",
+        "$value": "#9A5C00",
+        "$description": "Audit/warning text trên nền sáng."
+      },
+      "auditGold": {
+        "$type": "color",
+        "$value": "#F0B84B",
+        "$description": "Audit marker nhỏ."
+      },
+      "safetyRed": {
+        "$type": "color",
+        "$value": "#9E2B2B",
+        "$description": "Error/critical liên quan an toàn người bệnh."
+      },
+      "slate": {
+        "$type": "color",
+        "$value": "#324957",
+        "$description": "Body/subtitle trên nền sáng."
+      }
+    }
+  }
+}

@@ -23,17 +23,25 @@ WiiiCare Nexus by HoLiLiHu · The Wiii Lab
 
 ## Asset
 
-- `docs/assets/brand/wiiicare-nexus-mark.svg`: logo mark vector.
-- `docs/assets/brand/wiiicare-nexus-logo.svg`: logo lockup ngang.
-- `docs/assets/brand/wiiicare-nexus-logo-concept-imagegen.png`: bản concept tạo bằng imagegen để lưu vết hướng thiết kế.
+- `docs/assets/brand/wiiicare-nexus-final-source-imagegen.png`: logo nguồn đã chốt từ `imagegen`.
+- `docs/assets/brand/wiiicare-nexus-mark.png`: logo mark vuông.
+- `docs/assets/brand/wiiicare-nexus-mark-on-light.png`: logo mark trên nền sáng.
+- `docs/assets/brand/wiiicare-nexus-logo.png`: logo lockup ngang.
+- `docs/assets/brand/wiiicare-nexus-banner-16x9.png`: banner 16:9 cho slide/tài liệu.
+- `docs/assets/og/wiiicare-nexus-og.png`: ảnh Open Graph 1280 x 640.
 - `docs/assets/github-social-preview.png`: social preview 1280 x 640 cho GitHub.
 
-## Màu nền tảng
+Ghi chú: logo hiện được chốt theo bản raster `imagegen`; nếu cần in ấn hoặc dùng trong hệ thống thiết kế dài hạn, bước tiếp theo là redraw lại thành SVG/vector dựa trên chính bản nguồn đã chốt.
 
-```text
-Ink Navy       #06131B
-Deep Teal      #23C9C7
-Clinical Mint  #7BE2A7
-Soft Data      #9CDDD4
-Warm White     #F7F4E9
-```
+## Màu nền tảng: Clinical Light
+
+| Token | Hex | Vai trò |
+| --- | --- | --- |
+| Clinical White | `#FBFAF6` | Nền chính sáng, sạch, phù hợp bệnh viện và tài liệu. |
+| Sea Mist | `#E6F2F0` | Nền phụ dịu, gợi không gian lâm sàng và biển/cảng. |
+| Harbor Ink | `#061823` | Chữ chính, độ tin cậy và bảo mật. |
+| Harbor Blue | `#0B3A53` | Cấu trúc, heading, liên tưởng Hải Phòng/cảng. |
+| Clinical Teal | `#08757C` | Liên thông dữ liệu đủ tương phản trên nền sáng. |
+| Data Cyan | `#1FB8C0` | Accent luồng dữ liệu/FHIR/API. |
+| Care Green | `#176B4D` | Trạng thái chăm sóc, xác nhận hợp lệ. |
+| Audit Gold | `#F0B84B` | Điểm audit trail. |

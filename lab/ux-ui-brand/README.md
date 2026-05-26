@@ -45,3 +45,5 @@ tokens/         Design token thử nghiệm
 
 - Palette vòng 2: [strategy/color-meaning-round-02.md](strategy/color-meaning-round-02.md).
 - Token vòng 2: [tokens/design-tokens.round-02.json](tokens/design-tokens.round-02.json).
+- Palette vòng 3: [strategy/color-meaning-round-03.md](strategy/color-meaning-round-03.md).
+- Token vòng 3: [tokens/design-tokens.round-03.json](tokens/design-tokens.round-03.json).
