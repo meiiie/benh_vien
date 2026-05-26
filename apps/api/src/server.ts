@@ -2,12 +2,18 @@ import cors from "@fastify/cors";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import Fastify from "fastify";
-import type { PatientRepository } from "@benh-vien-so/domain";
+import type {
+  ClinicalDocumentRepository,
+  PatientRepository
+} from "@benh-vien-so/domain";
+import { createClinicalDocumentRepository } from "./modules/clinical-documents/create-clinical-document.repository.js";
+import { registerClinicalDocumentRoutes } from "./modules/clinical-documents/clinical-document-routes.js";
 import { createPatientRepository } from "./modules/patients/create-patient.repository.js";
 import { registerPatientRoutes } from "./modules/patients/patient-routes.js";
 
 export type ServerOptions = {
   readonly patientRepository?: PatientRepository;
+  readonly clinicalDocumentRepository?: ClinicalDocumentRepository;
 };
 
 export async function buildServer(options: ServerOptions = {}) {
@@ -40,6 +46,8 @@ export async function buildServer(options: ServerOptions = {}) {
   });
 
   const patientRepository = options.patientRepository ?? (await createPatientRepository());
+  const clinicalDocumentRepository =
+    options.clinicalDocumentRepository ?? (await createClinicalDocumentRepository());
 
   app.get("/health", async () => ({
     status: "ok",
@@ -49,6 +57,11 @@ export async function buildServer(options: ServerOptions = {}) {
   await app.register(
     async (api) => {
       await registerPatientRoutes(api, patientRepository);
+      await registerClinicalDocumentRoutes(
+        api,
+        patientRepository,
+        clinicalDocumentRepository
+      );
     },
     {
       prefix: "/api/v1"

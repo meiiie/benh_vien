@@ -71,6 +71,34 @@ export class ClinicalDocument {
     });
   }
 
+  static rehydrate(snapshot: ClinicalDocumentSnapshot): ClinicalDocument {
+    return new ClinicalDocument({
+      id: snapshot.id,
+      patientId: snapshot.patientId,
+      encounterId: snapshot.encounterId,
+      type: snapshot.type,
+      title: snapshot.title,
+      status: snapshot.status,
+      storageUri: snapshot.storageUri,
+      authorPractitionerId: snapshot.authorPractitionerId,
+      signedAt: snapshot.signedAt ? new Date(snapshot.signedAt) : undefined,
+      createdAt: new Date(snapshot.createdAt),
+      updatedAt: new Date(snapshot.updatedAt)
+    });
+  }
+
+  get id(): string {
+    return this.props.id;
+  }
+
+  get patientId(): string {
+    return this.props.patientId;
+  }
+
+  get status(): ClinicalDocumentStatus {
+    return this.props.status;
+  }
+
   sign(signedAt = new Date()): void {
     if (this.props.status !== "draft") {
       throw new DomainError("Chỉ tài liệu ở trạng thái nháp mới được ký.");
@@ -101,4 +129,3 @@ export class ClinicalDocument {
     this.props.updatedAt = new Date();
   }
 }
-

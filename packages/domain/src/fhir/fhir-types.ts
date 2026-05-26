@@ -8,6 +8,37 @@ export type FhirIdentifier = {
   };
 };
 
+export type FhirDocumentReference = {
+  readonly resourceType: "DocumentReference";
+  readonly id: string;
+  readonly meta?: {
+    readonly profile?: readonly string[];
+  };
+  readonly status: "current" | "superseded" | "entered-in-error";
+  readonly docStatus?: "preliminary" | "final" | "entered-in-error";
+  readonly type: {
+    readonly text: string;
+  };
+  readonly subject: {
+    readonly reference: string;
+  };
+  readonly context?: {
+    readonly encounter?: readonly {
+      readonly reference: string;
+    }[];
+  };
+  readonly author?: readonly {
+    readonly reference: string;
+  }[];
+  readonly date: string;
+  readonly content: readonly {
+    readonly attachment: {
+      readonly url: string;
+      readonly title: string;
+    };
+  }[];
+};
+
 export type FhirPatient = {
   readonly resourceType: "Patient";
   readonly id: string;
@@ -33,4 +64,3 @@ export type FhirPatient = {
     readonly reference: string;
   };
 };
-

@@ -305,6 +305,11 @@ code {
   background: var(--clinical-teal);
 }
 
+.pill.gold {
+  color: var(--harbor-ink);
+  background: var(--audit-gold);
+}
+
 .patient-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -338,8 +343,88 @@ select:focus {
 }
 
 .wide-field,
-.patient-form .primary-button {
+.patient-form .primary-button,
+.document-form .primary-button {
   grid-column: 1 / -1;
+}
+
+.document-panel {
+  grid-column: 1 / -1;
+}
+
+.document-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(320px, 1.1fr);
+  gap: 16px;
+}
+
+.document-cards {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.document-card {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 16px;
+  text-align: left;
+  background: rgba(251, 250, 246, 0.72);
+  transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
+}
+
+.document-card:hover,
+.document-card.selected {
+  border-color: rgba(23, 107, 77, 0.42);
+  background: white;
+  transform: translateY(-1px);
+}
+
+.document-card span,
+.document-card small {
+  display: block;
+  color: #657789;
+  font-size: 0.86rem;
+}
+
+.document-card strong {
+  display: block;
+  margin: 7px 0;
+  color: var(--harbor-ink);
+  font-size: 1.05rem;
+}
+
+.document-summary {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  border: 1px solid rgba(6, 24, 35, 0.09);
+  border-radius: 24px;
+  padding: 16px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(240, 184, 75, 0.14), transparent 16rem),
+    rgba(246, 242, 232, 0.44);
+}
+
+.document-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.action-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.document-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
 }
 
 .fhir-panel {
@@ -447,6 +532,9 @@ pre {
   .workflow-strip,
   .detail-grid,
   .patient-form,
+  .document-layout,
+  .document-meta,
+  .document-form,
   .reference-list {
     grid-template-columns: 1fr;
   }

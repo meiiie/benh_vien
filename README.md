@@ -79,5 +79,6 @@ Chi tiết version xem [VERSIONING.md](VERSIONING.md).
 
 - Quản lý hồ sơ bệnh nhân tối thiểu.
 - Xuất biểu diễn bệnh nhân sang FHIR `Patient`.
-- Chuẩn bị đường mở rộng sang hồ sơ lâm sàng, tài liệu bệnh án, hình ảnh y khoa và liên thông bệnh viện.
+- Quản lý tài liệu bệnh án tối thiểu: tạo bản nháp, ký tài liệu và xuất metadata sang FHIR `DocumentReference`.
+- Chuẩn bị đường mở rộng sang hồ sơ lâm sàng, hình ảnh y khoa và liên thông bệnh viện.
 - Tài liệu hóa các quyết định kiến trúc để dễ bảo vệ trước thầy hoặc mở rộng thành đề tài lớn hơn.

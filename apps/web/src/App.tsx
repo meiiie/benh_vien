@@ -2,6 +2,14 @@ import { FormEvent, useEffect, useState } from "react";
 
 type PatientIdentifierType = "national-id" | "insurance-id" | "hospital-mrn" | "legacy-id";
 type PatientGender = "male" | "female" | "other" | "unknown";
+type ClinicalDocumentType =
+  | "admission-note"
+  | "discharge-summary"
+  | "lab-report"
+  | "imaging-report"
+  | "referral-letter"
+  | "consent-form";
+type ClinicalDocumentStatus = "draft" | "signed" | "superseded" | "entered-in-error";
 
 type PatientIdentifier = {
   readonly system: string;
@@ -23,8 +31,26 @@ type Patient = {
   readonly updatedAt: string;
 };
 
+type ClinicalDocument = {
+  readonly id: string;
+  readonly patientId: string;
+  readonly encounterId?: string;
+  readonly type: ClinicalDocumentType;
+  readonly title: string;
+  readonly status: ClinicalDocumentStatus;
+  readonly storageUri: string;
+  readonly authorPractitionerId: string;
+  readonly signedAt?: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
 type PatientsResponse = {
   readonly items: readonly Patient[];
+};
+
+type ClinicalDocumentsResponse = {
+  readonly items: readonly ClinicalDocument[];
 };
 
 type NewPatientForm = {
@@ -38,6 +64,14 @@ type NewPatientForm = {
   managingOrganizationId: string;
 };
 
+type NewClinicalDocumentForm = {
+  encounterId: string;
+  type: ClinicalDocumentType;
+  title: string;
+  storageUri: string;
+  authorPractitionerId: string;
+};
+
 const defaultPatientForm: NewPatientForm = {
   fullName: "Trần Minh Hải",
   birthDate: "1992-09-18",
@@ -47,6 +81,14 @@ const defaultPatientForm: NewPatientForm = {
   phone: "0912345678",
   address: "Hải Phòng, Việt Nam",
   managingOrganizationId: "hospital-hai-phong-demo"
+};
+
+const defaultClinicalDocumentForm: NewClinicalDocumentForm = {
+  encounterId: "encounter-demo-002",
+  type: "referral-letter",
+  title: "Giấy chuyển tuyến điện tử - Hải Phòng",
+  storageUri: "s3://wiiicare-demo/patients/current/referral-letter.pdf",
+  authorPractitionerId: "practitioner-demo-003"
 };
 
 const apiBaseUrl =
@@ -74,22 +116,31 @@ const referenceSignals = [
 
 const nextMilestones = [
   "Encounter/Treatment: một lần khám hoặc đợt điều trị gắn với bệnh nhân",
-  "Clinical Document: tạo nháp, ký, lưu URI và xuất DocumentReference",
   "Audit Event: ghi lại ai xem/sửa/ký/chia sẻ hồ sơ",
   "Interop: đẩy Patient/DocumentReference sang HAPI FHIR",
-  "Imaging: liên kết metadata ảnh từ Orthanc, không lưu DICOM trong EMR"
+  "Imaging: liên kết metadata ảnh từ Orthanc, không lưu DICOM trong EMR",
+  "Consent: kiểm soát đồng ý chia sẻ khi chuyển hồ sơ giữa bệnh viện"
 ];
 
 export function App() {
   const [patients, setPatients] = useState<readonly Patient[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string>();
-  const [fhirPreview, setFhirPreview] = useState<unknown>();
-  const [form, setForm] = useState<NewPatientForm>(defaultPatientForm);
+  const [clinicalDocuments, setClinicalDocuments] = useState<readonly ClinicalDocument[]>([]);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string>();
+  const [patientFhirPreview, setPatientFhirPreview] = useState<unknown>();
+  const [documentFhirPreview, setDocumentFhirPreview] = useState<unknown>();
+  const [patientForm, setPatientForm] = useState<NewPatientForm>(defaultPatientForm);
+  const [documentForm, setDocumentForm] =
+    useState<NewClinicalDocumentForm>(defaultClinicalDocumentForm);
   const [statusMessage, setStatusMessage] = useState("Đang kết nối API...");
   const [isLoadingPatients, setIsLoadingPatients] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const [isSubmittingPatient, setIsSubmittingPatient] = useState(false);
+  const [isSubmittingDocument, setIsSubmittingDocument] = useState(false);
+  const [isSigningDocument, setIsSigningDocument] = useState(false);
 
   const selectedPatient = patients.find((patient) => patient.id === selectedPatientId);
+  const selectedDocument = clinicalDocuments.find((document) => document.id === selectedDocumentId);
 
   useEffect(() => {
     void loadPatients();
@@ -97,12 +148,24 @@ export function App() {
 
   useEffect(() => {
     if (!selectedPatientId) {
-      setFhirPreview(undefined);
+      setPatientFhirPreview(undefined);
+      setClinicalDocuments([]);
+      setSelectedDocumentId(undefined);
       return;
     }
 
-    void loadFhirPreview(selectedPatientId);
+    void loadPatientFhirPreview(selectedPatientId);
+    void loadClinicalDocuments(selectedPatientId);
   }, [selectedPatientId]);
+
+  useEffect(() => {
+    if (!selectedDocumentId) {
+      setDocumentFhirPreview(undefined);
+      return;
+    }
+
+    void loadDocumentFhirPreview(selectedDocumentId);
+  }, [selectedDocumentId]);
 
   async function loadPatients(nextSelectedId?: string) {
     setIsLoadingPatients(true);
@@ -129,7 +192,33 @@ export function App() {
     }
   }
 
-  async function loadFhirPreview(patientId: string) {
+  async function loadClinicalDocuments(patientId: string, nextSelectedDocumentId?: string) {
+    setIsLoadingDocuments(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/documents`);
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      const data = (await response.json()) as ClinicalDocumentsResponse;
+      setClinicalDocuments(data.items);
+      setSelectedDocumentId(nextSelectedDocumentId ?? data.items[0]?.id);
+    } catch (error) {
+      setClinicalDocuments([]);
+      setSelectedDocumentId(undefined);
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể tải tài liệu lâm sàng: ${error.message}`
+          : "Không thể tải tài liệu lâm sàng."
+      );
+    } finally {
+      setIsLoadingDocuments(false);
+    }
+  }
+
+  async function loadPatientFhirPreview(patientId: string) {
     try {
       const response = await fetch(`${apiBaseUrl}/patients/${patientId}/fhir`);
 
@@ -137,9 +226,9 @@ export function App() {
         throw new Error(`API trả về HTTP ${response.status}`);
       }
 
-      setFhirPreview(await response.json());
+      setPatientFhirPreview(await response.json());
     } catch (error) {
-      setFhirPreview({
+      setPatientFhirPreview({
         error:
           error instanceof Error
             ? `Không thể xuất FHIR Patient: ${error.message}`
@@ -148,19 +237,38 @@ export function App() {
     }
   }
 
+  async function loadDocumentFhirPreview(documentId: string) {
+    try {
+      const response = await fetch(`${apiBaseUrl}/clinical-documents/${documentId}/fhir`);
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      setDocumentFhirPreview(await response.json());
+    } catch (error) {
+      setDocumentFhirPreview({
+        error:
+          error instanceof Error
+            ? `Không thể xuất FHIR DocumentReference: ${error.message}`
+            : "Không thể xuất FHIR DocumentReference."
+      });
+    }
+  }
+
   async function handleCreatePatient(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setIsSubmitting(true);
+    setIsSubmittingPatient(true);
 
     const identifiers: PatientIdentifier[] = [
       {
         system: "urn:gov:vietnam:national-id",
-        value: form.nationalId,
+        value: patientForm.nationalId,
         type: "national-id"
       },
       {
         system: "urn:benh-vien-so:mrn",
-        value: form.hospitalMrn,
+        value: patientForm.hospitalMrn,
         type: "hospital-mrn"
       }
     ];
@@ -173,12 +281,12 @@ export function App() {
         },
         body: JSON.stringify({
           identifiers,
-          fullName: form.fullName,
-          birthDate: form.birthDate || undefined,
-          gender: form.gender,
-          address: form.address || undefined,
-          phone: form.phone || undefined,
-          managingOrganizationId: form.managingOrganizationId
+          fullName: patientForm.fullName,
+          birthDate: patientForm.birthDate || undefined,
+          gender: patientForm.gender,
+          address: patientForm.address || undefined,
+          phone: patientForm.phone || undefined,
+          managingOrganizationId: patientForm.managingOrganizationId
         })
       });
 
@@ -197,7 +305,79 @@ export function App() {
           : "Không thể tạo hồ sơ bệnh nhân."
       );
     } finally {
-      setIsSubmitting(false);
+      setIsSubmittingPatient(false);
+    }
+  }
+
+  async function handleCreateClinicalDocument(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedPatient) {
+      setStatusMessage("Cần chọn bệnh nhân trước khi tạo tài liệu lâm sàng.");
+      return;
+    }
+
+    setIsSubmittingDocument(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/documents`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          encounterId: documentForm.encounterId || undefined,
+          type: documentForm.type,
+          title: documentForm.title,
+          storageUri: documentForm.storageUri.replace("/current/", `/${selectedPatient.id}/`),
+          authorPractitionerId: documentForm.authorPractitionerId
+        })
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => undefined);
+        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
+      }
+
+      const createdDocument = (await response.json()) as ClinicalDocument;
+      await loadClinicalDocuments(selectedPatient.id, createdDocument.id);
+      setStatusMessage(`Đã tạo tài liệu "${createdDocument.title}" ở trạng thái nháp.`);
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể tạo tài liệu lâm sàng: ${error.message}`
+          : "Không thể tạo tài liệu lâm sàng."
+      );
+    } finally {
+      setIsSubmittingDocument(false);
+    }
+  }
+
+  async function handleSignClinicalDocument(documentId: string) {
+    setIsSigningDocument(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/clinical-documents/${documentId}/sign`, {
+        method: "POST"
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => undefined);
+        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
+      }
+
+      const signedDocument = (await response.json()) as ClinicalDocument;
+      await loadClinicalDocuments(signedDocument.patientId, signedDocument.id);
+      await loadDocumentFhirPreview(signedDocument.id);
+      setStatusMessage(`Đã ký tài liệu "${signedDocument.title}".`);
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể ký tài liệu lâm sàng: ${error.message}`
+          : "Không thể ký tài liệu lâm sàng."
+      );
+    } finally {
+      setIsSigningDocument(false);
     }
   }
 
@@ -206,10 +386,10 @@ export function App() {
       <section className="hero">
         <div className="hero-copy">
           <p className="eyebrow">WiiiCare Nexus · EMR interoperability slice</p>
-          <h1>Patient Registry đang gọi backend thật</h1>
+          <h1>Bệnh án điện tử đang chạy bằng backend thật</h1>
           <p className="lede">
-            Lát cắt đầu tiên tập trung vào định danh bệnh nhân, vì đây là nền của EMR,
-            FHIR, chia sẻ tài liệu và liên thông giữa bệnh viện.
+            Lát cắt hiện tại mô phỏng phần lõi của EMR: định danh bệnh nhân, tài liệu lâm sàng,
+            ký hồ sơ và xuất metadata theo HL7 FHIR để chuẩn bị liên thông giữa bệnh viện.
           </p>
         </div>
 
@@ -221,12 +401,14 @@ export function App() {
       </section>
 
       <section className="workflow-strip" aria-label="Luồng ưu tiên">
-        {["Patient", "FHIR Patient", "DocumentReference", "Audit", "PACS link"].map((item, index) => (
-          <div className="workflow-step" key={item}>
-            <span>{String(index + 1).padStart(2, "0")}</span>
-            <strong>{item}</strong>
-          </div>
-        ))}
+        {["Patient", "Clinical Document", "DocumentReference", "Audit", "PACS link"].map(
+          (item, index) => (
+            <div className="workflow-step" key={item}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <strong>{item}</strong>
+            </div>
+          )
+        )}
       </section>
 
       <section className="workspace">
@@ -236,7 +418,12 @@ export function App() {
               <p className="eyebrow">Registry</p>
               <h2>Danh sách bệnh nhân</h2>
             </div>
-            <button className="ghost-button" type="button" onClick={() => void loadPatients()} disabled={isLoadingPatients}>
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => void loadPatients()}
+              disabled={isLoadingPatients}
+            >
               {isLoadingPatients ? "Đang tải..." : "Tải lại"}
             </button>
           </div>
@@ -288,6 +475,116 @@ export function App() {
           )}
         </article>
 
+        <article className="panel document-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Clinical documents</p>
+              <h2>Tài liệu bệnh án</h2>
+            </div>
+            <span className="pill cyan">{isLoadingDocuments ? "loading" : `${clinicalDocuments.length} docs`}</span>
+          </div>
+
+          <div className="document-layout">
+            <div className="document-cards">
+              {clinicalDocuments.map((document) => (
+                <button
+                  className={document.id === selectedDocumentId ? "document-card selected" : "document-card"}
+                  key={document.id}
+                  type="button"
+                  onClick={() => setSelectedDocumentId(document.id)}
+                >
+                  <span>{formatDocumentType(document.type)}</span>
+                  <strong>{document.title}</strong>
+                  <small>
+                    {formatDocumentStatus(document.status)} · {formatDateTime(document.updatedAt)}
+                  </small>
+                </button>
+              ))}
+              {clinicalDocuments.length === 0 ? (
+                <p className="empty-state">Bệnh nhân này chưa có tài liệu lâm sàng.</p>
+              ) : null}
+            </div>
+
+            <div className="document-summary">
+              {selectedDocument ? (
+                <>
+                  <div className="document-meta">
+                    <Info label="Loại tài liệu" value={formatDocumentType(selectedDocument.type)} />
+                    <Info label="Trạng thái" value={formatDocumentStatus(selectedDocument.status)} />
+                    <Info label="Encounter" value={selectedDocument.encounterId ?? "Chưa gắn"} />
+                    <Info label="Người ký/tạo" value={selectedDocument.authorPractitionerId} />
+                  </div>
+                  <code>{selectedDocument.storageUri}</code>
+                  <div className="action-row">
+                    <button
+                      className="primary-button"
+                      type="button"
+                      disabled={selectedDocument.status !== "draft" || isSigningDocument}
+                      onClick={() => void handleSignClinicalDocument(selectedDocument.id)}
+                    >
+                      {isSigningDocument ? "Đang ký..." : "Ký tài liệu nháp"}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <p className="empty-state">Chọn một tài liệu để xem metadata và thao tác ký.</p>
+              )}
+            </div>
+          </div>
+
+          <form className="document-form" onSubmit={(event) => void handleCreateClinicalDocument(event)}>
+            <label>
+              Loại tài liệu
+              <select
+                value={documentForm.type}
+                onChange={(event) =>
+                  setDocumentForm({ ...documentForm, type: event.target.value as ClinicalDocumentType })
+                }
+              >
+                <option value="referral-letter">Giấy chuyển tuyến</option>
+                <option value="discharge-summary">Tóm tắt ra viện</option>
+                <option value="lab-report">Kết quả xét nghiệm</option>
+                <option value="imaging-report">Kết quả chẩn đoán hình ảnh</option>
+                <option value="admission-note">Phiếu nhập viện</option>
+                <option value="consent-form">Phiếu đồng ý điều trị</option>
+              </select>
+            </label>
+            <label>
+              Mã lần khám/đợt điều trị
+              <input
+                value={documentForm.encounterId}
+                onChange={(event) => setDocumentForm({ ...documentForm, encounterId: event.target.value })}
+              />
+            </label>
+            <label className="wide-field">
+              Tiêu đề tài liệu
+              <input
+                value={documentForm.title}
+                onChange={(event) => setDocumentForm({ ...documentForm, title: event.target.value })}
+              />
+            </label>
+            <label className="wide-field">
+              URI lưu trữ
+              <input
+                value={documentForm.storageUri}
+                onChange={(event) => setDocumentForm({ ...documentForm, storageUri: event.target.value })}
+              />
+            </label>
+            <label className="wide-field">
+              Mã bác sĩ/người tạo
+              <input
+                value={documentForm.authorPractitionerId}
+                onChange={(event) =>
+                  setDocumentForm({ ...documentForm, authorPractitionerId: event.target.value })
+                }
+              />
+            </label>
+            <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingDocument}>
+              {isSubmittingDocument ? "Đang tạo..." : "Tạo tài liệu bệnh án"}
+            </button>
+          </form>
+        </article>
+
         <article className="panel create-panel">
           <div>
             <p className="eyebrow">Intake</p>
@@ -297,29 +594,38 @@ export function App() {
           <form className="patient-form" onSubmit={(event) => void handleCreatePatient(event)}>
             <label>
               Họ tên
-              <input value={form.fullName} onChange={(event) => setForm({ ...form, fullName: event.target.value })} />
+              <input
+                value={patientForm.fullName}
+                onChange={(event) => setPatientForm({ ...patientForm, fullName: event.target.value })}
+              />
             </label>
             <label>
               Số định danh
-              <input value={form.nationalId} onChange={(event) => setForm({ ...form, nationalId: event.target.value })} />
+              <input
+                value={patientForm.nationalId}
+                onChange={(event) => setPatientForm({ ...patientForm, nationalId: event.target.value })}
+              />
             </label>
             <label>
               Mã hồ sơ bệnh viện
-              <input value={form.hospitalMrn} onChange={(event) => setForm({ ...form, hospitalMrn: event.target.value })} />
+              <input
+                value={patientForm.hospitalMrn}
+                onChange={(event) => setPatientForm({ ...patientForm, hospitalMrn: event.target.value })}
+              />
             </label>
             <label>
               Ngày sinh
               <input
                 type="date"
-                value={form.birthDate}
-                onChange={(event) => setForm({ ...form, birthDate: event.target.value })}
+                value={patientForm.birthDate}
+                onChange={(event) => setPatientForm({ ...patientForm, birthDate: event.target.value })}
               />
             </label>
             <label>
               Giới tính
               <select
-                value={form.gender}
-                onChange={(event) => setForm({ ...form, gender: event.target.value as PatientGender })}
+                value={patientForm.gender}
+                onChange={(event) => setPatientForm({ ...patientForm, gender: event.target.value as PatientGender })}
               >
                 <option value="male">Nam</option>
                 <option value="female">Nữ</option>
@@ -329,21 +635,29 @@ export function App() {
             </label>
             <label>
               Điện thoại
-              <input value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} />
+              <input
+                value={patientForm.phone}
+                onChange={(event) => setPatientForm({ ...patientForm, phone: event.target.value })}
+              />
             </label>
             <label className="wide-field">
               Địa chỉ
-              <input value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} />
+              <input
+                value={patientForm.address}
+                onChange={(event) => setPatientForm({ ...patientForm, address: event.target.value })}
+              />
             </label>
             <label className="wide-field">
               Cơ sở quản lý
               <input
-                value={form.managingOrganizationId}
-                onChange={(event) => setForm({ ...form, managingOrganizationId: event.target.value })}
+                value={patientForm.managingOrganizationId}
+                onChange={(event) =>
+                  setPatientForm({ ...patientForm, managingOrganizationId: event.target.value })
+                }
               />
             </label>
-            <button className="primary-button" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Đang tạo..." : "Tạo hồ sơ bệnh nhân"}
+            <button className="primary-button" type="submit" disabled={isSubmittingPatient}>
+              {isSubmittingPatient ? "Đang tạo..." : "Tạo hồ sơ bệnh nhân"}
             </button>
           </form>
         </article>
@@ -356,7 +670,26 @@ export function App() {
             </div>
             <span className="pill cyan">HL7 FHIR R4</span>
           </div>
-          <pre>{JSON.stringify(fhirPreview ?? { note: "Chọn một bệnh nhân để xuất FHIR Patient." }, null, 2)}</pre>
+          <pre>{JSON.stringify(patientFhirPreview ?? { note: "Chọn một bệnh nhân để xuất FHIR Patient." }, null, 2)}</pre>
+        </article>
+
+        <article className="panel fhir-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Interoperability</p>
+              <h2>FHIR DocumentReference JSON</h2>
+            </div>
+            <span className="pill gold">MHD-ready</span>
+          </div>
+          <pre>
+            {JSON.stringify(
+              documentFhirPreview ?? {
+                note: "Chọn một tài liệu bệnh án để xuất FHIR DocumentReference."
+              },
+              null,
+              2
+            )}
+          </pre>
         </article>
       </section>
 
@@ -417,6 +750,30 @@ function formatIdentifierType(type: PatientIdentifierType): string {
   };
 
   return labels[type];
+}
+
+function formatDocumentType(type: ClinicalDocumentType): string {
+  const labels: Record<ClinicalDocumentType, string> = {
+    "admission-note": "Phiếu nhập viện",
+    "discharge-summary": "Tóm tắt ra viện",
+    "lab-report": "Kết quả xét nghiệm",
+    "imaging-report": "Kết quả chẩn đoán hình ảnh",
+    "referral-letter": "Giấy chuyển tuyến",
+    "consent-form": "Phiếu đồng ý điều trị"
+  };
+
+  return labels[type];
+}
+
+function formatDocumentStatus(status: ClinicalDocumentStatus): string {
+  const labels: Record<ClinicalDocumentStatus, string> = {
+    draft: "Bản nháp",
+    signed: "Đã ký",
+    superseded: "Đã thay thế",
+    "entered-in-error": "Nhập lỗi"
+  };
+
+  return labels[status];
 }
 
 function formatDateTime(value: string): string {
