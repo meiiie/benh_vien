@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json && vite build",
+    "build": "tsc -p tsconfig.json --noEmit && vite build",
     "check": "tsc -p tsconfig.json --noEmit",
     "dev": "vite --host 0.0.0.0 --port 7311"
   },
@@ -20,4 +20,3 @@
     "@types/react-dom": "^19.0.2"
   }
 }
-
