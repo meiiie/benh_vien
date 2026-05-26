@@ -40,3 +40,8 @@ tokens/         Design token thử nghiệm
 - Không dùng quá nhiều glow, panel giả, chi tiết y tế stock.
 - Logo phải dùng được ở kích thước nhỏ, trên nền sáng và nền tối.
 - Banner phải dễ đọc khi GitHub crop hoặc hiển thị trên mạng xã hội.
+
+## Vòng nghiên cứu hiện tại
+
+- Palette vòng 2: [strategy/color-meaning-round-02.md](strategy/color-meaning-round-02.md).
+- Token vòng 2: [tokens/design-tokens.round-02.json](tokens/design-tokens.round-02.json).

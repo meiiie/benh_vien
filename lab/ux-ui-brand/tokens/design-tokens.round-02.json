@@ -1,0 +1,72 @@
+{
+  "$schema": "https://tokens.studio/schemas/tokens.json",
+  "brand": {
+    "color": {
+      "harborInk": {
+        "$type": "color",
+        "$value": "#061823",
+        "$description": "Nền sâu cho bảo mật, hạ tầng và độ tin cậy."
+      },
+      "harborBlue": {
+        "$type": "color",
+        "$value": "#0B3A53",
+        "$description": "Liên tưởng Hải Phòng/cảng biển, tổ chức và sự ổn định."
+      },
+      "nexusCyan": {
+        "$type": "color",
+        "$value": "#1FB8C0",
+        "$description": "Luồng dữ liệu, FHIR/API và kết nối liên thông trên nền tối."
+      },
+      "nexusCyanDark": {
+        "$type": "color",
+        "$value": "#08757C",
+        "$description": "Cyan dùng trên nền sáng để đạt tương phản tốt hơn."
+      },
+      "clinicalGreen": {
+        "$type": "color",
+        "$value": "#2FB879",
+        "$description": "Chăm sóc, trạng thái ổn định và xác nhận thành công trên nền tối."
+      },
+      "clinicalGreenDark": {
+        "$type": "color",
+        "$value": "#176B4D",
+        "$description": "Green dùng trên nền sáng để đạt tương phản tốt hơn."
+      },
+      "chartPaper": {
+        "$type": "color",
+        "$value": "#F6F2E8",
+        "$description": "Giấy hồ sơ bệnh án, cảm giác con người và dễ đọc."
+      },
+      "mist": {
+        "$type": "color",
+        "$value": "#E7F0EF",
+        "$description": "Nền phụ sáng, sạch và ít gây mỏi mắt."
+      },
+      "slateStrong": {
+        "$type": "color",
+        "$value": "#324957",
+        "$description": "Chữ phụ trên nền sáng."
+      },
+      "portAmber": {
+        "$type": "color",
+        "$value": "#F0B84B",
+        "$description": "Audit marker, cảnh báo nhẹ và sự kiện cần chú ý trên nền tối."
+      },
+      "portAmberDark": {
+        "$type": "color",
+        "$value": "#7A4D00",
+        "$description": "Amber dùng trên nền sáng."
+      },
+      "safetyRed": {
+        "$type": "color",
+        "$value": "#D94A4A",
+        "$description": "An toàn người bệnh, lỗi nghiêm trọng hoặc nguy cơ cao trên nền tối."
+      },
+      "safetyRedDark": {
+        "$type": "color",
+        "$value": "#9E2B2B",
+        "$description": "Red dùng trên nền sáng."
+      }
+    }
+  }
+}
