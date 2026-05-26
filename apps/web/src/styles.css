@@ -651,6 +651,392 @@ pre {
   line-height: 1.5;
 }
 
+.marketing-shell,
+.login-shell,
+.app-layout {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(31, 184, 192, 0.2), transparent 32rem),
+    radial-gradient(circle at 86% 16%, rgba(240, 184, 75, 0.18), transparent 25rem),
+    linear-gradient(135deg, #fffdf6 0%, #eef7f5 54%, #e6f2f0 100%);
+}
+
+.marketing-shell {
+  padding: 24px clamp(16px, 4vw, 64px) 64px;
+}
+
+.marketing-nav {
+  width: min(1440px, 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-inline: auto;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 12px 14px 12px 22px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+
+.marketing-nav strong {
+  color: var(--harbor-blue);
+  font-size: 1.05rem;
+  letter-spacing: -0.03em;
+}
+
+.marketing-nav div,
+.landing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.landing-hero,
+.landing-grid,
+.page-stack,
+.app-topbar {
+  width: min(1440px, 100%);
+  margin-inline: auto;
+}
+
+.landing-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+  gap: 24px;
+  margin-top: 32px;
+  align-items: stretch;
+}
+
+.landing-hero > div,
+.landing-card,
+.login-panel,
+.app-topbar,
+.page-header,
+.metric-card,
+.command-panel {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+
+.landing-hero > div {
+  position: relative;
+  overflow: hidden;
+  border-radius: 36px;
+  padding: clamp(28px, 5vw, 60px);
+}
+
+.landing-hero > div::after {
+  position: absolute;
+  right: -160px;
+  bottom: -180px;
+  width: 520px;
+  height: 520px;
+  border: 1px solid rgba(8, 117, 124, 0.22);
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(31, 184, 192, 0.17), transparent 68%);
+  content: "";
+}
+
+.landing-actions {
+  margin-top: 28px;
+}
+
+.landing-card {
+  display: grid;
+  min-height: 420px;
+  align-content: end;
+  gap: 14px;
+  border-radius: 36px;
+  padding: 30px;
+  color: white;
+  background:
+    linear-gradient(160deg, rgba(6, 24, 35, 0.24), rgba(6, 24, 35, 0.86)),
+    radial-gradient(circle at 30% 0%, rgba(31, 184, 192, 0.76), transparent 22rem),
+    linear-gradient(135deg, #0b3a53, #061823);
+}
+
+.landing-card span,
+.landing-card small {
+  color: #d8e8ed;
+  line-height: 1.55;
+}
+
+.landing-card strong {
+  color: white;
+  font-size: clamp(2rem, 4vw, 3.7rem);
+  line-height: 0.96;
+  letter-spacing: -0.07em;
+}
+
+.landing-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.login-shell {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.login-panel {
+  width: min(880px, 100%);
+  display: grid;
+  gap: 24px;
+  border-radius: 36px;
+  padding: clamp(22px, 4vw, 44px);
+}
+
+.login-panel > .ghost-button {
+  justify-self: start;
+}
+
+.login-panel h1 {
+  font-size: clamp(2.4rem, 7vw, 5rem);
+}
+
+.login-form {
+  display: grid;
+  gap: 14px;
+}
+
+.form-error {
+  margin: 0;
+  border: 1px solid rgba(154, 45, 32, 0.18);
+  border-radius: 16px;
+  padding: 12px 14px;
+  color: #8a2f24;
+  background: #fff1ed;
+}
+
+.app-layout {
+  display: grid;
+  grid-template-columns: 292px minmax(0, 1fr);
+}
+
+.app-sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  height: 100vh;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px;
+  color: white;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(31, 184, 192, 0.36), transparent 18rem),
+    linear-gradient(180deg, #082434 0%, #061823 62%, #041018 100%);
+}
+
+.brand-block {
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 26px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.brand-block span {
+  display: block;
+  color: #9fdfe2;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.brand-block strong {
+  display: block;
+  margin-top: 4px;
+  color: white;
+  font-size: 2.1rem;
+  letter-spacing: -0.07em;
+}
+
+.app-nav {
+  display: grid;
+  gap: 8px;
+}
+
+.app-nav button {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  padding: 14px;
+  color: white;
+  text-align: left;
+  background: transparent;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.app-nav button:hover,
+.app-nav button.selected {
+  border-color: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.11);
+  transform: translateY(-1px);
+}
+
+.app-nav button strong,
+.app-nav button span {
+  display: block;
+}
+
+.app-nav button span {
+  margin-top: 4px;
+  color: #c5dce5;
+  font-size: 0.82rem;
+}
+
+.logout-button {
+  margin-top: auto;
+  color: white;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.app-main {
+  min-width: 0;
+  padding: 24px clamp(16px, 3vw, 42px) 56px;
+}
+
+.app-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+  border-radius: 24px;
+  padding: 14px 18px;
+}
+
+.app-topbar span,
+.user-chip span,
+.metric-card span,
+.metric-card small {
+  color: #657789;
+}
+
+.app-topbar strong,
+.user-chip strong {
+  display: block;
+  color: var(--harbor-blue);
+  line-height: 1.35;
+}
+
+.user-chip {
+  min-width: 180px;
+  text-align: right;
+}
+
+.page-stack {
+  display: grid;
+  gap: 22px;
+}
+
+.page-header {
+  overflow: hidden;
+  position: relative;
+  border-radius: 34px;
+  padding: clamp(24px, 4vw, 44px);
+}
+
+.page-header::after {
+  position: absolute;
+  right: -100px;
+  top: -150px;
+  width: 360px;
+  height: 360px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(31, 184, 192, 0.18), transparent 68%);
+  content: "";
+}
+
+.page-header h1 {
+  max-width: 1040px;
+  font-size: clamp(2.4rem, 5vw, 5.4rem);
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.metric-card {
+  display: grid;
+  gap: 10px;
+  border-radius: 26px;
+  padding: 20px;
+}
+
+.metric-card strong {
+  color: var(--clinical-teal);
+  font-size: clamp(2.1rem, 4vw, 4.2rem);
+  line-height: 0.9;
+  letter-spacing: -0.07em;
+}
+
+.metric-card small {
+  line-height: 1.5;
+}
+
+.dashboard-grid,
+.settings-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  gap: 22px;
+}
+
+.command-panel {
+  border-radius: 30px;
+  padding: clamp(20px, 3vw, 30px);
+}
+
+.queue-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.queue-list button {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 16px;
+  text-align: left;
+  background: rgba(251, 250, 246, 0.78);
+  transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
+}
+
+.queue-list button:hover {
+  border-color: rgba(8, 117, 124, 0.44);
+  background: white;
+  transform: translateY(-1px);
+}
+
+.queue-list button span,
+.queue-list button strong {
+  display: block;
+}
+
+.queue-list button span {
+  margin-bottom: 6px;
+  color: #657789;
+  font-size: 0.82rem;
+}
+
+.queue-list button strong {
+  color: var(--harbor-blue);
+}
+
+.detail-grid.compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 18px;
+}
+
 .empty-state {
   margin: 0;
   color: var(--slate);
@@ -658,9 +1044,24 @@ pre {
 
 @media (max-width: 1100px) {
   .hero,
+  .landing-hero,
+  .landing-grid,
+  .app-layout,
+  .metric-grid,
+  .dashboard-grid,
+  .settings-grid,
   .workspace,
   .reference-grid {
     grid-template-columns: 1fr;
+  }
+
+  .app-sidebar {
+    position: relative;
+    height: auto;
+  }
+
+  .app-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .workflow-strip {
@@ -669,16 +1070,37 @@ pre {
 }
 
 @media (max-width: 680px) {
-  .shell {
+  .shell,
+  .marketing-shell,
+  .app-main {
     padding-top: 18px;
+  }
+
+  .marketing-nav,
+  .app-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+    border-radius: 24px;
+  }
+
+  .marketing-nav div,
+  .landing-actions {
+    width: 100%;
+  }
+
+  .marketing-nav button,
+  .landing-actions button {
+    width: 100%;
   }
 
   .hero-copy {
     min-height: auto;
   }
 
+  .app-nav,
   .workflow-strip,
   .detail-grid,
+  .detail-grid.compact,
   .patient-form,
   .encounter-layout,
   .encounter-form,

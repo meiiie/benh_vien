@@ -29,6 +29,25 @@ docs/       Kiến trúc, chuẩn tham chiếu, quyết định kỹ thuật, ro
 migrations/ SQL migration cho PostgreSQL
 ```
 
+## Luồng giao diện hiện có
+
+Ứng dụng web hiện đã có luồng sản phẩm đầy đủ hơn thay vì chỉ một trang demo:
+
+- `Landing`: giới thiệu WiiiCare Nexus, định vị EMR/FHIR và điều hướng vào phiên demo.
+- `Login`: đăng nhập demo có vai trò bác sĩ, kiểm toán hoặc quản trị; đây chưa phải IAM/SSO sản xuất.
+- `Dashboard`: tổng quan số hồ sơ, lượt khám đang mở, tài liệu đã ký, cảnh báo audit và hàng chờ thao tác.
+- `Patient Workspace`: chọn bệnh nhân, xem định danh, mở/kết thúc lượt khám, tạo tài liệu và xem FHIR theo hồ sơ.
+- `Documents`: quản lý tài liệu bệnh án theo nhóm CCD/CCDA/CCR, lab report, medical record và referral.
+- `Audit`: xem nhật ký thao tác nhạy cảm theo bệnh nhân, actor, mục đích sử dụng và tài nguyên.
+- `Interop`: kiểm tra FHIR `Patient`, `Encounter`, `DocumentReference` và các hướng mở sang HIS/LIS/PACS.
+- `Settings`: mô tả quyền demo, cấu hình vận hành và các việc cần thay bằng bảo mật thật khi lên production.
+
+## Ảnh kiểm thử giao diện
+
+![WiiiCare Nexus landing](docs/assets/screenshots/wiiicare-full-flow-landing.png)
+
+![WiiiCare Nexus dashboard](docs/assets/screenshots/wiiicare-full-flow-dashboard.png)
+
 ## Chạy kiểm tra
 
 ```bash

@@ -1,5 +1,14 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useState } from "react";
 
+type AppRoute =
+  | "landing"
+  | "login"
+  | "dashboard"
+  | "workspace"
+  | "documents"
+  | "audit"
+  | "interop"
+  | "settings";
 type PatientIdentifierType = "national-id" | "insurance-id" | "hospital-mrn" | "legacy-id";
 type PatientGender = "male" | "female" | "other" | "unknown";
 type EncounterClass = "ambulatory" | "inpatient" | "emergency" | "virtual";
@@ -17,6 +26,7 @@ type ClinicalDocumentType =
   | "medical-record"
   | "patient-information";
 type ClinicalDocumentStatus = "draft" | "signed" | "superseded" | "entered-in-error";
+type DemoRole = "clinician" | "auditor" | "admin";
 
 type PatientIdentifier = {
   readonly system: string;
@@ -143,6 +153,12 @@ type NewClinicalDocumentForm = {
   authorPractitionerId: string;
 };
 
+type LoginForm = {
+  username: string;
+  password: string;
+  role: DemoRole;
+};
+
 const defaultPatientForm: NewPatientForm = {
   fullName: "Trần Minh Hải",
   birthDate: "1992-09-18",
@@ -204,6 +220,19 @@ const documentTaxonomy = [
   "FHIR Export Document"
 ];
 
+const navigationItems: readonly {
+  readonly route: Exclude<AppRoute, "landing" | "login">;
+  readonly label: string;
+  readonly hint: string;
+}[] = [
+  { route: "dashboard", label: "Dashboard", hint: "Tổng quan vận hành" },
+  { route: "workspace", label: "Patient Workspace", hint: "Hồ sơ và lượt khám" },
+  { route: "documents", label: "Documents", hint: "Tài liệu bệnh án" },
+  { route: "audit", label: "Audit", hint: "Nhật ký truy cập" },
+  { route: "interop", label: "Interop", hint: "FHIR và liên thông" },
+  { route: "settings", label: "Settings", hint: "Vai trò và cấu hình" }
+];
+
 const referenceSignals = [
   {
     name: "OpenEMR",
@@ -224,6 +253,14 @@ const referenceSignals = [
 ];
 
 export function App() {
+  const [appRoute, setAppRoute] = useState<AppRoute>("landing");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loginForm, setLoginForm] = useState<LoginForm>({
+    username: "practitioner-demo-001",
+    password: "demo",
+    role: "clinician"
+  });
+  const [loginError, setLoginError] = useState<string>();
   const [patients, setPatients] = useState<readonly Patient[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string>();
   const [encounters, setEncounters] = useState<readonly Encounter[]>([]);
@@ -238,8 +275,8 @@ export function App() {
   const [encounterForm, setEncounterForm] = useState<NewEncounterForm>(defaultEncounterForm);
   const [documentForm, setDocumentForm] =
     useState<NewClinicalDocumentForm>(defaultClinicalDocumentForm);
-  const [statusMessage, setStatusMessage] = useState("Đang kết nối API...");
-  const [isLoadingPatients, setIsLoadingPatients] = useState(true);
+  const [statusMessage, setStatusMessage] = useState("Chưa đăng nhập.");
+  const [isLoadingPatients, setIsLoadingPatients] = useState(false);
   const [isLoadingEncounters, setIsLoadingEncounters] = useState(false);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [isLoadingAuditEvents, setIsLoadingAuditEvents] = useState(false);
@@ -255,13 +292,20 @@ export function App() {
   const selectedEncounterDocuments = selectedEncounter
     ? clinicalDocuments.filter((document) => document.encounterId === selectedEncounter.id)
     : [];
+  const openEncounters = encounters.filter((encounter) => encounter.status === "in-progress");
+  const signedDocuments = clinicalDocuments.filter((document) => document.status === "signed");
+  const draftDocuments = clinicalDocuments.filter((document) => document.status === "draft");
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
     void loadPatients();
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
-    if (!selectedPatientId) {
+    if (!isAuthenticated || !selectedPatientId) {
       setPatientFhirPreview(undefined);
       setEncounterFhirPreview(undefined);
       setDocumentFhirPreview(undefined);
@@ -274,7 +318,7 @@ export function App() {
     }
 
     void loadPatientWorkspace(selectedPatientId);
-  }, [selectedPatientId]);
+  }, [isAuthenticated, selectedPatientId]);
 
   useEffect(() => {
     if (!selectedEncounterId) {
@@ -477,6 +521,33 @@ export function App() {
     }
   }
 
+  function handleLogin(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
+
+    if (!loginForm.username.trim() || !loginForm.password.trim()) {
+      setLoginError("Vui lòng nhập tài khoản và mật khẩu demo.");
+      return;
+    }
+
+    setLoginError(undefined);
+    setIsAuthenticated(true);
+    setAppRoute("dashboard");
+    setStatusMessage("Đã đăng nhập demo. IAM/SSO thật sẽ được tách thành module riêng.");
+  }
+
+  function handleLogout() {
+    setIsAuthenticated(false);
+    setAppRoute("landing");
+    setStatusMessage("Đã đăng xuất khỏi phiên demo.");
+    setPatients([]);
+    setEncounters([]);
+    setClinicalDocuments([]);
+    setAuditEvents([]);
+    setSelectedPatientId(undefined);
+    setSelectedEncounterId(undefined);
+    setSelectedDocumentId(undefined);
+  }
+
   async function handleCreatePatient(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSubmittingPatient(true);
@@ -519,6 +590,7 @@ export function App() {
 
       const createdPatient = (await response.json()) as Patient;
       await loadPatients(createdPatient.id);
+      setAppRoute("workspace");
       setStatusMessage(`Đã tạo hồ sơ ${createdPatient.fullName} và chọn ngay trên workspace.`);
     } catch (error) {
       setStatusMessage(
@@ -566,6 +638,7 @@ export function App() {
       const createdEncounter = (await response.json()) as Encounter;
       await loadEncounters(selectedPatient.id, createdEncounter.id);
       await loadAuditEvents(selectedPatient.id);
+      setAppRoute("workspace");
       setStatusMessage(`Đã mở lượt khám "${createdEncounter.serviceType}" cho ${selectedPatient.fullName}.`);
     } catch (error) {
       setStatusMessage(
@@ -646,6 +719,7 @@ export function App() {
       const createdDocument = (await response.json()) as ClinicalDocument;
       await loadClinicalDocuments(selectedPatient.id, createdDocument.id);
       await loadAuditEvents(selectedPatient.id);
+      setAppRoute("documents");
       setStatusMessage(`Đã tạo tài liệu "${createdDocument.title}" ở trạng thái nháp.`);
     } catch (error) {
       setStatusMessage(
@@ -688,508 +762,935 @@ export function App() {
     }
   }
 
+  if (!isAuthenticated) {
+    if (appRoute === "login") {
+      return (
+        <LoginPage
+          form={loginForm}
+          error={loginError}
+          onBack={() => setAppRoute("landing")}
+          onChange={setLoginForm}
+          onSubmit={handleLogin}
+        />
+      );
+    }
+
+    return <LandingPage onDemo={handleLogin} onLogin={() => setAppRoute("login")} />;
+  }
+
   return (
-    <main className="shell">
-      <section className="hero">
-        <div className="hero-copy">
-          <p className="eyebrow">WiiiCare Nexus · Patient workspace</p>
-          <h1>Bàn làm việc bệnh án điện tử theo luồng EMR thật</h1>
-          <p className="lede">
-            Bản này chuyển trọng tâm từ dashboard trình diễn sang workspace nghiệp vụ: bệnh nhân,
-            lượt khám, tài liệu bệnh án, ký xác thực, audit trail và FHIR Patient/Encounter/DocumentReference.
-          </p>
+    <AuthenticatedLayout
+      apiBaseUrl={apiBaseUrl}
+      currentRoute={appRoute}
+      userRole={loginForm.role}
+      userName={loginForm.username}
+      onLogout={handleLogout}
+      onNavigate={setAppRoute}
+      statusMessage={statusMessage}
+    >
+      {renderCurrentRoute()}
+    </AuthenticatedLayout>
+  );
+
+  function renderCurrentRoute(): ReactNode {
+    if (appRoute === "workspace") {
+      return renderWorkspacePage();
+    }
+
+    if (appRoute === "documents") {
+      return renderDocumentsPage();
+    }
+
+    if (appRoute === "audit") {
+      return renderAuditPage();
+    }
+
+    if (appRoute === "interop") {
+      return renderInteropPage();
+    }
+
+    if (appRoute === "settings") {
+      return renderSettingsPage();
+    }
+
+    return renderDashboardPage();
+  }
+
+  function renderDashboardPage(): ReactNode {
+    return (
+      <div className="page-stack">
+        <PageHeader
+          eyebrow="Dashboard"
+          title="Tổng quan vận hành bệnh án điện tử"
+          description="Màn hình dành cho đầu ca làm việc: xem nhanh hồ sơ, lượt khám mở, tài liệu chờ ký và trạng thái liên thông."
+        />
+
+        <section className="metric-grid">
+          <MetricCard label="Bệnh nhân" value={`${patients.length}`} note="Hồ sơ trong registry demo" />
+          <MetricCard label="Lượt khám mở" value={`${openEncounters.length}`} note="Theo bệnh nhân đang chọn" />
+          <MetricCard label="Tài liệu nháp" value={`${draftDocuments.length}`} note="Cần ký/xác thực" />
+          <MetricCard label="Audit events" value={`${auditEvents.length}`} note="Theo hồ sơ đang chọn" />
+        </section>
+
+        <section className="dashboard-grid">
+          <article className="panel command-panel">
+            <div>
+              <p className="eyebrow">Today queue</p>
+              <h2>Việc nên xử lý tiếp</h2>
+            </div>
+            <div className="queue-list">
+              <button type="button" onClick={() => setAppRoute("workspace")}>
+                <strong>Mở patient workspace</strong>
+                <span>Xem hồ sơ, lượt khám và tài liệu đang gắn với bệnh nhân.</span>
+              </button>
+              <button type="button" onClick={() => setAppRoute("documents")}>
+                <strong>Kiểm tra tài liệu chờ ký</strong>
+                <span>{draftDocuments.length} tài liệu đang ở trạng thái nháp.</span>
+              </button>
+              <button type="button" onClick={() => setAppRoute("interop")}>
+                <strong>Xem gói FHIR</strong>
+                <span>Patient, Encounter và DocumentReference đã có preview.</span>
+              </button>
+            </div>
+          </article>
+
+          <article className="panel">
+            <p className="eyebrow">Selected chart</p>
+            <h2>{selectedPatient?.fullName ?? "Chưa chọn bệnh nhân"}</h2>
+            {selectedPatient ? (
+              <div className="detail-grid compact">
+                <Info label="MRN" value={selectedPatient.identifiers[0]?.value ?? selectedPatient.id} />
+                <Info label="Lượt khám gần nhất" value={encounters[0]?.serviceType ?? "Chưa có"} />
+                <Info label="Tài liệu" value={`${clinicalDocuments.length}`} />
+                <Info label="Cập nhật" value={formatDateTime(selectedPatient.updatedAt)} />
+              </div>
+            ) : (
+              <p className="empty-state">Chưa có dữ liệu bệnh nhân để hiển thị.</p>
+            )}
+          </article>
+        </section>
+      </div>
+    );
+  }
+
+  function renderWorkspacePage(): ReactNode {
+    return (
+      <div className="page-stack">
+        <PageHeader
+          eyebrow="Patient Workspace"
+          title="Bàn làm việc bệnh nhân"
+          description="Luồng chính mô phỏng EMR thật: chọn bệnh nhân, mở lượt khám, gắn tài liệu và theo dõi hồ sơ."
+        />
+
+        <section className="workspace">
+          {renderPatientListPanel()}
+          {renderPatientDetailPanel()}
+          {renderEncounterPanel()}
+          {renderCreatePatientPanel()}
+        </section>
+      </div>
+    );
+  }
+
+  function renderDocumentsPage(): ReactNode {
+    return (
+      <div className="page-stack">
+        <PageHeader
+          eyebrow="Document Center"
+          title="Trung tâm tài liệu bệnh án"
+          description="Tổ chức tài liệu theo danh mục gần với OpenEMR: CCR/CCDA, hồ sơ bệnh án, xét nghiệm, thông tin bệnh nhân và tài liệu FHIR export."
+        />
+
+        <section className="workspace">
+          {renderPatientListPanel()}
+          {renderDocumentPanel()}
+          <FhirPanel title="FHIR DocumentReference JSON" badge="DocumentReference" value={documentFhirPreview} />
+        </section>
+      </div>
+    );
+  }
+
+  function renderAuditPage(): ReactNode {
+    return (
+      <div className="page-stack">
+        <PageHeader
+          eyebrow="Audit"
+          title="Nhật ký truy cập và kiểm toán"
+          description="Mỗi lần xem FHIR, mở lượt khám, tạo/ký tài liệu đều được ghi log với actor, mục đích sử dụng và tài nguyên liên quan."
+        />
+
+        <section className="workspace">
+          {renderAuditPanel()}
+          <article className="panel">
+            <p className="eyebrow">Policy note</p>
+            <h2>Ranh giới demo</h2>
+            <ul className="milestone-list">
+              <li>Giao diện đang mô phỏng actor qua header demo, chưa phải IAM/SSO thật.</li>
+              <li>API đã chặn quyền cơ bản: clinician thao tác điều trị, auditor xem audit.</li>
+              <li>Khi lên sản phẩm thật cần thêm phiên đăng nhập, MFA, token, chính sách consent và log bất biến.</li>
+            </ul>
+          </article>
+        </section>
+      </div>
+    );
+  }
+
+  function renderInteropPage(): ReactNode {
+    return (
+      <div className="page-stack">
+        <PageHeader
+          eyebrow="Interop"
+          title="FHIR và hướng liên thông bệnh viện"
+          description="Màn này gom các biểu diễn FHIR hiện có để chuẩn bị cho luồng gửi sang HAPI FHIR hoặc hệ thống bệnh viện khác."
+        />
+
+        <section className="workflow-strip" aria-label="Luồng liên thông">
+          {workflowSteps.map((item, index) => (
+            <div className="workflow-step" key={item}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <strong>{item}</strong>
+            </div>
+          ))}
+        </section>
+
+        <section className="workspace">
+          <FhirPanel title="FHIR Patient JSON" badge="Patient" value={patientFhirPreview} />
+          <FhirPanel title="FHIR Encounter JSON" badge="Encounter" value={encounterFhirPreview} />
+          <FhirPanel title="FHIR DocumentReference JSON" badge="DocumentReference" value={documentFhirPreview} />
+          <article className="panel dark-panel">
+            <p className="eyebrow">Reference map</p>
+            <h2>Chuẩn đang bám theo</h2>
+            <div className="reference-list">
+              {referenceSignals.map((reference) => (
+                <div key={reference.name}>
+                  <strong>{reference.name}</strong>
+                  <span>{reference.value}</span>
+                </div>
+              ))}
+            </div>
+          </article>
+        </section>
+      </div>
+    );
+  }
+
+  function renderSettingsPage(): ReactNode {
+    return (
+      <div className="page-stack">
+        <PageHeader
+          eyebrow="Settings"
+          title="Cấu hình demo và đường nâng cấp"
+          description="Trang này cố ý ghi rõ phần nào là demo, phần nào cần triển khai thật để tránh nhầm với hệ thống bệnh viện hoàn chỉnh."
+        />
+
+        <section className="settings-grid">
+          <article className="panel">
+            <p className="eyebrow">Session</p>
+            <h2>Phiên hiện tại</h2>
+            <div className="detail-grid compact">
+              <Info label="Người dùng" value={loginForm.username} />
+              <Info label="Vai trò demo" value={formatDemoRole(loginForm.role)} />
+              <Info label="API" value={apiBaseUrl} />
+              <Info label="Mục đích" value="TREATMENT / AUDIT headers" />
+            </div>
+          </article>
+          <article className="panel">
+            <p className="eyebrow">Roadmap</p>
+            <h2>Cần làm thật sau skeleton</h2>
+            <ul className="milestone-list">
+              <li>Thêm IAM/SSO thật thay cho đăng nhập demo.</li>
+              <li>Bổ sung role matrix chi tiết theo bác sĩ, điều dưỡng, văn thư, kiểm toán, quản trị.</li>
+              <li>Thêm consent, chữ ký số, luồng gửi nhận FHIR Bundle.</li>
+              <li>Tách cấu hình cơ sở y tế, khoa/phòng, mã định danh và danh mục tài liệu.</li>
+            </ul>
+          </article>
+        </section>
+      </div>
+    );
+  }
+
+  function renderPatientListPanel(): ReactNode {
+    return (
+      <article className="panel patient-list">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Registry</p>
+            <h2>Danh sách bệnh nhân</h2>
+          </div>
+          <button
+            className="ghost-button"
+            type="button"
+            onClick={() => void loadPatients()}
+            disabled={isLoadingPatients}
+          >
+            {isLoadingPatients ? "Đang tải..." : "Tải lại"}
+          </button>
         </div>
 
-        <aside className="status-card" aria-label="Trạng thái hệ thống">
-          <span>API base</span>
-          <strong>{apiBaseUrl}</strong>
-          <small>{statusMessage}</small>
-          <div className="access-summary">
-            <span>Access policy</span>
-            <strong>clinician/TREATMENT · auditor/AUDIT</strong>
-            <small>Luồng thao tác mô phỏng vai trò điều trị; audit chỉ mở bằng vai trò kiểm toán.</small>
+        <div className="patient-cards">
+          {patients.map((patient) => (
+            <button
+              className={patient.id === selectedPatientId ? "patient-card selected" : "patient-card"}
+              key={patient.id}
+              type="button"
+              onClick={() => setSelectedPatientId(patient.id)}
+            >
+              <span>{patient.identifiers[0]?.value ?? patient.id}</span>
+              <strong>{patient.fullName}</strong>
+              <small>{patient.address ?? "Chưa có địa chỉ"}</small>
+            </button>
+          ))}
+        </div>
+      </article>
+    );
+  }
+
+  function renderPatientDetailPanel(): ReactNode {
+    return (
+      <article className="panel patient-detail">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Patient chart</p>
+            <h2>Hồ sơ đang chọn</h2>
           </div>
+          {selectedPatient ? <span className="pill">{selectedPatient.status}</span> : null}
+        </div>
+
+        {selectedPatient ? (
+          <div className="detail-grid">
+            <Info label="Họ tên" value={selectedPatient.fullName} />
+            <Info label="Ngày sinh" value={selectedPatient.birthDate ?? "Chưa có"} />
+            <Info label="Giới tính" value={formatGender(selectedPatient.gender)} />
+            <Info label="Điện thoại" value={selectedPatient.phone ?? "Chưa có"} />
+            <Info label="Cơ sở quản lý" value={selectedPatient.managingOrganizationId} />
+            <Info label="Cập nhật" value={formatDateTime(selectedPatient.updatedAt)} />
+            <div className="identifiers">
+              <span>Định danh</span>
+              {selectedPatient.identifiers.map((identifier) => (
+                <code key={`${identifier.system}:${identifier.value}`}>
+                  {formatIdentifierType(identifier.type)} · {identifier.value}
+                </code>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="empty-state">Chưa có bệnh nhân nào để hiển thị.</p>
+        )}
+      </article>
+    );
+  }
+
+  function renderEncounterPanel(): ReactNode {
+    return (
+      <article className="panel encounter-panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Encounter timeline</p>
+            <h2>Lượt khám và đợt điều trị</h2>
+          </div>
+          <span className="pill cyan">{isLoadingEncounters ? "loading" : `${encounters.length} lượt`}</span>
+        </div>
+
+        <div className="encounter-layout">
+          <div className="timeline">
+            {encounters.map((encounter) => (
+              <button
+                className={encounter.id === selectedEncounterId ? "timeline-item selected" : "timeline-item"}
+                key={encounter.id}
+                type="button"
+                onClick={() => setSelectedEncounterId(encounter.id)}
+              >
+                <span>{formatDateTime(encounter.startedAt)}</span>
+                <strong>{encounter.serviceType}</strong>
+                <small>
+                  {formatEncounterClass(encounter.class)} · {formatEncounterStatus(encounter.status)}
+                </small>
+              </button>
+            ))}
+            {encounters.length === 0 ? (
+              <p className="empty-state">Chưa có lượt khám nào cho bệnh nhân này.</p>
+            ) : null}
+          </div>
+
+          <div className="encounter-summary">
+            {selectedEncounter ? (
+              <>
+                <div className="document-meta">
+                  <Info label="Lý do khám" value={selectedEncounter.reasonText} />
+                  <Info label="Khoa/phòng" value={selectedEncounter.departmentId ?? "Chưa gắn"} />
+                  <Info label="Nhân sự phụ trách" value={selectedEncounter.attendingPractitionerId} />
+                  <Info label="Tài liệu gắn lượt khám" value={`${selectedEncounterDocuments.length}`} />
+                </div>
+                <div className="action-row">
+                  <button
+                    className="primary-button"
+                    type="button"
+                    disabled={selectedEncounter.status !== "in-progress" || isFinishingEncounter}
+                    onClick={() => void handleFinishEncounter(selectedEncounter.id)}
+                  >
+                    {isFinishingEncounter ? "Đang kết thúc..." : "Kết thúc lượt khám"}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p className="empty-state">Chọn một lượt khám để xem chi tiết và xuất FHIR Encounter.</p>
+            )}
+          </div>
+        </div>
+
+        <form className="encounter-form" onSubmit={(event) => void handleCreateEncounter(event)}>
+          <label>
+            Loại lượt khám
+            <select
+              value={encounterForm.class}
+              onChange={(event) =>
+                setEncounterForm({ ...encounterForm, class: event.target.value as EncounterClass })
+              }
+            >
+              <option value="ambulatory">Ngoại trú</option>
+              <option value="inpatient">Nội trú</option>
+              <option value="emergency">Cấp cứu</option>
+              <option value="virtual">Khám từ xa</option>
+            </select>
+          </label>
+          <label>
+            Dịch vụ/khoa khám
+            <input
+              value={encounterForm.serviceType}
+              onChange={(event) => setEncounterForm({ ...encounterForm, serviceType: event.target.value })}
+            />
+          </label>
+          <label className="wide-field">
+            Lý do khám
+            <input
+              value={encounterForm.reasonText}
+              onChange={(event) => setEncounterForm({ ...encounterForm, reasonText: event.target.value })}
+            />
+          </label>
+          <label>
+            Khoa/phòng
+            <input
+              value={encounterForm.departmentId}
+              onChange={(event) => setEncounterForm({ ...encounterForm, departmentId: event.target.value })}
+            />
+          </label>
+          <label>
+            Nhân sự phụ trách
+            <input
+              value={encounterForm.attendingPractitionerId}
+              onChange={(event) =>
+                setEncounterForm({ ...encounterForm, attendingPractitionerId: event.target.value })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Thời điểm bắt đầu
+            <input
+              type="datetime-local"
+              value={encounterForm.startedAt}
+              onChange={(event) => setEncounterForm({ ...encounterForm, startedAt: event.target.value })}
+            />
+          </label>
+          <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingEncounter}>
+            {isSubmittingEncounter ? "Đang mở..." : "Mở lượt khám"}
+          </button>
+        </form>
+      </article>
+    );
+  }
+
+  function renderDocumentPanel(): ReactNode {
+    return (
+      <article className="panel document-panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Document center</p>
+            <h2>Tài liệu bệnh án</h2>
+          </div>
+          <span className="pill cyan">{isLoadingDocuments ? "loading" : `${clinicalDocuments.length} docs`}</span>
+        </div>
+
+        <div className="taxonomy-strip" aria-label="Phân loại tài liệu tham chiếu OpenEMR">
+          {documentTaxonomy.map((item) => (
+            <span key={item}>{item}</span>
+          ))}
+        </div>
+
+        <div className="document-layout">
+          <div className="document-cards">
+            {clinicalDocuments.map((document) => (
+              <button
+                className={document.id === selectedDocumentId ? "document-card selected" : "document-card"}
+                key={document.id}
+                type="button"
+                onClick={() => setSelectedDocumentId(document.id)}
+              >
+                <span>{formatDocumentType(document.type)}</span>
+                <strong>{document.title}</strong>
+                <small>
+                  {formatDocumentStatus(document.status)} ·{" "}
+                  {document.encounterId ? `Encounter ${document.encounterId}` : "Chưa gắn encounter"}
+                </small>
+              </button>
+            ))}
+            {clinicalDocuments.length === 0 ? (
+              <p className="empty-state">Bệnh nhân này chưa có tài liệu bệnh án.</p>
+            ) : null}
+          </div>
+
+          <div className="document-summary">
+            {selectedDocument ? (
+              <>
+                <div className="document-meta">
+                  <Info label="Loại tài liệu" value={formatDocumentType(selectedDocument.type)} />
+                  <Info label="Trạng thái" value={formatDocumentStatus(selectedDocument.status)} />
+                  <Info label="Encounter" value={selectedDocument.encounterId ?? "Chưa gắn"} />
+                  <Info label="Người tạo" value={selectedDocument.authorPractitionerId} />
+                </div>
+                <code>{selectedDocument.storageUri}</code>
+                <div className="action-row">
+                  <button
+                    className="primary-button"
+                    type="button"
+                    disabled={selectedDocument.status !== "draft" || isSigningDocument}
+                    onClick={() => void handleSignClinicalDocument(selectedDocument.id)}
+                  >
+                    {isSigningDocument ? "Đang ký..." : "Ký tài liệu nháp"}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p className="empty-state">Chọn một tài liệu để xem metadata và thao tác ký.</p>
+            )}
+          </div>
+        </div>
+
+        <form className="document-form" onSubmit={(event) => void handleCreateClinicalDocument(event)}>
+          <label>
+            Loại tài liệu
+            <select
+              value={documentForm.type}
+              onChange={(event) =>
+                setDocumentForm({ ...documentForm, type: event.target.value as ClinicalDocumentType })
+              }
+            >
+              <option value="referral-letter">Giấy chuyển tuyến</option>
+              <option value="discharge-summary">Tóm tắt ra viện</option>
+              <option value="lab-report">Kết quả xét nghiệm</option>
+              <option value="imaging-report">Kết quả chẩn đoán hình ảnh</option>
+              <option value="admission-note">Phiếu nhập viện</option>
+              <option value="consent-form">Phiếu đồng ý điều trị</option>
+              <option value="advance-directive">Chỉ dẫn chăm sóc trước</option>
+              <option value="ccda">CCDA</option>
+              <option value="ccr">CCR</option>
+              <option value="medical-record">Hồ sơ bệnh án</option>
+              <option value="patient-information">Thông tin bệnh nhân</option>
+            </select>
+          </label>
+          <label>
+            Gắn với lượt khám
+            <select
+              value={documentForm.encounterId}
+              onChange={(event) => setDocumentForm({ ...documentForm, encounterId: event.target.value })}
+            >
+              <option value="">Không gắn</option>
+              {encounters.map((encounter) => (
+                <option key={encounter.id} value={encounter.id}>
+                  {encounter.serviceType} · {formatDateTime(encounter.startedAt)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="wide-field">
+            Tiêu đề tài liệu
+            <input
+              value={documentForm.title}
+              onChange={(event) => setDocumentForm({ ...documentForm, title: event.target.value })}
+            />
+          </label>
+          <label className="wide-field">
+            URI lưu trữ
+            <input
+              value={documentForm.storageUri}
+              onChange={(event) => setDocumentForm({ ...documentForm, storageUri: event.target.value })}
+            />
+          </label>
+          <label className="wide-field">
+            Mã bác sĩ/người tạo
+            <input
+              value={documentForm.authorPractitionerId}
+              onChange={(event) =>
+                setDocumentForm({ ...documentForm, authorPractitionerId: event.target.value })
+              }
+            />
+          </label>
+          <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingDocument}>
+            {isSubmittingDocument ? "Đang tạo..." : "Tạo tài liệu bệnh án"}
+          </button>
+        </form>
+      </article>
+    );
+  }
+
+  function renderAuditPanel(): ReactNode {
+    return (
+      <article className="panel audit-panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Security trace</p>
+            <h2>Nhật ký kiểm toán</h2>
+          </div>
+          <button
+            className="ghost-button"
+            type="button"
+            disabled={!selectedPatient || isLoadingAuditEvents}
+            onClick={() => selectedPatient && void loadAuditEvents(selectedPatient.id)}
+          >
+            {isLoadingAuditEvents ? "Đang tải..." : "Tải audit"}
+          </button>
+        </div>
+
+        <div className="audit-list">
+          {auditEvents.map((event) => (
+            <div className="audit-item" key={event.id ?? `${event.occurredAt}:${event.action}`}>
+              <div>
+                <span>{formatDateTime(event.occurredAt)}</span>
+                <strong>{formatAuditAction(event.action)}</strong>
+              </div>
+              <div>
+                <span>Actor</span>
+                <strong>{event.actorId}</strong>
+              </div>
+              <div>
+                <span>Tài nguyên</span>
+                <strong>
+                  {formatAuditResourceType(event.resourceType)} · {event.resourceId}
+                </strong>
+              </div>
+              <div>
+                <span>Mục đích</span>
+                <strong>
+                  {event.purposeOfUse ?? "Chưa khai báo"}
+                  {typeof event.metadata.actorRole === "string" ? ` · ${event.metadata.actorRole}` : ""}
+                </strong>
+              </div>
+            </div>
+          ))}
+          {auditEvents.length === 0 ? (
+            <p className="empty-state">
+              Chưa có audit event cho bệnh nhân đang chọn. Hãy xem FHIR, mở lượt khám hoặc ký tài liệu
+              để phát sinh log.
+            </p>
+          ) : null}
+        </div>
+      </article>
+    );
+  }
+
+  function renderCreatePatientPanel(): ReactNode {
+    return (
+      <article className="panel create-panel">
+        <div>
+          <p className="eyebrow">Intake</p>
+          <h2>Tạo nhanh hồ sơ mới</h2>
+        </div>
+
+        <form className="patient-form" onSubmit={(event) => void handleCreatePatient(event)}>
+          <label>
+            Họ tên
+            <input
+              value={patientForm.fullName}
+              onChange={(event) => setPatientForm({ ...patientForm, fullName: event.target.value })}
+            />
+          </label>
+          <label>
+            Số định danh
+            <input
+              value={patientForm.nationalId}
+              onChange={(event) => setPatientForm({ ...patientForm, nationalId: event.target.value })}
+            />
+          </label>
+          <label>
+            Mã hồ sơ bệnh viện
+            <input
+              value={patientForm.hospitalMrn}
+              onChange={(event) => setPatientForm({ ...patientForm, hospitalMrn: event.target.value })}
+            />
+          </label>
+          <label>
+            Ngày sinh
+            <input
+              type="date"
+              value={patientForm.birthDate}
+              onChange={(event) => setPatientForm({ ...patientForm, birthDate: event.target.value })}
+            />
+          </label>
+          <label>
+            Giới tính
+            <select
+              value={patientForm.gender}
+              onChange={(event) => setPatientForm({ ...patientForm, gender: event.target.value as PatientGender })}
+            >
+              <option value="male">Nam</option>
+              <option value="female">Nữ</option>
+              <option value="other">Khác</option>
+              <option value="unknown">Chưa rõ</option>
+            </select>
+          </label>
+          <label>
+            Điện thoại
+            <input
+              value={patientForm.phone}
+              onChange={(event) => setPatientForm({ ...patientForm, phone: event.target.value })}
+            />
+          </label>
+          <label className="wide-field">
+            Địa chỉ
+            <input
+              value={patientForm.address}
+              onChange={(event) => setPatientForm({ ...patientForm, address: event.target.value })}
+            />
+          </label>
+          <label className="wide-field">
+            Cơ sở quản lý
+            <input
+              value={patientForm.managingOrganizationId}
+              onChange={(event) =>
+                setPatientForm({ ...patientForm, managingOrganizationId: event.target.value })
+              }
+            />
+          </label>
+          <button className="primary-button" type="submit" disabled={isSubmittingPatient}>
+            {isSubmittingPatient ? "Đang tạo..." : "Tạo hồ sơ bệnh nhân"}
+          </button>
+        </form>
+      </article>
+    );
+  }
+}
+
+function LandingPage({
+  onDemo,
+  onLogin
+}: {
+  readonly onDemo: () => void;
+  readonly onLogin: () => void;
+}) {
+  return (
+    <main className="marketing-shell">
+      <nav className="marketing-nav" aria-label="Điều hướng giới thiệu">
+        <strong>WiiiCare Nexus</strong>
+        <div>
+          <button className="ghost-button" type="button" onClick={onLogin}>
+            Đăng nhập
+          </button>
+          <button className="primary-button" type="button" onClick={onDemo}>
+            Vào demo
+          </button>
+        </div>
+      </nav>
+
+      <section className="landing-hero">
+        <div>
+          <p className="eyebrow">HoLiLiHu · The Wiii Lab</p>
+          <h1>Nền tảng bệnh án điện tử mở cho liên thông y tế</h1>
+          <p className="lede">
+            WiiiCare Nexus mô phỏng lõi EMR hiện đại: hồ sơ bệnh nhân, lượt khám, tài liệu bệnh án,
+            audit trail và ánh xạ FHIR để chuẩn bị kết nối giữa các bệnh viện.
+          </p>
+          <div className="landing-actions">
+            <button className="primary-button" type="button" onClick={onLogin}>
+              Đăng nhập demo
+            </button>
+            <button className="ghost-button" type="button" onClick={onDemo}>
+              Bỏ qua, vào dashboard
+            </button>
+          </div>
+        </div>
+        <aside className="landing-card">
+          <span>Product slice</span>
+          <strong>Patient → Encounter → Document → FHIR</strong>
+          <small>Không còn là landing page đơn thuần; app có luồng vận hành sau đăng nhập.</small>
         </aside>
       </section>
 
-      <section className="workflow-strip" aria-label="Luồng nghiệp vụ ưu tiên">
-        {workflowSteps.map((item, index) => (
-          <div className="workflow-step" key={item}>
-            <span>{String(index + 1).padStart(2, "0")}</span>
-            <strong>{item}</strong>
-          </div>
+      <section className="landing-grid">
+        {[
+          ["Patient Workspace", "Bàn làm việc theo bệnh nhân, giống nhịp vận hành EMR thật."],
+          ["Document Center", "Quản lý CCR, CCDA, hồ sơ bệnh án, xét nghiệm và tài liệu chuyển tuyến."],
+          ["Audit & RBAC", "Ghi log truy cập nhạy cảm và kiểm tra quyền theo vai trò demo."],
+          ["FHIR Interop", "Xuất Patient, Encounter và DocumentReference để chuẩn bị liên thông."]
+        ].map(([title, description]) => (
+          <article className="panel" key={title}>
+            <p className="eyebrow">{title}</p>
+            <h2>{title}</h2>
+            <p className="empty-state">{description}</p>
+          </article>
         ))}
       </section>
+    </main>
+  );
+}
 
-      <section className="workspace">
-        <article className="panel patient-list">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Registry</p>
-              <h2>Danh sách bệnh nhân</h2>
-            </div>
-            <button
-              className="ghost-button"
-              type="button"
-              onClick={() => void loadPatients()}
-              disabled={isLoadingPatients}
+function LoginPage({
+  error,
+  form,
+  onBack,
+  onChange,
+  onSubmit
+}: {
+  readonly error?: string;
+  readonly form: LoginForm;
+  readonly onBack: () => void;
+  readonly onChange: (form: LoginForm) => void;
+  readonly onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <main className="login-shell">
+      <section className="login-panel">
+        <button className="ghost-button" type="button" onClick={onBack}>
+          Quay lại landing
+        </button>
+        <div>
+          <p className="eyebrow">Secure access</p>
+          <h1>Đăng nhập WiiiCare Nexus</h1>
+          <p className="lede">
+            Đây là đăng nhập demo để trình bày luồng sản phẩm. Khi lên sản phẩm thật, lớp này cần
+            thay bằng IAM/SSO, MFA, quản lý phiên và chính sách bảo mật đầy đủ.
+          </p>
+        </div>
+
+        <form className="login-form" onSubmit={onSubmit}>
+          <label>
+            Tài khoản
+            <input
+              value={form.username}
+              onChange={(event) => onChange({ ...form, username: event.target.value })}
+            />
+          </label>
+          <label>
+            Mật khẩu
+            <input
+              type="password"
+              value={form.password}
+              onChange={(event) => onChange({ ...form, password: event.target.value })}
+            />
+          </label>
+          <label>
+            Vai trò demo
+            <select
+              value={form.role}
+              onChange={(event) => onChange({ ...form, role: event.target.value as DemoRole })}
             >
-              {isLoadingPatients ? "Đang tải..." : "Tải lại"}
-            </button>
-          </div>
-
-          <div className="patient-cards">
-            {patients.map((patient) => (
-              <button
-                className={patient.id === selectedPatientId ? "patient-card selected" : "patient-card"}
-                key={patient.id}
-                type="button"
-                onClick={() => setSelectedPatientId(patient.id)}
-              >
-                <span>{patient.identifiers[0]?.value ?? patient.id}</span>
-                <strong>{patient.fullName}</strong>
-                <small>{patient.address ?? "Chưa có địa chỉ"}</small>
-              </button>
-            ))}
-          </div>
-        </article>
-
-        <article className="panel patient-detail">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Patient chart</p>
-              <h2>Hồ sơ đang chọn</h2>
-            </div>
-            {selectedPatient ? <span className="pill">{selectedPatient.status}</span> : null}
-          </div>
-
-          {selectedPatient ? (
-            <div className="detail-grid">
-              <Info label="Họ tên" value={selectedPatient.fullName} />
-              <Info label="Ngày sinh" value={selectedPatient.birthDate ?? "Chưa có"} />
-              <Info label="Giới tính" value={formatGender(selectedPatient.gender)} />
-              <Info label="Điện thoại" value={selectedPatient.phone ?? "Chưa có"} />
-              <Info label="Cơ sở quản lý" value={selectedPatient.managingOrganizationId} />
-              <Info label="Cập nhật" value={formatDateTime(selectedPatient.updatedAt)} />
-              <div className="identifiers">
-                <span>Định danh</span>
-                {selectedPatient.identifiers.map((identifier) => (
-                  <code key={`${identifier.system}:${identifier.value}`}>
-                    {formatIdentifierType(identifier.type)} · {identifier.value}
-                  </code>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <p className="empty-state">Chưa có bệnh nhân nào để hiển thị.</p>
-          )}
-        </article>
-
-        <article className="panel encounter-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Encounter timeline</p>
-              <h2>Lượt khám và đợt điều trị</h2>
-            </div>
-            <span className="pill cyan">{isLoadingEncounters ? "loading" : `${encounters.length} lượt`}</span>
-          </div>
-
-          <div className="encounter-layout">
-            <div className="timeline">
-              {encounters.map((encounter) => (
-                <button
-                  className={
-                    encounter.id === selectedEncounterId ? "timeline-item selected" : "timeline-item"
-                  }
-                  key={encounter.id}
-                  type="button"
-                  onClick={() => setSelectedEncounterId(encounter.id)}
-                >
-                  <span>{formatDateTime(encounter.startedAt)}</span>
-                  <strong>{encounter.serviceType}</strong>
-                  <small>
-                    {formatEncounterClass(encounter.class)} · {formatEncounterStatus(encounter.status)}
-                  </small>
-                </button>
-              ))}
-              {encounters.length === 0 ? (
-                <p className="empty-state">Chưa có lượt khám nào cho bệnh nhân này.</p>
-              ) : null}
-            </div>
-
-            <div className="encounter-summary">
-              {selectedEncounter ? (
-                <>
-                  <div className="document-meta">
-                    <Info label="Lý do khám" value={selectedEncounter.reasonText} />
-                    <Info label="Khoa/phòng" value={selectedEncounter.departmentId ?? "Chưa gắn"} />
-                    <Info label="Nhân sự phụ trách" value={selectedEncounter.attendingPractitionerId} />
-                    <Info label="Tài liệu gắn lượt khám" value={`${selectedEncounterDocuments.length}`} />
-                  </div>
-                  <div className="action-row">
-                    <button
-                      className="primary-button"
-                      type="button"
-                      disabled={selectedEncounter.status !== "in-progress" || isFinishingEncounter}
-                      onClick={() => void handleFinishEncounter(selectedEncounter.id)}
-                    >
-                      {isFinishingEncounter ? "Đang kết thúc..." : "Kết thúc lượt khám"}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <p className="empty-state">Chọn một lượt khám để xem chi tiết và xuất FHIR Encounter.</p>
-              )}
-            </div>
-          </div>
-
-          <form className="encounter-form" onSubmit={(event) => void handleCreateEncounter(event)}>
-            <label>
-              Loại lượt khám
-              <select
-                value={encounterForm.class}
-                onChange={(event) =>
-                  setEncounterForm({ ...encounterForm, class: event.target.value as EncounterClass })
-                }
-              >
-                <option value="ambulatory">Ngoại trú</option>
-                <option value="inpatient">Nội trú</option>
-                <option value="emergency">Cấp cứu</option>
-                <option value="virtual">Khám từ xa</option>
-              </select>
-            </label>
-            <label>
-              Dịch vụ/khoa khám
-              <input
-                value={encounterForm.serviceType}
-                onChange={(event) => setEncounterForm({ ...encounterForm, serviceType: event.target.value })}
-              />
-            </label>
-            <label className="wide-field">
-              Lý do khám
-              <input
-                value={encounterForm.reasonText}
-                onChange={(event) => setEncounterForm({ ...encounterForm, reasonText: event.target.value })}
-              />
-            </label>
-            <label>
-              Khoa/phòng
-              <input
-                value={encounterForm.departmentId}
-                onChange={(event) => setEncounterForm({ ...encounterForm, departmentId: event.target.value })}
-              />
-            </label>
-            <label>
-              Nhân sự phụ trách
-              <input
-                value={encounterForm.attendingPractitionerId}
-                onChange={(event) =>
-                  setEncounterForm({ ...encounterForm, attendingPractitionerId: event.target.value })
-                }
-              />
-            </label>
-            <label className="wide-field">
-              Thời điểm bắt đầu
-              <input
-                type="datetime-local"
-                value={encounterForm.startedAt}
-                onChange={(event) => setEncounterForm({ ...encounterForm, startedAt: event.target.value })}
-              />
-            </label>
-            <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingEncounter}>
-              {isSubmittingEncounter ? "Đang mở..." : "Mở lượt khám"}
-            </button>
-          </form>
-        </article>
-
-        <article className="panel document-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Document center</p>
-              <h2>Tài liệu bệnh án</h2>
-            </div>
-            <span className="pill cyan">{isLoadingDocuments ? "loading" : `${clinicalDocuments.length} docs`}</span>
-          </div>
-
-          <div className="taxonomy-strip" aria-label="Phân loại tài liệu tham chiếu OpenEMR">
-            {documentTaxonomy.map((item) => (
-              <span key={item}>{item}</span>
-            ))}
-          </div>
-
-          <div className="document-layout">
-            <div className="document-cards">
-              {clinicalDocuments.map((document) => (
-                <button
-                  className={document.id === selectedDocumentId ? "document-card selected" : "document-card"}
-                  key={document.id}
-                  type="button"
-                  onClick={() => setSelectedDocumentId(document.id)}
-                >
-                  <span>{formatDocumentType(document.type)}</span>
-                  <strong>{document.title}</strong>
-                  <small>
-                    {formatDocumentStatus(document.status)} ·{" "}
-                    {document.encounterId ? `Encounter ${document.encounterId}` : "Chưa gắn encounter"}
-                  </small>
-                </button>
-              ))}
-              {clinicalDocuments.length === 0 ? (
-                <p className="empty-state">Bệnh nhân này chưa có tài liệu bệnh án.</p>
-              ) : null}
-            </div>
-
-            <div className="document-summary">
-              {selectedDocument ? (
-                <>
-                  <div className="document-meta">
-                    <Info label="Loại tài liệu" value={formatDocumentType(selectedDocument.type)} />
-                    <Info label="Trạng thái" value={formatDocumentStatus(selectedDocument.status)} />
-                    <Info label="Encounter" value={selectedDocument.encounterId ?? "Chưa gắn"} />
-                    <Info label="Người tạo" value={selectedDocument.authorPractitionerId} />
-                  </div>
-                  <code>{selectedDocument.storageUri}</code>
-                  <div className="action-row">
-                    <button
-                      className="primary-button"
-                      type="button"
-                      disabled={selectedDocument.status !== "draft" || isSigningDocument}
-                      onClick={() => void handleSignClinicalDocument(selectedDocument.id)}
-                    >
-                      {isSigningDocument ? "Đang ký..." : "Ký tài liệu nháp"}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <p className="empty-state">Chọn một tài liệu để xem metadata và thao tác ký.</p>
-              )}
-            </div>
-          </div>
-
-          <form className="document-form" onSubmit={(event) => void handleCreateClinicalDocument(event)}>
-            <label>
-              Loại tài liệu
-              <select
-                value={documentForm.type}
-                onChange={(event) =>
-                  setDocumentForm({ ...documentForm, type: event.target.value as ClinicalDocumentType })
-                }
-              >
-                <option value="referral-letter">Giấy chuyển tuyến</option>
-                <option value="discharge-summary">Tóm tắt ra viện</option>
-                <option value="lab-report">Kết quả xét nghiệm</option>
-                <option value="imaging-report">Kết quả chẩn đoán hình ảnh</option>
-                <option value="admission-note">Phiếu nhập viện</option>
-                <option value="consent-form">Phiếu đồng ý điều trị</option>
-                <option value="advance-directive">Chỉ dẫn chăm sóc trước</option>
-                <option value="ccda">CCDA</option>
-                <option value="ccr">CCR</option>
-                <option value="medical-record">Hồ sơ bệnh án</option>
-                <option value="patient-information">Thông tin bệnh nhân</option>
-              </select>
-            </label>
-            <label>
-              Gắn với lượt khám
-              <select
-                value={documentForm.encounterId}
-                onChange={(event) => setDocumentForm({ ...documentForm, encounterId: event.target.value })}
-              >
-                <option value="">Không gắn</option>
-                {encounters.map((encounter) => (
-                  <option key={encounter.id} value={encounter.id}>
-                    {encounter.serviceType} · {formatDateTime(encounter.startedAt)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="wide-field">
-              Tiêu đề tài liệu
-              <input
-                value={documentForm.title}
-                onChange={(event) => setDocumentForm({ ...documentForm, title: event.target.value })}
-              />
-            </label>
-            <label className="wide-field">
-              URI lưu trữ
-              <input
-                value={documentForm.storageUri}
-                onChange={(event) => setDocumentForm({ ...documentForm, storageUri: event.target.value })}
-              />
-            </label>
-            <label className="wide-field">
-              Mã bác sĩ/người tạo
-              <input
-                value={documentForm.authorPractitionerId}
-                onChange={(event) =>
-                  setDocumentForm({ ...documentForm, authorPractitionerId: event.target.value })
-                }
-              />
-            </label>
-            <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingDocument}>
-              {isSubmittingDocument ? "Đang tạo..." : "Tạo tài liệu bệnh án"}
-            </button>
-          </form>
-        </article>
-
-        <article className="panel audit-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Security trace</p>
-              <h2>Nhật ký kiểm toán</h2>
-            </div>
-            <button
-              className="ghost-button"
-              type="button"
-              disabled={!selectedPatient || isLoadingAuditEvents}
-              onClick={() => selectedPatient && void loadAuditEvents(selectedPatient.id)}
-            >
-              {isLoadingAuditEvents ? "Đang tải..." : "Tải audit"}
-            </button>
-          </div>
-
-          <div className="audit-list">
-            {auditEvents.map((event) => (
-              <div className="audit-item" key={event.id ?? `${event.occurredAt}:${event.action}`}>
-                <div>
-                  <span>{formatDateTime(event.occurredAt)}</span>
-                  <strong>{formatAuditAction(event.action)}</strong>
-                </div>
-                <div>
-                  <span>Actor</span>
-                  <strong>{event.actorId}</strong>
-                </div>
-                <div>
-                  <span>Tài nguyên</span>
-                  <strong>
-                    {formatAuditResourceType(event.resourceType)} · {event.resourceId}
-                  </strong>
-                </div>
-                <div>
-                  <span>Mục đích</span>
-                  <strong>
-                    {event.purposeOfUse ?? "Chưa khai báo"}
-                    {typeof event.metadata.actorRole === "string" ? ` · ${event.metadata.actorRole}` : ""}
-                  </strong>
-                </div>
-              </div>
-            ))}
-            {auditEvents.length === 0 ? (
-              <p className="empty-state">
-                Chưa có audit event cho bệnh nhân đang chọn. Hãy xem FHIR, mở lượt khám hoặc ký tài liệu
-                để phát sinh log.
-              </p>
-            ) : null}
-          </div>
-        </article>
-
-        <article className="panel create-panel">
-          <div>
-            <p className="eyebrow">Intake</p>
-            <h2>Tạo nhanh hồ sơ mới</h2>
-          </div>
-
-          <form className="patient-form" onSubmit={(event) => void handleCreatePatient(event)}>
-            <label>
-              Họ tên
-              <input
-                value={patientForm.fullName}
-                onChange={(event) => setPatientForm({ ...patientForm, fullName: event.target.value })}
-              />
-            </label>
-            <label>
-              Số định danh
-              <input
-                value={patientForm.nationalId}
-                onChange={(event) => setPatientForm({ ...patientForm, nationalId: event.target.value })}
-              />
-            </label>
-            <label>
-              Mã hồ sơ bệnh viện
-              <input
-                value={patientForm.hospitalMrn}
-                onChange={(event) => setPatientForm({ ...patientForm, hospitalMrn: event.target.value })}
-              />
-            </label>
-            <label>
-              Ngày sinh
-              <input
-                type="date"
-                value={patientForm.birthDate}
-                onChange={(event) => setPatientForm({ ...patientForm, birthDate: event.target.value })}
-              />
-            </label>
-            <label>
-              Giới tính
-              <select
-                value={patientForm.gender}
-                onChange={(event) => setPatientForm({ ...patientForm, gender: event.target.value as PatientGender })}
-              >
-                <option value="male">Nam</option>
-                <option value="female">Nữ</option>
-                <option value="other">Khác</option>
-                <option value="unknown">Chưa rõ</option>
-              </select>
-            </label>
-            <label>
-              Điện thoại
-              <input
-                value={patientForm.phone}
-                onChange={(event) => setPatientForm({ ...patientForm, phone: event.target.value })}
-              />
-            </label>
-            <label className="wide-field">
-              Địa chỉ
-              <input
-                value={patientForm.address}
-                onChange={(event) => setPatientForm({ ...patientForm, address: event.target.value })}
-              />
-            </label>
-            <label className="wide-field">
-              Cơ sở quản lý
-              <input
-                value={patientForm.managingOrganizationId}
-                onChange={(event) =>
-                  setPatientForm({ ...patientForm, managingOrganizationId: event.target.value })
-                }
-              />
-            </label>
-            <button className="primary-button" type="submit" disabled={isSubmittingPatient}>
-              {isSubmittingPatient ? "Đang tạo..." : "Tạo hồ sơ bệnh nhân"}
-            </button>
-          </form>
-        </article>
-
-        <FhirPanel title="FHIR Patient JSON" badge="Patient" value={patientFhirPreview} />
-        <FhirPanel title="FHIR Encounter JSON" badge="Encounter" value={encounterFhirPreview} />
-        <FhirPanel title="FHIR DocumentReference JSON" badge="DocumentReference" value={documentFhirPreview} />
-      </section>
-
-      <section className="reference-grid">
-        <article className="panel dark-panel">
-          <p className="eyebrow">OpenEMR-derived</p>
-          <h2>Những nguyên tắc đang bám theo</h2>
-          <div className="reference-list">
-            {referenceSignals.map((reference) => (
-              <div key={reference.name}>
-                <strong>{reference.name}</strong>
-                <span>{reference.value}</span>
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <article className="panel">
-          <p className="eyebrow">Scope guard</p>
-          <h2>Ranh giới hiện tại</h2>
-          <ul className="milestone-list">
-            <li>Đã có bệnh nhân, lượt khám, tài liệu, ký, audit và FHIR facade.</li>
-            <li>Chưa mô phỏng HIS/LIS/PACS sâu khi chưa có hệ thống tích hợp thật.</li>
-            <li>Luồng liên thông tiếp theo nên là FHIR Bundle/DocumentReference gửi sang HAPI FHIR.</li>
-            <li>Giao diện ưu tiên thao tác nghiệp vụ hơn hiệu ứng trình diễn.</li>
-          </ul>
-        </article>
+              <option value="clinician">Bác sĩ / điều trị</option>
+              <option value="auditor">Kiểm toán</option>
+              <option value="admin">Quản trị</option>
+            </select>
+          </label>
+          {error ? <p className="form-error">{error}</p> : null}
+          <button className="primary-button" type="submit">
+            Đăng nhập demo
+          </button>
+        </form>
       </section>
     </main>
+  );
+}
+
+function AuthenticatedLayout({
+  apiBaseUrl,
+  children,
+  currentRoute,
+  onLogout,
+  onNavigate,
+  statusMessage,
+  userName,
+  userRole
+}: {
+  readonly apiBaseUrl: string;
+  readonly children: ReactNode;
+  readonly currentRoute: AppRoute;
+  readonly onLogout: () => void;
+  readonly onNavigate: (route: AppRoute) => void;
+  readonly statusMessage: string;
+  readonly userName: string;
+  readonly userRole: DemoRole;
+}) {
+  return (
+    <main className="app-layout">
+      <aside className="app-sidebar">
+        <div className="brand-block">
+          <span>WiiiCare</span>
+          <strong>Nexus</strong>
+        </div>
+        <nav className="app-nav" aria-label="Điều hướng ứng dụng">
+          {navigationItems.map((item) => (
+            <button
+              className={currentRoute === item.route ? "selected" : ""}
+              key={item.route}
+              type="button"
+              onClick={() => onNavigate(item.route)}
+            >
+              <strong>{item.label}</strong>
+              <span>{item.hint}</span>
+            </button>
+          ))}
+        </nav>
+        <button className="ghost-button logout-button" type="button" onClick={onLogout}>
+          Đăng xuất
+        </button>
+      </aside>
+
+      <section className="app-main">
+        <header className="app-topbar">
+          <div>
+            <span>{apiBaseUrl}</span>
+            <strong>{statusMessage}</strong>
+          </div>
+          <div className="user-chip">
+            <span>{formatDemoRole(userRole)}</span>
+            <strong>{userName}</strong>
+          </div>
+        </header>
+        {children}
+      </section>
+    </main>
+  );
+}
+
+function PageHeader({
+  description,
+  eyebrow,
+  title
+}: {
+  readonly description: string;
+  readonly eyebrow: string;
+  readonly title: string;
+}) {
+  return (
+    <section className="page-header">
+      <p className="eyebrow">{eyebrow}</p>
+      <h1>{title}</h1>
+      <p className="lede">{description}</p>
+    </section>
+  );
+}
+
+function MetricCard({
+  label,
+  note,
+  value
+}: {
+  readonly label: string;
+  readonly note: string;
+  readonly value: string;
+}) {
+  return (
+    <article className="metric-card">
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <small>{note}</small>
+    </article>
   );
 }
 
@@ -1223,6 +1724,16 @@ function Info({ label, value }: { readonly label: string; readonly value: string
       <strong>{value}</strong>
     </div>
   );
+}
+
+function formatDemoRole(role: DemoRole): string {
+  const labels: Record<DemoRole, string> = {
+    admin: "Quản trị",
+    auditor: "Kiểm toán",
+    clinician: "Bác sĩ điều trị"
+  };
+
+  return labels[role];
 }
 
 function formatGender(gender: PatientGender): string {
