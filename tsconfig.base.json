@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@benh-vien-so/domain": ["packages/domain/src/index.ts"],
+      "@benh-vien-so/contracts": ["packages/contracts/src/index.ts"]
+    }
+  }
+}
+

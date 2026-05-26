@@ -1,0 +1,24 @@
+{
+  "name": "@benh-vien-so/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -b tsconfig.json --force",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "dev": "pnpm --filter @benh-vien-so/domain run build && pnpm --filter @benh-vien-so/contracts run build && tsx src/main.ts"
+  },
+  "dependencies": {
+    "@benh-vien-so/contracts": "workspace:*",
+    "@benh-vien-so/domain": "workspace:*",
+    "@fastify/cors": "^10.0.2",
+    "@fastify/swagger": "^9.4.2",
+    "@fastify/swagger-ui": "^5.2.2",
+    "fastify": "^5.2.1",
+    "nanoid": "^5.0.9"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}

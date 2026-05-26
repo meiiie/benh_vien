@@ -1,0 +1,64 @@
+language: "vi-VN"
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  review_status: true
+  poem: false
+  collapse_walkthrough: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "main"
+
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/dist/**"
+    - "!**/coverage/**"
+    - "!**/*.lock"
+    - "!pnpm-lock.yaml"
+    - "!uploads/**"
+    - "!.data/**"
+
+  path_instructions:
+    - path: "packages/domain/src/**/*.ts"
+      instructions: |
+        Review theo DDD:
+        - Domain không phụ thuộc framework, database, HTTP hay UI.
+        - Invariant bệnh nhân/tài liệu lâm sàng phải nằm trong aggregate/factory.
+        - Mapping FHIR phải tách khỏi aggregate.
+        - Cảnh báo nếu dùng thuật ngữ y tế thiếu chính xác hoặc không có test cho invariant quan trọng.
+
+    - path: "apps/api/src/**/*.ts"
+      instructions: |
+        API:
+        - Public API phải dưới /api/v1, healthcheck giữ /health.
+        - Validate input bằng contracts/Zod.
+        - Không trả dữ liệu bệnh án dư thừa.
+        - Cảnh báo Broken Object Level Authorization nếu endpoint truy cập bệnh nhân không có kiểm soát quyền.
+
+    - path: "docker-compose*.yml"
+      instructions: |
+        Docker:
+        - Base compose là topology source of truth.
+        - Dev/prod chỉ override cấu hình cần thiết.
+        - Không expose backend network nếu không cần.
+        - Sau thay đổi phải chạy pnpm compose:config.
+
+    - path: ".github/workflows/*.yml"
+      instructions: |
+        CI/CD:
+        - Không bỏ qua check/build/test/compose validation.
+        - Job release phải dùng quyền tối thiểu và chỉ push image khi tag v*.
+        - Không đưa secret vào workflow.
+
+    - path: "docs/**/*.md"
+      instructions: |
+        Docs:
+        - Viết tiếng Việt có dấu.
+        - Tên chuẩn/công nghệ tiếng Anh phải có chú thích hoặc ngữ cảnh.
+        - Chuẩn y tế/pháp lý cần nguồn chính thức nếu dùng làm căn cứ.
+

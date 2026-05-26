@@ -1,0 +1,56 @@
+name: benh-vien-so-lab
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: benh_vien_so
+      POSTGRES_USER: bvs
+      POSTGRES_PASSWORD: bvs_dev_password
+    ports:
+      - "55432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    ports:
+      - "56379:6379"
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: bvs_minio
+      MINIO_ROOT_PASSWORD: bvs_minio_password
+    ports:
+      - "59000:9000"
+      - "59001:9001"
+    volumes:
+      - minio_data:/data
+
+  hapi-fhir:
+    image: hapiproject/hapi:latest
+    profiles:
+      - interop
+    ports:
+      - "8090:8080"
+
+  orthanc:
+    image: orthancteam/orthanc:latest
+    profiles:
+      - imaging
+    environment:
+      ORTHANC__AUTHENTICATION_ENABLED: "false"
+      ORTHANC__DICOM_WEB__ENABLE: "true"
+    ports:
+      - "8042:8042"
+      - "4242:4242"
+    volumes:
+      - orthanc_data:/var/lib/orthanc/db
+
+volumes:
+  postgres_data:
+  minio_data:
+  orthanc_data:
+

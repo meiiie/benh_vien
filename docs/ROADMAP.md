@@ -1,0 +1,45 @@
+# Roadmap phát triển
+
+## Giai đoạn 0: Nền móng kiến trúc
+
+- Hoàn thiện monorepo, domain model, API prototype và tài liệu chuẩn.
+- Chốt phạm vi đề tài: EMR/EHR liên thông, không cố xây HIS đầy đủ trong phiên bản đầu.
+- Xây bộ thuật ngữ thống nhất: HIS, LIS, PACS, EMR, EHR, FHIR, DICOM, MHD, PIXm.
+
+## Giai đoạn 1: Hồ sơ bệnh nhân và tài liệu bệnh án
+
+- Patient Registry: nhiều định danh cho một bệnh nhân.
+- Clinical Records: tài liệu bệnh án, trạng thái ký/xác nhận, lịch sử chỉnh sửa.
+- Audit & Compliance: nhật ký xem, sửa, ký, xuất hồ sơ.
+- Web demo: màn hình bệnh nhân, danh sách tài liệu, trạng thái ký.
+
+## Giai đoạn 2: Liên thông FHIR
+
+- Kết nối HAPI FHIR ở chế độ thử nghiệm.
+- Mapping `Patient`, `Encounter`, `Condition`, `Observation`, `DocumentReference`, `Composition`.
+- Tạo luồng xuất gói hồ sơ bệnh án cho một bệnh nhân.
+- Kiểm tra luồng nhận lại dữ liệu từ FHIR server.
+
+## Giai đoạn 3: Ảnh y khoa và PACS
+
+- Kết nối Orthanc.
+- Lưu metadata ảnh trong EMR, ảnh thật nằm trong PACS.
+- Hiển thị danh sách study/series và liên kết báo cáo chẩn đoán hình ảnh.
+- Nghiên cứu DICOMweb nếu cần tích hợp hiện đại hơn.
+
+## Giai đoạn 4: Bảo mật, vận hành và chuẩn hóa
+
+- Tích hợp IAM/SSO, phân quyền theo vai trò và ngữ cảnh điều trị.
+- Hoàn thiện audit trail và báo cáo tuân thủ.
+- Bổ sung kiểm thử bảo mật API theo OWASP.
+- Chuẩn hóa backup, restore, retention và disaster recovery.
+
+## Giai đoạn 5: Mở rộng kiến trúc
+
+Chỉ tách microservice khi có lý do thật:
+
+- `Interoperability Service` khi cần nhiều adapter và nhiều bệnh viện.
+- `Imaging Service` khi dữ liệu ảnh lớn hoặc cần vận hành PACS riêng.
+- `Audit Service` khi cần lưu trữ bất biến hoặc kiểm toán độc lập.
+- `Identity Service` khi có nhiều ứng dụng cùng dùng định danh và phân quyền.
+

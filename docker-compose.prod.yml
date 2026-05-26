@@ -1,0 +1,11 @@
+services:
+  api:
+    environment:
+      NODE_ENV: production
+    ports:
+      - "${API_HTTP_PORT:-7310}:7310"
+
+  web:
+    ports:
+      - "${APP_HTTP_PORT:-8080}:80"
+

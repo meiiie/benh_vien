@@ -1,0 +1,19 @@
+flowchart LR
+  Doctor["Bác sĩ / điều dưỡng"]
+  Admin["Nhân sự hành chính"]
+  Web["Web App"]
+  Api["Bệnh viện số API"]
+  Domain["Domain modules"]
+  Fhir["FHIR Server"]
+  Pacs["PACS / DICOM"]
+  External["Hệ thống ngoài"]
+
+  Doctor --> Web
+  Admin --> Web
+  Web --> Api
+  Api --> Domain
+  Api --> Fhir
+  Api --> Pacs
+  Fhir --> External
+  Pacs --> External
+

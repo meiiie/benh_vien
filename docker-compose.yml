@@ -1,0 +1,149 @@
+# =============================================================================
+# Bệnh viện số - Docker Compose base topology
+# Dev:  docker compose --env-file .env.dev.example -f docker-compose.yml -f docker-compose.dev.yml up -d
+# Prod: docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# =============================================================================
+
+name: benh-vien-so
+
+x-service-defaults: &service-defaults
+  init: true
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  postgres:
+    <<: *service-defaults
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-bvs}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bvs_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-benh_vien_so}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bvs} -d ${POSTGRES_DB:-benh_vien_so}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    networks:
+      - backend
+
+  valkey:
+    <<: *service-defaults
+    image: valkey/valkey:8-alpine
+    command: ["valkey-server", "--appendonly", "yes"]
+    volumes:
+      - valkey_data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - backend
+
+  minio:
+    <<: *service-defaults
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-bvs_minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-bvs_minio_password}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks:
+      - backend
+
+  api:
+    <<: *service-defaults
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${PORT:-7310}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://bvs:bvs_dev_password@postgres:5432/benh_vien_so}
+      FHIR_BASE_URL: ${FHIR_BASE_URL:-http://hapi-fhir:8080/fhir}
+      ORTHANC_BASE_URL: ${ORTHANC_BASE_URL:-http://orthanc:8042}
+      OBJECT_STORAGE_ENDPOINT: ${OBJECT_STORAGE_ENDPOINT:-http://minio:9000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:7310/health | grep -q ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    networks:
+      - backend
+      - frontend
+
+  web:
+    <<: *service-defaults
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/health | grep -q ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks:
+      - frontend
+
+  hapi-fhir:
+    <<: *service-defaults
+    image: hapiproject/hapi:latest
+    profiles:
+      - interop
+    networks:
+      - backend
+
+  orthanc:
+    <<: *service-defaults
+    image: orthancteam/orthanc:latest
+    profiles:
+      - imaging
+    environment:
+      ORTHANC__AUTHENTICATION_ENABLED: "false"
+      ORTHANC__DICOM_WEB__ENABLE: "true"
+    volumes:
+      - orthanc_data:/var/lib/orthanc/db
+    networks:
+      - backend
+
+volumes:
+  postgres_data:
+  valkey_data:
+  minio_data:
+  orthanc_data:
+
+networks:
+  backend:
+    driver: bridge
+    internal: true
+  frontend:
+    driver: bridge

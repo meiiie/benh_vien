@@ -1,0 +1,57 @@
+services:
+  postgres:
+    ports:
+      - "55432:5432"
+
+  valkey:
+    ports:
+      - "56379:6379"
+
+  minio:
+    ports:
+      - "59000:9000"
+      - "59001:9001"
+
+  api:
+    build:
+      target: build
+    command: pnpm --filter @benh-vien-so/api run dev
+    environment:
+      NODE_ENV: development
+    ports:
+      - "${API_HTTP_PORT:-7310}:7310"
+    volumes:
+      - .:/app
+      - api_node_modules:/app/node_modules
+
+  web:
+    build:
+      target: build
+    command: pnpm --filter @benh-vien-so/web run dev
+    ports:
+      - "${APP_HTTP_PORT:-7311}:7311"
+    volumes:
+      - .:/app
+      - web_node_modules:/app/node_modules
+    depends_on:
+      api:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:7311/ >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  hapi-fhir:
+    ports:
+      - "8090:8080"
+
+  orthanc:
+    ports:
+      - "8042:8042"
+      - "4242:4242"
+
+volumes:
+  api_node_modules:
+  web_node_modules:

@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(node_modules/**)",
+      "Read(**/node_modules/**)",
+      "Read(dist/**)",
+      "Read(**/dist/**)",
+      "Read(coverage/**)",
+      "Read(**/coverage/**)",
+      "Read(.git/**)",
+      "Read(.data/**)",
+      "Read(uploads/**)"
+    ]
+  }
+}
+
