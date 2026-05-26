@@ -23,7 +23,7 @@ export async function buildServer(options: ServerOptions = {}) {
     openapi: {
       info: {
         title: "Bệnh viện số API",
-        version: "0.1.0",
+        version: "0.2.0",
         description: "API thử nghiệm cho hồ sơ bệnh án điện tử và liên thông FHIR."
       },
       tags: [
