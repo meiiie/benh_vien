@@ -1,0 +1,75 @@
+{
+  "$schema": "https://tokens.studio/schemas/tokens.json",
+  "brand": {
+    "color": {
+      "ink": {
+        "$type": "color",
+        "$value": "#06131B"
+      },
+      "navy": {
+        "$type": "color",
+        "$value": "#0B2230"
+      },
+      "teal": {
+        "$type": "color",
+        "$value": "#23C9C7"
+      },
+      "mint": {
+        "$type": "color",
+        "$value": "#7BE2A7"
+      },
+      "softData": {
+        "$type": "color",
+        "$value": "#9CDDD4"
+      },
+      "warmWhite": {
+        "$type": "color",
+        "$value": "#F7F4E9"
+      },
+      "amberSignal": {
+        "$type": "color",
+        "$value": "#F2B84B"
+      },
+      "danger": {
+        "$type": "color",
+        "$value": "#E15A4F"
+      }
+    },
+    "radius": {
+      "sm": {
+        "$type": "dimension",
+        "$value": "6px"
+      },
+      "md": {
+        "$type": "dimension",
+        "$value": "12px"
+      },
+      "lg": {
+        "$type": "dimension",
+        "$value": "24px"
+      }
+    },
+    "space": {
+      "2": {
+        "$type": "dimension",
+        "$value": "8px"
+      },
+      "3": {
+        "$type": "dimension",
+        "$value": "12px"
+      },
+      "4": {
+        "$type": "dimension",
+        "$value": "16px"
+      },
+      "6": {
+        "$type": "dimension",
+        "$value": "24px"
+      },
+      "8": {
+        "$type": "dimension",
+        "$value": "32px"
+      }
+    }
+  }
+}
