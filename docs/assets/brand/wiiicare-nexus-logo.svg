@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 260" role="img" aria-labelledby="title desc">
+  <title id="title">WiiiCare Nexus logo</title>
+  <desc id="desc">Horizontal logo lockup for WiiiCare Nexus by HoLiLiHu and The Wiii Lab.</desc>
+  <defs>
+    <linearGradient id="frame" x1="31" y1="40" x2="189" y2="218" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#23C9C7"/>
+      <stop offset="1" stop-color="#7BE2A7"/>
+    </linearGradient>
+    <linearGradient id="path" x1="51" y1="144" x2="169" y2="144" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#28D0C7"/>
+      <stop offset=".56" stop-color="#F7F4E9"/>
+      <stop offset="1" stop-color="#7BE2A7"/>
+    </linearGradient>
+  </defs>
+  <rect width="980" height="260" rx="34" fill="#06131B"/>
+  <g transform="translate(28 12)">
+    <path fill="#06131B" stroke="url(#frame)" stroke-linejoin="round" stroke-width="9"
+          d="M110 28 185 70v64c0 46-29 78-75 99-46-21-75-53-75-99V70l75-42Z"/>
+    <g fill="#F7F4E9">
+      <circle cx="110" cy="58" r="8"/>
+      <rect x="101" y="79" width="18" height="81" rx="9"/>
+    </g>
+    <g fill="#23C9C7">
+      <circle cx="65" cy="86" r="8"/>
+      <rect x="56" y="106" width="18" height="58" rx="9"/>
+    </g>
+    <g fill="#7BE2A7">
+      <circle cx="155" cy="86" r="8"/>
+      <rect x="146" y="106" width="18" height="58" rx="9"/>
+    </g>
+    <path fill="none" stroke="url(#path)" stroke-linecap="round" stroke-width="13"
+          d="M53 148c24-17 35 24 57 24s33-41 57-24"/>
+    <circle cx="110" cy="172" r="12" fill="#F7F4E9" stroke="#06131B" stroke-width="5"/>
+  </g>
+  <g font-family="Bahnschrift, Aptos, 'Segoe UI', Arial, sans-serif">
+    <text x="252" y="107" fill="#F7F4E9" font-size="58" font-weight="700" letter-spacing="-.9">WiiiCare Nexus</text>
+    <text x="255" y="156" fill="#9CDDD4" font-size="24" font-weight="500">Digital hospital platform for EMR, FHIR and PACS interoperability</text>
+    <text x="255" y="197" fill="#65E5C7" font-size="21" font-weight="700">HoLiLiHu · The Wiii Lab</text>
+  </g>
+</svg>

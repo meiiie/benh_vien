@@ -6,6 +6,8 @@
 
 Mục tiêu trước mắt là tạo một nền tảng monorepo đủ rõ ràng để trình bày, thử nghiệm và mở rộng; chưa giả định đây là phần mềm đạt điều kiện triển khai sản xuất tại bệnh viện.
 
+Brand assets: [docs/BRAND.md](docs/BRAND.md).
+
 ## Định hướng kiến trúc
 
 - Bắt đầu bằng **modular monolith theo DDD** để giữ tốc độ phát triển, giảm chi phí vận hành và vẫn có ranh giới nghiệp vụ rõ.
