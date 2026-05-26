@@ -1,5 +1,7 @@
 # Bệnh viện số
 
+![Bệnh viện số social preview](docs/assets/github-social-preview.png)
+
 Dự án khởi đầu cho hệ thống hồ sơ bệnh án điện tử và liên thông dữ liệu y tế. Mục tiêu trước mắt là tạo một nền tảng monorepo đủ rõ ràng để trình bày, thử nghiệm và mở rộng; chưa giả định đây là phần mềm đạt điều kiện triển khai sản xuất tại bệnh viện.
 
 ## Định hướng kiến trúc
@@ -20,6 +22,7 @@ packages/
   contracts/ Schema request/response dùng chung
 infra/      Docker Compose cho hạ tầng thử nghiệm, không tự bật
 docs/       Kiến trúc, chuẩn tham chiếu, quyết định kỹ thuật, roadmap
+migrations/ SQL migration cho PostgreSQL
 ```
 
 ## Chạy kiểm tra
@@ -50,6 +53,12 @@ docker compose --env-file .env.dev.example -f docker-compose.yml -f docker-compo
 ```
 
 Chi tiết xem [docs/runbooks/DOCKER.md](docs/runbooks/DOCKER.md).
+
+## Backend và cơ sở dữ liệu
+
+Backend hiện dùng Fastify + TypeScript. Trong Docker, API chạy với `BVS_REPOSITORY=postgres`, migration service tạo schema PostgreSQL trước khi API khởi động. Các bảng nền tảng gồm `patients`, `clinical_documents`, `audit_events` và `schema_migrations`.
+
+Khi chạy local không Docker, có thể dùng in-memory repository để phát triển nhanh; khi cần kiểm chứng sát thực tế, dùng Docker dev/prod để chạy PostgreSQL.
 
 ## GitHub và release
 

@@ -3,10 +3,7 @@ import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import Fastify from "fastify";
 import type { PatientRepository } from "@benh-vien-so/domain";
-import {
-  InMemoryPatientRepository,
-  createSeedPatients
-} from "./modules/patients/in-memory-patient.repository.js";
+import { createPatientRepository } from "./modules/patients/create-patient.repository.js";
 import { registerPatientRoutes } from "./modules/patients/patient-routes.js";
 
 export type ServerOptions = {
@@ -42,8 +39,7 @@ export async function buildServer(options: ServerOptions = {}) {
     routePrefix: "/docs"
   });
 
-  const patientRepository =
-    options.patientRepository ?? new InMemoryPatientRepository(createSeedPatients());
+  const patientRepository = options.patientRepository ?? (await createPatientRepository());
 
   app.get("/health", async () => ({
     status: "ok",

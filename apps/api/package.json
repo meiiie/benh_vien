@@ -7,6 +7,7 @@
   "scripts": {
     "build": "tsc -b tsconfig.json --force",
     "check": "tsc -p tsconfig.json --noEmit",
+    "db:migrate": "node scripts/migrate.mjs",
     "dev": "pnpm --filter @benh-vien-so/domain run build && pnpm --filter @benh-vien-so/contracts run build && tsx src/main.ts"
   },
   "dependencies": {
@@ -16,9 +17,11 @@
     "@fastify/swagger": "^9.4.2",
     "@fastify/swagger-ui": "^5.2.2",
     "fastify": "^5.2.1",
-    "nanoid": "^5.0.9"
+    "nanoid": "^5.0.9",
+    "pg": "^8.21.0"
   },
   "devDependencies": {
+    "@types/pg": "^8.20.0",
     "tsx": "^4.19.2"
   }
 }

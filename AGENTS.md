@@ -50,6 +50,7 @@ URL mặc định:
 - `packages/contracts` chứa schema request/response dùng chung, ưu tiên Zod.
 - `apps/api` là adapter HTTP và orchestration nhẹ, không để business rule phình trong route handler.
 - `apps/web` là giao diện demo, không quyết định nghiệp vụ.
+- `migrations/` là source of truth cho schema PostgreSQL; không để API tự tạo schema ngoài migration.
 - FHIR là lớp liên thông, không phải toàn bộ database nội bộ.
 - PACS/DICOM xử lý ảnh y khoa; EMR chỉ lưu metadata và liên kết cần thiết.
 

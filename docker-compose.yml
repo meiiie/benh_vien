@@ -68,6 +68,21 @@ services:
     networks:
       - backend
 
+  migrate:
+    <<: *service-defaults
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: ["node", "apps/api/scripts/migrate.mjs"]
+    restart: "no"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://bvs:bvs_dev_password@postgres:5432/benh_vien_so}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend
+
   api:
     <<: *service-defaults
     build:
@@ -76,6 +91,7 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: ${PORT:-7310}
+      BVS_REPOSITORY: ${BVS_REPOSITORY:-postgres}
       DATABASE_URL: ${DATABASE_URL:-postgresql://bvs:bvs_dev_password@postgres:5432/benh_vien_so}
       FHIR_BASE_URL: ${FHIR_BASE_URL:-http://hapi-fhir:8080/fhir}
       ORTHANC_BASE_URL: ${ORTHANC_BASE_URL:-http://orthanc:8042}
@@ -83,6 +99,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       valkey:
         condition: service_healthy
       minio:

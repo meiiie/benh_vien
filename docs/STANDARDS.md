@@ -14,6 +14,7 @@ Hàm ý cho dự án:
 - Cần có ký/xác nhận điện tử ở vòng đời tài liệu.
 - Cần quản lý định danh bệnh nhân đủ nghiêm túc.
 - Cần audit trail và chính sách bảo vệ dữ liệu.
+- Cần cơ sở dữ liệu có migration, phân quyền, lưu vết, sao lưu và quy trình vận hành; phiên bản hiện tại mới đặt nền `patients`, `clinical_documents`, `audit_events`, chưa tuyên bố đạt điều kiện triển khai bệnh viện thật.
 
 ## HL7 FHIR R4
 
@@ -96,4 +97,3 @@ Hàm ý cho dự án:
 - Cần chính sách phân quyền, lưu trữ, sao lưu, khôi phục và quản lý sự cố.
 - Cần kiểm toán truy cập dữ liệu sức khỏe cá nhân.
 - Cần tách rõ môi trường phát triển, thử nghiệm và sản xuất.
-

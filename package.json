@@ -10,6 +10,7 @@
     "test": "pnpm -r --sort --if-present run test",
     "ci": "pnpm run check && pnpm run test && pnpm run harness:smoke && pnpm run compose:config",
     "compose:config": "docker compose -f docker-compose.yml -f docker-compose.dev.yml config --quiet && docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet",
+    "db:migrate": "pnpm --filter @benh-vien-so/api run db:migrate",
     "dev:api": "pnpm --filter @benh-vien-so/api run dev",
     "dev:web": "pnpm --filter @benh-vien-so/web run dev",
     "harness:smoke": "node scripts/harness/fhir-smoke.mjs",

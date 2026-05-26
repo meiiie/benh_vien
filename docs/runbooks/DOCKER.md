@@ -14,6 +14,8 @@ Mặc định mở:
 - Valkey: `localhost:56379`
 - MinIO console: `http://localhost:59001`
 
+Compose sẽ chạy service `migrate` trước API để áp dụng SQL migration trong `migrations/`.
+
 ## Bật FHIR và PACS khi cần
 
 Chỉ bật khi demo liên thông hoặc ảnh y khoa:
@@ -30,10 +32,11 @@ Khi đó có thêm:
 ## Prod-like smoke
 
 ```bash
-docker compose --env-file .env.prod.example -f docker-compose.yml -f docker-compose.prod.yml up -d --build --wait postgres valkey minio api web
+docker compose --env-file .env.prod.example -f docker-compose.yml -f docker-compose.prod.yml up -d --build --wait postgres valkey minio migrate api web
 curl -fsS http://localhost:7310/health
 curl -fsS http://localhost:8080/health
 curl -fsS http://localhost:8080/api/v1/patients
+docker compose --env-file .env.prod.example -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -c "select version from schema_migrations order by version;"
 docker compose --env-file .env.prod.example -f docker-compose.yml -f docker-compose.prod.yml down -v --remove-orphans
 ```
 
@@ -48,4 +51,3 @@ pnpm compose:config
 - Không dùng `.env.prod.example` cho production thật.
 - Network `backend` là internal, chỉ web và API được đưa ra ngoài qua network `frontend`.
 - HAPI FHIR và Orthanc đang ở profile riêng để tránh vô tình bật dịch vụ nặng hoặc chưa có xác thực.
-
