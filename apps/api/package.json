@@ -13,7 +13,7 @@
   "dependencies": {
     "@benh-vien-so/contracts": "workspace:*",
     "@benh-vien-so/domain": "workspace:*",
-    "@fastify/cors": "^10.0.2",
+    "@fastify/cors": "^11.2.0",
     "@fastify/swagger": "^9.4.2",
     "@fastify/swagger-ui": "^5.2.2",
     "fastify": "^5.2.1",
