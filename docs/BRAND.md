@@ -30,8 +30,10 @@ WiiiCare Nexus by HoLiLiHu · The Wiii Lab
 - `docs/assets/brand/wiiicare-nexus-banner-16x9.png`: banner 16:9 cho slide/tài liệu.
 - `docs/assets/og/wiiicare-nexus-og.png`: ảnh Open Graph 1280 x 640.
 - `docs/assets/github-social-preview.png`: social preview 1280 x 640 cho GitHub.
+- `lab/ux-ui-brand/assets/backgrounds/clinical-light-abstract-background-imagegen.png`: nền trừu tượng Clinical Light dùng để dựng banner và social preview.
+- `lab/ux-ui-brand/scripts/render-social-assets.ps1`: script tái tạo social preview và banner từ nền, logo và typography.
 
-Ghi chú: logo hiện được chốt theo bản raster `imagegen`; nếu cần in ấn hoặc dùng trong hệ thống thiết kế dài hạn, bước tiếp theo là redraw lại thành SVG/vector dựa trên chính bản nguồn đã chốt.
+Ghi chú: logo hiện được chốt theo bản raster `imagegen`; nếu cần in ấn hoặc dùng trong hệ thống thiết kế dài hạn, bước tiếp theo là redraw lại thành SVG/vector dựa trên chính bản nguồn đã chốt. Các ảnh social/banner phải được dựng bằng nền không chữ, sau đó đặt typography/logo bằng công cụ render cục bộ để tránh chữ giả hoặc chi tiết sai lệch từ AI.
 
 ## Màu nền tảng: Clinical Light
 
