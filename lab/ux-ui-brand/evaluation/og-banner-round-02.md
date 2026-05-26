@@ -2,25 +2,25 @@
 
 ## Quyết định
 
-Chốt hướng dựng ảnh social preview và banner bằng quy trình hai lớp:
-
-- Lớp nền: dùng `imagegen` để tạo nền trừu tượng Clinical Light, không có chữ, không có con người, không có thiết bị y tế cụ thể và không có biểu tượng chẩn đoán dễ gây hiểu sai.
-- Lớp thương hiệu: đặt logo, tên dự án, mô tả và danh sách năng lực bằng render cục bộ để bảo đảm chữ tiếng Việt đúng dấu, khoảng cách ổn định và không xuất hiện chữ giả từ AI.
+Chốt lại quy trình chính thức cho social preview và banner: dùng `imagegen` tạo trọn ảnh, bao gồm nền, logo-like mark, typography, bố cục và chi tiết thương hiệu. Không dùng phương án tạo nền bằng AI rồi ghép chữ/logo bằng script cục bộ.
 
 ## Tệp chính thức
 
-- `docs/assets/github-social-preview.png`: bản GitHub social preview 1280 x 640.
-- `docs/assets/og/wiiicare-nexus-og.png`: bản Open Graph cùng kích thước với social preview.
-- `docs/assets/brand/wiiicare-nexus-banner-16x9.png`: bản banner 1920 x 1080 cho README, slide và tài liệu.
-- `lab/ux-ui-brand/assets/backgrounds/clinical-light-abstract-background-imagegen.png`: nền nguồn từ `imagegen`.
+- `docs/assets/github-social-preview.jpg`: bản GitHub social preview 1280 x 640, tối ưu dung lượng.
+- `docs/assets/og/wiiicare-nexus-og.jpg`: bản Open Graph 1280 x 640, tối ưu dung lượng.
+- `docs/assets/og/wiiicare-nexus-og.png`: bản Open Graph lossless.
+- `docs/assets/brand/wiiicare-nexus-banner-16x9.jpg`: bản banner 1920 x 1080, tối ưu dung lượng.
+- `docs/assets/brand/wiiicare-nexus-banner-16x9.png`: bản banner lossless.
+- `lab/ux-ui-brand/assets/final/wiiicare-nexus-social-preview-full-imagegen.png`: nguồn social preview do `imagegen` tạo toàn bộ.
+- `lab/ux-ui-brand/assets/final/wiiicare-nexus-banner-16x9-full-imagegen.png`: nguồn banner do `imagegen` tạo toàn bộ.
 
-## Tiêu chí kiểm tra
+## Nguyên tắc
 
-- Tỉ lệ GitHub social preview giữ ở 2:1 và xuất ở 1280 x 640 để phù hợp khuyến nghị hiển thị tốt nhất của GitHub.
-- Banner 16:9 giữ khoảng thở lớn, dùng nền sáng để không làm logo bị nặng hoặc giống poster AI.
-- Nội dung tiếng Việt do hệ thống render trực tiếp, không phụ thuộc vào khả năng sinh chữ của mô hình ảnh.
-- Motif hình ảnh chỉ gợi ý hồ sơ, luồng dữ liệu và kết nối hệ thống; không mô phỏng bác sĩ, bệnh nhân, xét nghiệm, phổi, ống nghiệm hoặc biểu tượng y tế sai phạm vi EMR/FHIR/PACS.
+- `imagegen` chịu trách nhiệm toàn bộ hình ảnh, bao gồm bố cục, chữ và biểu tượng.
+- Bước cục bộ sau sinh ảnh chỉ được dùng để đổi kích thước hoặc nén định dạng; không ghép chữ, không ghép logo, không thêm layer mới.
+- Ưu tiên nền sáng Clinical Light, motif hồ sơ điện tử, luồng dữ liệu, FHIR, PACS/DICOM và liên thông bệnh viện.
+- Tránh biểu tượng chữ thập y tế làm motif chính, X-quang/phổi rõ nghĩa, bác sĩ/bệnh nhân thật, panel UI rối và chữ giả khó đọc.
 
 ## Kết luận
 
-Round 02 phù hợp hơn với định vị WiiiCare Nexus: hiện đại, sạch, có cảm giác bệnh viện số nhưng vẫn đủ kỹ thuật cho một dự án monorepo về EMR, FHIR, PACS/DICOM và kiến trúc audit-ready.
+Round 02 chuyển sang đúng hướng full-imagegen theo yêu cầu thương hiệu: ảnh có cảm giác đồng nhất hơn, ít cơ khí hơn, vẫn giữ định vị WiiiCare Nexus cho EMR, FHIR, PACS/DICOM và kiến trúc audit-ready.

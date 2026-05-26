@@ -17,7 +17,7 @@ docs/assets/brand/wiiicare-nexus-final-source-imagegen.png
 docs/assets/brand/wiiicare-nexus-mark.png
 docs/assets/brand/wiiicare-nexus-logo.png
 docs/assets/og/wiiicare-nexus-og.png
-docs/assets/github-social-preview.png
+docs/assets/github-social-preview.jpg
 ```
 
 ## Lý do chọn

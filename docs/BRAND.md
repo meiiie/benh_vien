@@ -27,13 +27,15 @@ WiiiCare Nexus by HoLiLiHu · The Wiii Lab
 - `docs/assets/brand/wiiicare-nexus-mark.png`: logo mark vuông.
 - `docs/assets/brand/wiiicare-nexus-mark-on-light.png`: logo mark trên nền sáng.
 - `docs/assets/brand/wiiicare-nexus-logo.png`: logo lockup ngang.
-- `docs/assets/brand/wiiicare-nexus-banner-16x9.png`: banner 16:9 cho slide/tài liệu.
-- `docs/assets/og/wiiicare-nexus-og.png`: ảnh Open Graph 1280 x 640.
-- `docs/assets/github-social-preview.png`: social preview 1280 x 640 cho GitHub.
-- `lab/ux-ui-brand/assets/backgrounds/clinical-light-abstract-background-imagegen.png`: nền trừu tượng Clinical Light dùng để dựng banner và social preview.
-- `lab/ux-ui-brand/scripts/render-social-assets.ps1`: script tái tạo social preview và banner từ nền, logo và typography.
+- `docs/assets/brand/wiiicare-nexus-banner-16x9.png`: banner 16:9 lossless cho slide/tài liệu.
+- `docs/assets/brand/wiiicare-nexus-banner-16x9.jpg`: banner 16:9 bản nhẹ cho README/tài liệu web.
+- `docs/assets/og/wiiicare-nexus-og.png`: ảnh Open Graph 1280 x 640 bản lossless.
+- `docs/assets/og/wiiicare-nexus-og.jpg`: ảnh Open Graph 1280 x 640 bản nhẹ.
+- `docs/assets/github-social-preview.jpg`: social preview 1280 x 640 cho GitHub.
+- `lab/ux-ui-brand/assets/final/wiiicare-nexus-social-preview-full-imagegen.png`: nguồn social preview do `imagegen` tạo toàn bộ.
+- `lab/ux-ui-brand/assets/final/wiiicare-nexus-banner-16x9-full-imagegen.png`: nguồn banner do `imagegen` tạo toàn bộ.
 
-Ghi chú: logo hiện được chốt theo bản raster `imagegen`; nếu cần in ấn hoặc dùng trong hệ thống thiết kế dài hạn, bước tiếp theo là redraw lại thành SVG/vector dựa trên chính bản nguồn đã chốt. Các ảnh social/banner phải được dựng bằng nền không chữ, sau đó đặt typography/logo bằng công cụ render cục bộ để tránh chữ giả hoặc chi tiết sai lệch từ AI.
+Ghi chú: logo hiện được chốt theo bản raster `imagegen`; nếu cần in ấn hoặc dùng trong hệ thống thiết kế dài hạn, bước tiếp theo là redraw lại thành SVG/vector dựa trên chính bản nguồn đã chốt. Riêng social preview và banner phải được tạo trọn ảnh bằng `imagegen`; bước cục bộ chỉ được dùng để đổi kích thước/nén định dạng, không ghép chữ, logo hoặc bố cục thủ công.
 
 ## Màu nền tảng: Clinical Light
 

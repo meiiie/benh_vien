@@ -1,6 +1,6 @@
 # WiiiCare Nexus
 
-![WiiiCare Nexus social preview](docs/assets/github-social-preview.png)
+![WiiiCare Nexus social preview](docs/assets/github-social-preview.jpg)
 
 **WiiiCare Nexus** là dự án nền tảng bệnh viện số do **HoLiLiHu** thuộc **The Wiii Lab** phát triển, tập trung vào hồ sơ bệnh án điện tử, liên thông dữ liệu y tế và kiến trúc mở cho EMR/FHIR/PACS.
 
