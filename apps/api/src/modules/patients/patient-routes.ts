@@ -14,6 +14,7 @@ import type {
   PatientRepository,
   PatientSnapshot
 } from "@benh-vien-so/domain";
+import { requirePermission } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 
 export async function registerPatientRoutes(
@@ -21,7 +22,13 @@ export async function registerPatientRoutes(
   repository: PatientRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
-  app.get("/patients", async (request) => {
+  app.get("/patients", async (request, reply) => {
+    const actor = requirePermission(request, reply, "patient:list");
+
+    if (!actor) {
+      return;
+    }
+
     const patients = await repository.findAll();
     await recordAuditEvent(auditRepository, request, {
       action: "patient.list",
@@ -38,6 +45,12 @@ export async function registerPatientRoutes(
   });
 
   app.post("/patients", async (request, reply) => {
+    const actor = requirePermission(request, reply, "patient:create");
+
+    if (!actor) {
+      return;
+    }
+
     const parsed = CreatePatientRequestSchema.safeParse(request.body);
 
     if (!parsed.success) {
@@ -78,6 +91,12 @@ export async function registerPatientRoutes(
   });
 
   app.get("/patients/:id", async (request, reply) => {
+    const actor = requirePermission(request, reply, "patient:read");
+
+    if (!actor) {
+      return;
+    }
+
     const params = PatientIdParamsSchema.parse(request.params);
     const patient = await repository.findById(params.id);
 
@@ -98,6 +117,12 @@ export async function registerPatientRoutes(
   });
 
   app.get("/patients/:id/fhir", async (request, reply) => {
+    const actor = requirePermission(request, reply, "patient:fhir-export");
+
+    if (!actor) {
+      return;
+    }
+
     const params = PatientIdParamsSchema.parse(request.params);
     const patient = await repository.findById(params.id);
 

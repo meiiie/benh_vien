@@ -1,4 +1,5 @@
 export * from "./shared/domain-error.js";
+export * from "./access-control/access-control.js";
 export * from "./audit-event/audit-event.js";
 export * from "./audit-event/audit-event.repository.js";
 export * from "./patient/patient.js";

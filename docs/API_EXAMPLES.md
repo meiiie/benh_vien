@@ -12,6 +12,7 @@ Các ví dụ nghiệp vụ có thể gửi thêm header audit tối thiểu:
 
 ```bash
 -H "x-actor-id: practitioner-demo-001" \
+-H "x-actor-role: clinician" \
 -H "x-purpose-of-use: TREATMENT"
 ```
 
@@ -90,7 +91,31 @@ Kết quả mong muốn là JSON có `resourceType` bằng `DocumentReference`, 
 ```bash
 curl http://localhost:7310/api/v1/patients/patient-demo-001/audit-events \
   -H "x-actor-id: security-officer-demo" \
+  -H "x-actor-role: auditor" \
   -H "x-purpose-of-use: AUDIT"
 ```
 
 Kết quả mong muốn là danh sách sự kiện có `actorId`, `action`, `resourceType`, `resourceId`, `patientId`, `purposeOfUse` và thời điểm `occurredAt`. Ở bản prototype, nếu không truyền `x-actor-id`, API dùng actor mặc định `demo-clinician`; khi lên môi trường thật, giá trị này phải đến từ lớp xác thực/IAM.
+
+## Kiểm tra chặn quyền RBAC
+
+Ví dụ dưới đây cố tình dùng vai trò `auditor` để tạo bệnh nhân. API phải trả `403 FORBIDDEN`:
+
+```bash
+curl -i -X POST http://localhost:7310/api/v1/patients \
+  -H "Content-Type: application/json" \
+  -H "x-actor-id: security-officer-demo" \
+  -H "x-actor-role: auditor" \
+  -H "x-purpose-of-use: AUDIT" \
+  -d '{
+    "identifiers": [
+      {
+        "system": "urn:benh-vien-so:mrn",
+        "value": "MRN-DENIED-001",
+        "type": "hospital-mrn"
+      }
+    ],
+    "fullName": "RBAC Denied",
+    "managingOrganizationId": "hospital-hai-phong-demo"
+  }'
+```

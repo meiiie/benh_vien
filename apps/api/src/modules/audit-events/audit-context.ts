@@ -5,6 +5,7 @@ import type {
   AuditEventRepository,
   AuditResourceType
 } from "@benh-vien-so/domain";
+import { readActorContext } from "../access-control/access-context.js";
 
 type AuditInput = {
   readonly action: AuditAction;
@@ -19,17 +20,22 @@ export async function recordAuditEvent(
   request: FastifyRequest,
   input: AuditInput
 ): Promise<void> {
+  const actor = readActorContext(request);
+
   await repository.save(
     AuditEvent.record({
-      actorId: readHeader(request.headers["x-actor-id"]) ?? "demo-clinician",
+      actorId: actor.actorId,
       action: input.action,
       resourceType: input.resourceType,
       resourceId: input.resourceId,
       patientId: input.patientId,
-      purposeOfUse: readHeader(request.headers["x-purpose-of-use"]) ?? "TREATMENT",
+      purposeOfUse: actor.purposeOfUse,
       ipAddress: request.ip,
       userAgent: readHeader(request.headers["user-agent"]),
-      metadata: input.metadata ?? {}
+      metadata: {
+        actorRole: actor.role,
+        ...input.metadata
+      }
     })
   );
 }

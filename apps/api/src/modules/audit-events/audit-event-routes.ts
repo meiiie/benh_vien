@@ -6,6 +6,7 @@ import type {
   AuditEventSnapshot,
   PatientRepository
 } from "@benh-vien-so/domain";
+import { requirePermission } from "../access-control/access-context.js";
 import { recordAuditEvent } from "./audit-context.js";
 
 export async function registerAuditEventRoutes(
@@ -14,6 +15,12 @@ export async function registerAuditEventRoutes(
   auditRepository: AuditEventRepository
 ): Promise<void> {
   app.get("/patients/:patientId/audit-events", async (request, reply) => {
+    const actor = requirePermission(request, reply, "audit-event:list");
+
+    if (!actor) {
+      return;
+    }
+
     const params = PatientAuditEventsParamsSchema.parse(request.params);
     const patient = await patientRepository.findById(params.patientId);
 

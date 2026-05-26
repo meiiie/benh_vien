@@ -16,6 +16,7 @@ import type {
   ClinicalDocumentSnapshot,
   PatientRepository
 } from "@benh-vien-so/domain";
+import { requirePermission } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 
 export async function registerClinicalDocumentRoutes(
@@ -25,6 +26,12 @@ export async function registerClinicalDocumentRoutes(
   auditRepository: AuditEventRepository
 ): Promise<void> {
   app.get("/patients/:patientId/documents", async (request, reply) => {
+    const actor = requirePermission(request, reply, "clinical-document:list");
+
+    if (!actor) {
+      return;
+    }
+
     const params = PatientDocumentsParamsSchema.parse(request.params);
     const patient = await patientRepository.findById(params.patientId);
 
@@ -51,6 +58,12 @@ export async function registerClinicalDocumentRoutes(
   });
 
   app.post("/patients/:patientId/documents", async (request, reply) => {
+    const actor = requirePermission(request, reply, "clinical-document:create");
+
+    if (!actor) {
+      return;
+    }
+
     const params = PatientDocumentsParamsSchema.parse(request.params);
     const patient = await patientRepository.findById(params.patientId);
 
@@ -102,6 +115,12 @@ export async function registerClinicalDocumentRoutes(
   });
 
   app.post("/clinical-documents/:id/sign", async (request, reply) => {
+    const actor = requirePermission(request, reply, "clinical-document:sign");
+
+    if (!actor) {
+      return;
+    }
+
     const params = ClinicalDocumentIdParamsSchema.parse(request.params);
     const document = await documentRepository.findById(params.id);
 
@@ -138,6 +157,12 @@ export async function registerClinicalDocumentRoutes(
   });
 
   app.get("/clinical-documents/:id/fhir", async (request, reply) => {
+    const actor = requirePermission(request, reply, "clinical-document:fhir-export");
+
+    if (!actor) {
+      return;
+    }
+
     const params = ClinicalDocumentIdParamsSchema.parse(request.params);
     const document = await documentRepository.findById(params.id);
 

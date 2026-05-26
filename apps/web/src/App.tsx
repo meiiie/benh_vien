@@ -128,11 +128,13 @@ const apiBaseUrl =
 
 const treatmentAuditHeaders = {
   "x-actor-id": "practitioner-demo-001",
+  "x-actor-role": "clinician",
   "x-purpose-of-use": "TREATMENT"
 };
 
 const auditReviewHeaders = {
   "x-actor-id": "security-officer-demo",
+  "x-actor-role": "auditor",
   "x-purpose-of-use": "AUDIT"
 };
 
@@ -482,6 +484,11 @@ export function App() {
           <span>API base</span>
           <strong>{apiBaseUrl}</strong>
           <small>{statusMessage}</small>
+          <div className="access-summary">
+            <span>Access policy</span>
+            <strong>clinician/TREATMENT · auditor/AUDIT</strong>
+            <small>API đang chặn sai vai trò bằng 403; header hiện chỉ phục vụ demo.</small>
+          </div>
         </aside>
       </section>
 
@@ -705,7 +712,10 @@ export function App() {
                 </div>
                 <div>
                   <span>Mục đích</span>
-                  <strong>{event.purposeOfUse ?? "Chưa khai báo"}</strong>
+                  <strong>
+                    {event.purposeOfUse ?? "Chưa khai báo"}
+                    {typeof event.metadata.actorRole === "string" ? ` · ${event.metadata.actorRole}` : ""}
+                  </strong>
                 </div>
               </div>
             ))}

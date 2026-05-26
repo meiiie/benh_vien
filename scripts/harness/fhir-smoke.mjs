@@ -8,8 +8,14 @@ if (!existsSync(domainEntry)) {
   throw new Error("packages/domain/dist/index.js was not found. Run `pnpm build` first.");
 }
 
-const { AuditEvent, ClinicalDocument, Patient, mapClinicalDocumentToFhir, mapPatientToFhir } =
-  await import(pathToFileURL(domainEntry).href);
+const {
+  AuditEvent,
+  ClinicalDocument,
+  Patient,
+  canAccess,
+  mapClinicalDocumentToFhir,
+  mapPatientToFhir
+} = await import(pathToFileURL(domainEntry).href);
 
 const patient = Patient.register({
   id: "patient-harness-001",
@@ -86,16 +92,60 @@ if (auditEvent.toSnapshot().action !== "clinical-document.fhir-export") {
   throw new Error(`Expected audit action clinical-document.fhir-export.`);
 }
 
+const clinicianCanCreateDocument = canAccess(
+  {
+    actorId: "practitioner-harness-001",
+    role: "clinician",
+    purposeOfUse: "TREATMENT"
+  },
+  "clinical-document:create"
+);
+
+const clinicianCanReadAudit = canAccess(
+  {
+    actorId: "practitioner-harness-001",
+    role: "clinician",
+    purposeOfUse: "TREATMENT"
+  },
+  "audit-event:list"
+);
+
+const auditorCanReadAudit = canAccess(
+  {
+    actorId: "auditor-harness-001",
+    role: "auditor",
+    purposeOfUse: "AUDIT"
+  },
+  "audit-event:list"
+);
+
+if (!clinicianCanCreateDocument) {
+  throw new Error("Expected clinician/TREATMENT to create clinical documents.");
+}
+
+if (clinicianCanReadAudit) {
+  throw new Error("Expected clinician/TREATMENT to be denied audit-event:list.");
+}
+
+if (!auditorCanReadAudit) {
+  throw new Error("Expected auditor/AUDIT to read audit events.");
+}
+
 console.log(
   JSON.stringify(
     {
       status: "ok",
-      check: "FHIR Patient, DocumentReference and AuditEvent smoke test",
+      check: "FHIR, AuditEvent and RBAC smoke test",
       patientId: fhirPatient.id,
       patientResourceType: fhirPatient.resourceType,
       documentId: fhirDocumentReference.id,
       documentResourceType: fhirDocumentReference.resourceType,
-      auditAction: auditEvent.toSnapshot().action
+      auditAction: auditEvent.toSnapshot().action,
+      rbac: {
+        clinicianCanCreateDocument,
+        clinicianCanReadAudit,
+        auditorCanReadAudit
+      }
     },
     null,
     2
