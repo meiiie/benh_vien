@@ -1,6 +1,6 @@
 # Ví dụ API
 
-API hiện tại là prototype tối thiểu để kiểm chứng hướng kiến trúc. Chưa có database thật, dữ liệu đang nằm trong in-memory repository.
+API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm Patient, Encounter, ClinicalDocument, AuditEvent và FHIR facade.
 
 ## Kiểm tra sức khỏe API
 
@@ -51,6 +51,53 @@ curl http://localhost:7310/api/v1/patients/patient-demo-001/fhir
 ```
 
 Kết quả mong muốn là một JSON có `resourceType` bằng `Patient`, có định danh, họ tên, ngày sinh, giới tính và cơ sở quản lý. Đây là bước đầu để chứng minh dữ liệu nội bộ có thể chuyển sang chuẩn liên thông.
+
+## Lấy lượt khám của bệnh nhân
+
+```bash
+curl http://localhost:7310/api/v1/patients/patient-demo-001/encounters \
+  -H "x-actor-id: practitioner-demo-001" \
+  -H "x-actor-role: clinician" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+## Mở lượt khám mới
+
+```bash
+curl -X POST http://localhost:7310/api/v1/patients/patient-demo-001/encounters \
+  -H "Content-Type: application/json" \
+  -H "x-actor-id: practitioner-demo-001" \
+  -H "x-actor-role: clinician" \
+  -H "x-purpose-of-use: TREATMENT" \
+  -d '{
+    "class": "ambulatory",
+    "serviceType": "Khám ngoại trú",
+    "reasonText": "Tiếp nhận hồ sơ và đánh giá ban đầu",
+    "departmentId": "department-outpatient",
+    "attendingPractitionerId": "practitioner-demo-002",
+    "startedAt": "2026-05-27T03:00:00.000Z"
+  }'
+```
+
+## Kết thúc lượt khám
+
+```bash
+curl -X POST http://localhost:7310/api/v1/encounters/encounter-demo-002/finish \
+  -H "x-actor-id: practitioner-demo-001" \
+  -H "x-actor-role: clinician" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+## Xuất lượt khám sang FHIR Encounter
+
+```bash
+curl http://localhost:7310/api/v1/encounters/encounter-demo-001/fhir \
+  -H "x-actor-id: practitioner-demo-001" \
+  -H "x-actor-role: clinician" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+Kết quả mong muốn là JSON có `resourceType` bằng `Encounter`, có `subject` trỏ về `Patient`, `participant` trỏ về `Practitioner`, `period`, `reasonCode` và `serviceProvider` nếu có khoa/phòng.
 
 ## Lấy tài liệu bệnh án của một bệnh nhân
 

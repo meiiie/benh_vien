@@ -14,6 +14,7 @@ import type {
   AuditEventRepository,
   ClinicalDocumentRepository,
   ClinicalDocumentSnapshot,
+  EncounterRepository,
   PatientRepository
 } from "@benh-vien-so/domain";
 import { requirePermission } from "../access-control/access-context.js";
@@ -22,6 +23,7 @@ import { recordAuditEvent } from "../audit-events/audit-context.js";
 export async function registerClinicalDocumentRoutes(
   app: FastifyInstance,
   patientRepository: PatientRepository,
+  encounterRepository: EncounterRepository,
   documentRepository: ClinicalDocumentRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
@@ -80,6 +82,17 @@ export async function registerClinicalDocumentRoutes(
         error: "INVALID_CLINICAL_DOCUMENT_PAYLOAD",
         issues: parsed.error.issues
       });
+    }
+
+    if (parsed.data.encounterId) {
+      const encounter = await encounterRepository.findById(parsed.data.encounterId);
+
+      if (!encounter || encounter.patientId !== params.patientId) {
+        return reply.status(422).send({
+          error: "ENCOUNTER_MISMATCH",
+          message: "Tài liệu phải gắn với lượt khám thuộc cùng bệnh nhân."
+        });
+      }
     }
 
     try {

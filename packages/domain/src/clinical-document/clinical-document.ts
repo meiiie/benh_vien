@@ -6,7 +6,12 @@ export type ClinicalDocumentType =
   | "lab-report"
   | "imaging-report"
   | "referral-letter"
-  | "consent-form";
+  | "consent-form"
+  | "advance-directive"
+  | "ccda"
+  | "ccr"
+  | "medical-record"
+  | "patient-information";
 
 export type ClinicalDocumentStatus = "draft" | "signed" | "superseded" | "entered-in-error";
 

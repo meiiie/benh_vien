@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Patient, mapPatientToFhir } from "../index.js";
+import { Encounter, Patient, mapEncounterToFhir, mapPatientToFhir } from "../index.js";
 
 describe("Patient", () => {
   it("registers a patient with normalized demographics", () => {
@@ -50,5 +50,29 @@ describe("Patient", () => {
       }
     });
   });
-});
 
+  it("maps an encounter to FHIR Encounter", () => {
+    const encounter = Encounter.create({
+      id: "encounter-test-001",
+      patientId: "patient-test-002",
+      class: "ambulatory",
+      serviceType: "Khám ngoại trú",
+      reasonText: "Tái khám sau ra viện",
+      departmentId: "department-outpatient",
+      attendingPractitionerId: "practitioner-test-001",
+      startedAt: "2026-05-27T03:00:00.000Z"
+    });
+
+    expect(mapEncounterToFhir(encounter)).toMatchObject({
+      resourceType: "Encounter",
+      id: "encounter-test-001",
+      status: "in-progress",
+      subject: {
+        reference: "Patient/patient-test-002"
+      },
+      serviceProvider: {
+        reference: "Organization/department-outpatient"
+      }
+    });
+  });
+});

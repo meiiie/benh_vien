@@ -5,13 +5,18 @@ export type AuditAction =
   | "patient.create"
   | "patient.read"
   | "patient.fhir-export"
+  | "encounter.list"
+  | "encounter.create"
+  | "encounter.read"
+  | "encounter.finish"
+  | "encounter.fhir-export"
   | "clinical-document.list"
   | "clinical-document.create"
   | "clinical-document.sign"
   | "clinical-document.fhir-export"
   | "audit-event.list";
 
-export type AuditResourceType = "Patient" | "ClinicalDocument" | "AuditEvent";
+export type AuditResourceType = "Patient" | "Encounter" | "ClinicalDocument" | "AuditEvent";
 
 export type AuditEventSnapshot = {
   readonly id?: string;

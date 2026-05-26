@@ -2,13 +2,20 @@ import { FormEvent, useEffect, useState } from "react";
 
 type PatientIdentifierType = "national-id" | "insurance-id" | "hospital-mrn" | "legacy-id";
 type PatientGender = "male" | "female" | "other" | "unknown";
+type EncounterClass = "ambulatory" | "inpatient" | "emergency" | "virtual";
+type EncounterStatus = "planned" | "in-progress" | "finished" | "cancelled" | "entered-in-error";
 type ClinicalDocumentType =
   | "admission-note"
   | "discharge-summary"
   | "lab-report"
   | "imaging-report"
   | "referral-letter"
-  | "consent-form";
+  | "consent-form"
+  | "advance-directive"
+  | "ccda"
+  | "ccr"
+  | "medical-record"
+  | "patient-information";
 type ClinicalDocumentStatus = "draft" | "signed" | "superseded" | "entered-in-error";
 
 type PatientIdentifier = {
@@ -27,6 +34,21 @@ type Patient = {
   readonly phone?: string;
   readonly managingOrganizationId: string;
   readonly status: "active" | "merged" | "inactive";
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
+type Encounter = {
+  readonly id: string;
+  readonly patientId: string;
+  readonly status: EncounterStatus;
+  readonly class: EncounterClass;
+  readonly serviceType: string;
+  readonly reasonText: string;
+  readonly departmentId?: string;
+  readonly attendingPractitionerId: string;
+  readonly startedAt: string;
+  readonly endedAt?: string;
   readonly createdAt: string;
   readonly updatedAt: string;
 };
@@ -50,13 +72,18 @@ type AuditAction =
   | "patient.create"
   | "patient.read"
   | "patient.fhir-export"
+  | "encounter.list"
+  | "encounter.create"
+  | "encounter.read"
+  | "encounter.finish"
+  | "encounter.fhir-export"
   | "clinical-document.list"
   | "clinical-document.create"
   | "clinical-document.sign"
   | "clinical-document.fhir-export"
   | "audit-event.list";
 
-type AuditResourceType = "Patient" | "ClinicalDocument" | "AuditEvent";
+type AuditResourceType = "Patient" | "Encounter" | "ClinicalDocument" | "AuditEvent";
 
 type AuditEvent = {
   readonly id?: string;
@@ -74,6 +101,10 @@ type AuditEvent = {
 
 type PatientsResponse = {
   readonly items: readonly Patient[];
+};
+
+type EncountersResponse = {
+  readonly items: readonly Encounter[];
 };
 
 type ClinicalDocumentsResponse = {
@@ -95,6 +126,15 @@ type NewPatientForm = {
   managingOrganizationId: string;
 };
 
+type NewEncounterForm = {
+  class: EncounterClass;
+  serviceType: string;
+  reasonText: string;
+  departmentId: string;
+  attendingPractitionerId: string;
+  startedAt: string;
+};
+
 type NewClinicalDocumentForm = {
   encounterId: string;
   type: ClinicalDocumentType;
@@ -114,8 +154,17 @@ const defaultPatientForm: NewPatientForm = {
   managingOrganizationId: "hospital-hai-phong-demo"
 };
 
+const defaultEncounterForm: NewEncounterForm = {
+  class: "ambulatory",
+  serviceType: "Khám ngoại trú",
+  reasonText: "Tiếp nhận hồ sơ và đánh giá tình trạng ban đầu.",
+  departmentId: "department-outpatient",
+  attendingPractitionerId: "practitioner-demo-002",
+  startedAt: "2026-05-27T10:00"
+};
+
 const defaultClinicalDocumentForm: NewClinicalDocumentForm = {
-  encounterId: "encounter-demo-002",
+  encounterId: "",
   type: "referral-letter",
   title: "Giấy chuyển tuyến điện tử - Hải Phòng",
   storageUri: "s3://wiiicare-demo/patients/current/referral-letter.pdf",
@@ -138,54 +187,74 @@ const auditReviewHeaders = {
   "x-purpose-of-use": "AUDIT"
 };
 
+const workflowSteps = [
+  "Tiếp nhận bệnh nhân",
+  "Mở lượt khám",
+  "Gắn tài liệu",
+  "Ký/xác thực",
+  "Xuất FHIR"
+];
+
+const documentTaxonomy = [
+  "Advance Directive",
+  "CCD/CCDA/CCR",
+  "Lab Report",
+  "Medical Record",
+  "Patient Information",
+  "FHIR Export Document"
+];
+
 const referenceSignals = [
   {
     name: "OpenEMR",
-    value: "Luồng bệnh nhân, encounter, tài liệu và FHIR API"
+    value: "Workbench bệnh viện: lịch khám, hồ sơ bệnh nhân, encounter, tài liệu, audit và API."
   },
   {
-    name: "HAPI FHIR",
-    value: "FHIR R4 server, round-trip resource và CapabilityStatement"
+    name: "HL7 FHIR R4",
+    value: "Patient, Encounter và DocumentReference là lõi trao đổi dữ liệu trong lát cắt này."
   },
   {
-    name: "Orthanc",
-    value: "PACS/DICOMweb, EMR chỉ giữ metadata ảnh"
+    name: "Bối cảnh Việt Nam",
+    value: "Ưu tiên Hải Phòng, định danh nội bộ, BHYT/CCCD ở lớp dữ liệu; chưa giả lập HIS/LIS/PACS khi chưa tích hợp thật."
   },
   {
-    name: "Vietsens HIS",
-    value: "Thuật ngữ/luồng HIS nội địa: viện phí, BHYT, chỉ định dịch vụ"
+    name: "Product direction",
+    value: "Không làm landing page đẹp trước; xây bàn làm việc nghiệp vụ cho nhân viên y tế trước."
   }
-];
-
-const nextMilestones = [
-  "Encounter/Treatment: một lần khám hoặc đợt điều trị gắn với bệnh nhân",
-  "Audit Event: ghi lại ai xem/sửa/ký/chia sẻ hồ sơ",
-  "Interop: đẩy Patient/DocumentReference sang HAPI FHIR",
-  "Imaging: liên kết metadata ảnh từ Orthanc, không lưu DICOM trong EMR",
-  "Consent: kiểm soát đồng ý chia sẻ khi chuyển hồ sơ giữa bệnh viện"
 ];
 
 export function App() {
   const [patients, setPatients] = useState<readonly Patient[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string>();
+  const [encounters, setEncounters] = useState<readonly Encounter[]>([]);
+  const [selectedEncounterId, setSelectedEncounterId] = useState<string>();
   const [clinicalDocuments, setClinicalDocuments] = useState<readonly ClinicalDocument[]>([]);
-  const [auditEvents, setAuditEvents] = useState<readonly AuditEvent[]>([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string>();
+  const [auditEvents, setAuditEvents] = useState<readonly AuditEvent[]>([]);
   const [patientFhirPreview, setPatientFhirPreview] = useState<unknown>();
+  const [encounterFhirPreview, setEncounterFhirPreview] = useState<unknown>();
   const [documentFhirPreview, setDocumentFhirPreview] = useState<unknown>();
   const [patientForm, setPatientForm] = useState<NewPatientForm>(defaultPatientForm);
+  const [encounterForm, setEncounterForm] = useState<NewEncounterForm>(defaultEncounterForm);
   const [documentForm, setDocumentForm] =
     useState<NewClinicalDocumentForm>(defaultClinicalDocumentForm);
   const [statusMessage, setStatusMessage] = useState("Đang kết nối API...");
   const [isLoadingPatients, setIsLoadingPatients] = useState(true);
+  const [isLoadingEncounters, setIsLoadingEncounters] = useState(false);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [isLoadingAuditEvents, setIsLoadingAuditEvents] = useState(false);
   const [isSubmittingPatient, setIsSubmittingPatient] = useState(false);
+  const [isSubmittingEncounter, setIsSubmittingEncounter] = useState(false);
   const [isSubmittingDocument, setIsSubmittingDocument] = useState(false);
   const [isSigningDocument, setIsSigningDocument] = useState(false);
+  const [isFinishingEncounter, setIsFinishingEncounter] = useState(false);
 
   const selectedPatient = patients.find((patient) => patient.id === selectedPatientId);
+  const selectedEncounter = encounters.find((encounter) => encounter.id === selectedEncounterId);
   const selectedDocument = clinicalDocuments.find((document) => document.id === selectedDocumentId);
+  const selectedEncounterDocuments = selectedEncounter
+    ? clinicalDocuments.filter((document) => document.encounterId === selectedEncounter.id)
+    : [];
 
   useEffect(() => {
     void loadPatients();
@@ -194,16 +263,29 @@ export function App() {
   useEffect(() => {
     if (!selectedPatientId) {
       setPatientFhirPreview(undefined);
+      setEncounterFhirPreview(undefined);
+      setDocumentFhirPreview(undefined);
+      setEncounters([]);
       setClinicalDocuments([]);
       setAuditEvents([]);
+      setSelectedEncounterId(undefined);
       setSelectedDocumentId(undefined);
       return;
     }
 
-    void loadPatientFhirPreview(selectedPatientId);
-    void loadClinicalDocuments(selectedPatientId);
-    void loadAuditEvents(selectedPatientId);
+    void loadPatientWorkspace(selectedPatientId);
   }, [selectedPatientId]);
+
+  useEffect(() => {
+    if (!selectedEncounterId) {
+      setEncounterFhirPreview(undefined);
+      setDocumentForm((current) => ({ ...current, encounterId: "" }));
+      return;
+    }
+
+    setDocumentForm((current) => ({ ...current, encounterId: selectedEncounterId }));
+    void loadEncounterFhirPreview(selectedEncounterId);
+  }, [selectedEncounterId]);
 
   useEffect(() => {
     if (!selectedDocumentId) {
@@ -228,7 +310,7 @@ export function App() {
 
       const data = (await response.json()) as PatientsResponse;
       setPatients(data.items);
-      setSelectedPatientId(nextSelectedId ?? data.items[0]?.id);
+      setSelectedPatientId(nextSelectedId ?? selectedPatientId ?? data.items[0]?.id);
       setStatusMessage(`Đã tải ${data.items.length} hồ sơ bệnh nhân từ backend.`);
     } catch (error) {
       setStatusMessage(
@@ -238,6 +320,43 @@ export function App() {
       );
     } finally {
       setIsLoadingPatients(false);
+    }
+  }
+
+  async function loadPatientWorkspace(patientId: string) {
+    await Promise.all([
+      loadPatientFhirPreview(patientId),
+      loadEncounters(patientId),
+      loadClinicalDocuments(patientId),
+      loadAuditEvents(patientId)
+    ]);
+  }
+
+  async function loadEncounters(patientId: string, nextSelectedEncounterId?: string) {
+    setIsLoadingEncounters(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/encounters`, {
+        headers: treatmentAuditHeaders
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      const data = (await response.json()) as EncountersResponse;
+      setEncounters(data.items);
+      setSelectedEncounterId(nextSelectedEncounterId ?? data.items[0]?.id);
+    } catch (error) {
+      setEncounters([]);
+      setSelectedEncounterId(undefined);
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể tải lượt khám: ${error.message}`
+          : "Không thể tải lượt khám."
+      );
+    } finally {
+      setIsLoadingEncounters(false);
     }
   }
 
@@ -261,8 +380,8 @@ export function App() {
       setSelectedDocumentId(undefined);
       setStatusMessage(
         error instanceof Error
-          ? `Không thể tải tài liệu lâm sàng: ${error.message}`
-          : "Không thể tải tài liệu lâm sàng."
+          ? `Không thể tải tài liệu bệnh án: ${error.message}`
+          : "Không thể tải tài liệu bệnh án."
       );
     } finally {
       setIsLoadingDocuments(false);
@@ -312,6 +431,27 @@ export function App() {
           error instanceof Error
             ? `Không thể xuất FHIR Patient: ${error.message}`
             : "Không thể xuất FHIR Patient."
+      });
+    }
+  }
+
+  async function loadEncounterFhirPreview(encounterId: string) {
+    try {
+      const response = await fetch(`${apiBaseUrl}/encounters/${encounterId}/fhir`, {
+        headers: treatmentAuditHeaders
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      setEncounterFhirPreview(await response.json());
+    } catch (error) {
+      setEncounterFhirPreview({
+        error:
+          error instanceof Error
+            ? `Không thể xuất FHIR Encounter: ${error.message}`
+            : "Không thể xuất FHIR Encounter."
       });
     }
   }
@@ -379,8 +519,7 @@ export function App() {
 
       const createdPatient = (await response.json()) as Patient;
       await loadPatients(createdPatient.id);
-      await loadAuditEvents(createdPatient.id);
-      setStatusMessage(`Đã tạo hồ sơ ${createdPatient.fullName} và chọn ngay trên giao diện.`);
+      setStatusMessage(`Đã tạo hồ sơ ${createdPatient.fullName} và chọn ngay trên workspace.`);
     } catch (error) {
       setStatusMessage(
         error instanceof Error
@@ -392,11 +531,92 @@ export function App() {
     }
   }
 
+  async function handleCreateEncounter(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedPatient) {
+      setStatusMessage("Cần chọn bệnh nhân trước khi mở lượt khám.");
+      return;
+    }
+
+    setIsSubmittingEncounter(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/encounters`, {
+        method: "POST",
+        headers: {
+          ...treatmentAuditHeaders,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          class: encounterForm.class,
+          serviceType: encounterForm.serviceType,
+          reasonText: encounterForm.reasonText,
+          departmentId: encounterForm.departmentId || undefined,
+          attendingPractitionerId: encounterForm.attendingPractitionerId,
+          startedAt: toApiDateTime(encounterForm.startedAt)
+        })
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => undefined);
+        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
+      }
+
+      const createdEncounter = (await response.json()) as Encounter;
+      await loadEncounters(selectedPatient.id, createdEncounter.id);
+      await loadAuditEvents(selectedPatient.id);
+      setStatusMessage(`Đã mở lượt khám "${createdEncounter.serviceType}" cho ${selectedPatient.fullName}.`);
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể mở lượt khám: ${error.message}`
+          : "Không thể mở lượt khám."
+      );
+    } finally {
+      setIsSubmittingEncounter(false);
+    }
+  }
+
+  async function handleFinishEncounter(encounterId: string) {
+    if (!selectedPatient) {
+      return;
+    }
+
+    setIsFinishingEncounter(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/encounters/${encounterId}/finish`, {
+        method: "POST",
+        headers: treatmentAuditHeaders
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => undefined);
+        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
+      }
+
+      const finishedEncounter = (await response.json()) as Encounter;
+      await loadEncounters(selectedPatient.id, finishedEncounter.id);
+      await loadEncounterFhirPreview(finishedEncounter.id);
+      await loadAuditEvents(selectedPatient.id);
+      setStatusMessage(`Đã kết thúc lượt khám "${finishedEncounter.serviceType}".`);
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể kết thúc lượt khám: ${error.message}`
+          : "Không thể kết thúc lượt khám."
+      );
+    } finally {
+      setIsFinishingEncounter(false);
+    }
+  }
+
   async function handleCreateClinicalDocument(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!selectedPatient) {
-      setStatusMessage("Cần chọn bệnh nhân trước khi tạo tài liệu lâm sàng.");
+      setStatusMessage("Cần chọn bệnh nhân trước khi tạo tài liệu bệnh án.");
       return;
     }
 
@@ -430,8 +650,8 @@ export function App() {
     } catch (error) {
       setStatusMessage(
         error instanceof Error
-          ? `Không thể tạo tài liệu lâm sàng: ${error.message}`
-          : "Không thể tạo tài liệu lâm sàng."
+          ? `Không thể tạo tài liệu bệnh án: ${error.message}`
+          : "Không thể tạo tài liệu bệnh án."
       );
     } finally {
       setIsSubmittingDocument(false);
@@ -460,8 +680,8 @@ export function App() {
     } catch (error) {
       setStatusMessage(
         error instanceof Error
-          ? `Không thể ký tài liệu lâm sàng: ${error.message}`
-          : "Không thể ký tài liệu lâm sàng."
+          ? `Không thể ký tài liệu bệnh án: ${error.message}`
+          : "Không thể ký tài liệu bệnh án."
       );
     } finally {
       setIsSigningDocument(false);
@@ -472,11 +692,11 @@ export function App() {
     <main className="shell">
       <section className="hero">
         <div className="hero-copy">
-          <p className="eyebrow">WiiiCare Nexus · EMR interoperability slice</p>
-          <h1>Bệnh án điện tử đang chạy bằng backend thật</h1>
+          <p className="eyebrow">WiiiCare Nexus · Patient workspace</p>
+          <h1>Bàn làm việc bệnh án điện tử theo luồng EMR thật</h1>
           <p className="lede">
-            Lát cắt hiện tại mô phỏng phần lõi của EMR: định danh bệnh nhân, tài liệu lâm sàng,
-            ký hồ sơ và xuất metadata theo HL7 FHIR để chuẩn bị liên thông giữa bệnh viện.
+            Bản này chuyển trọng tâm từ dashboard trình diễn sang workspace nghiệp vụ: bệnh nhân,
+            lượt khám, tài liệu bệnh án, ký xác thực, audit trail và FHIR Patient/Encounter/DocumentReference.
           </p>
         </div>
 
@@ -487,20 +707,18 @@ export function App() {
           <div className="access-summary">
             <span>Access policy</span>
             <strong>clinician/TREATMENT · auditor/AUDIT</strong>
-            <small>API đang chặn sai vai trò bằng 403; header hiện chỉ phục vụ demo.</small>
+            <small>Luồng thao tác mô phỏng vai trò điều trị; audit chỉ mở bằng vai trò kiểm toán.</small>
           </div>
         </aside>
       </section>
 
-      <section className="workflow-strip" aria-label="Luồng ưu tiên">
-        {["Patient", "Clinical Document", "DocumentReference", "Audit", "PACS link"].map(
-          (item, index) => (
-            <div className="workflow-step" key={item}>
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              <strong>{item}</strong>
-            </div>
-          )
-        )}
+      <section className="workflow-strip" aria-label="Luồng nghiệp vụ ưu tiên">
+        {workflowSteps.map((item, index) => (
+          <div className="workflow-step" key={item}>
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            <strong>{item}</strong>
+          </div>
+        ))}
       </section>
 
       <section className="workspace">
@@ -539,7 +757,7 @@ export function App() {
         <article className="panel patient-detail">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">EMR core</p>
+              <p className="eyebrow">Patient chart</p>
               <h2>Hồ sơ đang chọn</h2>
             </div>
             {selectedPatient ? <span className="pill">{selectedPatient.status}</span> : null}
@@ -567,13 +785,136 @@ export function App() {
           )}
         </article>
 
+        <article className="panel encounter-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Encounter timeline</p>
+              <h2>Lượt khám và đợt điều trị</h2>
+            </div>
+            <span className="pill cyan">{isLoadingEncounters ? "loading" : `${encounters.length} lượt`}</span>
+          </div>
+
+          <div className="encounter-layout">
+            <div className="timeline">
+              {encounters.map((encounter) => (
+                <button
+                  className={
+                    encounter.id === selectedEncounterId ? "timeline-item selected" : "timeline-item"
+                  }
+                  key={encounter.id}
+                  type="button"
+                  onClick={() => setSelectedEncounterId(encounter.id)}
+                >
+                  <span>{formatDateTime(encounter.startedAt)}</span>
+                  <strong>{encounter.serviceType}</strong>
+                  <small>
+                    {formatEncounterClass(encounter.class)} · {formatEncounterStatus(encounter.status)}
+                  </small>
+                </button>
+              ))}
+              {encounters.length === 0 ? (
+                <p className="empty-state">Chưa có lượt khám nào cho bệnh nhân này.</p>
+              ) : null}
+            </div>
+
+            <div className="encounter-summary">
+              {selectedEncounter ? (
+                <>
+                  <div className="document-meta">
+                    <Info label="Lý do khám" value={selectedEncounter.reasonText} />
+                    <Info label="Khoa/phòng" value={selectedEncounter.departmentId ?? "Chưa gắn"} />
+                    <Info label="Nhân sự phụ trách" value={selectedEncounter.attendingPractitionerId} />
+                    <Info label="Tài liệu gắn lượt khám" value={`${selectedEncounterDocuments.length}`} />
+                  </div>
+                  <div className="action-row">
+                    <button
+                      className="primary-button"
+                      type="button"
+                      disabled={selectedEncounter.status !== "in-progress" || isFinishingEncounter}
+                      onClick={() => void handleFinishEncounter(selectedEncounter.id)}
+                    >
+                      {isFinishingEncounter ? "Đang kết thúc..." : "Kết thúc lượt khám"}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <p className="empty-state">Chọn một lượt khám để xem chi tiết và xuất FHIR Encounter.</p>
+              )}
+            </div>
+          </div>
+
+          <form className="encounter-form" onSubmit={(event) => void handleCreateEncounter(event)}>
+            <label>
+              Loại lượt khám
+              <select
+                value={encounterForm.class}
+                onChange={(event) =>
+                  setEncounterForm({ ...encounterForm, class: event.target.value as EncounterClass })
+                }
+              >
+                <option value="ambulatory">Ngoại trú</option>
+                <option value="inpatient">Nội trú</option>
+                <option value="emergency">Cấp cứu</option>
+                <option value="virtual">Khám từ xa</option>
+              </select>
+            </label>
+            <label>
+              Dịch vụ/khoa khám
+              <input
+                value={encounterForm.serviceType}
+                onChange={(event) => setEncounterForm({ ...encounterForm, serviceType: event.target.value })}
+              />
+            </label>
+            <label className="wide-field">
+              Lý do khám
+              <input
+                value={encounterForm.reasonText}
+                onChange={(event) => setEncounterForm({ ...encounterForm, reasonText: event.target.value })}
+              />
+            </label>
+            <label>
+              Khoa/phòng
+              <input
+                value={encounterForm.departmentId}
+                onChange={(event) => setEncounterForm({ ...encounterForm, departmentId: event.target.value })}
+              />
+            </label>
+            <label>
+              Nhân sự phụ trách
+              <input
+                value={encounterForm.attendingPractitionerId}
+                onChange={(event) =>
+                  setEncounterForm({ ...encounterForm, attendingPractitionerId: event.target.value })
+                }
+              />
+            </label>
+            <label className="wide-field">
+              Thời điểm bắt đầu
+              <input
+                type="datetime-local"
+                value={encounterForm.startedAt}
+                onChange={(event) => setEncounterForm({ ...encounterForm, startedAt: event.target.value })}
+              />
+            </label>
+            <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingEncounter}>
+              {isSubmittingEncounter ? "Đang mở..." : "Mở lượt khám"}
+            </button>
+          </form>
+        </article>
+
         <article className="panel document-panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Clinical documents</p>
+              <p className="eyebrow">Document center</p>
               <h2>Tài liệu bệnh án</h2>
             </div>
             <span className="pill cyan">{isLoadingDocuments ? "loading" : `${clinicalDocuments.length} docs`}</span>
+          </div>
+
+          <div className="taxonomy-strip" aria-label="Phân loại tài liệu tham chiếu OpenEMR">
+            {documentTaxonomy.map((item) => (
+              <span key={item}>{item}</span>
+            ))}
           </div>
 
           <div className="document-layout">
@@ -588,12 +929,13 @@ export function App() {
                   <span>{formatDocumentType(document.type)}</span>
                   <strong>{document.title}</strong>
                   <small>
-                    {formatDocumentStatus(document.status)} · {formatDateTime(document.updatedAt)}
+                    {formatDocumentStatus(document.status)} ·{" "}
+                    {document.encounterId ? `Encounter ${document.encounterId}` : "Chưa gắn encounter"}
                   </small>
                 </button>
               ))}
               {clinicalDocuments.length === 0 ? (
-                <p className="empty-state">Bệnh nhân này chưa có tài liệu lâm sàng.</p>
+                <p className="empty-state">Bệnh nhân này chưa có tài liệu bệnh án.</p>
               ) : null}
             </div>
 
@@ -604,7 +946,7 @@ export function App() {
                     <Info label="Loại tài liệu" value={formatDocumentType(selectedDocument.type)} />
                     <Info label="Trạng thái" value={formatDocumentStatus(selectedDocument.status)} />
                     <Info label="Encounter" value={selectedDocument.encounterId ?? "Chưa gắn"} />
-                    <Info label="Người ký/tạo" value={selectedDocument.authorPractitionerId} />
+                    <Info label="Người tạo" value={selectedDocument.authorPractitionerId} />
                   </div>
                   <code>{selectedDocument.storageUri}</code>
                   <div className="action-row">
@@ -639,14 +981,26 @@ export function App() {
                 <option value="imaging-report">Kết quả chẩn đoán hình ảnh</option>
                 <option value="admission-note">Phiếu nhập viện</option>
                 <option value="consent-form">Phiếu đồng ý điều trị</option>
+                <option value="advance-directive">Chỉ dẫn chăm sóc trước</option>
+                <option value="ccda">CCDA</option>
+                <option value="ccr">CCR</option>
+                <option value="medical-record">Hồ sơ bệnh án</option>
+                <option value="patient-information">Thông tin bệnh nhân</option>
               </select>
             </label>
             <label>
-              Mã lần khám/đợt điều trị
-              <input
+              Gắn với lượt khám
+              <select
                 value={documentForm.encounterId}
                 onChange={(event) => setDocumentForm({ ...documentForm, encounterId: event.target.value })}
-              />
+              >
+                <option value="">Không gắn</option>
+                {encounters.map((encounter) => (
+                  <option key={encounter.id} value={encounter.id}>
+                    {encounter.serviceType} · {formatDateTime(encounter.startedAt)}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="wide-field">
               Tiêu đề tài liệu
@@ -721,7 +1075,8 @@ export function App() {
             ))}
             {auditEvents.length === 0 ? (
               <p className="empty-state">
-                Chưa có audit event cho bệnh nhân đang chọn. Hãy xem FHIR, tạo tài liệu hoặc ký tài liệu để phát sinh log.
+                Chưa có audit event cho bệnh nhân đang chọn. Hãy xem FHIR, mở lượt khám hoặc ký tài liệu
+                để phát sinh log.
               </p>
             ) : null}
           </div>
@@ -804,41 +1159,15 @@ export function App() {
           </form>
         </article>
 
-        <article className="panel fhir-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">FHIR facade</p>
-              <h2>FHIR Patient JSON</h2>
-            </div>
-            <span className="pill cyan">HL7 FHIR R4</span>
-          </div>
-          <pre>{JSON.stringify(patientFhirPreview ?? { note: "Chọn một bệnh nhân để xuất FHIR Patient." }, null, 2)}</pre>
-        </article>
-
-        <article className="panel fhir-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Interoperability</p>
-              <h2>FHIR DocumentReference JSON</h2>
-            </div>
-            <span className="pill gold">MHD-ready</span>
-          </div>
-          <pre>
-            {JSON.stringify(
-              documentFhirPreview ?? {
-                note: "Chọn một tài liệu bệnh án để xuất FHIR DocumentReference."
-              },
-              null,
-              2
-            )}
-          </pre>
-        </article>
+        <FhirPanel title="FHIR Patient JSON" badge="Patient" value={patientFhirPreview} />
+        <FhirPanel title="FHIR Encounter JSON" badge="Encounter" value={encounterFhirPreview} />
+        <FhirPanel title="FHIR DocumentReference JSON" badge="DocumentReference" value={documentFhirPreview} />
       </section>
 
       <section className="reference-grid">
         <article className="panel dark-panel">
-          <p className="eyebrow">Tham chiếu repos</p>
-          <h2>Đang bám vào luồng nào?</h2>
+          <p className="eyebrow">OpenEMR-derived</p>
+          <h2>Những nguyên tắc đang bám theo</h2>
           <div className="reference-list">
             {referenceSignals.map((reference) => (
               <div key={reference.name}>
@@ -850,16 +1179,40 @@ export function App() {
         </article>
 
         <article className="panel">
-          <p className="eyebrow">Next build</p>
-          <h2>Việc nên làm tiếp</h2>
+          <p className="eyebrow">Scope guard</p>
+          <h2>Ranh giới hiện tại</h2>
           <ul className="milestone-list">
-            {nextMilestones.map((milestone) => (
-              <li key={milestone}>{milestone}</li>
-            ))}
+            <li>Đã có bệnh nhân, lượt khám, tài liệu, ký, audit và FHIR facade.</li>
+            <li>Chưa mô phỏng HIS/LIS/PACS sâu khi chưa có hệ thống tích hợp thật.</li>
+            <li>Luồng liên thông tiếp theo nên là FHIR Bundle/DocumentReference gửi sang HAPI FHIR.</li>
+            <li>Giao diện ưu tiên thao tác nghiệp vụ hơn hiệu ứng trình diễn.</li>
           </ul>
         </article>
       </section>
     </main>
+  );
+}
+
+function FhirPanel({
+  title,
+  badge,
+  value
+}: {
+  readonly title: string;
+  readonly badge: string;
+  readonly value: unknown;
+}) {
+  return (
+    <article className="panel fhir-panel">
+      <div className="panel-heading">
+        <div>
+          <p className="eyebrow">FHIR facade</p>
+          <h2>{title}</h2>
+        </div>
+        <span className="pill gold">{badge}</span>
+      </div>
+      <pre>{JSON.stringify(value ?? { note: "Chọn dữ liệu ở workspace để xuất FHIR." }, null, 2)}</pre>
+    </article>
   );
 }
 
@@ -894,6 +1247,29 @@ function formatIdentifierType(type: PatientIdentifierType): string {
   return labels[type];
 }
 
+function formatEncounterClass(value: EncounterClass): string {
+  const labels: Record<EncounterClass, string> = {
+    ambulatory: "Ngoại trú",
+    inpatient: "Nội trú",
+    emergency: "Cấp cứu",
+    virtual: "Khám từ xa"
+  };
+
+  return labels[value];
+}
+
+function formatEncounterStatus(status: EncounterStatus): string {
+  const labels: Record<EncounterStatus, string> = {
+    planned: "Đã hẹn",
+    "in-progress": "Đang mở",
+    finished: "Đã kết thúc",
+    cancelled: "Đã hủy",
+    "entered-in-error": "Nhập lỗi"
+  };
+
+  return labels[status];
+}
+
 function formatDocumentType(type: ClinicalDocumentType): string {
   const labels: Record<ClinicalDocumentType, string> = {
     "admission-note": "Phiếu nhập viện",
@@ -901,7 +1277,12 @@ function formatDocumentType(type: ClinicalDocumentType): string {
     "lab-report": "Kết quả xét nghiệm",
     "imaging-report": "Kết quả chẩn đoán hình ảnh",
     "referral-letter": "Giấy chuyển tuyến",
-    "consent-form": "Phiếu đồng ý điều trị"
+    "consent-form": "Phiếu đồng ý điều trị",
+    "advance-directive": "Chỉ dẫn chăm sóc trước",
+    ccda: "CCDA",
+    ccr: "CCR",
+    "medical-record": "Hồ sơ bệnh án",
+    "patient-information": "Thông tin bệnh nhân"
   };
 
   return labels[type];
@@ -924,6 +1305,11 @@ function formatAuditAction(action: AuditAction): string {
     "patient.create": "Tạo hồ sơ bệnh nhân",
     "patient.read": "Xem hồ sơ bệnh nhân",
     "patient.fhir-export": "Xuất FHIR Patient",
+    "encounter.list": "Tải danh sách lượt khám",
+    "encounter.create": "Mở lượt khám",
+    "encounter.read": "Xem lượt khám",
+    "encounter.finish": "Kết thúc lượt khám",
+    "encounter.fhir-export": "Xuất FHIR Encounter",
     "clinical-document.list": "Tải tài liệu bệnh án",
     "clinical-document.create": "Tạo tài liệu bệnh án",
     "clinical-document.sign": "Ký tài liệu bệnh án",
@@ -937,6 +1323,7 @@ function formatAuditAction(action: AuditAction): string {
 function formatAuditResourceType(resourceType: AuditResourceType): string {
   const labels: Record<AuditResourceType, string> = {
     Patient: "Bệnh nhân",
+    Encounter: "Lượt khám",
     ClinicalDocument: "Tài liệu",
     AuditEvent: "Audit"
   };
@@ -949,4 +1336,8 @@ function formatDateTime(value: string): string {
     dateStyle: "medium",
     timeStyle: "short"
   }).format(new Date(value));
+}
+
+function toApiDateTime(value: string): string {
+  return new Date(value).toISOString();
 }

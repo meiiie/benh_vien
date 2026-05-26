@@ -5,17 +5,21 @@ import Fastify from "fastify";
 import type {
   AuditEventRepository,
   ClinicalDocumentRepository,
+  EncounterRepository,
   PatientRepository
 } from "@benh-vien-so/domain";
 import { createAuditEventRepository } from "./modules/audit-events/create-audit-event.repository.js";
 import { registerAuditEventRoutes } from "./modules/audit-events/audit-event-routes.js";
 import { createClinicalDocumentRepository } from "./modules/clinical-documents/create-clinical-document.repository.js";
 import { registerClinicalDocumentRoutes } from "./modules/clinical-documents/clinical-document-routes.js";
+import { createEncounterRepository } from "./modules/encounters/create-encounter.repository.js";
+import { registerEncounterRoutes } from "./modules/encounters/encounter-routes.js";
 import { createPatientRepository } from "./modules/patients/create-patient.repository.js";
 import { registerPatientRoutes } from "./modules/patients/patient-routes.js";
 
 export type ServerOptions = {
   readonly patientRepository?: PatientRepository;
+  readonly encounterRepository?: EncounterRepository;
   readonly clinicalDocumentRepository?: ClinicalDocumentRepository;
   readonly auditEventRepository?: AuditEventRepository;
 };
@@ -38,6 +42,10 @@ export async function buildServer(options: ServerOptions = {}) {
       },
       tags: [
         {
+          name: "encounters",
+          description: "Quản lý lượt khám, đợt điều trị và FHIR Encounter"
+        },
+        {
           name: "clinical-documents",
           description: "Quản lý tài liệu lâm sàng và FHIR DocumentReference"
         },
@@ -58,6 +66,8 @@ export async function buildServer(options: ServerOptions = {}) {
   });
 
   const patientRepository = options.patientRepository ?? (await createPatientRepository());
+  const encounterRepository =
+    options.encounterRepository ?? (await createEncounterRepository());
   const clinicalDocumentRepository =
     options.clinicalDocumentRepository ?? (await createClinicalDocumentRepository());
   const auditEventRepository =
@@ -71,9 +81,16 @@ export async function buildServer(options: ServerOptions = {}) {
   await app.register(
     async (api) => {
       await registerPatientRoutes(api, patientRepository, auditEventRepository);
+      await registerEncounterRoutes(
+        api,
+        patientRepository,
+        encounterRepository,
+        auditEventRepository
+      );
       await registerClinicalDocumentRoutes(
         api,
         patientRepository,
+        encounterRepository,
         clinicalDocumentRepository,
         auditEventRepository
       );

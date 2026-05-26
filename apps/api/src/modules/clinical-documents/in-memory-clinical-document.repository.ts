@@ -50,6 +50,15 @@ export function createSeedClinicalDocuments(): ClinicalDocument[] {
       title: "Kết quả xét nghiệm máu ngoại vi",
       storageUri: "s3://wiiicare-demo/patients/patient-demo-001/lab-report.pdf",
       authorPractitionerId: "practitioner-demo-002"
+    }),
+    ClinicalDocument.create({
+      id: "clinical-document-demo-003",
+      patientId: "patient-demo-001",
+      encounterId: "encounter-demo-002",
+      type: "ccr",
+      title: "Hồ sơ CCR chuyển tuyến nội bộ",
+      storageUri: "s3://wiiicare-demo/patients/patient-demo-001/continuity-of-care-record.xml",
+      authorPractitionerId: "practitioner-demo-002"
     })
   ];
 }

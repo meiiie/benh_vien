@@ -6,7 +6,12 @@ export const ClinicalDocumentTypeSchema = z.enum([
   "lab-report",
   "imaging-report",
   "referral-letter",
-  "consent-form"
+  "consent-form",
+  "advance-directive",
+  "ccda",
+  "ccr",
+  "medical-record",
+  "patient-information"
 ]);
 
 export const CreateClinicalDocumentRequestSchema = z.object({

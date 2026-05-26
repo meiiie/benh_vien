@@ -11,7 +11,12 @@ const documentTypeLabels: Record<ClinicalDocumentType, string> = {
   "lab-report": "Phiếu kết quả xét nghiệm",
   "imaging-report": "Phiếu kết quả chẩn đoán hình ảnh",
   "referral-letter": "Giấy chuyển tuyến",
-  "consent-form": "Phiếu đồng ý điều trị"
+  "consent-form": "Phiếu đồng ý điều trị",
+  "advance-directive": "Chỉ dẫn chăm sóc trước",
+  ccda: "Tài liệu CCDA",
+  ccr: "Hồ sơ CCR",
+  "medical-record": "Hồ sơ bệnh án",
+  "patient-information": "Thông tin bệnh nhân"
 };
 
 export function mapClinicalDocumentToFhir(document: ClinicalDocument): FhirDocumentReference {

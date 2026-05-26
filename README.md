@@ -60,7 +60,7 @@ Chi tiết xem [docs/runbooks/DOCKER.md](docs/runbooks/DOCKER.md).
 
 ## Backend và cơ sở dữ liệu
 
-Backend hiện dùng Fastify + TypeScript. Trong Docker, API chạy với `BVS_REPOSITORY=postgres`, migration service tạo schema PostgreSQL trước khi API khởi động. Các bảng nền tảng gồm `patients`, `clinical_documents`, `audit_events` và `schema_migrations`.
+Backend hiện dùng Fastify + TypeScript. Trong Docker, API chạy với `BVS_REPOSITORY=postgres`, migration service tạo schema PostgreSQL trước khi API khởi động. Các bảng nền tảng gồm `patients`, `encounters`, `clinical_documents`, `audit_events` và `schema_migrations`.
 
 Khi chạy local không Docker, có thể dùng in-memory repository để phát triển nhanh; khi cần kiểm chứng sát thực tế, dùng Docker dev/prod để chạy PostgreSQL.
 
@@ -78,7 +78,9 @@ Chi tiết version xem [VERSIONING.md](VERSIONING.md).
 ## Phạm vi phiên bản đầu
 
 - Quản lý hồ sơ bệnh nhân tối thiểu.
+- Quản lý lượt khám/đợt điều trị tối thiểu để tài liệu bệnh án có ngữ cảnh lâm sàng.
 - Xuất biểu diễn bệnh nhân sang FHIR `Patient`.
+- Xuất lượt khám sang FHIR `Encounter`.
 - Quản lý tài liệu bệnh án tối thiểu: tạo bản nháp, ký tài liệu và xuất metadata sang FHIR `DocumentReference`.
 - Ghi nhật ký kiểm toán tối thiểu cho các thao tác xem/tạo/ký/xuất dữ liệu nhạy cảm.
 - Chặn quyền tối thiểu ở API theo vai trò demo `clinician`, `nurse`, `auditor`, `admin`.

@@ -11,9 +11,11 @@ if (!existsSync(domainEntry)) {
 const {
   AuditEvent,
   ClinicalDocument,
+  Encounter,
   Patient,
   canAccess,
   mapClinicalDocumentToFhir,
+  mapEncounterToFhir,
   mapPatientToFhir
 } = await import(pathToFileURL(domainEntry).href);
 
@@ -42,10 +44,33 @@ if (fhirPatient.id !== "patient-harness-001") {
   throw new Error(`Expected id patient-harness-001, received ${fhirPatient.id}`);
 }
 
+const encounter = Encounter.create({
+  id: "encounter-harness-001",
+  patientId: patient.id,
+  class: "ambulatory",
+  serviceType: "Outpatient follow-up",
+  reasonText: "Validate encounter mapping",
+  departmentId: "department-harness-001",
+  attendingPractitionerId: "practitioner-harness-001",
+  startedAt: "2026-05-27T00:00:00.000Z"
+});
+
+const fhirEncounter = mapEncounterToFhir(encounter);
+
+if (fhirEncounter.resourceType !== "Encounter") {
+  throw new Error(`Expected resourceType Encounter, received ${fhirEncounter.resourceType}`);
+}
+
+if (fhirEncounter.subject.reference !== "Patient/patient-harness-001") {
+  throw new Error(
+    `Expected encounter subject Patient/patient-harness-001, received ${fhirEncounter.subject.reference}`
+  );
+}
+
 const document = ClinicalDocument.create({
   id: "clinical-document-harness-001",
   patientId: patient.id,
-  encounterId: "encounter-harness-001",
+  encounterId: encounter.id,
   type: "referral-letter",
   title: "Referral letter harness",
   storageUri: "s3://wiiicare-harness/patients/patient-harness-001/referral-letter.pdf",
@@ -101,6 +126,15 @@ const clinicianCanCreateDocument = canAccess(
   "clinical-document:create"
 );
 
+const clinicianCanCreateEncounter = canAccess(
+  {
+    actorId: "practitioner-harness-001",
+    role: "clinician",
+    purposeOfUse: "TREATMENT"
+  },
+  "encounter:create"
+);
+
 const clinicianCanReadAudit = canAccess(
   {
     actorId: "practitioner-harness-001",
@@ -123,6 +157,10 @@ if (!clinicianCanCreateDocument) {
   throw new Error("Expected clinician/TREATMENT to create clinical documents.");
 }
 
+if (!clinicianCanCreateEncounter) {
+  throw new Error("Expected clinician/TREATMENT to create encounters.");
+}
+
 if (clinicianCanReadAudit) {
   throw new Error("Expected clinician/TREATMENT to be denied audit-event:list.");
 }
@@ -140,8 +178,11 @@ console.log(
       patientResourceType: fhirPatient.resourceType,
       documentId: fhirDocumentReference.id,
       documentResourceType: fhirDocumentReference.resourceType,
+      encounterId: fhirEncounter.id,
+      encounterResourceType: fhirEncounter.resourceType,
       auditAction: auditEvent.toSnapshot().action,
       rbac: {
+        clinicianCanCreateEncounter,
         clinicianCanCreateDocument,
         clinicianCanReadAudit,
         auditorCanReadAudit

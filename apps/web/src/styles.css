@@ -364,8 +364,107 @@ select:focus {
   grid-column: 1 / -1;
 }
 
+.encounter-panel {
+  grid-column: 1 / -1;
+}
+
 .audit-panel {
   grid-column: 1 / -1;
+}
+
+.encounter-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.85fr) minmax(340px, 1.15fr);
+  gap: 16px;
+}
+
+.timeline {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.timeline-item {
+  position: relative;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 16px 16px 16px 22px;
+  text-align: left;
+  background: rgba(251, 250, 246, 0.72);
+  transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
+}
+
+.timeline-item::before {
+  position: absolute;
+  inset: 16px auto 16px 9px;
+  width: 4px;
+  border-radius: 999px;
+  background: var(--data-cyan);
+  content: "";
+}
+
+.timeline-item:hover,
+.timeline-item.selected {
+  border-color: rgba(8, 117, 124, 0.44);
+  background: white;
+  transform: translateY(-1px);
+}
+
+.timeline-item span,
+.timeline-item small {
+  display: block;
+  color: #657789;
+  font-size: 0.86rem;
+}
+
+.timeline-item strong {
+  display: block;
+  margin: 7px 0;
+  color: var(--harbor-ink);
+  font-size: 1.08rem;
+}
+
+.encounter-summary {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  border: 1px solid rgba(6, 24, 35, 0.09);
+  border-radius: 24px;
+  padding: 16px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(31, 184, 192, 0.14), transparent 16rem),
+    rgba(246, 242, 232, 0.44);
+}
+
+.encounter-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+
+.encounter-form .primary-button {
+  grid-column: 1 / -1;
+}
+
+.taxonomy-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.taxonomy-strip span {
+  border: 1px solid rgba(8, 117, 124, 0.18);
+  border-radius: 999px;
+  padding: 8px 11px;
+  color: var(--harbor-blue);
+  background: rgba(230, 242, 240, 0.66);
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 
 .document-layout {
@@ -581,6 +680,8 @@ pre {
   .workflow-strip,
   .detail-grid,
   .patient-form,
+  .encounter-layout,
+  .encounter-form,
   .document-layout,
   .document-meta,
   .document-form,
