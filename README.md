@@ -44,9 +44,9 @@ migrations/ SQL migration cho PostgreSQL
 
 ## Ảnh kiểm thử giao diện
 
-![WiiiCare Nexus landing](docs/assets/screenshots/wiiicare-full-flow-landing.png)
+![WiiiCare Nexus landing](docs/assets/screenshots/wiiicare-lms-style-landing.png)
 
-![WiiiCare Nexus dashboard](docs/assets/screenshots/wiiicare-full-flow-dashboard.png)
+![WiiiCare Nexus dashboard](docs/assets/screenshots/wiiicare-lms-style-dashboard.png)
 
 ## Chạy kiểm tra
 

@@ -225,12 +225,12 @@ const navigationItems: readonly {
   readonly label: string;
   readonly hint: string;
 }[] = [
-  { route: "dashboard", label: "Dashboard", hint: "Tổng quan vận hành" },
-  { route: "workspace", label: "Patient Workspace", hint: "Hồ sơ và lượt khám" },
-  { route: "documents", label: "Documents", hint: "Tài liệu bệnh án" },
-  { route: "audit", label: "Audit", hint: "Nhật ký truy cập" },
-  { route: "interop", label: "Interop", hint: "FHIR và liên thông" },
-  { route: "settings", label: "Settings", hint: "Vai trò và cấu hình" }
+  { route: "dashboard", label: "Tổng quan", hint: "Vận hành" },
+  { route: "workspace", label: "Hồ sơ bệnh nhân", hint: "Lượt khám" },
+  { route: "documents", label: "Tài liệu", hint: "Bệnh án điện tử" },
+  { route: "audit", label: "Kiểm toán", hint: "Nhật ký truy cập" },
+  { route: "interop", label: "Liên thông", hint: "FHIR/HIS/LIS/PACS" },
+  { route: "settings", label: "Cấu hình", hint: "Vai trò và bảo mật" }
 ];
 
 const referenceSignals = [
