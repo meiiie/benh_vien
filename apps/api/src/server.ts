@@ -166,7 +166,7 @@ export async function buildServer(options: ServerOptions = {}) {
         },
         {
           name: "audit-events",
-          description: "Truy vết truy cập, ký và xuất dữ liệu bệnh án"
+          description: "Truy vết truy cập, kiểm tra toàn vẹn audit và xuất FHIR AuditEvent"
         },
         {
           name: "patients",

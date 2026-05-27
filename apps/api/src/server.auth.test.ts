@@ -76,6 +76,41 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("allows auditor audit-purpose patient registry context", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "security-officer-demo", "auditor");
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients",
+      headers: auditHeaders(accessToken)
+    });
+    const body = response.json();
+
+    expect(response.statusCode).toBe(200);
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0]).toMatchObject({
+      id: "patient-demo-001"
+    });
+  });
+
+  it("denies auditor treatment-purpose patient registry context", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "security-officer-demo", "auditor");
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients",
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({
+      error: "FORBIDDEN",
+      permission: "patient:list"
+    });
+  });
+
   it("denies auditor attempts to create clinical data", async () => {
     app = await readyServer();
     const accessToken = await loginForToken(app, "security-officer-demo", "auditor");
@@ -120,6 +155,72 @@ describe("API auth and RBAC boundary", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
       items: expect.any(Array)
+    });
+  });
+
+  it("exports patient audit trail as a FHIR AuditEvent Bundle for auditor review", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "security-officer-demo", "auditor");
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/audit-events/fhir-bundle",
+      headers: auditHeaders(accessToken)
+    });
+    const body = response.json();
+
+    expect(response.statusCode).toBe(200);
+    expect(body).toMatchObject({
+      resourceType: "Bundle",
+      type: "collection",
+      entry: [
+        {
+          resource: {
+            resourceType: "AuditEvent",
+            type: {
+              code: "rest"
+            },
+            subtype: [
+              {
+                code: "audit-event.fhir-export"
+              }
+            ],
+            agent: [
+              {
+                requestor: true,
+                purposeOfUse: [
+                  {
+                    code: "AUDIT"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    });
+    expect(body.entry[0].resource.entity[0].detail).toContainEqual(
+      expect.objectContaining({
+        type: "integrityHash",
+        valueString: expect.stringMatching(/^[a-f0-9]{64}$/)
+      })
+    );
+  });
+
+  it("denies clinician treatment-purpose export of the audit FHIR Bundle", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/audit-events/fhir-bundle",
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({
+      error: "FORBIDDEN",
+      permission: "audit-event:fhir-export"
     });
   });
 

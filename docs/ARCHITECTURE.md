@@ -25,7 +25,7 @@ Kiến trúc khởi đầu là **modular monolith theo DDD**. Lý do:
 | Consent & Sharing | Consent chia sẻ hồ sơ, thu hồi consent, gói chuyển hồ sơ liên viện, đơn vị nhận, thời hạn hiệu lực và căn cứ xuất dữ liệu | Khi có nhiều chính sách chia sẻ, nhiều bệnh viện nhận hoặc cần đồng bộ consent từ hệ thống ngoài |
 | Interoperability | FHIR facade, mapping dữ liệu, luồng gửi/nhận tài liệu | Khi kết nối nhiều chuẩn và nhiều đối tác |
 | Imaging | Tích hợp PACS, DICOM/DICOMweb, báo cáo hình ảnh | Khi dữ liệu ảnh lớn hoặc cần quản trị riêng |
-| Audit & Compliance | Nhật ký truy cập, nhật ký chỉnh sửa, báo cáo tuân thủ | Khi có yêu cầu kiểm toán độc lập |
+| Audit & Compliance | Nhật ký truy cập, nhật ký chỉnh sửa, xuất FHIR `AuditEvent`, báo cáo tuân thủ | Khi có yêu cầu kiểm toán độc lập |
 
 ## Sơ đồ tổng quan
 
@@ -96,7 +96,7 @@ sequenceDiagram
 - **Gói bệnh án chuyển viện cần Composition.** `Bundle.type = collection` phù hợp để gom dữ liệu thô; khi cần biểu diễn một tài liệu bệnh án có cấu trúc, dùng `Bundle.type = document` và đặt `Composition` làm entry đầu tiên để mô tả mục lục lâm sàng.
 - **Không để reference FHIR bị treo.** Khi `Patient`, `Encounter`, `DiagnosticReport` hoặc `ImagingStudy` tham chiếu `Organization`, `Practitioner`, `PractitionerRole` hoặc `Endpoint`, gói liên thông cần có Provider Directory tối thiểu để bên nhận hiểu cơ sở quản lý, khoa thực hiện, người phụ trách và endpoint PACS/FHIR/LIS.
 - **Ảnh y khoa đi theo chuẩn riêng.** Ảnh X-quang, CT, MRI, siêu âm nên đi qua PACS/DICOM, không nhồi trực tiếp vào bảng bệnh án. EMR chỉ lưu metadata `ImagingStudy` như DICOM Study Instance UID, Accession Number, modality, series, số ảnh, vùng chụp và endpoint PACS/DICOMweb.
-- **Mọi truy cập nhạy cảm cần kiểm toán và kiểm tra toàn vẹn.** Bệnh án là dữ liệu đặc biệt nhạy cảm, không thể thiếu audit trail. Mỗi `AuditEvent` mới được niêm phong bằng `sha256` theo chuỗi băm để phát hiện sửa/xóa log ở mức prototype; triển khai thật vẫn cần cơ chế lưu trữ bất biến, chính sách giữ log và giám sát độc lập.
+- **Mọi truy cập nhạy cảm cần kiểm toán và kiểm tra toàn vẹn.** Bệnh án là dữ liệu đặc biệt nhạy cảm, không thể thiếu audit trail. Mỗi `AuditEvent` mới được niêm phong bằng `sha256` theo chuỗi băm để phát hiện sửa/xóa log ở mức prototype; khi cần trao đổi với lớp kiểm toán/liên thông, audit có thể xuất thành FHIR `AuditEvent` Bundle. Triển khai thật vẫn cần cơ chế lưu trữ bất biến, chính sách giữ log và giám sát độc lập.
 
 ## Lược đồ dữ liệu nền tảng
 
@@ -119,7 +119,7 @@ Phiên bản hiện tại tạo các bảng tối thiểu:
 - `consents`: consent chia sẻ hồ sơ theo bệnh nhân, đơn vị nhận, trạng thái, thời hạn hiệu lực, người thu hồi, thời điểm thu hồi và lý do thu hồi nếu có; xuất sang FHIR `Consent` khi cần giải nghĩa căn cứ chia sẻ.
 - `record_transfers`: gói chuyển hồ sơ liên viện, gồm trạng thái vận hành, FHIR Bundle đích, cơ sở gửi/nhận, consent, lý do chuyển và người tạo yêu cầu.
 - `provider_directory_resources`: danh bạ cơ sở y tế/khoa phòng, nhân sự, vai trò nhân sự và endpoint liên thông; lưu snapshot JSONB để prototype có thể đồng bộ nhanh nhiều loại FHIR resource.
-- `audit_events`: nhật ký thao tác theo thời gian, tài nguyên, bệnh nhân, mục đích sử dụng và chuỗi băm toàn vẹn (`hash_algorithm`, `previous_hash`, `payload_hash`, `integrity_hash`).
+- `audit_events`: nhật ký thao tác theo thời gian, tài nguyên, bệnh nhân, mục đích sử dụng và chuỗi băm toàn vẹn (`hash_algorithm`, `previous_hash`, `payload_hash`, `integrity_hash`); xuất sang FHIR `AuditEvent` Bundle khi kiểm toán viên cần gói log chuẩn hóa.
 - `schema_migrations`: quản lý migration đã áp dụng.
 
 ## Luồng mở rộng dự kiến

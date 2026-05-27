@@ -848,6 +848,16 @@ curl http://localhost:7310/api/v1/patients/patient-demo-001/audit-events \
 
 Kết quả mong muốn là danh sách sự kiện có `actorId`, `action`, `resourceType`, `resourceId`, `patientId`, `purposeOfUse`, `occurredAt`, `payloadHash` và `integrityHash`.
 
+## Xuất nhật ký kiểm toán sang FHIR AuditEvent Bundle
+
+```bash
+curl http://localhost:7310/api/v1/patients/patient-demo-001/audit-events/fhir-bundle \
+  -H "Authorization: Bearer $AUDIT_TOKEN" \
+  -H "x-purpose-of-use: AUDIT"
+```
+
+Kết quả mong muốn là FHIR `Bundle` dạng `collection`, gồm các resource `AuditEvent` có `type`, `subtype`, `action`, `recorded`, `agent`, `source`, `entity` và các `detail` về `payloadHash`/`integrityHash`. Endpoint này dùng quyền `audit-event:fhir-export`, chỉ mở cho vai trò kiểm toán hoặc quản trị với mục đích sử dụng `AUDIT`.
+
 ## Kiểm tra toàn vẹn chuỗi audit
 
 ```bash

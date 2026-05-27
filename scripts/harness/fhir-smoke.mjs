@@ -34,6 +34,8 @@ const {
   WorkflowTask,
   buildAuditIntegrityReport,
   canAccess,
+  mapAuditEventToFhir,
+  mapAuditEventsToFhirBundle,
   mapAllergyIntoleranceToFhir,
   mapClinicalDocumentToFhir,
   mapConsentToFhir,
@@ -900,9 +902,31 @@ if (auditEvent.toSnapshot().action !== "clinical-document.fhir-export") {
 
 const sealedAuditEvent = sealAuditEvent(auditEvent);
 const auditIntegrityReport = buildAuditIntegrityReport(patient.id, [sealedAuditEvent]);
+const fhirAuditEvent = mapAuditEventToFhir(sealedAuditEvent);
+const fhirAuditBundle = mapAuditEventsToFhirBundle(
+  patient.id,
+  [sealedAuditEvent],
+  new Date("2026-05-27T12:15:00.000Z")
+);
 
 if (!auditIntegrityReport.verified) {
   throw new Error("Expected sealed audit event to pass integrity verification.");
+}
+
+if (fhirAuditEvent.resourceType !== "AuditEvent") {
+  throw new Error(`Expected FHIR AuditEvent, received ${fhirAuditEvent.resourceType}.`);
+}
+
+if (fhirAuditEvent.agent[0]?.purposeOfUse?.[0]?.code !== "TREAT") {
+  throw new Error("Expected FHIR AuditEvent purposeOfUse to map TREATMENT to TREAT.");
+}
+
+if (!fhirAuditEvent.entity?.[0]?.detail?.some((detail) => detail.type === "integrityHash")) {
+  throw new Error("Expected FHIR AuditEvent to carry audit chain integrityHash detail.");
+}
+
+if (fhirAuditBundle.entry[0]?.resource.resourceType !== "AuditEvent") {
+  throw new Error("Expected FHIR audit Bundle to contain AuditEvent resources.");
 }
 
 const clinicianCanCreateDocument = canAccess(
@@ -1211,6 +1235,15 @@ const clinicianCanReadAudit = canAccess(
   "audit-event:list"
 );
 
+const clinicianCanExportAuditFhir = canAccess(
+  {
+    actorId: "practitioner-harness-001",
+    role: "clinician",
+    purposeOfUse: "TREATMENT"
+  },
+  "audit-event:fhir-export"
+);
+
 const auditorCanReadAudit = canAccess(
   {
     actorId: "auditor-harness-001",
@@ -1218,6 +1251,42 @@ const auditorCanReadAudit = canAccess(
     purposeOfUse: "AUDIT"
   },
   "audit-event:list"
+);
+
+const auditorCanListPatientContext = canAccess(
+  {
+    actorId: "auditor-harness-001",
+    role: "auditor",
+    purposeOfUse: "AUDIT"
+  },
+  "patient:list"
+);
+
+const auditorCanReadPatientContext = canAccess(
+  {
+    actorId: "auditor-harness-001",
+    role: "auditor",
+    purposeOfUse: "AUDIT"
+  },
+  "patient:read"
+);
+
+const auditorCanListPatientForTreatment = canAccess(
+  {
+    actorId: "auditor-harness-001",
+    role: "auditor",
+    purposeOfUse: "TREATMENT"
+  },
+  "patient:list"
+);
+
+const auditorCanExportAuditFhir = canAccess(
+  {
+    actorId: "auditor-harness-001",
+    role: "auditor",
+    purposeOfUse: "AUDIT"
+  },
+  "audit-event:fhir-export"
 );
 
 if (!clinicianCanCreateDocument) {
@@ -1358,8 +1427,28 @@ if (clinicianCanReadAudit) {
   throw new Error("Expected clinician/TREATMENT to be denied audit-event:list.");
 }
 
+if (clinicianCanExportAuditFhir) {
+  throw new Error("Expected clinician/TREATMENT to be denied audit-event:fhir-export.");
+}
+
 if (!auditorCanReadAudit) {
   throw new Error("Expected auditor/AUDIT to read audit events.");
+}
+
+if (!auditorCanListPatientContext) {
+  throw new Error("Expected auditor/AUDIT to list patient context for audit review.");
+}
+
+if (!auditorCanReadPatientContext) {
+  throw new Error("Expected auditor/AUDIT to read patient context for audit review.");
+}
+
+if (auditorCanListPatientForTreatment) {
+  throw new Error("Expected auditor/TREATMENT to be denied patient:list.");
+}
+
+if (!auditorCanExportAuditFhir) {
+  throw new Error("Expected auditor/AUDIT to export FHIR audit events.");
 }
 
 console.log(
@@ -1411,6 +1500,8 @@ console.log(
       recordTransferResourceType: fhirRecordTransferTask.resourceType,
       recordTransferFocus: fhirRecordTransferTask.focus?.reference,
       auditAction: auditEvent.toSnapshot().action,
+      auditResourceType: fhirAuditEvent.resourceType,
+      auditBundleEntryCount: fhirAuditBundle.entry.length,
       auditIntegrityStatus: auditIntegrityReport.status,
       auditIntegrityLatestHash: auditIntegrityReport.latestHash,
       auth: {
@@ -1453,7 +1544,12 @@ console.log(
         nurseCanExportWorkflowTask,
         nurseCanExportProcedure,
         clinicianCanReadAudit,
-        auditorCanReadAudit
+        clinicianCanExportAuditFhir,
+        auditorCanListPatientContext,
+        auditorCanReadPatientContext,
+        auditorCanListPatientForTreatment,
+        auditorCanReadAudit,
+        auditorCanExportAuditFhir
       }
     },
     null,

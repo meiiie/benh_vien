@@ -70,7 +70,8 @@ export type Permission =
   | "consent:create"
   | "consent:revoke"
   | "consent:fhir-export"
-  | "audit-event:list";
+  | "audit-event:list"
+  | "audit-event:fhir-export";
 
 export type ActorContext = {
   readonly actorId: string;
@@ -194,6 +195,7 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "consent:list"
   ],
   auditor: [
+    "patient:list",
     "patient:read",
     "provider-directory:read",
     "record-transfer:list",
@@ -206,7 +208,8 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "medication-dispense:read",
     "medication-administration:list",
     "medication-administration:read",
-    "audit-event:list"
+    "audit-event:list",
+    "audit-event:fhir-export"
   ],
   admin: [
     "patient:list",
@@ -276,7 +279,8 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "consent:create",
     "consent:revoke",
     "consent:fhir-export",
-    "audit-event:list"
+    "audit-event:list",
+    "audit-event:fhir-export"
   ]
 };
 
@@ -285,7 +289,18 @@ export function canAccess(actor: ActorContext, permission: Permission): boolean 
     return false;
   }
 
+  if (
+    actor.role === "auditor" &&
+    (permission === "patient:list" || permission === "patient:read")
+  ) {
+    return actor.purposeOfUse === "AUDIT";
+  }
+
   if (permission === "audit-event:list") {
+    return actor.purposeOfUse === "AUDIT" || actor.role === "admin";
+  }
+
+  if (permission === "audit-event:fhir-export") {
     return actor.purposeOfUse === "AUDIT" || actor.role === "admin";
   }
 

@@ -14,7 +14,7 @@ Thêm access-control domain với các vai trò demo:
 
 - `clinician`: thực hiện nghiệp vụ điều trị, đọc/xuất Provider Directory, tạo bệnh nhân, mở lượt khám, ghi nhận dị ứng/cảnh báo, chẩn đoán/chỉ định dịch vụ/công việc thực thi/thủ thuật-hoạt động/chỉ số/báo cáo kết quả/nghiên cứu hình ảnh/chỉ định thuốc/cấp phát thuốc/dùng thuốc thực tế, tạo/ký tài liệu, tạo/thu hồi consent chia sẻ hồ sơ, xuất FHIR Consent và xuất FHIR phục vụ điều trị.
 - `nurse`: đọc Provider Directory, đọc bệnh nhân, đọc/tạo tài liệu, ghi nhận dị ứng/cảnh báo, chẩn đoán/chỉ định dịch vụ/công việc thực thi/thủ thuật-hoạt động/chỉ số/báo cáo kết quả/nghiên cứu hình ảnh/chỉ định thuốc/cấp phát thuốc/dùng thuốc thực tế, nhưng không ký và không xuất FHIR.
-- `auditor`: đọc hồ sơ tối thiểu và đọc audit trail khi `purposeOfUse` là `AUDIT`.
+- `auditor`: đọc ngữ cảnh bệnh nhân tối thiểu (`patient:list`, `patient:read`), đọc audit trail và xuất FHIR `AuditEvent` Bundle khi `purposeOfUse` là `AUDIT`; cùng vai trò đó không được dùng `TREATMENT` để truy cập như nhân sự điều trị.
 - `admin`: có toàn quyền trong prototype.
 
 API đọc actor từ Bearer token nội bộ do `POST /api/v1/auth/login` phát hành. Token được ký bằng `BVS_AUTH_SECRET` và có thời hạn ngắn trong prototype.
@@ -34,7 +34,7 @@ Tích cực:
 - Quyền được chặn ở backend, không phụ thuộc vào UI.
 - Audit event ghi thêm `actorRole` trong metadata.
 - UI trình bày rõ policy demo: `clinician/TREATMENT` cho nghiệp vụ và `auditor/AUDIT` cho kiểm toán.
-- Harness smoke test kiểm cả phiên token, FHIR, audit event, quyền thu hồi consent và trường hợp RBAC được phép/bị chặn.
+- Harness smoke test kiểm cả phiên token, FHIR, audit event, quyền thu hồi consent, quyền xuất FHIR AuditEvent và trường hợp RBAC được phép/bị chặn.
 
 Giới hạn còn lại:
 

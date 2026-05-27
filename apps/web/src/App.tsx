@@ -782,6 +782,7 @@ type AuditAction =
   | "consent.revoke"
   | "consent.fhir-export"
   | "audit-event.list"
+  | "audit-event.fhir-export"
   | "audit-event.integrity-verify";
 
 type AuditResourceType =
@@ -1569,6 +1570,7 @@ export function App() {
   const [auditEvents, setAuditEvents] = useState<readonly AuditEvent[]>([]);
   const [auditIntegrityReport, setAuditIntegrityReport] =
     useState<AuditIntegrityReport>();
+  const [auditFhirBundlePreview, setAuditFhirBundlePreview] = useState<unknown>();
   const [consents, setConsents] = useState<readonly Consent[]>([]);
   const [recordTransfers, setRecordTransfers] = useState<readonly RecordTransfer[]>([]);
   const [selectedRecordTransferId, setSelectedRecordTransferId] = useState<string>();
@@ -1640,6 +1642,7 @@ export function App() {
   const [isLoadingImagingStudies, setIsLoadingImagingStudies] = useState(false);
   const [isLoadingAuditEvents, setIsLoadingAuditEvents] = useState(false);
   const [isVerifyingAuditIntegrity, setIsVerifyingAuditIntegrity] = useState(false);
+  const [isExportingAuditFhir, setIsExportingAuditFhir] = useState(false);
   const [isLoadingConsents, setIsLoadingConsents] = useState(false);
   const [isLoadingRecordTransfers, setIsLoadingRecordTransfers] = useState(false);
   const [isLoadingProviderDirectory, setIsLoadingProviderDirectory] = useState(false);
@@ -1740,6 +1743,7 @@ export function App() {
   const signedDocuments = clinicalDocuments.filter((document) => document.status === "signed");
   const draftDocuments = clinicalDocuments.filter((document) => document.status === "draft");
   const canReadAudit = authSession?.actor.role === "auditor" || authSession?.actor.role === "admin";
+  const isAuditOnlySession = authSession?.actor.role === "auditor";
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -1785,6 +1789,7 @@ export function App() {
       setImagingStudies([]);
       setAuditEvents([]);
       setAuditIntegrityReport(undefined);
+      setAuditFhirBundlePreview(undefined);
       setConsents([]);
       setRecordTransfers([]);
       setSelectedEncounterId(undefined);
@@ -1975,7 +1980,7 @@ export function App() {
 
     try {
       const response = await fetch(`${apiBaseUrl}/patients`, {
-        headers: buildHeaders("TREATMENT")
+        headers: buildHeaders(isAuditOnlySession ? "AUDIT" : "TREATMENT")
       });
 
       if (!response.ok) {
@@ -2001,6 +2006,22 @@ export function App() {
     setIsLoadingProviderDirectory(true);
 
     try {
+      if (isAuditOnlySession) {
+        const response = await fetch(`${apiBaseUrl}/provider-directory`, {
+          headers: buildHeaders("AUDIT")
+        });
+
+        if (!response.ok) {
+          throw new Error(`Provider Directory API trả về HTTP ${response.status}`);
+        }
+
+        setProviderDirectory((await response.json()) as ProviderDirectory);
+        setProviderDirectoryFhirPreview({
+          note: "Phiên kiểm toán chỉ tải danh bạ vận hành; không xuất FHIR Provider Directory."
+        });
+        return;
+      }
+
       const [directoryResponse, fhirResponse] = await Promise.all([
         fetch(`${apiBaseUrl}/provider-directory`, {
           headers: buildHeaders("TREATMENT")
@@ -2034,6 +2055,11 @@ export function App() {
   }
 
   async function loadPatientWorkspace(patientId: string) {
+    if (isAuditOnlySession) {
+      await loadAuditEvents(patientId, { silent: true });
+      return;
+    }
+
     const workspaceTasks = [
       loadPatientFhirPreview(patientId),
       loadPatientFhirBundlePreview(patientId),
@@ -2462,6 +2488,7 @@ export function App() {
     if (!canReadAudit) {
       setAuditEvents([]);
       setAuditIntegrityReport(undefined);
+      setAuditFhirBundlePreview(undefined);
 
       if (!options.silent) {
         setStatusMessage("Nhật ký kiểm toán chỉ mở cho vai trò kiểm toán hoặc quản trị.");
@@ -2539,6 +2566,38 @@ export function App() {
       );
     } finally {
       setIsVerifyingAuditIntegrity(false);
+    }
+  }
+
+  async function loadAuditFhirBundle(patientId: string) {
+    if (!canReadAudit) {
+      setAuditFhirBundlePreview(undefined);
+      setStatusMessage("Xuất FHIR AuditEvent chỉ mở cho vai trò kiểm toán hoặc quản trị.");
+      return;
+    }
+
+    setIsExportingAuditFhir(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/audit-events/fhir-bundle`, {
+        headers: buildHeaders("AUDIT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      setAuditFhirBundlePreview(await response.json());
+      setStatusMessage("Đã xuất FHIR AuditEvent Bundle cho nhật ký kiểm toán.");
+    } catch (error) {
+      setAuditFhirBundlePreview({
+        error:
+          error instanceof Error
+            ? `Không thể xuất FHIR AuditEvent Bundle: ${error.message}`
+            : "Không thể xuất FHIR AuditEvent Bundle."
+      });
+    } finally {
+      setIsExportingAuditFhir(false);
     }
   }
 
@@ -7944,100 +8003,111 @@ export function App() {
 
   function renderAuditPanel(): ReactNode {
     return (
-      <article className="panel audit-panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Security trace</p>
-            <h2>Nhật ký kiểm toán</h2>
+      <>
+        <article className="panel audit-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Security trace</p>
+              <h2>Nhật ký kiểm toán</h2>
+            </div>
+            <div className="panel-actions">
+              <button
+                className="ghost-button"
+                type="button"
+                disabled={!selectedPatient || isLoadingAuditEvents || !canReadAudit}
+                onClick={() => selectedPatient && void loadAuditEvents(selectedPatient.id)}
+              >
+                {isLoadingAuditEvents ? "Đang tải..." : canReadAudit ? "Tải audit" : "Cần quyền kiểm toán"}
+              </button>
+              <button
+                className="ghost-button"
+                type="button"
+                disabled={!selectedPatient || isVerifyingAuditIntegrity || !canReadAudit}
+                onClick={() => selectedPatient && void verifyAuditIntegrity(selectedPatient.id)}
+              >
+                {isVerifyingAuditIntegrity ? "Đang xác minh..." : "Kiểm tra toàn vẹn"}
+              </button>
+              <button
+                className="ghost-button"
+                type="button"
+                disabled={!selectedPatient || isExportingAuditFhir || !canReadAudit}
+                onClick={() => selectedPatient && void loadAuditFhirBundle(selectedPatient.id)}
+              >
+                {isExportingAuditFhir ? "Đang xuất..." : "Xuất FHIR AuditEvent"}
+              </button>
+            </div>
           </div>
-          <div className="panel-actions">
-            <button
-              className="ghost-button"
-              type="button"
-              disabled={!selectedPatient || isLoadingAuditEvents || !canReadAudit}
-              onClick={() => selectedPatient && void loadAuditEvents(selectedPatient.id)}
-            >
-              {isLoadingAuditEvents ? "Đang tải..." : canReadAudit ? "Tải audit" : "Cần quyền kiểm toán"}
-            </button>
-            <button
-              className="ghost-button"
-              type="button"
-              disabled={!selectedPatient || isVerifyingAuditIntegrity || !canReadAudit}
-              onClick={() => selectedPatient && void verifyAuditIntegrity(selectedPatient.id)}
-            >
-              {isVerifyingAuditIntegrity ? "Đang xác minh..." : "Kiểm tra toàn vẹn"}
-            </button>
-          </div>
-        </div>
 
-        {auditIntegrityReport ? (
-          <div className={`integrity-card integrity-card--${auditIntegrityReport.status}`}>
-            <div>
-              <span>Trạng thái chuỗi băm</span>
-              <strong>{formatAuditIntegrityStatus(auditIntegrityReport.status)}</strong>
-            </div>
-            <div>
-              <span>Số bản ghi đã kiểm</span>
-              <strong>
-                {auditIntegrityReport.sealedEvents}/{auditIntegrityReport.totalEvents}
-              </strong>
-            </div>
-            <div>
-              <span>Lần kiểm tra</span>
-              <strong>{formatDateTime(auditIntegrityReport.checkedAt)}</strong>
-            </div>
-            <div>
-              <span>Hash mới nhất</span>
-              <strong className="hash-text">{auditIntegrityReport.latestHash ?? "Chưa có"}</strong>
-            </div>
-            {auditIntegrityReport.verified ? null : (
-              <p>
-                Điểm cần kiểm tra: {auditIntegrityReport.brokenAtEventId ?? "không xác định"} ·{" "}
-                {formatAuditIntegrityReason(auditIntegrityReport.brokenReason)}
-              </p>
-            )}
-          </div>
-        ) : null}
-
-        <div className="audit-list">
-          {auditEvents.map((event) => (
-            <div className="audit-item" key={event.id ?? `${event.occurredAt}:${event.action}`}>
+          {auditIntegrityReport ? (
+            <div className={`integrity-card integrity-card--${auditIntegrityReport.status}`}>
               <div>
-                <span>{formatDateTime(event.occurredAt)}</span>
-                <strong>{formatAuditAction(event.action)}</strong>
+                <span>Trạng thái chuỗi băm</span>
+                <strong>{formatAuditIntegrityStatus(auditIntegrityReport.status)}</strong>
               </div>
               <div>
-                <span>Actor</span>
-                <strong>{event.actorId}</strong>
-              </div>
-              <div>
-                <span>Tài nguyên</span>
+                <span>Số bản ghi đã kiểm</span>
                 <strong>
-                  {formatAuditResourceType(event.resourceType)} · {event.resourceId}
+                  {auditIntegrityReport.sealedEvents}/{auditIntegrityReport.totalEvents}
                 </strong>
               </div>
               <div>
-                <span>Mục đích</span>
-                <strong>
-                  {event.purposeOfUse ?? "Chưa khai báo"}
-                  {typeof event.metadata.actorRole === "string" ? ` · ${event.metadata.actorRole}` : ""}
-                </strong>
+                <span>Lần kiểm tra</span>
+                <strong>{formatDateTime(auditIntegrityReport.checkedAt)}</strong>
               </div>
               <div>
-                <span>Toàn vẹn</span>
-                <strong>{event.integrityHash ? "Đã niêm phong" : "Chưa niêm phong"}</strong>
+                <span>Hash mới nhất</span>
+                <strong className="hash-text">{auditIntegrityReport.latestHash ?? "Chưa có"}</strong>
               </div>
+              {auditIntegrityReport.verified ? null : (
+                <p>
+                  Điểm cần kiểm tra: {auditIntegrityReport.brokenAtEventId ?? "không xác định"} ·{" "}
+                  {formatAuditIntegrityReason(auditIntegrityReport.brokenReason)}
+                </p>
+              )}
             </div>
-          ))}
-          {auditEvents.length === 0 ? (
-            <p className="empty-state">
-              {canReadAudit
-                ? "Chưa có audit event cho bệnh nhân đang chọn. Hãy xem FHIR, mở lượt khám hoặc ký tài liệu để phát sinh log."
-                : "Nhật ký kiểm toán chỉ hiển thị với kiểm toán viên hoặc quản trị viên."}
-            </p>
           ) : null}
-        </div>
-      </article>
+
+          <div className="audit-list">
+            {auditEvents.map((event) => (
+              <div className="audit-item" key={event.id ?? `${event.occurredAt}:${event.action}`}>
+                <div>
+                  <span>{formatDateTime(event.occurredAt)}</span>
+                  <strong>{formatAuditAction(event.action)}</strong>
+                </div>
+                <div>
+                  <span>Actor</span>
+                  <strong>{event.actorId}</strong>
+                </div>
+                <div>
+                  <span>Tài nguyên</span>
+                  <strong>
+                    {formatAuditResourceType(event.resourceType)} · {event.resourceId}
+                  </strong>
+                </div>
+                <div>
+                  <span>Mục đích</span>
+                  <strong>
+                    {event.purposeOfUse ?? "Chưa khai báo"}
+                    {typeof event.metadata.actorRole === "string" ? ` · ${event.metadata.actorRole}` : ""}
+                  </strong>
+                </div>
+                <div>
+                  <span>Toàn vẹn</span>
+                  <strong>{event.integrityHash ? "Đã niêm phong" : "Chưa niêm phong"}</strong>
+                </div>
+              </div>
+            ))}
+            {auditEvents.length === 0 ? (
+              <p className="empty-state">
+                {canReadAudit
+                  ? "Chưa có audit event cho bệnh nhân đang chọn. Hãy xem FHIR, mở lượt khám hoặc ký tài liệu để phát sinh log."
+                  : "Nhật ký kiểm toán chỉ hiển thị với kiểm toán viên hoặc quản trị viên."}
+              </p>
+            ) : null}
+          </div>
+        </article>
+        <FhirPanel title="FHIR AuditEvent Bundle JSON" badge="AuditEvent" value={auditFhirBundlePreview} />
+      </>
     );
   }
 
@@ -8538,6 +8608,7 @@ function formatAuditAction(action: AuditAction): string {
     "consent.revoke": "Thu hồi đồng ý chia sẻ hồ sơ",
     "consent.fhir-export": "Xuất FHIR Consent",
     "audit-event.list": "Xem nhật ký kiểm toán",
+    "audit-event.fhir-export": "Xuất FHIR AuditEvent",
     "audit-event.integrity-verify": "Kiểm tra toàn vẹn audit"
   };
 

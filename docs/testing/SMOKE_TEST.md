@@ -158,6 +158,14 @@ curl -fsS http://localhost:7310/api/v1/patients/patient-demo-001/fhir-document-b
   -H "x-purpose-of-use: TREATMENT" \
   -H "x-consent-reference: consent-demo-transfer-001" \
   -H "x-recipient-organization-id: hospital-hai-phong-referral"
+
+AUDIT_TOKEN=$(curl -s -X POST http://localhost:7310/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"security-officer-demo","password":"demo","role":"auditor"}' | jq -r .accessToken)
+
+curl -fsS http://localhost:7310/api/v1/patients/patient-demo-001/audit-events/fhir-bundle \
+  -H "Authorization: Bearer $AUDIT_TOKEN" \
+  -H "x-purpose-of-use: AUDIT"
 ```
 
 ## Docker smoke

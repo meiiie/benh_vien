@@ -6,6 +6,7 @@ import type {
   AuditEventSnapshot,
   PatientRepository
 } from "@benh-vien-so/domain";
+import { mapAuditEventsToFhirBundle } from "@benh-vien-so/domain";
 import { requirePermission } from "../access-control/access-context.js";
 import { recordAuditEvent } from "./audit-context.js";
 
@@ -74,6 +75,38 @@ export async function registerAuditEventRoutes(
     });
 
     return auditRepository.verifyPatientIntegrity(params.patientId);
+  });
+
+  app.get("/patients/:patientId/audit-events/fhir-bundle", async (request, reply) => {
+    const actor = requirePermission(request, reply, "audit-event:fhir-export");
+
+    if (!actor) {
+      return;
+    }
+
+    const params = PatientAuditEventsParamsSchema.parse(request.params);
+    const patient = await patientRepository.findById(params.patientId);
+
+    if (!patient) {
+      return reply.status(404).send({
+        error: "PATIENT_NOT_FOUND"
+      });
+    }
+
+    await recordAuditEvent(auditRepository, request, {
+      action: "audit-event.fhir-export",
+      resourceType: "AuditEvent",
+      resourceId: params.patientId,
+      patientId: params.patientId,
+      metadata: {
+        standard: "HL7 FHIR R4",
+        resourceType: "AuditEvent",
+        format: "Bundle.collection"
+      }
+    });
+
+    const events = await auditRepository.findByPatientId(params.patientId);
+    return mapAuditEventsToFhirBundle(params.patientId, events);
   });
 }
 

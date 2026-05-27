@@ -17,7 +17,7 @@
 - Clinical Records: tài liệu bệnh án, trạng thái ký/xác nhận và lịch sử chỉnh sửa.
 - Consent core: đồng ý chia sẻ hồ sơ, hiệu lực theo thời gian, thu hồi consent, xuất FHIR `Consent` và audit các thao tác chia sẻ.
 - Record Transfer core: gói chuyển hồ sơ liên viện, trạng thái vận hành, cơ sở gửi/nhận, consent và FHIR `Task` điều phối.
-- Audit & Compliance: nhật ký xem, sửa, ký, xuất hồ sơ và kiểm tra toàn vẹn chuỗi băm ở mức prototype.
+- Audit & Compliance: nhật ký xem, sửa, ký, xuất hồ sơ, xuất FHIR `AuditEvent` và kiểm tra toàn vẹn chuỗi băm ở mức prototype.
 - Web demo: màn hình bệnh nhân, danh sách tài liệu, consent, gói chuyển hồ sơ và trạng thái liên thông.
 
 ## Giai đoạn 2: Liên thông FHIR
@@ -37,7 +37,7 @@
 ## Giai đoạn 4: Bảo mật, vận hành và chuẩn hóa
 
 - Tích hợp IAM/SSO, phân quyền theo vai trò và ngữ cảnh điều trị.
-- Hoàn thiện audit trail, kiểm tra toàn vẹn chuỗi băm, báo cáo tuân thủ, retention policy và cảnh báo khi phát hiện sai lệch.
+- Hoàn thiện audit trail, FHIR `AuditEvent`, kiểm tra toàn vẹn chuỗi băm, báo cáo tuân thủ, retention policy và cảnh báo khi phát hiện sai lệch.
 - Bổ sung kiểm thử bảo mật API theo OWASP.
 - Chuẩn hóa backup, restore, retention và disaster recovery.
 

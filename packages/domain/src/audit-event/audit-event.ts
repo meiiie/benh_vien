@@ -72,6 +72,7 @@ export type AuditAction =
   | "consent.revoke"
   | "consent.fhir-export"
   | "audit-event.list"
+  | "audit-event.fhir-export"
   | "audit-event.integrity-verify";
 
 export type AuditResourceType =
