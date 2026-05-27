@@ -178,10 +178,11 @@ describe("API auth and RBAC boundary", () => {
         "DiagnosticReport",
         "ImagingStudy",
         "MedicationRequest",
+        "MedicationAdministration",
         "DocumentReference"
       ])
     );
-    expect(body.entry).toHaveLength(39);
+    expect(body.entry).toHaveLength(41);
   });
 
   it("returns a patient-record FHIR document Bundle with Composition first", async () => {
@@ -212,7 +213,7 @@ describe("API auth and RBAC boundary", () => {
         }
       ]
     });
-    expect(body.entry).toHaveLength(40);
+    expect(body.entry).toHaveLength(42);
     expect(body.entry[0].resource.section).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -223,6 +224,9 @@ describe("API auth and RBAC boundary", () => {
         }),
         expect.objectContaining({
           title: "Thủ thuật và hoạt động đã thực hiện"
+        }),
+        expect.objectContaining({
+          title: "Dùng thuốc thực tế"
         })
       ])
     );
@@ -655,6 +659,107 @@ describe("API auth and RBAC boundary", () => {
       subject: {
         reference: "Patient/patient-demo-001"
       }
+    });
+  });
+
+  it("lists medication administrations and exports them as FHIR MedicationAdministration", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const listResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/medication-administrations",
+      headers: treatmentHeaders(accessToken)
+    });
+    const listBody = listResponse.json();
+
+    expect(listResponse.statusCode).toBe(200);
+    expect(listBody.items).toHaveLength(2);
+    expect(listBody.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "medication-administration-demo-002",
+          status: "completed",
+          medicationRequestId: "medication-request-demo-002"
+        })
+      ])
+    );
+
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/medication-administrations/medication-administration-demo-002/fhir",
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(fhirResponse.statusCode).toBe(200);
+    expect(fhirResponse.json()).toMatchObject({
+      resourceType: "MedicationAdministration",
+      id: "medication-administration-demo-002",
+      status: "completed",
+      request: {
+        reference: "MedicationRequest/medication-request-demo-002"
+      },
+      subject: {
+        reference: "Patient/patient-demo-001"
+      }
+    });
+  });
+
+  it("creates a medication administration linked to the original medication request", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/medication-administrations",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: "encounter-demo-002",
+        medicationRequestId: "medication-request-demo-002",
+        reasonConditionId: "condition-demo-002",
+        status: "completed",
+        category: "outpatient",
+        medicationCode: {
+          system: "http://www.whocc.no/atc",
+          code: "C09AA05",
+          display: "Ramipril"
+        },
+        effectivePeriod: {
+          start: "2026-05-27T06:05:00.000Z"
+        },
+        performers: [
+          {
+            actorType: "Practitioner",
+            actorId: "nurse-demo-001"
+          }
+        ],
+        dosage: {
+          text: "Uống 5 mg vào buổi sáng",
+          route: {
+            system: "http://snomed.info/sct",
+            code: "26643006",
+            display: "Oral route"
+          },
+          doseQuantity: {
+            value: 5,
+            unit: "mg",
+            system: "http://unitsofmeasure.org",
+            code: "mg"
+          }
+        }
+      }
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({
+      patientId: "patient-demo-001",
+      encounterId: "encounter-demo-002",
+      medicationRequestId: "medication-request-demo-002",
+      reasonConditionId: "condition-demo-002",
+      category: "outpatient"
     });
   });
 

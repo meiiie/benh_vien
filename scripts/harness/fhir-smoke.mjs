@@ -22,6 +22,7 @@ const {
   DiagnosticReport,
   Encounter,
   ImagingStudy,
+  MedicationAdministration,
   MedicationRequest,
   Observation,
   Patient,
@@ -36,6 +37,7 @@ const {
   mapDiagnosticReportToFhir,
   mapEncounterToFhir,
   mapImagingStudyToFhir,
+  mapMedicationAdministrationToFhir,
   mapMedicationRequestToFhir,
   mapObservationToFhir,
   mapPatientRecordToFhirDocumentBundle,
@@ -562,6 +564,57 @@ if (fhirMedicationRequest.subject.reference !== "Patient/patient-harness-001") {
   );
 }
 
+const medicationAdministration = MedicationAdministration.record({
+  id: "medication-administration-harness-001",
+  patientId: patient.id,
+  encounterId: encounter.id,
+  medicationRequestId: medicationRequest.id,
+  reasonConditionId: condition.id,
+  status: "completed",
+  category: "outpatient",
+  medicationCode: {
+    system: "http://www.whocc.no/atc",
+    code: "J01CA04",
+    display: "Amoxicillin"
+  },
+  effectivePeriod: {
+    start: "2026-05-27T02:30:00.000Z"
+  },
+  performers: [
+    {
+      actorType: "Practitioner",
+      actorId: "practitioner-harness-001"
+    }
+  ],
+  dosage: {
+    text: "500 mg oral dose",
+    doseQuantity: {
+      value: 500,
+      unit: "mg",
+      system: "http://unitsofmeasure.org",
+      code: "mg"
+    }
+  }
+});
+
+const fhirMedicationAdministration =
+  mapMedicationAdministrationToFhir(medicationAdministration);
+
+if (fhirMedicationAdministration.resourceType !== "MedicationAdministration") {
+  throw new Error(
+    `Expected resourceType MedicationAdministration, received ${fhirMedicationAdministration.resourceType}`
+  );
+}
+
+if (
+  fhirMedicationAdministration.request?.reference !==
+  "MedicationRequest/medication-request-harness-001"
+) {
+  throw new Error(
+    "Expected medication administration request MedicationRequest/medication-request-harness-001."
+  );
+}
+
 const document = ClinicalDocument.create({
   id: "clinical-document-harness-001",
   patientId: patient.id,
@@ -604,6 +657,7 @@ const fhirBundle = mapPatientRecordToFhirBundle({
   diagnosticReports: [diagnosticReport],
   imagingStudies: [imagingStudy],
   medicationRequests: [medicationRequest],
+  medicationAdministrations: [medicationAdministration],
   documents: [document],
   providerDirectory,
   generatedAt: new Date("2026-05-27T00:00:00.000Z")
@@ -617,8 +671,8 @@ if (fhirBundle.type !== "collection") {
   throw new Error(`Expected bundle type collection, received ${fhirBundle.type}`);
 }
 
-if (fhirBundle.entry.length !== 18) {
-  throw new Error(`Expected bundle to contain 18 entries, received ${fhirBundle.entry.length}`);
+if (fhirBundle.entry.length !== 19) {
+  throw new Error(`Expected bundle to contain 19 entries, received ${fhirBundle.entry.length}`);
 }
 
 const fhirDocumentBundle = mapPatientRecordToFhirDocumentBundle({
@@ -633,6 +687,7 @@ const fhirDocumentBundle = mapPatientRecordToFhirDocumentBundle({
   diagnosticReports: [diagnosticReport],
   imagingStudies: [imagingStudy],
   medicationRequests: [medicationRequest],
+  medicationAdministrations: [medicationAdministration],
   documents: [document],
   providerDirectory,
   generatedAt: new Date("2026-05-27T00:00:00.000Z"),
@@ -653,9 +708,9 @@ if (fhirDocumentBundle.entry[0]?.resource.resourceType !== "Composition") {
   throw new Error("Expected first document bundle entry to be Composition.");
 }
 
-if (fhirDocumentBundle.entry.length !== 19) {
+if (fhirDocumentBundle.entry.length !== 20) {
   throw new Error(
-    `Expected document bundle to contain 19 entries, received ${fhirDocumentBundle.entry.length}`
+    `Expected document bundle to contain 20 entries, received ${fhirDocumentBundle.entry.length}`
   );
 }
 
@@ -763,6 +818,15 @@ const clinicianCanExportMedicationRequest = canAccess(
   "medication-request:fhir-export"
 );
 
+const clinicianCanExportMedicationAdministration = canAccess(
+  {
+    actorId: "practitioner-harness-001",
+    role: "clinician",
+    purposeOfUse: "TREATMENT"
+  },
+  "medication-administration:fhir-export"
+);
+
 const clinicianCanExportServiceRequest = canAccess(
   {
     actorId: "practitioner-harness-001",
@@ -851,6 +915,15 @@ const nurseCanExportMedicationRequest = canAccess(
     purposeOfUse: "TREATMENT"
   },
   "medication-request:fhir-export"
+);
+
+const nurseCanExportMedicationAdministration = canAccess(
+  {
+    actorId: "nurse-harness-001",
+    role: "nurse",
+    purposeOfUse: "TREATMENT"
+  },
+  "medication-administration:fhir-export"
 );
 
 const nurseCanExportServiceRequest = canAccess(
@@ -958,6 +1031,10 @@ if (!clinicianCanExportMedicationRequest) {
   throw new Error("Expected clinician/TREATMENT to export medication requests.");
 }
 
+if (!clinicianCanExportMedicationAdministration) {
+  throw new Error("Expected clinician/TREATMENT to export medication administrations.");
+}
+
 if (!clinicianCanExportServiceRequest) {
   throw new Error("Expected clinician/TREATMENT to export service requests.");
 }
@@ -996,6 +1073,12 @@ if (nurseCanExportAllergyIntolerance) {
 
 if (nurseCanExportMedicationRequest) {
   throw new Error("Expected nurse/TREATMENT to be denied medication-request:fhir-export.");
+}
+
+if (nurseCanExportMedicationAdministration) {
+  throw new Error(
+    "Expected nurse/TREATMENT to be denied medication-administration:fhir-export."
+  );
 }
 
 if (nurseCanExportServiceRequest) {
@@ -1058,6 +1141,8 @@ console.log(
       imagingStudyResourceType: fhirImagingStudy.resourceType,
       medicationRequestId: fhirMedicationRequest.id,
       medicationRequestResourceType: fhirMedicationRequest.resourceType,
+      medicationAdministrationId: fhirMedicationAdministration.id,
+      medicationAdministrationResourceType: fhirMedicationAdministration.resourceType,
       serviceRequestId: fhirServiceRequest.id,
       serviceRequestResourceType: fhirServiceRequest.resourceType,
       workflowTaskId: fhirWorkflowTask.id,
@@ -1086,6 +1171,7 @@ console.log(
         clinicianCanExportDiagnosticReport,
         clinicianCanExportImagingStudy,
         clinicianCanExportMedicationRequest,
+        clinicianCanExportMedicationAdministration,
         clinicianCanExportObservation,
         clinicianCanExportProviderDirectory,
         clinicianCanExportServiceRequest,
@@ -1096,6 +1182,7 @@ console.log(
         nurseCanExportDiagnosticReport,
         nurseCanExportImagingStudy,
         nurseCanExportMedicationRequest,
+        nurseCanExportMedicationAdministration,
         nurseCanExportObservation,
         nurseCanExportProviderDirectory,
         nurseCanReadProviderDirectory,

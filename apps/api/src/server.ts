@@ -11,6 +11,7 @@ import type {
   DiagnosticReportRepository,
   EncounterRepository,
   ImagingStudyRepository,
+  MedicationAdministrationRepository,
   MedicationRequestRepository,
   ObservationRepository,
   PatientRepository,
@@ -36,6 +37,8 @@ import { createEncounterRepository } from "./modules/encounters/create-encounter
 import { registerEncounterRoutes } from "./modules/encounters/encounter-routes.js";
 import { createImagingStudyRepository } from "./modules/imaging-studies/create-imaging-study.repository.js";
 import { registerImagingStudyRoutes } from "./modules/imaging-studies/imaging-study-routes.js";
+import { createMedicationAdministrationRepository } from "./modules/medication-administrations/create-medication-administration.repository.js";
+import { registerMedicationAdministrationRoutes } from "./modules/medication-administrations/medication-administration-routes.js";
 import { createMedicationRequestRepository } from "./modules/medication-requests/create-medication-request.repository.js";
 import { registerMedicationRequestRoutes } from "./modules/medication-requests/medication-request-routes.js";
 import { createObservationRepository } from "./modules/observations/create-observation.repository.js";
@@ -60,6 +63,7 @@ export type ServerOptions = {
   readonly providerDirectoryRepository?: ProviderDirectoryRepository;
   readonly diagnosticReportRepository?: DiagnosticReportRepository;
   readonly imagingStudyRepository?: ImagingStudyRepository;
+  readonly medicationAdministrationRepository?: MedicationAdministrationRepository;
   readonly medicationRequestRepository?: MedicationRequestRepository;
   readonly serviceRequestRepository?: ServiceRequestRepository;
   readonly workflowTaskRepository?: WorkflowTaskRepository;
@@ -121,6 +125,10 @@ export async function buildServer(options: ServerOptions = {}) {
           description: "Quản lý chỉ định thuốc, đơn thuốc và FHIR MedicationRequest"
         },
         {
+          name: "medication-administrations",
+          description: "Quản lý lần dùng thuốc thực tế và FHIR MedicationAdministration"
+        },
+        {
           name: "service-requests",
           description: "Quản lý chỉ định xét nghiệm, hình ảnh, thủ thuật và FHIR ServiceRequest"
         },
@@ -177,6 +185,9 @@ export async function buildServer(options: ServerOptions = {}) {
     options.observationRepository ?? (await createObservationRepository());
   const medicationRequestRepository =
     options.medicationRequestRepository ?? (await createMedicationRequestRepository());
+  const medicationAdministrationRepository =
+    options.medicationAdministrationRepository ??
+    (await createMedicationAdministrationRepository());
   const serviceRequestRepository =
     options.serviceRequestRepository ?? (await createServiceRequestRepository());
   const workflowTaskRepository =
@@ -211,6 +222,7 @@ export async function buildServer(options: ServerOptions = {}) {
         conditionRepository,
         observationRepository,
         medicationRequestRepository,
+        medicationAdministrationRepository,
         serviceRequestRepository,
         diagnosticReportRepository,
         imagingStudyRepository,
@@ -264,6 +276,15 @@ export async function buildServer(options: ServerOptions = {}) {
         encounterRepository,
         conditionRepository,
         medicationRequestRepository,
+        auditEventRepository
+      );
+      await registerMedicationAdministrationRoutes(
+        api,
+        patientRepository,
+        encounterRepository,
+        conditionRepository,
+        medicationRequestRepository,
+        medicationAdministrationRepository,
         auditEventRepository
       );
       await registerServiceRequestRoutes(

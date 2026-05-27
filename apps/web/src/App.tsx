@@ -77,6 +77,25 @@ type MedicationRequestIntent =
 type MedicationRequestCategory = "inpatient" | "outpatient" | "community" | "discharge";
 type MedicationRequestPriority = "routine" | "urgent" | "asap" | "stat";
 type MedicationTimingUnit = "h" | "d" | "wk";
+type MedicationAdministrationStatus =
+  | "in-progress"
+  | "not-done"
+  | "on-hold"
+  | "completed"
+  | "entered-in-error"
+  | "stopped"
+  | "unknown";
+type MedicationAdministrationCategory =
+  | "inpatient"
+  | "outpatient"
+  | "community"
+  | "patient-specified";
+type MedicationAdministrationPerformerActorType =
+  | "Practitioner"
+  | "PractitionerRole"
+  | "Patient"
+  | "RelatedPerson"
+  | "Device";
 type ServiceRequestStatus =
   | "draft"
   | "active"
@@ -433,6 +452,41 @@ type MedicationRequest = {
   readonly updatedAt: string;
 };
 
+type MedicationAdministrationPerformer = {
+  readonly actorType: MedicationAdministrationPerformerActorType;
+  readonly actorId: string;
+  readonly function?: MedicationCode;
+};
+
+type MedicationAdministrationEffectivePeriod = {
+  readonly start?: string;
+  readonly end?: string;
+};
+
+type MedicationAdministrationDosage = {
+  readonly text?: string;
+  readonly route?: MedicationCode;
+  readonly doseQuantity?: MedicationQuantity;
+};
+
+type MedicationAdministration = {
+  readonly id: string;
+  readonly patientId: string;
+  readonly encounterId?: string;
+  readonly medicationRequestId?: string;
+  readonly reasonConditionId?: string;
+  readonly status: MedicationAdministrationStatus;
+  readonly statusReason?: MedicationCode;
+  readonly category: MedicationAdministrationCategory;
+  readonly medicationCode: MedicationCode;
+  readonly effectivePeriod: MedicationAdministrationEffectivePeriod;
+  readonly performers: readonly MedicationAdministrationPerformer[];
+  readonly dosage?: MedicationAdministrationDosage;
+  readonly note?: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
 type ServiceRequestCode = {
   readonly system: string;
   readonly code: string;
@@ -640,6 +694,10 @@ type AuditAction =
   | "medication-request.create"
   | "medication-request.read"
   | "medication-request.fhir-export"
+  | "medication-administration.list"
+  | "medication-administration.create"
+  | "medication-administration.read"
+  | "medication-administration.fhir-export"
   | "observation.list"
   | "observation.create"
   | "observation.read"
@@ -679,6 +737,7 @@ type AuditResourceType =
   | "AllergyIntolerance"
   | "Condition"
   | "MedicationRequest"
+  | "MedicationAdministration"
   | "Observation"
   | "ServiceRequest"
   | "Task"
@@ -743,6 +802,10 @@ type ObservationsResponse = {
 
 type MedicationRequestsResponse = {
   readonly items: readonly MedicationRequest[];
+};
+
+type MedicationAdministrationsResponse = {
+  readonly items: readonly MedicationAdministration[];
 };
 
 type ServiceRequestsResponse = {
@@ -867,6 +930,27 @@ type NewMedicationRequestForm = {
   authoredOn: string;
   requesterPractitionerId: string;
   expectedSupplyDurationDays: string;
+  note: string;
+};
+
+type NewMedicationAdministrationForm = {
+  encounterId: string;
+  medicationRequestId: string;
+  reasonConditionId: string;
+  category: MedicationAdministrationCategory;
+  medicationSystem: string;
+  medicationCode: string;
+  medicationDisplay: string;
+  effectiveStart: string;
+  performerActorType: MedicationAdministrationPerformerActorType;
+  performerActorId: string;
+  performerFunctionDisplay: string;
+  dosageText: string;
+  routeSystem: string;
+  routeCode: string;
+  routeDisplay: string;
+  doseValue: string;
+  doseUnit: string;
   note: string;
 };
 
@@ -1069,6 +1153,27 @@ const defaultMedicationRequestForm: NewMedicationRequestForm = {
   note: "Chỉ định thuốc dùng cho quản lý điều trị ngoại trú."
 };
 
+const defaultMedicationAdministrationForm: NewMedicationAdministrationForm = {
+  encounterId: "",
+  medicationRequestId: "",
+  reasonConditionId: "",
+  category: "outpatient",
+  medicationSystem: "http://www.whocc.no/atc",
+  medicationCode: "C09AA05",
+  medicationDisplay: "Ramipril",
+  effectiveStart: "2026-05-27T13:00",
+  performerActorType: "Practitioner",
+  performerActorId: "nurse-demo-001",
+  performerFunctionDisplay: "Nhân sự xác nhận dùng thuốc",
+  dosageText: "Uống 5 mg vào buổi sáng",
+  routeSystem: "http://snomed.info/sct",
+  routeCode: "26643006",
+  routeDisplay: "Oral route",
+  doseValue: "5",
+  doseUnit: "mg",
+  note: "Ghi nhận dùng thuốc thực tế theo chỉ định đã có."
+};
+
 const defaultServiceRequestForm: NewServiceRequestForm = {
   encounterId: "",
   reasonConditionId: "",
@@ -1200,6 +1305,7 @@ const workflowSteps = [
   "Định danh cơ sở/endpoint",
   "Ghi nhận chỉ số",
   "Kê đơn/thuốc",
+  "Xác nhận dùng thuốc",
   "Gắn tài liệu",
   "Ký/xác thực",
   "Xuất FHIR"
@@ -1234,7 +1340,7 @@ const referenceSignals = [
   },
   {
     name: "HL7 FHIR R4",
-    value: "Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, DocumentReference cùng Organization/Practitioner/Endpoint là lõi trao đổi dữ liệu trong lát cắt này."
+    value: "Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, MedicationAdministration, DocumentReference cùng Organization/Practitioner/Endpoint là lõi trao đổi dữ liệu trong lát cắt này."
   },
   {
     name: "Bối cảnh Việt Nam",
@@ -1266,6 +1372,10 @@ export function App() {
   const [selectedObservationId, setSelectedObservationId] = useState<string>();
   const [medicationRequests, setMedicationRequests] = useState<readonly MedicationRequest[]>([]);
   const [selectedMedicationRequestId, setSelectedMedicationRequestId] = useState<string>();
+  const [medicationAdministrations, setMedicationAdministrations] =
+    useState<readonly MedicationAdministration[]>([]);
+  const [selectedMedicationAdministrationId, setSelectedMedicationAdministrationId] =
+    useState<string>();
   const [serviceRequests, setServiceRequests] = useState<readonly ServiceRequest[]>([]);
   const [selectedServiceRequestId, setSelectedServiceRequestId] = useState<string>();
   const [workflowTasks, setWorkflowTasks] = useState<readonly WorkflowTask[]>([]);
@@ -1289,6 +1399,8 @@ export function App() {
   const [conditionFhirPreview, setConditionFhirPreview] = useState<unknown>();
   const [observationFhirPreview, setObservationFhirPreview] = useState<unknown>();
   const [medicationRequestFhirPreview, setMedicationRequestFhirPreview] = useState<unknown>();
+  const [medicationAdministrationFhirPreview, setMedicationAdministrationFhirPreview] =
+    useState<unknown>();
   const [serviceRequestFhirPreview, setServiceRequestFhirPreview] = useState<unknown>();
   const [workflowTaskFhirPreview, setWorkflowTaskFhirPreview] = useState<unknown>();
   const [procedureFhirPreview, setProcedureFhirPreview] = useState<unknown>();
@@ -1306,6 +1418,8 @@ export function App() {
     useState<NewObservationForm>(defaultObservationForm);
   const [medicationRequestForm, setMedicationRequestForm] =
     useState<NewMedicationRequestForm>(defaultMedicationRequestForm);
+  const [medicationAdministrationForm, setMedicationAdministrationForm] =
+    useState<NewMedicationAdministrationForm>(defaultMedicationAdministrationForm);
   const [serviceRequestForm, setServiceRequestForm] =
     useState<NewServiceRequestForm>(defaultServiceRequestForm);
   const [procedureForm, setProcedureForm] =
@@ -1322,6 +1436,8 @@ export function App() {
   const [isLoadingConditions, setIsLoadingConditions] = useState(false);
   const [isLoadingObservations, setIsLoadingObservations] = useState(false);
   const [isLoadingMedicationRequests, setIsLoadingMedicationRequests] = useState(false);
+  const [isLoadingMedicationAdministrations, setIsLoadingMedicationAdministrations] =
+    useState(false);
   const [isLoadingServiceRequests, setIsLoadingServiceRequests] = useState(false);
   const [isLoadingWorkflowTasks, setIsLoadingWorkflowTasks] = useState(false);
   const [isLoadingProcedures, setIsLoadingProcedures] = useState(false);
@@ -1337,6 +1453,8 @@ export function App() {
   const [isSubmittingCondition, setIsSubmittingCondition] = useState(false);
   const [isSubmittingObservation, setIsSubmittingObservation] = useState(false);
   const [isSubmittingMedicationRequest, setIsSubmittingMedicationRequest] = useState(false);
+  const [isSubmittingMedicationAdministration, setIsSubmittingMedicationAdministration] =
+    useState(false);
   const [isSubmittingServiceRequest, setIsSubmittingServiceRequest] = useState(false);
   const [isSubmittingProcedure, setIsSubmittingProcedure] = useState(false);
   const [isSubmittingDiagnosticReport, setIsSubmittingDiagnosticReport] = useState(false);
@@ -1354,6 +1472,10 @@ export function App() {
   const selectedObservation = observations.find((observation) => observation.id === selectedObservationId);
   const selectedMedicationRequest = medicationRequests.find(
     (medicationRequest) => medicationRequest.id === selectedMedicationRequestId
+  );
+  const selectedMedicationAdministration = medicationAdministrations.find(
+    (medicationAdministration) =>
+      medicationAdministration.id === selectedMedicationAdministrationId
   );
   const selectedServiceRequest = serviceRequests.find(
     (serviceRequest) => serviceRequest.id === selectedServiceRequestId
@@ -1380,6 +1502,12 @@ export function App() {
     : [];
   const selectedEncounterMedicationRequests = selectedEncounter
     ? medicationRequests.filter((medicationRequest) => medicationRequest.encounterId === selectedEncounter.id)
+    : [];
+  const selectedEncounterMedicationAdministrations = selectedEncounter
+    ? medicationAdministrations.filter(
+        (medicationAdministration) =>
+          medicationAdministration.encounterId === selectedEncounter.id
+      )
     : [];
   const selectedEncounterServiceRequests = selectedEncounter
     ? serviceRequests.filter((serviceRequest) => serviceRequest.encounterId === selectedEncounter.id)
@@ -1421,6 +1549,7 @@ export function App() {
       setConditionFhirPreview(undefined);
       setObservationFhirPreview(undefined);
       setMedicationRequestFhirPreview(undefined);
+      setMedicationAdministrationFhirPreview(undefined);
       setServiceRequestFhirPreview(undefined);
       setWorkflowTaskFhirPreview(undefined);
       setProcedureFhirPreview(undefined);
@@ -1432,6 +1561,7 @@ export function App() {
       setConditions([]);
       setObservations([]);
       setMedicationRequests([]);
+      setMedicationAdministrations([]);
       setServiceRequests([]);
       setWorkflowTasks([]);
       setProcedures([]);
@@ -1445,6 +1575,7 @@ export function App() {
       setSelectedConditionId(undefined);
       setSelectedObservationId(undefined);
       setSelectedMedicationRequestId(undefined);
+      setSelectedMedicationAdministrationId(undefined);
       setSelectedServiceRequestId(undefined);
       setSelectedWorkflowTaskId(undefined);
       setSelectedProcedureId(undefined);
@@ -1464,6 +1595,7 @@ export function App() {
       setConditionForm((current) => ({ ...current, encounterId: "" }));
       setObservationForm((current) => ({ ...current, encounterId: "" }));
       setMedicationRequestForm((current) => ({ ...current, encounterId: "" }));
+      setMedicationAdministrationForm((current) => ({ ...current, encounterId: "" }));
       setServiceRequestForm((current) => ({ ...current, encounterId: "" }));
       setProcedureForm((current) => ({ ...current, encounterId: "" }));
       setDiagnosticReportForm((current) => ({ ...current, encounterId: "" }));
@@ -1476,6 +1608,7 @@ export function App() {
     setConditionForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     setObservationForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     setMedicationRequestForm((current) => ({ ...current, encounterId: selectedEncounterId }));
+    setMedicationAdministrationForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     setServiceRequestForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     setProcedureForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     setDiagnosticReportForm((current) => ({ ...current, encounterId: selectedEncounterId }));
@@ -1527,6 +1660,15 @@ export function App() {
 
     void loadMedicationRequestFhirPreview(selectedMedicationRequestId);
   }, [selectedMedicationRequestId]);
+
+  useEffect(() => {
+    if (!selectedMedicationAdministrationId) {
+      setMedicationAdministrationFhirPreview(undefined);
+      return;
+    }
+
+    void loadMedicationAdministrationFhirPreview(selectedMedicationAdministrationId);
+  }, [selectedMedicationAdministrationId]);
 
   useEffect(() => {
     if (!selectedServiceRequestId) {
@@ -1661,6 +1803,7 @@ export function App() {
       loadConditions(patientId),
       loadObservations(patientId),
       loadMedicationRequests(patientId),
+      loadMedicationAdministrations(patientId),
       loadServiceRequests(patientId),
       loadWorkflowTasks(patientId),
       loadProcedures(patientId),
@@ -1850,6 +1993,42 @@ export function App() {
       );
     } finally {
       setIsLoadingMedicationRequests(false);
+    }
+  }
+
+  async function loadMedicationAdministrations(
+    patientId: string,
+    nextSelectedMedicationAdministrationId?: string
+  ) {
+    setIsLoadingMedicationAdministrations(true);
+
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/patients/${patientId}/medication-administrations`,
+        {
+          headers: buildHeaders("TREATMENT")
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      const data = (await response.json()) as MedicationAdministrationsResponse;
+      setMedicationAdministrations(data.items);
+      setSelectedMedicationAdministrationId(
+        nextSelectedMedicationAdministrationId ?? data.items[0]?.id
+      );
+    } catch (error) {
+      setMedicationAdministrations([]);
+      setSelectedMedicationAdministrationId(undefined);
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể tải lần dùng thuốc: ${error.message}`
+          : "Không thể tải lần dùng thuốc."
+      );
+    } finally {
+      setIsLoadingMedicationAdministrations(false);
     }
   }
 
@@ -2256,6 +2435,32 @@ export function App() {
     }
   }
 
+  async function loadMedicationAdministrationFhirPreview(
+    medicationAdministrationId: string
+  ) {
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/medication-administrations/${medicationAdministrationId}/fhir`,
+        {
+          headers: buildHeaders("TREATMENT")
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      setMedicationAdministrationFhirPreview(await response.json());
+    } catch (error) {
+      setMedicationAdministrationFhirPreview({
+        error:
+          error instanceof Error
+            ? `Không thể xuất FHIR MedicationAdministration: ${error.message}`
+            : "Không thể xuất FHIR MedicationAdministration."
+      });
+    }
+  }
+
   async function loadServiceRequestFhirPreview(serviceRequestId: string) {
     try {
       const response = await fetch(`${apiBaseUrl}/service-requests/${serviceRequestId}/fhir`, {
@@ -2419,6 +2624,7 @@ export function App() {
     setConditions([]);
     setObservations([]);
     setMedicationRequests([]);
+    setMedicationAdministrations([]);
     setServiceRequests([]);
     setWorkflowTasks([]);
     setProcedures([]);
@@ -2437,6 +2643,7 @@ export function App() {
     setConditionFhirPreview(undefined);
     setObservationFhirPreview(undefined);
     setMedicationRequestFhirPreview(undefined);
+    setMedicationAdministrationFhirPreview(undefined);
     setServiceRequestFhirPreview(undefined);
     setWorkflowTaskFhirPreview(undefined);
     setProcedureFhirPreview(undefined);
@@ -2449,6 +2656,7 @@ export function App() {
     setSelectedConditionId(undefined);
     setSelectedObservationId(undefined);
     setSelectedMedicationRequestId(undefined);
+    setSelectedMedicationAdministrationId(undefined);
     setSelectedServiceRequestId(undefined);
     setSelectedWorkflowTaskId(undefined);
     setSelectedProcedureId(undefined);
@@ -2882,6 +3090,120 @@ export function App() {
       );
     } finally {
       setIsSubmittingMedicationRequest(false);
+    }
+  }
+
+  async function handleCreateMedicationAdministration(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedPatient) {
+      setStatusMessage("Cần chọn bệnh nhân trước khi ghi nhận dùng thuốc thực tế.");
+      return;
+    }
+
+    const doseValue = Number(medicationAdministrationForm.doseValue);
+
+    if (!Number.isFinite(doseValue) || doseValue <= 0) {
+      setStatusMessage("Liều dùng thực tế phải là số lớn hơn 0.");
+      return;
+    }
+
+    if (!medicationAdministrationForm.effectiveStart) {
+      setStatusMessage("Cần nhập thời điểm dùng thuốc thực tế.");
+      return;
+    }
+
+    if (!medicationAdministrationForm.performerActorId.trim()) {
+      setStatusMessage("Cần nhập người hoặc thiết bị xác nhận dùng thuốc.");
+      return;
+    }
+
+    setIsSubmittingMedicationAdministration(true);
+
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/patients/${selectedPatient.id}/medication-administrations`,
+        {
+          method: "POST",
+          headers: buildHeaders("TREATMENT", {
+            "Content-Type": "application/json"
+          }),
+          body: JSON.stringify({
+            encounterId: medicationAdministrationForm.encounterId || undefined,
+            medicationRequestId:
+              medicationAdministrationForm.medicationRequestId || undefined,
+            reasonConditionId: medicationAdministrationForm.reasonConditionId || undefined,
+            status: "completed",
+            category: medicationAdministrationForm.category,
+            medicationCode: {
+              system: medicationAdministrationForm.medicationSystem,
+              code: medicationAdministrationForm.medicationCode,
+              display: medicationAdministrationForm.medicationDisplay
+            },
+            effectivePeriod: {
+              start: toApiDateTime(medicationAdministrationForm.effectiveStart)
+            },
+            performers: [
+              {
+                actorType: medicationAdministrationForm.performerActorType,
+                actorId: medicationAdministrationForm.performerActorId,
+                function: medicationAdministrationForm.performerFunctionDisplay
+                  ? {
+                      system:
+                        "urn:wiiicare:nexus:medication-admin-performer-function",
+                      code: "medication-administration-recorder",
+                      display: medicationAdministrationForm.performerFunctionDisplay
+                    }
+                  : undefined
+              }
+            ],
+            dosage: {
+              text: medicationAdministrationForm.dosageText || undefined,
+              route: medicationAdministrationForm.routeCode
+                ? {
+                    system: medicationAdministrationForm.routeSystem,
+                    code: medicationAdministrationForm.routeCode,
+                    display: medicationAdministrationForm.routeDisplay
+                  }
+                : undefined,
+              doseQuantity: {
+                value: doseValue,
+                unit: medicationAdministrationForm.doseUnit,
+                system: "http://unitsofmeasure.org",
+                code: medicationAdministrationForm.doseUnit
+              }
+            },
+            note: medicationAdministrationForm.note || undefined
+          })
+        }
+      );
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => undefined);
+        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
+      }
+
+      const createdMedicationAdministration =
+        (await response.json()) as MedicationAdministration;
+      await loadMedicationAdministrations(
+        selectedPatient.id,
+        createdMedicationAdministration.id
+      );
+      await loadPatientFhirBundlePreview(selectedPatient.id);
+      await loadPatientFhirDocumentBundlePreview(selectedPatient.id);
+      await loadAuditEvents(selectedPatient.id, { silent: true });
+      setAppRoute("workspace");
+      setStatusMessage(
+        `Đã ghi nhận dùng thuốc "${createdMedicationAdministration.medicationCode.display}" cho ${selectedPatient.fullName}.`
+      );
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể ghi nhận dùng thuốc thực tế: ${error.message}`
+          : "Không thể ghi nhận dùng thuốc thực tế."
+      );
+    } finally {
+      setIsSubmittingMedicationAdministration(false);
     }
   }
 
@@ -3358,6 +3680,7 @@ export function App() {
           <MetricCard label="Kết quả" value={`${diagnosticReports.length}`} note="FHIR DiagnosticReport" />
           <MetricCard label="Ảnh y khoa" value={`${imagingStudies.length}`} note="FHIR ImagingStudy" />
           <MetricCard label="Chỉ định thuốc" value={`${medicationRequests.length}`} note="FHIR MedicationRequest" />
+          <MetricCard label="Dùng thuốc" value={`${medicationAdministrations.length}`} note="FHIR MedicationAdministration" />
           <MetricCard label="Tài liệu nháp" value={`${draftDocuments.length}`} note="Cần ký/xác thực" />
         </section>
 
@@ -3378,7 +3701,7 @@ export function App() {
               </button>
               <button type="button" onClick={() => setAppRoute("interop")}>
                 <strong>Xem gói FHIR</strong>
-                <span>Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest và DocumentReference đã có preview.</span>
+                <span>Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, MedicationAdministration và DocumentReference đã có preview.</span>
               </button>
             </div>
           </article>
@@ -3399,6 +3722,7 @@ export function App() {
                 <Info label="Báo cáo kết quả" value={`${diagnosticReports.length}`} />
                 <Info label="Nghiên cứu hình ảnh" value={`${imagingStudies.length}`} />
                 <Info label="Chỉ định thuốc" value={`${medicationRequests.length}`} />
+                <Info label="Dùng thuốc thực tế" value={`${medicationAdministrations.length}`} />
                 <Info label="Tài liệu" value={`${clinicalDocuments.length}`} />
                 <Info label="Cập nhật" value={formatDateTime(selectedPatient.updatedAt)} />
               </div>
@@ -3433,6 +3757,7 @@ export function App() {
           {renderDiagnosticReportPanel()}
           {renderImagingStudyPanel()}
           {renderMedicationRequestPanel()}
+          {renderMedicationAdministrationPanel()}
           {renderCreatePatientPanel()}
         </section>
       </div>
@@ -3516,6 +3841,7 @@ export function App() {
           <FhirPanel title="FHIR DiagnosticReport JSON" badge="DiagnosticReport" value={diagnosticReportFhirPreview} />
           <FhirPanel title="FHIR ImagingStudy JSON" badge="ImagingStudy" value={imagingStudyFhirPreview} />
           <FhirPanel title="FHIR MedicationRequest JSON" badge="MedicationRequest" value={medicationRequestFhirPreview} />
+          <FhirPanel title="FHIR MedicationAdministration JSON" badge="MedicationAdministration" value={medicationAdministrationFhirPreview} />
           <FhirPanel title="FHIR DocumentReference JSON" badge="DocumentReference" value={documentFhirPreview} />
           {renderConsentInteropPanel()}
           <article className="panel dark-panel">
@@ -3778,6 +4104,7 @@ export function App() {
                   <Info label="Báo cáo kết quả gắn lượt khám" value={`${selectedEncounterDiagnosticReports.length}`} />
                   <Info label="Ảnh y khoa gắn lượt khám" value={`${selectedEncounterImagingStudies.length}`} />
                   <Info label="Thuốc gắn lượt khám" value={`${selectedEncounterMedicationRequests.length}`} />
+                  <Info label="Dùng thuốc gắn lượt khám" value={`${selectedEncounterMedicationAdministrations.length}`} />
                   <Info label="Tài liệu gắn lượt khám" value={`${selectedEncounterDocuments.length}`} />
                 </div>
                 <div className="action-row">
@@ -5911,6 +6238,315 @@ export function App() {
     );
   }
 
+  function renderMedicationAdministrationPanel(): ReactNode {
+    return (
+      <article className="panel medication-panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Medication administrations</p>
+            <h2>Dùng thuốc thực tế</h2>
+          </div>
+          <span className="pill cyan">
+            {isLoadingMedicationAdministrations
+              ? "loading"
+              : `${medicationAdministrations.length} lần dùng`}
+          </span>
+        </div>
+
+        <div className="document-layout">
+          <div className="medication-cards">
+            {medicationAdministrations.map((medicationAdministration) => (
+              <button
+                className={
+                  medicationAdministration.id === selectedMedicationAdministrationId
+                    ? "medication-card selected"
+                    : "medication-card"
+                }
+                key={medicationAdministration.id}
+                type="button"
+                onClick={() => setSelectedMedicationAdministrationId(medicationAdministration.id)}
+              >
+                <span>{formatMedicationAdministrationCategory(medicationAdministration.category)}</span>
+                <strong>{medicationAdministration.medicationCode.display}</strong>
+                <small>
+                  {formatMedicationAdministrationStatus(medicationAdministration.status)} ·{" "}
+                  {formatDateTime(
+                    medicationAdministration.effectivePeriod.start ??
+                      medicationAdministration.updatedAt
+                  )}
+                </small>
+              </button>
+            ))}
+            {medicationAdministrations.length === 0 ? (
+              <p className="empty-state">
+                Chưa có bản ghi dùng thuốc thực tế. Hãy xác nhận sau khi có
+                MedicationRequest để phân biệt “chỉ định” với “đã dùng”.
+              </p>
+            ) : null}
+          </div>
+
+          <div className="medication-summary">
+            {selectedMedicationAdministration ? (
+              <>
+                <div className="document-meta">
+                  <Info label="Thuốc" value={selectedMedicationAdministration.medicationCode.display} />
+                  <Info label="Trạng thái" value={formatMedicationAdministrationStatus(selectedMedicationAdministration.status)} />
+                  <Info label="Bối cảnh" value={formatMedicationAdministrationCategory(selectedMedicationAdministration.category)} />
+                  <Info label="Thời điểm" value={formatMedicationAdministrationPeriod(selectedMedicationAdministration.effectivePeriod)} />
+                  <Info label="Liều thực tế" value={formatMedicationAdministrationDose(selectedMedicationAdministration.dosage)} />
+                  <Info label="Gắn đơn thuốc" value={selectedMedicationAdministration.medicationRequestId ?? "Chưa gắn"} />
+                  <Info label="Người xác nhận" value={formatMedicationAdministrationPerformers(selectedMedicationAdministration.performers)} />
+                  <Info label="Chẩn đoán liên quan" value={selectedMedicationAdministration.reasonConditionId ?? "Chưa gắn"} />
+                </div>
+                <p className="empty-state">
+                  MedicationAdministration là sự kiện thuốc đã được dùng hoặc
+                  được xác nhận dùng. Đây là phần giúp EMR đóng vòng điều trị:
+                  bác sĩ kê, hệ thống lưu chỉ định, nhân sự y tế xác nhận dùng
+                  và FHIR Bundle có thể chuyển sang bệnh viện khác.
+                </p>
+              </>
+            ) : (
+              <p className="empty-state">Chọn một lần dùng thuốc để xem metadata và xuất FHIR MedicationAdministration.</p>
+            )}
+          </div>
+        </div>
+
+        <form className="medication-form" onSubmit={(event) => void handleCreateMedicationAdministration(event)}>
+          <label>
+            Gắn với lượt khám
+            <select
+              value={medicationAdministrationForm.encounterId}
+              onChange={(event) =>
+                setMedicationAdministrationForm({
+                  ...medicationAdministrationForm,
+                  encounterId: event.target.value
+                })
+              }
+            >
+              <option value="">Không gắn</option>
+              {encounters.map((encounter) => (
+                <option key={encounter.id} value={encounter.id}>
+                  {encounter.serviceType} · {formatDateTime(encounter.startedAt)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Gắn MedicationRequest
+            <select
+              value={medicationAdministrationForm.medicationRequestId}
+              onChange={(event) => {
+                const medicationRequest = medicationRequests.find(
+                  (request) => request.id === event.target.value
+                );
+                setMedicationAdministrationForm({
+                  ...medicationAdministrationForm,
+                  medicationRequestId: event.target.value,
+                  reasonConditionId:
+                    medicationRequest?.reasonConditionId ??
+                    medicationAdministrationForm.reasonConditionId,
+                  medicationSystem:
+                    medicationRequest?.medicationCode.system ??
+                    medicationAdministrationForm.medicationSystem,
+                  medicationCode:
+                    medicationRequest?.medicationCode.code ??
+                    medicationAdministrationForm.medicationCode,
+                  medicationDisplay:
+                    medicationRequest?.medicationCode.display ??
+                    medicationAdministrationForm.medicationDisplay,
+                  dosageText:
+                    medicationRequest?.dosageInstruction.text ??
+                    medicationAdministrationForm.dosageText,
+                  doseValue:
+                    medicationRequest?.dosageInstruction.doseQuantity?.value.toString() ??
+                    medicationAdministrationForm.doseValue,
+                  doseUnit:
+                    medicationRequest?.dosageInstruction.doseQuantity?.unit ??
+                    medicationAdministrationForm.doseUnit
+                });
+              }}
+            >
+              <option value="">Không gắn</option>
+              {medicationRequests.map((medicationRequest) => (
+                <option key={medicationRequest.id} value={medicationRequest.id}>
+                  {medicationRequest.medicationCode.display} · {formatDateTime(medicationRequest.authoredOn)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Chẩn đoán liên quan
+            <select
+              value={medicationAdministrationForm.reasonConditionId}
+              onChange={(event) =>
+                setMedicationAdministrationForm({
+                  ...medicationAdministrationForm,
+                  reasonConditionId: event.target.value
+                })
+              }
+            >
+              <option value="">Không gắn</option>
+              {conditions.map((condition) => (
+                <option key={condition.id} value={condition.id}>
+                  {condition.code.display} · {condition.code.code}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Bối cảnh dùng thuốc
+            <select
+              value={medicationAdministrationForm.category}
+              onChange={(event) =>
+                setMedicationAdministrationForm({
+                  ...medicationAdministrationForm,
+                  category: event.target.value as MedicationAdministrationCategory
+                })
+              }
+            >
+              <option value="outpatient">Ngoại trú</option>
+              <option value="inpatient">Nội trú</option>
+              <option value="community">Cộng đồng</option>
+              <option value="patient-specified">Bệnh nhân tự khai</option>
+            </select>
+          </label>
+          <label>
+            Thời điểm dùng
+            <input
+              type="datetime-local"
+              value={medicationAdministrationForm.effectiveStart}
+              onChange={(event) =>
+                setMedicationAdministrationForm({
+                  ...medicationAdministrationForm,
+                  effectiveStart: event.target.value
+                })
+              }
+            />
+          </label>
+          <label>
+            Người/thiết bị xác nhận
+            <input
+              value={medicationAdministrationForm.performerActorId}
+              onChange={(event) =>
+                setMedicationAdministrationForm({
+                  ...medicationAdministrationForm,
+                  performerActorId: event.target.value
+                })
+              }
+            />
+          </label>
+          <label>
+            Vai trò xác nhận
+            <input
+              value={medicationAdministrationForm.performerFunctionDisplay}
+              onChange={(event) =>
+                setMedicationAdministrationForm({
+                  ...medicationAdministrationForm,
+                  performerFunctionDisplay: event.target.value
+                })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Tên thuốc
+            <input
+              value={medicationAdministrationForm.medicationDisplay}
+              onChange={(event) =>
+                setMedicationAdministrationForm({
+                  ...medicationAdministrationForm,
+                  medicationDisplay: event.target.value
+                })
+              }
+            />
+          </label>
+          <label>
+            Hệ mã thuốc
+            <input
+              value={medicationAdministrationForm.medicationSystem}
+              onChange={(event) =>
+                setMedicationAdministrationForm({
+                  ...medicationAdministrationForm,
+                  medicationSystem: event.target.value
+                })
+              }
+            />
+          </label>
+          <label>
+            Mã thuốc
+            <input
+              value={medicationAdministrationForm.medicationCode}
+              onChange={(event) =>
+                setMedicationAdministrationForm({
+                  ...medicationAdministrationForm,
+                  medicationCode: event.target.value
+                })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Mô tả liều thực tế
+            <input
+              value={medicationAdministrationForm.dosageText}
+              onChange={(event) =>
+                setMedicationAdministrationForm({
+                  ...medicationAdministrationForm,
+                  dosageText: event.target.value
+                })
+              }
+            />
+          </label>
+          <label>
+            Liều
+            <input
+              type="number"
+              step="any"
+              value={medicationAdministrationForm.doseValue}
+              onChange={(event) =>
+                setMedicationAdministrationForm({
+                  ...medicationAdministrationForm,
+                  doseValue: event.target.value
+                })
+              }
+            />
+          </label>
+          <label>
+            Đơn vị
+            <input
+              value={medicationAdministrationForm.doseUnit}
+              onChange={(event) =>
+                setMedicationAdministrationForm({
+                  ...medicationAdministrationForm,
+                  doseUnit: event.target.value
+                })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Ghi chú
+            <input
+              value={medicationAdministrationForm.note}
+              onChange={(event) =>
+                setMedicationAdministrationForm({
+                  ...medicationAdministrationForm,
+                  note: event.target.value
+                })
+              }
+            />
+          </label>
+          <button
+            className="primary-button"
+            type="submit"
+            disabled={!selectedPatient || isSubmittingMedicationAdministration}
+          >
+            {isSubmittingMedicationAdministration
+              ? "Đang ghi nhận..."
+              : "Ghi nhận dùng thuốc"}
+          </button>
+        </form>
+      </article>
+    );
+  }
+
   function renderDocumentPanel(): ReactNode {
     return (
       <article className="panel document-panel">
@@ -6209,7 +6845,7 @@ function LandingPage({
           <h1>Nền tảng bệnh án điện tử mở cho liên thông y tế</h1>
           <p className="lede">
             WiiiCare Nexus mô phỏng lõi EMR hiện đại: hồ sơ bệnh nhân, Provider Directory, lượt khám, dị ứng, chẩn đoán,
-            chỉ định dịch vụ, Task thực thi, Procedure đã thực hiện, chỉ số lâm sàng, báo cáo kết quả, chỉ định thuốc, tài liệu bệnh án, audit trail và ánh xạ FHIR để chuẩn bị kết nối giữa các bệnh viện.
+            chỉ định dịch vụ, Task thực thi, Procedure đã thực hiện, chỉ số lâm sàng, báo cáo kết quả, chỉ định thuốc, dùng thuốc thực tế, tài liệu bệnh án, audit trail và ánh xạ FHIR để chuẩn bị kết nối giữa các bệnh viện.
           </p>
           <div className="landing-actions">
             <button className="primary-button" type="button" onClick={onLogin}>
@@ -6222,7 +6858,7 @@ function LandingPage({
         </div>
         <aside className="landing-card">
           <span>Product slice</span>
-          <strong>Patient → Provider Directory → Encounter → AllergyIntolerance → Condition → ServiceRequest → Task → Procedure → Observation → DiagnosticReport → ImagingStudy → MedicationRequest → Document → FHIR</strong>
+          <strong>Patient → Provider Directory → Encounter → AllergyIntolerance → Condition → ServiceRequest → Task → Procedure → Observation → DiagnosticReport → ImagingStudy → MedicationRequest → MedicationAdministration → Document → FHIR</strong>
           <small>Không còn là landing page đơn thuần; app có luồng vận hành sau đăng nhập.</small>
         </aside>
       </section>
@@ -6232,7 +6868,7 @@ function LandingPage({
           ["Patient Workspace", "Bàn làm việc theo bệnh nhân, giống nhịp vận hành EMR thật."],
           ["Document Center", "Quản lý CCR, CCDA, hồ sơ bệnh án, xét nghiệm và tài liệu chuyển tuyến."],
           ["Audit & RBAC", "Ghi log truy cập nhạy cảm và kiểm tra quyền theo vai trò demo."],
-          ["FHIR Interop", "Xuất Patient, Provider Directory, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest và DocumentReference để chuẩn bị liên thông."]
+          ["FHIR Interop", "Xuất Patient, Provider Directory, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, MedicationAdministration và DocumentReference để chuẩn bị liên thông."]
         ].map(([title, description]) => (
           <article className="panel" key={title}>
             <p className="eyebrow">{title}</p>
@@ -6552,6 +7188,10 @@ function formatAuditAction(action: AuditAction): string {
     "medication-request.create": "Ghi nhận chỉ định thuốc",
     "medication-request.read": "Xem chỉ định thuốc",
     "medication-request.fhir-export": "Xuất FHIR MedicationRequest",
+    "medication-administration.list": "Tải lần dùng thuốc",
+    "medication-administration.create": "Ghi nhận dùng thuốc thực tế",
+    "medication-administration.read": "Xem lần dùng thuốc",
+    "medication-administration.fhir-export": "Xuất FHIR MedicationAdministration",
     "observation.list": "Tải chỉ số lâm sàng",
     "observation.create": "Ghi nhận chỉ số lâm sàng",
     "observation.read": "Xem chỉ số lâm sàng",
@@ -6596,6 +7236,7 @@ function formatAuditResourceType(resourceType: AuditResourceType): string {
     AllergyIntolerance: "Dị ứng/cảnh báo",
     Condition: "Chẩn đoán",
     MedicationRequest: "Chỉ định thuốc",
+    MedicationAdministration: "Dùng thuốc thực tế",
     Observation: "Chỉ số lâm sàng",
     ServiceRequest: "Chỉ định dịch vụ",
     Task: "Công việc thực thi",
@@ -6803,6 +7444,84 @@ function formatDosageInstruction(dosageInstruction: DosageInstruction): string {
       : undefined;
 
   return [dosageInstruction.text, dose, timing].filter(Boolean).join(" · ");
+}
+
+function formatMedicationAdministrationCategory(
+  category: MedicationAdministrationCategory
+): string {
+  const labels: Record<MedicationAdministrationCategory, string> = {
+    community: "Cộng đồng",
+    inpatient: "Nội trú",
+    outpatient: "Ngoại trú",
+    "patient-specified": "Bệnh nhân tự khai"
+  };
+
+  return labels[category];
+}
+
+function formatMedicationAdministrationStatus(
+  status: MedicationAdministrationStatus
+): string {
+  const labels: Record<MedicationAdministrationStatus, string> = {
+    completed: "Đã dùng",
+    "entered-in-error": "Nhập lỗi",
+    "in-progress": "Đang dùng",
+    "not-done": "Không dùng",
+    "on-hold": "Tạm giữ",
+    stopped: "Đã dừng",
+    unknown: "Chưa rõ"
+  };
+
+  return labels[status];
+}
+
+function formatMedicationAdministrationPeriod(
+  period: MedicationAdministrationEffectivePeriod
+): string {
+  if (period.start && period.end) {
+    return `${formatDateTime(period.start)} - ${formatDateTime(period.end)}`;
+  }
+
+  if (period.start) {
+    return formatDateTime(period.start);
+  }
+
+  if (period.end) {
+    return formatDateTime(period.end);
+  }
+
+  return "Chưa có";
+}
+
+function formatMedicationAdministrationDose(
+  dosage: MedicationAdministrationDosage | undefined
+): string {
+  if (!dosage) {
+    return "Chưa có";
+  }
+
+  const dose = dosage.doseQuantity
+    ? `${dosage.doseQuantity.value} ${dosage.doseQuantity.unit}`
+    : undefined;
+  const route = dosage.route?.display;
+
+  return [dosage.text, dose, route].filter(Boolean).join(" · ") || "Chưa có";
+}
+
+function formatMedicationAdministrationPerformers(
+  performers: readonly MedicationAdministrationPerformer[]
+): string {
+  if (performers.length === 0) {
+    return "Chưa có";
+  }
+
+  return performers
+    .map((performer) =>
+      performer.function?.display
+        ? `${performer.actorId} (${performer.function.display})`
+        : performer.actorId
+    )
+    .join(", ");
 }
 
 function formatServiceRequestCategory(category: ServiceRequestCategory): string {

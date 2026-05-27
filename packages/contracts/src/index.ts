@@ -10,6 +10,7 @@ export * from "./encounter.contract.js";
 export * from "./condition.contract.js";
 export * from "./diagnostic-report.contract.js";
 export * from "./imaging-study.contract.js";
+export * from "./medication-administration.contract.js";
 export * from "./medication-request.contract.js";
 export * from "./observation.contract.js";
 export * from "./clinical-document.contract.js";

@@ -10,7 +10,7 @@ Bệnh án điện tử không chỉ là form nhập dữ liệu. Khi đặt tro
 
 ## Quyết định
 
-Dùng FHIR R4 làm lớp trao đổi dữ liệu chính, DICOM/PACS cho ảnh y khoa, IHE MHD cho hướng chia sẻ tài liệu và IHE PIXm cho định danh bệnh nhân liên miền. Domain model nội bộ vẫn giữ ngữ nghĩa riêng, sau đó mapping sang chuẩn khi trao đổi; với workflow, `ServiceRequest` là y lệnh còn `Task` là trạng thái thực thi y lệnh.
+Dùng FHIR R4 làm lớp trao đổi dữ liệu chính, DICOM/PACS cho ảnh y khoa, IHE MHD cho hướng chia sẻ tài liệu và IHE PIXm cho định danh bệnh nhân liên miền. Domain model nội bộ vẫn giữ ngữ nghĩa riêng, sau đó mapping sang chuẩn khi trao đổi; với workflow, `ServiceRequest` là y lệnh còn `Task` là trạng thái thực thi y lệnh. Với thuốc, `MedicationRequest` là chỉ định còn `MedicationAdministration` là sự kiện dùng thuốc thực tế.
 
 ## Hệ quả
 

@@ -32,7 +32,7 @@ Trong dự án, PACS có thể được minh họa bằng Orthanc. EMR chỉ nê
 
 ## FHIR
 
-**Fast Healthcare Interoperability Resources** là chuẩn trao đổi dữ liệu y tế của HL7. FHIR định nghĩa các resource như `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `MedicationRequest`, `DocumentReference`, `Composition`.
+**Fast Healthcare Interoperability Resources** là chuẩn trao đổi dữ liệu y tế của HL7. FHIR định nghĩa các resource như `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `MedicationRequest`, `MedicationAdministration`, `DocumentReference`, `Composition`.
 
 Trong dự án này, FHIR là lớp liên thông. Domain model nội bộ vẫn có thể khác FHIR, sau đó được mapping sang FHIR khi cần trao đổi.
 
@@ -77,6 +77,12 @@ Trong dự án này, DiagnosticReport đóng vòng `ServiceRequest -> Observatio
 **ImagingStudy** là resource FHIR mô tả metadata của một nghiên cứu hình ảnh DICOM/PACS. Nó không chứa ảnh nhị phân, mà mô tả Study Instance UID, Accession Number, modality, series, số ảnh, bệnh nhân, lượt khám, y lệnh gốc và endpoint để truy xuất ảnh qua PACS/DICOMweb.
 
 Trong dự án này, ImagingStudy là lát cắt PACS tối thiểu sau `ServiceRequest` và `DiagnosticReport`: bác sĩ tạo y lệnh hình ảnh, PACS/RIS sinh metadata ảnh, báo cáo hình ảnh được lưu bằng DiagnosticReport, còn Bundle liên viện có thêm chỉ mục ảnh máy đọc được.
+
+## MedicationAdministration
+
+**MedicationAdministration** là resource FHIR ghi nhận việc thuốc đã được dùng hoặc được xác nhận dùng cho người bệnh. Resource này khác `MedicationRequest`: `MedicationRequest` là chỉ định/kế hoạch dùng thuốc, còn `MedicationAdministration` là sự kiện thực tế có thời điểm, liều dùng và người/thiết bị xác nhận.
+
+Trong dự án này, MedicationAdministration đóng vòng điều trị thuốc tối thiểu: bác sĩ kê đơn bằng MedicationRequest, nhân sự y tế hoặc hệ thống xác nhận lần dùng thuốc bằng MedicationAdministration, và Bundle liên viện có đủ cả “đã kê gì” lẫn “đã dùng gì”.
 
 ## Composition
 

@@ -10,7 +10,7 @@ Nguồn tham khảo: [How Claude Code works in large codebases: Best practices a
 - `CLAUDE.md`: tương thích Claude Code, trỏ về context root và source of truth.
 - `apps/api/AGENTS.md`, `packages/domain/AGENTS.md`, `docs/AGENTS.md`: context cục bộ theo thư mục.
 - `.claude/settings.json`: loại trừ generated files và thư mục nhiễu.
-- `harness/README.md` và `scripts/harness/*`: kiểm chứng deterministic, không dựa vào trí nhớ agent.
+- `docs/testing/SMOKE_TEST.md` và `scripts/harness/*`: kiểm chứng deterministic, không dựa vào trí nhớ agent.
 - `.github/workflows/ci.yml`: chạy cùng các gate quan trọng trên GitHub.
 - `.coderabbit.yaml`: review bằng tiếng Việt, bám kiến trúc và tránh comment cosmetic.
 
@@ -20,4 +20,3 @@ Nguồn tham khảo: [How Claude Code works in large codebases: Best practices a
 - Kiến thức chuyên sâu nằm trong docs hoặc skill chuyên biệt, không nhồi vào `AGENTS.md`.
 - Mỗi thay đổi runtime cần cập nhật command kiểm chứng tương ứng.
 - Generated files, `dist`, `node_modules`, coverage và dữ liệu local phải bị loại khỏi context.
-

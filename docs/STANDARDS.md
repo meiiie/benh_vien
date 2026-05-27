@@ -14,7 +14,7 @@ Hàm ý cho dự án:
 - Cần có ký/xác nhận điện tử ở vòng đời tài liệu.
 - Cần quản lý định danh bệnh nhân đủ nghiêm túc.
 - Cần audit trail và chính sách bảo vệ dữ liệu.
-- Cần cơ sở dữ liệu có migration, phân quyền, lưu vết, sao lưu và quy trình vận hành; phiên bản hiện tại mới đặt nền `patients`, `encounters`, `allergy_intolerances`, `conditions`, `service_requests`, `workflow_tasks`, `procedures`, `observations`, `diagnostic_reports`, `imaging_studies`, `medication_requests`, `clinical_documents`, `consents`, `provider_directory_resources`, `audit_events`, chưa tuyên bố đạt điều kiện triển khai bệnh viện thật.
+- Cần cơ sở dữ liệu có migration, phân quyền, lưu vết, sao lưu và quy trình vận hành; phiên bản hiện tại mới đặt nền `patients`, `encounters`, `allergy_intolerances`, `conditions`, `service_requests`, `workflow_tasks`, `procedures`, `observations`, `diagnostic_reports`, `imaging_studies`, `medication_requests`, `medication_administrations`, `clinical_documents`, `consents`, `provider_directory_resources`, `audit_events`, chưa tuyên bố đạt điều kiện triển khai bệnh viện thật.
 
 ## HL7 FHIR R4
 
@@ -39,6 +39,7 @@ Nguồn:
 - [FHIR DiagnosticReport Resource](https://hl7.org/fhir/R4/diagnosticreport.html)
 - [FHIR ImagingStudy Resource](https://hl7.org/fhir/R4/imagingstudy.html)
 - [FHIR MedicationRequest Resource](https://hl7.org/fhir/R4/medicationrequest.html)
+- [FHIR MedicationAdministration Resource](https://hl7.org/fhir/R4/medicationadministration.html)
 - [FHIR Composition Resource](https://hl7.org/fhir/R4/composition.html)
 - [FHIR Bundle Resource](https://hl7.org/fhir/R4/bundle.html)
 - [FHIR DocumentReference Resource](https://hl7.org/fhir/R4/documentreference.html)
@@ -56,9 +57,10 @@ Hàm ý cho dự án:
 - `Observation` phù hợp cho sinh hiệu, kết quả xét nghiệm và chỉ số có cấu trúc; nên đi kèm mã chuẩn như LOINC khi có dữ liệu thật.
 - `DiagnosticReport` phù hợp cho báo cáo xét nghiệm/hình ảnh đã phát hành; nên dùng `basedOn` để nối y lệnh `ServiceRequest` và `result` để tham chiếu các `Observation` nguyên tử.
 - `ImagingStudy` phù hợp để biểu diễn metadata của một nghiên cứu DICOM/PACS. Resource này nên chứa DICOM Study Instance UID trong `identifier`, trạng thái, modality, bệnh nhân, lượt khám, y lệnh gốc, endpoint truy xuất ảnh, số series, số instance và series metadata; không dùng nó để lưu ảnh nhị phân trực tiếp.
-- `MedicationRequest` phù hợp cho yêu cầu/chỉ định dùng thuốc, gồm trạng thái, mục đích, thuốc, bệnh nhân, lượt khám, người kê và hướng dẫn dùng thuốc; không nên đồng nhất với cấp phát hoặc dùng thuốc thực tế vì FHIR có `MedicationDispense` và `MedicationAdministration` riêng.
+- `MedicationRequest` phù hợp cho yêu cầu/chỉ định dùng thuốc, gồm trạng thái, mục đích, thuốc, bệnh nhân, lượt khám, người kê và hướng dẫn dùng thuốc; không nên đồng nhất với cấp phát hoặc dùng thuốc thực tế.
+- `MedicationAdministration` phù hợp cho sự kiện thuốc đã được dùng hoặc được xác nhận dùng cho người bệnh. Trong dự án này, resource này đóng vòng `MedicationRequest -> MedicationAdministration`: chỉ định thuốc là “cần dùng thuốc gì”, còn dùng thuốc thực tế là “đã dùng lúc nào, liều bao nhiêu, ai/thiết bị nào xác nhận”.
 - `Composition` phù hợp để tạo mục lục lâm sàng cho một FHIR document. Khi `Bundle.type = document`, entry đầu tiên bắt buộc phải là `Composition`; các section của Composition nên tham chiếu các resource nằm trong Bundle.
-- Khi phát triển tiếp cần bổ sung `MedicationDispense`, `MedicationAdministration`, workflow engine hoặc event queue thật và ràng buộc profile cụ thể hơn.
+- Khi phát triển tiếp cần bổ sung `MedicationDispense`, workflow engine hoặc event queue thật và ràng buộc profile cụ thể hơn.
 - Với liên thông bệnh án, `DocumentReference` và `Composition` quan trọng hơn việc chỉ gửi một file PDF rời rạc.
 
 ## DICOM và PACS
