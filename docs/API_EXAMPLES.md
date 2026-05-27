@@ -127,6 +127,18 @@ curl http://localhost:7310/api/v1/patients/patient-demo-001/fhir-bundle \
 
 Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các `Encounter`, các `AllergyIntolerance`, các `Condition`, các `ServiceRequest`, các `Observation`, các `DiagnosticReport`, các `ImagingStudy`, các `MedicationRequest` và các `DocumentReference` của bệnh nhân. Endpoint này không chỉ kiểm header: `x-consent-reference` phải trỏ tới một consent đang hiệu lực, đúng bệnh nhân và đúng `x-recipient-organization-id`.
 
+## Xuất gói tài liệu bệnh án sang FHIR document Bundle
+
+```bash
+curl http://localhost:7310/api/v1/patients/patient-demo-001/fhir-document-bundle \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT" \
+  -H "x-consent-reference: consent-demo-transfer-001" \
+  -H "x-recipient-organization-id: hospital-hai-phong-referral"
+```
+
+Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `document`, và `entry[0].resource.resourceType` bằng `Composition`. Các section của `Composition` tham chiếu tới nhóm lượt khám, dị ứng, chẩn đoán, y lệnh dịch vụ, chỉ số, báo cáo kết quả, nghiên cứu hình ảnh, chỉ định thuốc và tài liệu lâm sàng trong cùng Bundle.
+
 ## Lấy và mở lượt khám
 
 ```bash

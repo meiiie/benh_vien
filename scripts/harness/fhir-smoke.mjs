@@ -35,6 +35,7 @@ const {
   mapImagingStudyToFhir,
   mapMedicationRequestToFhir,
   mapObservationToFhir,
+  mapPatientRecordToFhirDocumentBundle,
   mapPatientRecordToFhirBundle,
   mapPatientToFhir,
   mapServiceRequestToFhir
@@ -431,6 +432,41 @@ if (fhirBundle.entry.length !== 10) {
   throw new Error(`Expected bundle to contain 10 entries, received ${fhirBundle.entry.length}`);
 }
 
+const fhirDocumentBundle = mapPatientRecordToFhirDocumentBundle({
+  patient,
+  encounters: [encounter],
+  allergyIntolerances: [allergyIntolerance],
+  conditions: [condition],
+  serviceRequests: [serviceRequest],
+  observations: [observation],
+  diagnosticReports: [diagnosticReport],
+  imagingStudies: [imagingStudy],
+  medicationRequests: [medicationRequest],
+  documents: [document],
+  generatedAt: new Date("2026-05-27T00:00:00.000Z"),
+  authorPractitionerId: "practitioner-harness-001"
+});
+
+if (fhirDocumentBundle.resourceType !== "Bundle") {
+  throw new Error(
+    `Expected document bundle resourceType Bundle, received ${fhirDocumentBundle.resourceType}`
+  );
+}
+
+if (fhirDocumentBundle.type !== "document") {
+  throw new Error(`Expected document bundle type document, received ${fhirDocumentBundle.type}`);
+}
+
+if (fhirDocumentBundle.entry[0]?.resource.resourceType !== "Composition") {
+  throw new Error("Expected first document bundle entry to be Composition.");
+}
+
+if (fhirDocumentBundle.entry.length !== 11) {
+  throw new Error(
+    `Expected document bundle to contain 11 entries, received ${fhirDocumentBundle.entry.length}`
+  );
+}
+
 const consent = Consent.grant({
   id: "consent-harness-001",
   patientId: patient.id,
@@ -743,6 +779,10 @@ console.log(
       bundleId: fhirBundle.id,
       bundleResourceType: fhirBundle.resourceType,
       bundleEntryCount: fhirBundle.entry.length,
+      documentBundleId: fhirDocumentBundle.id,
+      documentBundleType: fhirDocumentBundle.type,
+      documentBundleFirstResourceType: fhirDocumentBundle.entry[0]?.resource.resourceType,
+      documentBundleEntryCount: fhirDocumentBundle.entry.length,
       consentId: consent.id,
       auditAction: auditEvent.toSnapshot().action,
       auth: {

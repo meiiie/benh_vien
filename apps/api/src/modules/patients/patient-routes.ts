@@ -7,6 +7,7 @@ import {
 import {
   DomainError,
   Patient,
+  mapPatientRecordToFhirDocumentBundle,
   mapPatientRecordToFhirBundle,
   mapPatientToFhir
 } from "@benh-vien-so/domain";
@@ -264,6 +265,108 @@ export async function registerPatientRoutes(
       medicationRequests,
       serviceRequests,
       documents
+    });
+  });
+
+  app.get("/patients/:id/fhir-document-bundle", async (request, reply) => {
+    const actor = requirePermission(request, reply, "patient:fhir-export");
+
+    if (!actor) {
+      return;
+    }
+
+    const params = PatientIdParamsSchema.parse(request.params);
+    const patient = await repository.findById(params.id);
+
+    if (!patient) {
+      return reply.status(404).send({
+        error: "PATIENT_NOT_FOUND"
+      });
+    }
+
+    const transferContext = readBundleTransferContext(request.headers);
+
+    if (!transferContext) {
+      return reply.status(400).send({
+        error: "MISSING_BUNDLE_TRANSFER_CONTEXT",
+        message:
+          "Cần khai báo x-consent-reference và x-recipient-organization-id khi xuất FHIR document Bundle hồ sơ bệnh nhân."
+      });
+    }
+
+    const consent = await consentRepository.findById(transferContext.consentReference);
+
+    if (
+      !consent?.allowsRecordSharing({
+        patientId: params.id,
+        granteeOrganizationId: transferContext.recipientOrganizationId
+      })
+    ) {
+      return reply.status(403).send({
+        error: "CONSENT_NOT_VALID_FOR_TRANSFER",
+        message:
+          "Consent không tồn tại, không còn hiệu lực hoặc không khớp bệnh nhân/đơn vị nhận."
+      });
+    }
+
+    const [
+      encounters,
+      allergyIntolerances,
+      documents,
+      conditions,
+      observations,
+      diagnosticReports,
+      imagingStudies,
+      medicationRequests,
+      serviceRequests
+    ] = await Promise.all([
+      encounterRepository.findByPatientId(params.id),
+      allergyIntoleranceRepository.findByPatientId(params.id),
+      documentRepository.findByPatientId(params.id),
+      conditionRepository.findByPatientId(params.id),
+      observationRepository.findByPatientId(params.id),
+      diagnosticReportRepository.findByPatientId(params.id),
+      imagingStudyRepository.findByPatientId(params.id),
+      medicationRequestRepository.findByPatientId(params.id),
+      serviceRequestRepository.findByPatientId(params.id)
+    ]);
+
+    await recordAuditEvent(auditRepository, request, {
+      action: "patient.fhir-document-bundle-export",
+      resourceType: "Patient",
+      resourceId: patient.id,
+      patientId: patient.id,
+      metadata: {
+        standard: "HL7 FHIR R4",
+        resourceType: "Bundle",
+        bundleType: "document",
+        compositionResourceType: "Composition",
+        consentReference: transferContext.consentReference,
+        recipientOrganizationId: transferContext.recipientOrganizationId,
+        encounterCount: encounters.length,
+        allergyIntoleranceCount: allergyIntolerances.length,
+        conditionCount: conditions.length,
+        observationCount: observations.length,
+        diagnosticReportCount: diagnosticReports.length,
+        imagingStudyCount: imagingStudies.length,
+        medicationRequestCount: medicationRequests.length,
+        serviceRequestCount: serviceRequests.length,
+        documentCount: documents.length
+      }
+    });
+
+    return mapPatientRecordToFhirDocumentBundle({
+      patient,
+      encounters,
+      allergyIntolerances,
+      conditions,
+      observations,
+      diagnosticReports,
+      imagingStudies,
+      medicationRequests,
+      serviceRequests,
+      documents,
+      authorPractitionerId: actor.actorId
     });
   });
 }

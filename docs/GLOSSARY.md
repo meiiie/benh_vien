@@ -60,6 +60,12 @@ Trong dự án này, DiagnosticReport đóng vòng `ServiceRequest -> Observatio
 
 Trong dự án này, ImagingStudy là lát cắt PACS tối thiểu sau `ServiceRequest` và `DiagnosticReport`: bác sĩ tạo y lệnh hình ảnh, PACS/RIS sinh metadata ảnh, báo cáo hình ảnh được lưu bằng DiagnosticReport, còn Bundle liên viện có thêm chỉ mục ảnh máy đọc được.
 
+## Composition
+
+**Composition** là resource FHIR mô tả cấu trúc của một tài liệu lâm sàng. Trong FHIR document, `Composition` phải nằm ở entry đầu tiên của `Bundle.type = document` và các section của nó tham chiếu tới những resource tạo nên nội dung tài liệu.
+
+Trong dự án này, Composition đóng vai trò mục lục bệnh án điện tử khi xuất hồ sơ chuyển viện/liên viện: nhóm lượt khám, dị ứng, chẩn đoán, y lệnh, kết quả, ảnh y khoa, thuốc và tài liệu lâm sàng vào một gói có cấu trúc.
+
 ## DICOM
 
 **Digital Imaging and Communications in Medicine** là chuẩn quốc tế cho hình ảnh y khoa và thông tin liên quan.

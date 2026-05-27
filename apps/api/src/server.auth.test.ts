@@ -178,6 +178,37 @@ describe("API auth and RBAC boundary", () => {
     expect(body.entry).toHaveLength(19);
   });
 
+  it("returns a patient-record FHIR document Bundle with Composition first", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/fhir-document-bundle",
+      headers: bundleTransferHeaders(accessToken)
+    });
+    const body = response.json();
+
+    expect(response.statusCode).toBe(200);
+    expect(body).toMatchObject({
+      resourceType: "Bundle",
+      id: "patient-document-patient-demo-001",
+      type: "document"
+    });
+    expect(body.entry[0].resource).toMatchObject({
+      resourceType: "Composition",
+      subject: {
+        reference: "Patient/patient-demo-001"
+      },
+      author: [
+        {
+          reference: "Practitioner/practitioner-demo-001"
+        }
+      ]
+    });
+    expect(body.entry).toHaveLength(20);
+  });
+
   it("lists allergy intolerances and exports them as FHIR AllergyIntolerance", async () => {
     app = await readyServer();
     const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");

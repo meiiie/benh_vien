@@ -39,7 +39,7 @@ migrations/ SQL migration cho PostgreSQL
 - `Patient Workspace`: chọn bệnh nhân, xem định danh, mở/kết thúc lượt khám, ghi nhận dị ứng/cảnh báo, chẩn đoán, chỉ định xét nghiệm/hình ảnh/thủ thuật, chỉ số sinh hiệu/xét nghiệm, chỉ định thuốc, tạo tài liệu và xem FHIR theo hồ sơ.
 - `Documents`: quản lý tài liệu bệnh án theo nhóm CCD/CCDA/CCR, lab report, medical record và referral.
 - `Audit`: xem nhật ký thao tác nhạy cảm theo bệnh nhân, actor, mục đích sử dụng và tài nguyên.
-- `Interop`: kiểm tra FHIR `Patient`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `DocumentReference`, `Bundle` và các hướng mở sang HIS/LIS/PACS.
+- `Interop`: kiểm tra FHIR `Patient`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `DocumentReference`, `Composition`, `Bundle` và các hướng mở sang HIS/LIS/PACS.
 - `Settings`: mô tả quyền demo, cấu hình vận hành và các việc cần thay bằng bảo mật thật khi lên production.
 
 ## Ảnh kiểm thử giao diện
@@ -112,6 +112,7 @@ Chi tiết version xem [VERSIONING.md](VERSIONING.md).
 - Quản lý tài liệu bệnh án tối thiểu: tạo bản nháp, ký tài liệu và xuất metadata sang FHIR `DocumentReference`.
 - Quản lý consent chia sẻ hồ sơ tối thiểu, gồm lưu consent theo bệnh nhân, đơn vị nhận và thời hạn hiệu lực.
 - Xuất gói hồ sơ bệnh nhân sang FHIR `Bundle` dạng `collection` gồm Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Observation, DiagnosticReport, ImagingStudy, MedicationRequest và DocumentReference; API chỉ cho xuất khi consent còn hiệu lực và khớp đơn vị nhận.
+- Xuất gói tài liệu bệnh án sang FHIR `Bundle` dạng `document`, có `Composition` là entry đầu tiên để đóng vai trò mục lục lâm sàng cho hồ sơ chuyển viện/liên viện.
 - Ghi nhật ký kiểm toán tối thiểu cho các thao tác xem/tạo/ký/xuất dữ liệu nhạy cảm.
 - Chặn quyền tối thiểu ở API theo vai trò demo `clinician`, `nurse`, `auditor`, `admin`.
 - Chuẩn bị đường mở rộng sang hồ sơ lâm sàng, hình ảnh y khoa và liên thông bệnh viện.

@@ -33,6 +33,7 @@ export * from "./fhir/map-encounter-to-fhir.js";
 export * from "./fhir/map-imaging-study-to-fhir.js";
 export * from "./fhir/map-medication-request-to-fhir.js";
 export * from "./fhir/map-observation-to-fhir.js";
+export * from "./fhir/map-patient-record-to-fhir-document-bundle.js";
 export * from "./fhir/map-patient-to-fhir.js";
 export * from "./fhir/map-patient-record-to-fhir-bundle.js";
 export * from "./fhir/map-service-request-to-fhir.js";

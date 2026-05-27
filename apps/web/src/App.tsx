@@ -386,6 +386,7 @@ type AuditAction =
   | "patient.read"
   | "patient.fhir-export"
   | "patient.fhir-bundle-export"
+  | "patient.fhir-document-bundle-export"
   | "encounter.list"
   | "encounter.create"
   | "encounter.read"
@@ -957,6 +958,7 @@ export function App() {
   const [consents, setConsents] = useState<readonly Consent[]>([]);
   const [patientFhirPreview, setPatientFhirPreview] = useState<unknown>();
   const [patientFhirBundlePreview, setPatientFhirBundlePreview] = useState<unknown>();
+  const [patientFhirDocumentBundlePreview, setPatientFhirDocumentBundlePreview] = useState<unknown>();
   const [encounterFhirPreview, setEncounterFhirPreview] = useState<unknown>();
   const [documentFhirPreview, setDocumentFhirPreview] = useState<unknown>();
   const [allergyIntoleranceFhirPreview, setAllergyIntoleranceFhirPreview] = useState<unknown>();
@@ -1071,6 +1073,7 @@ export function App() {
     if (!isAuthenticated || !selectedPatientId) {
       setPatientFhirPreview(undefined);
       setPatientFhirBundlePreview(undefined);
+      setPatientFhirDocumentBundlePreview(undefined);
       setEncounterFhirPreview(undefined);
       setDocumentFhirPreview(undefined);
       setAllergyIntoleranceFhirPreview(undefined);
@@ -1249,6 +1252,7 @@ export function App() {
     const workspaceTasks = [
       loadPatientFhirPreview(patientId),
       loadPatientFhirBundlePreview(patientId),
+      loadPatientFhirDocumentBundlePreview(patientId),
       loadEncounters(patientId),
       loadAllergyIntolerances(patientId),
       loadConditions(patientId),
@@ -1641,6 +1645,30 @@ export function App() {
     }
   }
 
+  async function loadPatientFhirDocumentBundlePreview(patientId: string) {
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/fhir-document-bundle`, {
+        headers: buildHeaders("TREATMENT", {
+          "x-consent-reference": defaultTransferContext.consentReference,
+          "x-recipient-organization-id": defaultTransferContext.recipientOrganizationId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      setPatientFhirDocumentBundlePreview(await response.json());
+    } catch (error) {
+      setPatientFhirDocumentBundlePreview({
+        error:
+          error instanceof Error
+            ? `Không thể xuất FHIR document Bundle hồ sơ bệnh nhân: ${error.message}`
+            : "Không thể xuất FHIR document Bundle hồ sơ bệnh nhân."
+      });
+    }
+  }
+
   async function loadEncounterFhirPreview(encounterId: string) {
     try {
       const response = await fetch(`${apiBaseUrl}/encounters/${encounterId}/fhir`, {
@@ -1895,6 +1923,7 @@ export function App() {
     setConsents([]);
     setPatientFhirPreview(undefined);
     setPatientFhirBundlePreview(undefined);
+    setPatientFhirDocumentBundlePreview(undefined);
     setEncounterFhirPreview(undefined);
     setDocumentFhirPreview(undefined);
     setAllergyIntoleranceFhirPreview(undefined);
@@ -2839,6 +2868,7 @@ export function App() {
         <section className="workspace">
           <FhirPanel title="FHIR Patient JSON" badge="Patient" value={patientFhirPreview} />
           <FhirPanel title="FHIR Patient Record Bundle JSON" badge="Bundle" value={patientFhirBundlePreview} />
+          <FhirPanel title="FHIR Clinical Document Bundle JSON" badge="Composition" value={patientFhirDocumentBundlePreview} />
           <FhirPanel title="FHIR Encounter JSON" badge="Encounter" value={encounterFhirPreview} />
           <FhirPanel title="FHIR AllergyIntolerance JSON" badge="AllergyIntolerance" value={allergyIntoleranceFhirPreview} />
           <FhirPanel title="FHIR Condition JSON" badge="Condition" value={conditionFhirPreview} />
@@ -5443,6 +5473,7 @@ function formatAuditAction(action: AuditAction): string {
     "patient.read": "Xem hồ sơ bệnh nhân",
     "patient.fhir-export": "Xuất FHIR Patient",
     "patient.fhir-bundle-export": "Xuất FHIR Bundle hồ sơ",
+    "patient.fhir-document-bundle-export": "Xuất FHIR document Bundle hồ sơ",
     "encounter.list": "Tải danh sách lượt khám",
     "encounter.create": "Mở lượt khám",
     "encounter.read": "Xem lượt khám",

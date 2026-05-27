@@ -515,6 +515,44 @@ export type FhirImagingStudy = {
   }[];
 };
 
+export type FhirComposition = {
+  readonly resourceType: "Composition";
+  readonly id: string;
+  readonly meta?: {
+    readonly profile?: readonly string[];
+  };
+  readonly status: "preliminary" | "final" | "amended" | "entered-in-error";
+  readonly type: {
+    readonly coding: readonly {
+      readonly system: string;
+      readonly code: string;
+      readonly display: string;
+    }[];
+    readonly text: string;
+  };
+  readonly subject: {
+    readonly reference: string;
+  };
+  readonly date: string;
+  readonly author: readonly {
+    readonly reference: string;
+  }[];
+  readonly title: string;
+  readonly custodian?: {
+    readonly reference: string;
+  };
+  readonly section?: readonly {
+    readonly title: string;
+    readonly text?: {
+      readonly status: "generated";
+      readonly div: string;
+    };
+    readonly entry?: readonly {
+      readonly reference: string;
+    }[];
+  }[];
+};
+
 export type FhirPatient = {
   readonly resourceType: "Patient";
   readonly id: string;
@@ -544,6 +582,7 @@ export type FhirPatient = {
 export type FhirBundleEntry = {
   readonly fullUrl: string;
   readonly resource:
+    | FhirComposition
     | FhirPatient
     | FhirEncounter
     | FhirCondition
@@ -566,7 +605,7 @@ export type FhirBundle = {
     readonly system: string;
     readonly value: string;
   };
-  readonly type: "collection";
+  readonly type: "collection" | "document";
   readonly timestamp: string;
   readonly entry: readonly FhirBundleEntry[];
 };
