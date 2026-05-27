@@ -35,6 +35,16 @@ export const CreateRecordTransferRequestSchema = z.object({
   note: z.string().min(1).optional()
 });
 
+export const MarkRecordTransferSentRequestSchema = z.object({
+  sentAt: z.string().datetime().optional(),
+  note: z.string().min(1).optional()
+});
+
+export const MarkRecordTransferReceivedRequestSchema = z.object({
+  receivedAt: z.string().datetime().optional(),
+  note: z.string().min(1).optional()
+});
+
 export type RecordTransferStatus = z.infer<typeof RecordTransferStatusSchema>;
 export type RecordTransferPriority = z.infer<typeof RecordTransferPrioritySchema>;
 export type RecordTransferBundleType = z.infer<typeof RecordTransferBundleTypeSchema>;
@@ -43,3 +53,9 @@ export type PatientRecordTransfersParams = z.infer<
 >;
 export type RecordTransferIdParams = z.infer<typeof RecordTransferIdParamsSchema>;
 export type CreateRecordTransferRequest = z.infer<typeof CreateRecordTransferRequestSchema>;
+export type MarkRecordTransferSentRequest = z.infer<
+  typeof MarkRecordTransferSentRequestSchema
+>;
+export type MarkRecordTransferReceivedRequest = z.infer<
+  typeof MarkRecordTransferReceivedRequestSchema
+>;

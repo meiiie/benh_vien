@@ -12,6 +12,7 @@ export type Permission =
   | "record-transfer:list"
   | "record-transfer:create"
   | "record-transfer:read"
+  | "record-transfer:update"
   | "record-transfer:fhir-export"
   | "encounter:list"
   | "encounter:create"
@@ -90,6 +91,7 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "record-transfer:list",
     "record-transfer:create",
     "record-transfer:read",
+    "record-transfer:update",
     "record-transfer:fhir-export",
     "encounter:list",
     "encounter:create",
@@ -221,6 +223,7 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "record-transfer:list",
     "record-transfer:create",
     "record-transfer:read",
+    "record-transfer:update",
     "record-transfer:fhir-export",
     "encounter:list",
     "encounter:create",

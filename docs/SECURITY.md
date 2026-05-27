@@ -32,7 +32,7 @@ Hồ sơ bệnh án là dữ liệu đặc biệt nhạy cảm. Dự án chưa t
 - FHIR Bundle chia sẻ liên viện yêu cầu consent tồn tại trong store, còn hiệu lực, chưa bị thu hồi, đúng bệnh nhân và đúng đơn vị nhận.
 - FHIR document Bundle có `Composition` cũng dùng cùng rào consent và audit như Bundle collection; không có đường xuất tài liệu liên viện “bỏ qua consent”.
 - Consent chia sẻ hồ sơ có endpoint thu hồi riêng, quyền `consent:revoke`, audit action `consent.revoke`, endpoint FHIR `Consent` riêng và metadata thu hồi để chặn các lần xuất/chuyển hồ sơ mới.
-- `RecordTransfer` kiểm consent trước khi tạo, ghi audit khi liệt kê/tạo/xem/xuất FHIR `Task`, và không lưu bản sao đầy đủ của Bundle trong bảng vận hành.
+- `RecordTransfer` kiểm consent trước khi tạo, ghi audit khi liệt kê/tạo/xem/gửi/xác nhận nhận/xuất FHIR `Task`, và không lưu bản sao đầy đủ của Bundle trong bảng vận hành.
 - `AuditEvent` được niêm phong bằng chuỗi băm `sha256` theo từng bệnh nhân. API kiểm toán có thể gọi `/api/v1/patients/:patientId/audit-integrity` để phát hiện bản ghi chưa niêm phong, nội dung bị sửa hoặc liên kết hash bị đứt; kiểm toán viên cũng có endpoint xuất FHIR `AuditEvent` Bundle với quyền `audit-event:fhir-export`.
 - Kiểm toán viên có thể liệt kê/đọc ngữ cảnh bệnh nhân tối thiểu bằng `patient:list` và `patient:read` khi `x-purpose-of-use` là `AUDIT`; cùng vai trò đó sẽ bị chặn nếu khai báo mục đích `TREATMENT`, tránh biến phiên kiểm toán thành phiên điều trị trá hình.
 - Cơ chế này chỉ là lớp phiên nội bộ cho prototype, chưa thay thế IAM/SSO, MFA, quản lý thiết bị hoặc chính sách truy cập theo cơ sở y tế.

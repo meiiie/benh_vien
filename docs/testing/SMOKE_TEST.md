@@ -62,6 +62,18 @@ curl -fsS http://localhost:7310/api/v1/record-transfers/record-transfer-demo-001
   -H "Authorization: Bearer $TOKEN" \
   -H "x-purpose-of-use: TREATMENT"
 
+curl -fsS -X POST http://localhost:7310/api/v1/record-transfers/record-transfer-demo-001/send \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT" \
+  -H "Content-Type: application/json" \
+  -d '{"note":"Đã gửi gói hồ sơ qua gateway liên thông."}'
+
+curl -fsS -X POST http://localhost:7310/api/v1/record-transfers/record-transfer-demo-001/receive \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT" \
+  -H "Content-Type: application/json" \
+  -d '{"note":"Bệnh viện nhận đã xác nhận tiếp nhận."}'
+
 curl -fsS http://localhost:7310/api/v1/patients/patient-demo-001/allergy-intolerances \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-purpose-of-use: TREATMENT"

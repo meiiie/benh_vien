@@ -723,6 +723,8 @@ type AuditAction =
   | "record-transfer.list"
   | "record-transfer.create"
   | "record-transfer.read"
+  | "record-transfer.send"
+  | "record-transfer.receive"
   | "record-transfer.fhir-export"
   | "encounter.list"
   | "encounter.create"
@@ -1663,6 +1665,8 @@ export function App() {
   const [isSubmittingDiagnosticReport, setIsSubmittingDiagnosticReport] = useState(false);
   const [isSubmittingImagingStudy, setIsSubmittingImagingStudy] = useState(false);
   const [isSubmittingRecordTransfer, setIsSubmittingRecordTransfer] = useState(false);
+  const [transitioningRecordTransferId, setTransitioningRecordTransferId] =
+    useState<string>();
   const [revokingConsentId, setRevokingConsentId] = useState<string>();
   const [isSigningDocument, setIsSigningDocument] = useState(false);
   const [isFinishingEncounter, setIsFinishingEncounter] = useState(false);
@@ -3215,6 +3219,7 @@ export function App() {
     setSelectedProcedureId(undefined);
     setSelectedDiagnosticReportId(undefined);
     setSelectedImagingStudyId(undefined);
+    setTransitioningRecordTransferId(undefined);
   }
 
   async function handleCreatePatient(event: FormEvent<HTMLFormElement>) {
@@ -3316,6 +3321,84 @@ export function App() {
       );
     } finally {
       setIsSubmittingRecordTransfer(false);
+    }
+  }
+
+  async function handleSendRecordTransfer(recordTransfer: RecordTransfer) {
+    if (!selectedPatient) {
+      setStatusMessage("Cần chọn bệnh nhân trước khi gửi gói chuyển hồ sơ.");
+      return;
+    }
+
+    setTransitioningRecordTransferId(recordTransfer.id);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/record-transfers/${recordTransfer.id}/send`, {
+        method: "POST",
+        headers: buildHeaders("TREATMENT", {
+          "Content-Type": "application/json"
+        }),
+        body: JSON.stringify({
+          note: "Đã gửi gói hồ sơ qua gateway liên thông demo."
+        })
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => undefined);
+        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
+      }
+
+      const updatedTransfer = (await response.json()) as RecordTransfer;
+      await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
+      await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
+      setStatusMessage(`Đã gửi gói chuyển hồ sơ ${updatedTransfer.id}.`);
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể gửi gói chuyển hồ sơ: ${error.message}`
+          : "Không thể gửi gói chuyển hồ sơ."
+      );
+    } finally {
+      setTransitioningRecordTransferId(undefined);
+    }
+  }
+
+  async function handleReceiveRecordTransfer(recordTransfer: RecordTransfer) {
+    if (!selectedPatient) {
+      setStatusMessage("Cần chọn bệnh nhân trước khi xác nhận tiếp nhận hồ sơ.");
+      return;
+    }
+
+    setTransitioningRecordTransferId(recordTransfer.id);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/record-transfers/${recordTransfer.id}/receive`, {
+        method: "POST",
+        headers: buildHeaders("TREATMENT", {
+          "Content-Type": "application/json"
+        }),
+        body: JSON.stringify({
+          note: "Bệnh viện nhận đã xác nhận tiếp nhận qua giao diện demo."
+        })
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => undefined);
+        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
+      }
+
+      const updatedTransfer = (await response.json()) as RecordTransfer;
+      await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
+      await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
+      setStatusMessage(`Đã xác nhận bệnh viện nhận tiếp nhận gói ${updatedTransfer.id}.`);
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể xác nhận tiếp nhận hồ sơ: ${error.message}`
+          : "Không thể xác nhận tiếp nhận hồ sơ."
+      );
+    } finally {
+      setTransitioningRecordTransferId(undefined);
     }
   }
 
@@ -4789,6 +4872,38 @@ export function App() {
                   <Info label="Cơ sở nhận" value={selectedRecordTransfer.recipientOrganizationId} />
                   <Info label="Consent" value={selectedRecordTransfer.consentReference} />
                   <Info label="Người tạo" value={selectedRecordTransfer.requestedByActorId} />
+                  <Info label="Thời điểm gửi" value={selectedRecordTransfer.sentAt ? formatDateTime(selectedRecordTransfer.sentAt) : "Chưa gửi"} />
+                  <Info label="Thời điểm nhận" value={selectedRecordTransfer.receivedAt ? formatDateTime(selectedRecordTransfer.receivedAt) : "Chưa xác nhận"} />
+                </div>
+                <div className="panel-actions">
+                  <button
+                    className="ghost-button compact-button"
+                    type="button"
+                    disabled={
+                      Boolean(selectedRecordTransfer.sentAt) ||
+                      ["completed", "cancelled", "failed"].includes(selectedRecordTransfer.status) ||
+                      transitioningRecordTransferId === selectedRecordTransfer.id
+                    }
+                    onClick={() => void handleSendRecordTransfer(selectedRecordTransfer)}
+                  >
+                    {transitioningRecordTransferId === selectedRecordTransfer.id
+                      ? "Đang cập nhật..."
+                      : "Đánh dấu đã gửi"}
+                  </button>
+                  <button
+                    className="ghost-button compact-button"
+                    type="button"
+                    disabled={
+                      !selectedRecordTransfer.sentAt ||
+                      selectedRecordTransfer.status !== "in-progress" ||
+                      transitioningRecordTransferId === selectedRecordTransfer.id
+                    }
+                    onClick={() => void handleReceiveRecordTransfer(selectedRecordTransfer)}
+                  >
+                    {transitioningRecordTransferId === selectedRecordTransfer.id
+                      ? "Đang cập nhật..."
+                      : "Xác nhận đã nhận"}
+                  </button>
                 </div>
                 <p className="empty-state">
                   RecordTransfer là lớp điều phối nội bộ: sản phẩm dùng nó để theo dõi gửi/nhận,
@@ -8573,6 +8688,8 @@ function formatAuditAction(action: AuditAction): string {
     "record-transfer.list": "Tải gói chuyển hồ sơ",
     "record-transfer.create": "Tạo gói chuyển hồ sơ",
     "record-transfer.read": "Xem gói chuyển hồ sơ",
+    "record-transfer.send": "Gửi gói chuyển hồ sơ",
+    "record-transfer.receive": "Xác nhận nhận gói chuyển hồ sơ",
     "record-transfer.fhir-export": "Xuất FHIR Task chuyển hồ sơ",
     "encounter.list": "Tải danh sách lượt khám",
     "encounter.create": "Mở lượt khám",

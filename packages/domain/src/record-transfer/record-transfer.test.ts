@@ -59,4 +59,57 @@ describe("RecordTransfer", () => {
       })
     ).toThrow(DomainError);
   });
+
+  it("moves a transfer through sent and received lifecycle milestones", () => {
+    const transfer = RecordTransfer.create({
+      id: "record-transfer-test-004",
+      patientId: "patient-test-001",
+      bundleType: "document",
+      bundleId: "patient-document-patient-test-001",
+      sourceOrganizationId: "hospital-source",
+      recipientOrganizationId: "hospital-recipient",
+      consentReference: "consent-test-001",
+      requestedByActorId: "practitioner-test-001",
+      reason: "Chuyển hồ sơ để hội chẩn chuyên khoa.",
+      requestedAt: "2026-05-28T02:00:00.000Z"
+    });
+
+    transfer.markSent({
+      sentAt: "2026-05-28T02:30:00.000Z",
+      note: "Đã gửi qua kênh liên thông."
+    });
+    transfer.markReceived({
+      receivedAt: "2026-05-28T02:45:00.000Z",
+      note: "Bệnh viện nhận đã xác nhận."
+    });
+
+    expect(transfer.toSnapshot()).toMatchObject({
+      status: "completed",
+      sentAt: "2026-05-28T02:30:00.000Z",
+      receivedAt: "2026-05-28T02:45:00.000Z",
+      note: "Bệnh viện nhận đã xác nhận.",
+      updatedAt: "2026-05-28T02:45:00.000Z"
+    });
+  });
+
+  it("rejects receiving a transfer before it has been sent", () => {
+    const transfer = RecordTransfer.create({
+      id: "record-transfer-test-005",
+      patientId: "patient-test-001",
+      bundleType: "document",
+      bundleId: "patient-document-patient-test-001",
+      sourceOrganizationId: "hospital-source",
+      recipientOrganizationId: "hospital-recipient",
+      consentReference: "consent-test-001",
+      requestedByActorId: "practitioner-test-001",
+      reason: "Chuyển hồ sơ để hội chẩn chuyên khoa.",
+      requestedAt: "2026-05-28T02:00:00.000Z"
+    });
+
+    expect(() =>
+      transfer.markReceived({
+        receivedAt: "2026-05-28T02:45:00.000Z"
+      })
+    ).toThrow(DomainError);
+  });
 });

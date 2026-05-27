@@ -1636,6 +1636,68 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("moves a record transfer through sent and received milestones", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const sendResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/send",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        sentAt: "2026-05-28T04:00:00.000Z",
+        note: "Đã gửi gói hồ sơ qua gateway liên thông."
+      }
+    });
+
+    expect(sendResponse.statusCode).toBe(200);
+    expect(sendResponse.json()).toMatchObject({
+      id: "record-transfer-demo-001",
+      status: "in-progress",
+      sentAt: "2026-05-28T04:00:00.000Z"
+    });
+
+    const receiveResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/receive",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        receivedAt: "2026-05-28T04:15:00.000Z",
+        note: "Bệnh viện nhận đã xác nhận tiếp nhận."
+      }
+    });
+
+    expect(receiveResponse.statusCode).toBe(200);
+    expect(receiveResponse.json()).toMatchObject({
+      id: "record-transfer-demo-001",
+      status: "completed",
+      sentAt: "2026-05-28T04:00:00.000Z",
+      receivedAt: "2026-05-28T04:15:00.000Z"
+    });
+
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/fhir-task",
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(fhirResponse.statusCode).toBe(200);
+    expect(fhirResponse.json()).toMatchObject({
+      resourceType: "Task",
+      status: "completed",
+      executionPeriod: {
+        start: "2026-05-28T04:00:00.000Z",
+        end: "2026-05-28T04:15:00.000Z"
+      }
+    });
+  });
+
   it("denies record transfer creation when consent does not cover the recipient", async () => {
     app = await readyServer();
     const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");

@@ -13,6 +13,8 @@ export type AuditAction =
   | "record-transfer.list"
   | "record-transfer.create"
   | "record-transfer.read"
+  | "record-transfer.send"
+  | "record-transfer.receive"
   | "record-transfer.fhir-export"
   | "encounter.list"
   | "encounter.create"

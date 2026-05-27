@@ -2,6 +2,8 @@ import type { FastifyInstance } from "fastify";
 import { nanoid } from "nanoid";
 import {
   CreateRecordTransferRequestSchema,
+  MarkRecordTransferReceivedRequestSchema,
+  MarkRecordTransferSentRequestSchema,
   PatientRecordTransfersParamsSchema,
   RecordTransferIdParamsSchema
 } from "@benh-vien-so/contracts";
@@ -160,6 +162,113 @@ export async function registerRecordTransferRoutes(
     });
 
     return toRecordTransferResponse(recordTransfer);
+  });
+
+  app.post("/record-transfers/:id/send", async (request, reply) => {
+    const actor = requirePermission(request, reply, "record-transfer:update");
+
+    if (!actor) {
+      return;
+    }
+
+    const params = RecordTransferIdParamsSchema.parse(request.params);
+    const parsed = MarkRecordTransferSentRequestSchema.safeParse(request.body ?? {});
+
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: "INVALID_RECORD_TRANSFER_SEND_PAYLOAD",
+        issues: parsed.error.issues
+      });
+    }
+
+    const recordTransfer = await recordTransferRepository.findById(params.id);
+
+    if (!recordTransfer) {
+      return reply.status(404).send({
+        error: "RECORD_TRANSFER_NOT_FOUND"
+      });
+    }
+
+    try {
+      recordTransfer.markSent(parsed.data);
+      await recordTransferRepository.save(recordTransfer);
+      await recordAuditEvent(auditRepository, request, {
+        action: "record-transfer.send",
+        resourceType: "RecordTransfer",
+        resourceId: recordTransfer.id,
+        patientId: recordTransfer.patientId,
+        metadata: {
+          status: recordTransfer.toSnapshot().status,
+          sentAt: recordTransfer.toSnapshot().sentAt,
+          recipientOrganizationId: recordTransfer.toSnapshot().recipientOrganizationId
+        }
+      });
+
+      return toRecordTransferResponse(recordTransfer);
+    } catch (error) {
+      if (error instanceof DomainError) {
+        return reply.status(422).send({
+          error: "RECORD_TRANSFER_DOMAIN_ERROR",
+          message: error.message
+        });
+      }
+
+      throw error;
+    }
+  });
+
+  app.post("/record-transfers/:id/receive", async (request, reply) => {
+    const actor = requirePermission(request, reply, "record-transfer:update");
+
+    if (!actor) {
+      return;
+    }
+
+    const params = RecordTransferIdParamsSchema.parse(request.params);
+    const parsed = MarkRecordTransferReceivedRequestSchema.safeParse(request.body ?? {});
+
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: "INVALID_RECORD_TRANSFER_RECEIVE_PAYLOAD",
+        issues: parsed.error.issues
+      });
+    }
+
+    const recordTransfer = await recordTransferRepository.findById(params.id);
+
+    if (!recordTransfer) {
+      return reply.status(404).send({
+        error: "RECORD_TRANSFER_NOT_FOUND"
+      });
+    }
+
+    try {
+      recordTransfer.markReceived(parsed.data);
+      await recordTransferRepository.save(recordTransfer);
+      await recordAuditEvent(auditRepository, request, {
+        action: "record-transfer.receive",
+        resourceType: "RecordTransfer",
+        resourceId: recordTransfer.id,
+        patientId: recordTransfer.patientId,
+        metadata: {
+          status: recordTransfer.toSnapshot().status,
+          sentAt: recordTransfer.toSnapshot().sentAt,
+          receivedAt: recordTransfer.toSnapshot().receivedAt,
+          recipientOrganizationId: recordTransfer.toSnapshot().recipientOrganizationId
+        }
+      });
+
+      return toRecordTransferResponse(recordTransfer);
+    } catch (error) {
+      if (error instanceof DomainError) {
+        return reply.status(422).send({
+          error: "RECORD_TRANSFER_DOMAIN_ERROR",
+          message: error.message
+        });
+      }
+
+      throw error;
+    }
   });
 
   app.get("/record-transfers/:id/fhir-task", async (request, reply) => {

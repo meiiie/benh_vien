@@ -883,6 +883,27 @@ const recordTransfer = RecordTransfer.create({
   requestedAt: "2026-05-27T12:05:00.000Z"
 });
 const fhirRecordTransferTask = mapRecordTransferToFhirTask(recordTransfer);
+const completedRecordTransfer = RecordTransfer.create({
+  id: "record-transfer-harness-completed-001",
+  patientId: patient.id,
+  status: "ready",
+  priority: "urgent",
+  bundleType: "document",
+  bundleId: fhirDocumentBundle.id,
+  sourceOrganizationId: "hospital-hai-phong-demo",
+  recipientOrganizationId: "hospital-harness-recipient",
+  consentReference: consent.id,
+  requestedByActorId: "practitioner-harness-001",
+  reason: "Validate record transfer send and receive milestones.",
+  requestedAt: "2026-05-27T12:05:00.000Z"
+});
+completedRecordTransfer.markSent({
+  sentAt: "2026-05-27T12:15:00.000Z"
+});
+completedRecordTransfer.markReceived({
+  receivedAt: "2026-05-27T12:30:00.000Z"
+});
+const fhirCompletedRecordTransferTask = mapRecordTransferToFhirTask(completedRecordTransfer);
 
 if (fhirRecordTransferTask.resourceType !== "Task") {
   throw new Error(
@@ -896,6 +917,14 @@ if (fhirRecordTransferTask.focus?.reference !== `Bundle/${fhirDocumentBundle.id}
 
 if (fhirRecordTransferTask.owner?.reference !== "Organization/hospital-harness-recipient") {
   throw new Error("Expected record transfer Task owner to be the recipient organization.");
+}
+
+if (fhirCompletedRecordTransferTask.status !== "completed") {
+  throw new Error("Expected completed record transfer Task status to be completed.");
+}
+
+if (fhirCompletedRecordTransferTask.executionPeriod?.end !== "2026-05-27T12:30:00.000Z") {
+  throw new Error("Expected completed record transfer Task to include executionPeriod end.");
 }
 
 const auditEvent = AuditEvent.record({
@@ -1083,6 +1112,15 @@ const clinicianCanExportRecordTransfer = canAccess(
   "record-transfer:fhir-export"
 );
 
+const clinicianCanUpdateRecordTransfer = canAccess(
+  {
+    actorId: "practitioner-harness-001",
+    role: "clinician",
+    purposeOfUse: "TREATMENT"
+  },
+  "record-transfer:update"
+);
+
 const clinicianCanRevokeConsent = canAccess(
   {
     actorId: "practitioner-harness-001",
@@ -1216,6 +1254,15 @@ const nurseCanExportRecordTransfer = canAccess(
     purposeOfUse: "TREATMENT"
   },
   "record-transfer:fhir-export"
+);
+
+const nurseCanUpdateRecordTransfer = canAccess(
+  {
+    actorId: "nurse-harness-001",
+    role: "nurse",
+    purposeOfUse: "TREATMENT"
+  },
+  "record-transfer:update"
 );
 
 const nurseCanRevokeConsent = canAccess(
@@ -1368,6 +1415,10 @@ if (!clinicianCanExportRecordTransfer) {
   throw new Error("Expected clinician/TREATMENT to export record transfer tasks.");
 }
 
+if (!clinicianCanUpdateRecordTransfer) {
+  throw new Error("Expected clinician/TREATMENT to update record transfer milestones.");
+}
+
 if (!clinicianCanRevokeConsent) {
   throw new Error("Expected clinician/TREATMENT to revoke record-sharing consent.");
 }
@@ -1428,6 +1479,10 @@ if (nurseCanExportProviderDirectory) {
 
 if (nurseCanExportRecordTransfer) {
   throw new Error("Expected nurse/TREATMENT to be denied record-transfer:fhir-export.");
+}
+
+if (nurseCanUpdateRecordTransfer) {
+  throw new Error("Expected nurse/TREATMENT to be denied record-transfer:update.");
 }
 
 if (nurseCanRevokeConsent) {
@@ -1520,6 +1575,7 @@ console.log(
       recordTransferId: fhirRecordTransferTask.id,
       recordTransferResourceType: fhirRecordTransferTask.resourceType,
       recordTransferFocus: fhirRecordTransferTask.focus?.reference,
+      completedRecordTransferStatus: fhirCompletedRecordTransferTask.status,
       auditAction: auditEvent.toSnapshot().action,
       auditResourceType: fhirAuditEvent.resourceType,
       auditBundleEntryCount: fhirAuditBundle.entry.length,
@@ -1543,6 +1599,7 @@ console.log(
         clinicianCanExportObservation,
         clinicianCanExportProviderDirectory,
         clinicianCanExportRecordTransfer,
+        clinicianCanUpdateRecordTransfer,
         clinicianCanRevokeConsent,
         clinicianCanExportConsent,
         clinicianCanExportServiceRequest,
@@ -1558,6 +1615,7 @@ console.log(
         nurseCanExportObservation,
         nurseCanExportProviderDirectory,
         nurseCanExportRecordTransfer,
+        nurseCanUpdateRecordTransfer,
         nurseCanRevokeConsent,
         nurseCanExportConsent,
         nurseCanReadProviderDirectory,

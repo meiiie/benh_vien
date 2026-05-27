@@ -46,6 +46,13 @@ export function mapRecordTransferToFhirTask(recordTransfer: RecordTransfer): Fhi
     for: {
       reference: `Patient/${snapshot.patientId}`
     },
+    executionPeriod:
+      snapshot.sentAt || snapshot.receivedAt
+        ? {
+            start: snapshot.sentAt,
+            end: snapshot.receivedAt
+          }
+        : undefined,
     authoredOn: snapshot.requestedAt,
     lastModified: snapshot.updatedAt,
     requester: {

@@ -43,8 +43,18 @@ export type CreateRecordTransferInput = Omit<
   readonly receivedAt?: string;
 };
 
+export type MarkRecordTransferSentInput = {
+  readonly sentAt?: string;
+  readonly note?: string;
+};
+
+export type MarkRecordTransferReceivedInput = {
+  readonly receivedAt?: string;
+  readonly note?: string;
+};
+
 export class RecordTransfer {
-  private constructor(private readonly props: RecordTransferSnapshot) {}
+  private constructor(private props: RecordTransferSnapshot) {}
 
   static create(input: CreateRecordTransferInput): RecordTransfer {
     const now = new Date();
@@ -133,6 +143,71 @@ export class RecordTransfer {
 
   get patientId(): string {
     return this.props.patientId;
+  }
+
+  markSent(input: MarkRecordTransferSentInput = {}): void {
+    if (this.props.status === "completed") {
+      throw new DomainError("Hồ sơ đã được tiếp nhận, không thể gửi lại.");
+    }
+
+    if (this.props.status === "cancelled" || this.props.status === "failed") {
+      throw new DomainError("Không thể gửi hồ sơ khi yêu cầu đã hủy hoặc thất bại.");
+    }
+
+    if (this.props.sentAt) {
+      throw new DomainError("Hồ sơ đã có thời điểm gửi.");
+    }
+
+    const sentAt = input.sentAt
+      ? parseDate(input.sentAt, "Thời điểm gửi hồ sơ không hợp lệ.")
+      : new Date();
+    const requestedAt = parseDate(
+      this.props.requestedAt,
+      "Thời điểm yêu cầu chuyển hồ sơ không hợp lệ."
+    );
+
+    if (sentAt < requestedAt) {
+      throw new DomainError("Thời điểm gửi hồ sơ không được trước thời điểm yêu cầu.");
+    }
+
+    this.props = {
+      ...this.props,
+      status: "in-progress",
+      sentAt: sentAt.toISOString(),
+      note: normalizeOptional(input.note) ?? this.props.note,
+      updatedAt: sentAt.toISOString()
+    };
+  }
+
+  markReceived(input: MarkRecordTransferReceivedInput = {}): void {
+    if (this.props.status === "completed") {
+      throw new DomainError("Hồ sơ đã được ghi nhận tiếp nhận.");
+    }
+
+    if (this.props.status === "cancelled" || this.props.status === "failed") {
+      throw new DomainError("Không thể tiếp nhận hồ sơ khi yêu cầu đã hủy hoặc thất bại.");
+    }
+
+    if (!this.props.sentAt) {
+      throw new DomainError("Hồ sơ chỉ được tiếp nhận sau khi đã có thời điểm gửi.");
+    }
+
+    const receivedAt = input.receivedAt
+      ? parseDate(input.receivedAt, "Thời điểm tiếp nhận hồ sơ không hợp lệ.")
+      : new Date();
+    const sentAt = parseDate(this.props.sentAt, "Thời điểm gửi hồ sơ không hợp lệ.");
+
+    if (receivedAt < sentAt) {
+      throw new DomainError("Thời điểm tiếp nhận hồ sơ không được trước thời điểm gửi.");
+    }
+
+    this.props = {
+      ...this.props,
+      status: "completed",
+      receivedAt: receivedAt.toISOString(),
+      note: normalizeOptional(input.note) ?? this.props.note,
+      updatedAt: receivedAt.toISOString()
+    };
   }
 
   toSnapshot(): RecordTransferSnapshot {
