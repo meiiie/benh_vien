@@ -1578,6 +1578,7 @@ export function App() {
   const [patientFhirPreview, setPatientFhirPreview] = useState<unknown>();
   const [patientFhirBundlePreview, setPatientFhirBundlePreview] = useState<unknown>();
   const [patientFhirDocumentBundlePreview, setPatientFhirDocumentBundlePreview] = useState<unknown>();
+  const [capabilityStatementPreview, setCapabilityStatementPreview] = useState<unknown>();
   const [providerDirectoryFhirPreview, setProviderDirectoryFhirPreview] = useState<unknown>();
   const [consentFhirPreview, setConsentFhirPreview] = useState<unknown>();
   const [recordTransferFhirTaskPreview, setRecordTransferFhirTaskPreview] =
@@ -1751,6 +1752,7 @@ export function App() {
     }
 
     void loadPatients();
+    void loadCapabilityStatement();
     void loadProviderDirectory();
   }, [isAuthenticated]);
 
@@ -1759,6 +1761,7 @@ export function App() {
       setPatientFhirPreview(undefined);
       setPatientFhirBundlePreview(undefined);
       setPatientFhirDocumentBundlePreview(undefined);
+      setCapabilityStatementPreview(undefined);
       setConsentFhirPreview(undefined);
       setEncounterFhirPreview(undefined);
       setRecordTransferFhirTaskPreview(undefined);
@@ -2051,6 +2054,25 @@ export function App() {
       });
     } finally {
       setIsLoadingProviderDirectory(false);
+    }
+  }
+
+  async function loadCapabilityStatement() {
+    try {
+      const response = await fetch(`${apiBaseUrl}/fhir/metadata`);
+
+      if (!response.ok) {
+        throw new Error(`FHIR metadata API trả về HTTP ${response.status}`);
+      }
+
+      setCapabilityStatementPreview(await response.json());
+    } catch (error) {
+      setCapabilityStatementPreview({
+        error:
+          error instanceof Error
+            ? `Không thể tải FHIR CapabilityStatement: ${error.message}`
+            : "Không thể tải FHIR CapabilityStatement."
+      });
     }
   }
 
@@ -3164,6 +3186,7 @@ export function App() {
     setPatientFhirPreview(undefined);
     setPatientFhirBundlePreview(undefined);
     setPatientFhirDocumentBundlePreview(undefined);
+    setCapabilityStatementPreview(undefined);
     setProviderDirectoryFhirPreview(undefined);
     setEncounterFhirPreview(undefined);
     setDocumentFhirPreview(undefined);
@@ -4532,6 +4555,7 @@ export function App() {
 
         <section className="workspace">
           {renderProviderDirectoryPanel()}
+          <FhirPanel title="FHIR CapabilityStatement JSON" badge="CapabilityStatement" value={capabilityStatementPreview} />
           <FhirPanel title="FHIR Provider Directory Bundle JSON" badge="Organization/Endpoint" value={providerDirectoryFhirPreview} />
           <FhirPanel title="FHIR Patient JSON" badge="Patient" value={patientFhirPreview} />
           <FhirPanel title="FHIR Patient Record Bundle JSON" badge="Bundle" value={patientFhirBundlePreview} />

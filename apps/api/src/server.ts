@@ -2,6 +2,7 @@ import cors from "@fastify/cors";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import Fastify from "fastify";
+import { buildWiiiCareCapabilityStatement } from "@benh-vien-so/domain";
 import type {
   AuditEventRepository,
   AllergyIntoleranceRepository,
@@ -108,6 +109,10 @@ export async function buildServer(options: ServerOptions = {}) {
         }
       },
       tags: [
+        {
+          name: "fhir",
+          description: "FHIR facade metadata and interoperability discovery"
+        },
         {
           name: "auth",
           description: "Đăng nhập demo và xác thực phiên truy cập"
@@ -228,6 +233,13 @@ export async function buildServer(options: ServerOptions = {}) {
 
   await app.register(
     async (api) => {
+      api.get("/fhir/metadata", async () =>
+        buildWiiiCareCapabilityStatement({
+          implementationUrl:
+            process.env.BVS_PUBLIC_API_BASE_URL ?? "http://localhost:7310/api/v1"
+        })
+      );
+
       await registerAuthRoutes(api);
       await registerPatientRoutes(
         api,

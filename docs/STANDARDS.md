@@ -46,6 +46,7 @@ Nguồn:
 - [FHIR DocumentReference Resource](https://hl7.org/fhir/R4/documentreference.html)
 - [FHIR Consent Resource](https://hl7.org/fhir/R4/consent.html)
 - [FHIR AuditEvent Resource](https://hl7.org/fhir/R4/auditevent.html)
+- [FHIR CapabilityStatement Resource](https://hl7.org/fhir/R4/capabilitystatement.html)
 
 Hàm ý cho dự án:
 
@@ -66,6 +67,7 @@ Hàm ý cho dự án:
 - `Composition` phù hợp để tạo mục lục lâm sàng cho một FHIR document. Khi `Bundle.type = document`, entry đầu tiên bắt buộc phải là `Composition`; các section của Composition nên tham chiếu các resource nằm trong Bundle.
 - `Consent` là hướng chuẩn FHIR để biểu diễn đồng ý, chính sách chia sẻ và trạng thái hiệu lực của đồng ý. Domain hiện dùng trạng thái nội bộ `active`, `revoked`, `expired`; khi ánh xạ sang FHIR, `active` được giữ là `active`, còn `revoked`/`expired` được biểu diễn là `inactive` kèm metadata giải thích trong extension nội bộ của prototype.
 - `AuditEvent` dùng để biểu diễn sự kiện bảo mật/kiểm toán. Domain hiện ánh xạ action nội bộ sang `AuditEvent.type`, `subtype`, `action`, `recorded`, `agent`, `source`, `entity` và các `detail` chứa hash toàn vẹn; đây là profile tối thiểu để kiểm toán viên xem log theo ngôn ngữ FHIR R4.
+- `CapabilityStatement` dùng để công bố năng lực FHIR của facade. Endpoint `/api/v1/fhir/metadata` hiện khai báo các resource R4 đang xuất được, chế độ `server`, định dạng `json`, endpoint triển khai và cảnh báo rằng prototype chưa phải FHIR REST server đầy đủ.
 - Khi phát triển tiếp cần bổ sung Medication Administration Record (MAR), kiểm tra barcode/5 đúng dùng thuốc, workflow duyệt đơn thuốc và ràng buộc profile cụ thể hơn.
 - Với liên thông bệnh án, `DocumentReference` và `Composition` quan trọng hơn việc chỉ gửi một file PDF rời rạc.
 

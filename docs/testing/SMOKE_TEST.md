@@ -11,6 +11,8 @@ pnpm run ci
 ```bash
 curl -fsS http://localhost:7310/health
 
+curl -fsS http://localhost:7310/api/v1/fhir/metadata
+
 TOKEN=$(curl -s -X POST http://localhost:7310/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"practitioner-demo-001","password":"demo","role":"clinician"}' | jq -r .accessToken)

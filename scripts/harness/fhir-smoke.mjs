@@ -33,6 +33,7 @@ const {
   ServiceRequest,
   WorkflowTask,
   buildAuditIntegrityReport,
+  buildWiiiCareCapabilityStatement,
   canAccess,
   mapAuditEventToFhir,
   mapAuditEventsToFhirBundle,
@@ -174,11 +175,29 @@ const fhirProviderDirectoryBundle = mapProviderDirectoryToFhirBundle(
   providerDirectory,
   new Date("2026-05-27T00:00:00.000Z")
 );
+const fhirCapabilityStatement = buildWiiiCareCapabilityStatement({
+  generatedAt: new Date("2026-05-27T00:00:00.000Z"),
+  implementationUrl: "http://localhost:7310/api/v1"
+});
 
 if (fhirProviderDirectoryBundle.entry.length !== 6) {
   throw new Error(
     `Expected provider directory bundle to contain 6 entries, received ${fhirProviderDirectoryBundle.entry.length}`
   );
+}
+
+if (fhirCapabilityStatement.resourceType !== "CapabilityStatement") {
+  throw new Error(
+    `Expected FHIR CapabilityStatement, received ${fhirCapabilityStatement.resourceType}.`
+  );
+}
+
+if (fhirCapabilityStatement.fhirVersion !== "4.0.1") {
+  throw new Error(`Expected FHIR R4 version 4.0.1, received ${fhirCapabilityStatement.fhirVersion}.`);
+}
+
+if (!fhirCapabilityStatement.rest[0]?.resource.some((resource) => resource.type === "AuditEvent")) {
+  throw new Error("Expected CapabilityStatement to declare AuditEvent support.");
 }
 
 const fhirPatient = mapPatientToFhir(patient);
@@ -1458,6 +1477,8 @@ console.log(
       check: "FHIR, AuditEvent and RBAC smoke test",
       patientId: fhirPatient.id,
       patientResourceType: fhirPatient.resourceType,
+      capabilityStatementResourceType: fhirCapabilityStatement.resourceType,
+      capabilityStatementFhirVersion: fhirCapabilityStatement.fhirVersion,
       providerDirectoryEntryCount: fhirProviderDirectoryBundle.entry.length,
       documentId: fhirDocumentReference.id,
       documentResourceType: fhirDocumentReference.resourceType,

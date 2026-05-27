@@ -1,12 +1,22 @@
 # Ví dụ API
 
-API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `Patient`, `ProviderDirectory`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `ClinicalDocument`, `Consent`, `RecordTransfer`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
+API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `CapabilityStatement`, `Patient`, `ProviderDirectory`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `ClinicalDocument`, `Consent`, `RecordTransfer`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
 
 ## Kiểm tra sức khỏe API
 
 ```bash
 curl http://localhost:7310/health
 ```
+
+## Lấy FHIR CapabilityStatement
+
+Endpoint này dùng cho discovery kỹ thuật của facade FHIR R4 và không yêu cầu phiên demo:
+
+```bash
+curl http://localhost:7310/api/v1/fhir/metadata
+```
+
+Kết quả mong muốn là resource `CapabilityStatement` có `fhirVersion = "4.0.1"`, `rest.mode = "server"`, `format = ["json"]` và danh sách resource đang hỗ trợ như `Patient`, `DocumentReference`, `Bundle`, `Consent`, `AuditEvent`.
 
 ## Đăng nhập và lấy token
 

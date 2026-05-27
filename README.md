@@ -39,7 +39,7 @@ migrations/ SQL migration cho PostgreSQL
 - `Patient Workspace`: chọn bệnh nhân, xem định danh, mở/kết thúc lượt khám, ghi nhận dị ứng/cảnh báo, chẩn đoán, chỉ định xét nghiệm/hình ảnh/thủ thuật, theo dõi công việc thực thi y lệnh, ghi nhận thủ thuật/hoạt động đã thực hiện, chỉ số sinh hiệu/xét nghiệm, chỉ định thuốc, cấp phát thuốc, xác nhận dùng thuốc thực tế, tạo tài liệu và xem FHIR theo hồ sơ.
 - `Documents`: quản lý tài liệu bệnh án theo nhóm CCD/CCDA/CCR, lab report, medical record và referral.
 - `Audit`: xem nhật ký thao tác nhạy cảm theo bệnh nhân, actor, mục đích sử dụng, tài nguyên, kiểm tra toàn vẹn chuỗi băm audit và xuất FHIR `AuditEvent` Bundle cho kiểm toán viên.
-- `Interop`: kiểm tra FHIR `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Consent`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `DocumentReference`, `Composition`, `Bundle`, consent chia sẻ hồ sơ, thu hồi consent, gói chuyển hồ sơ liên viện và các hướng mở sang HIS/LIS/PACS.
+- `Interop`: kiểm tra FHIR `CapabilityStatement`, `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Consent`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `DocumentReference`, `Composition`, `Bundle`, consent chia sẻ hồ sơ, thu hồi consent, gói chuyển hồ sơ liên viện và các hướng mở sang HIS/LIS/PACS.
 - `Settings`: mô tả quyền demo, cấu hình vận hành và các việc cần thay bằng bảo mật thật khi lên production.
 
 ## Ảnh kiểm thử giao diện
@@ -118,6 +118,7 @@ Chi tiết version xem [VERSIONING.md](VERSIONING.md).
 - Quản lý gói chuyển hồ sơ liên viện tối thiểu bằng `RecordTransfer`, kiểm consent trước khi tạo, nối cơ sở gửi/nhận, loại FHIR Bundle, lý do chuyển, trạng thái vận hành và xuất sang FHIR `Task` điều phối.
 - Quản lý Provider Directory tối thiểu gồm cơ sở y tế/khoa phòng, nhân sự, vai trò nhân sự và endpoint liên thông FHIR/LIS/PACS; xuất sang FHIR `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`.
 - Ghi audit trail cho thao tác nhạy cảm, kiểm tra toàn vẹn chuỗi băm theo từng bệnh nhân qua API `/api/v1/patients/:patientId/audit-integrity` và xuất FHIR `AuditEvent` Bundle cho mục đích kiểm toán.
+- Công bố FHIR `CapabilityStatement` tại `/api/v1/fhir/metadata` để mô tả facade đang hỗ trợ resource R4 nào, endpoint triển khai và giả định bảo mật của prototype.
 - Xuất gói hồ sơ bệnh nhân sang FHIR `Bundle` dạng `collection` gồm Patient, Provider Directory resources, Consent, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, MedicationDispense, MedicationAdministration và DocumentReference; API chỉ cho xuất khi consent còn hiệu lực, chưa bị thu hồi và khớp đơn vị nhận.
 - Xuất gói tài liệu bệnh án sang FHIR `Bundle` dạng `document`, có `Composition` là entry đầu tiên để đóng vai trò mục lục lâm sàng cho hồ sơ chuyển viện/liên viện.
 - Ghi nhật ký kiểm toán tối thiểu cho các thao tác xem/tạo/ký/xuất dữ liệu nhạy cảm.
