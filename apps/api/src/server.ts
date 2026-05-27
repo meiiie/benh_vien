@@ -23,11 +23,12 @@ export type ServerOptions = {
   readonly encounterRepository?: EncounterRepository;
   readonly clinicalDocumentRepository?: ClinicalDocumentRepository;
   readonly auditEventRepository?: AuditEventRepository;
+  readonly logger?: boolean;
 };
 
 export async function buildServer(options: ServerOptions = {}) {
   const app = Fastify({
-    logger: true
+    logger: options.logger ?? true
   });
 
   await app.register(cors, {
