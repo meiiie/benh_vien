@@ -12,6 +12,7 @@
 - Provider Directory: cơ sở y tế, khoa/phòng, nhân sự, vai trò và endpoint liên thông.
 - Workflow core: hàng đợi thực thi y lệnh bằng FHIR `Task`, nối `ServiceRequest` với kết quả trả về từ LIS/PACS/RIS.
 - Procedure core: bản ghi thủ thuật/hoạt động y tế đã thực hiện bằng FHIR `Procedure`, nối y lệnh, người thực hiện, thời gian và báo cáo liên quan.
+- Medication dispense core: bản ghi cấp phát thuốc bằng FHIR `MedicationDispense`, nối `MedicationRequest` với số lượng cấp, số ngày cấp, thời điểm chuẩn bị/bàn giao, người cấp phát và người nhận.
 - Medication administration core: bản ghi dùng thuốc thực tế bằng FHIR `MedicationAdministration`, nối `MedicationRequest` với thời điểm dùng, liều thực tế và người/thiết bị xác nhận.
 - Clinical Records: tài liệu bệnh án, trạng thái ký/xác nhận, lịch sử chỉnh sửa.
 - Audit & Compliance: nhật ký xem, sửa, ký, xuất hồ sơ.
@@ -20,7 +21,7 @@
 ## Giai đoạn 2: Liên thông FHIR
 
 - Kết nối HAPI FHIR ở chế độ thử nghiệm.
-- Mapping `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationAdministration`, `DocumentReference`, `Composition`.
+- Mapping `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `DocumentReference`, `Composition`.
 - Tạo luồng xuất gói hồ sơ bệnh án cho một bệnh nhân.
 - Kiểm tra luồng nhận lại dữ liệu từ FHIR server.
 

@@ -178,11 +178,12 @@ describe("API auth and RBAC boundary", () => {
         "DiagnosticReport",
         "ImagingStudy",
         "MedicationRequest",
+        "MedicationDispense",
         "MedicationAdministration",
         "DocumentReference"
       ])
     );
-    expect(body.entry).toHaveLength(41);
+    expect(body.entry).toHaveLength(43);
   });
 
   it("returns a patient-record FHIR document Bundle with Composition first", async () => {
@@ -213,7 +214,7 @@ describe("API auth and RBAC boundary", () => {
         }
       ]
     });
-    expect(body.entry).toHaveLength(42);
+    expect(body.entry).toHaveLength(44);
     expect(body.entry[0].resource.section).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -224,6 +225,9 @@ describe("API auth and RBAC boundary", () => {
         }),
         expect.objectContaining({
           title: "Thủ thuật và hoạt động đã thực hiện"
+        }),
+        expect.objectContaining({
+          title: "Cấp phát thuốc"
         }),
         expect.objectContaining({
           title: "Dùng thuốc thực tế"
@@ -659,6 +663,114 @@ describe("API auth and RBAC boundary", () => {
       subject: {
         reference: "Patient/patient-demo-001"
       }
+    });
+  });
+
+  it("lists medication dispenses and exports them as FHIR MedicationDispense", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const listResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/medication-dispenses",
+      headers: treatmentHeaders(accessToken)
+    });
+    const listBody = listResponse.json();
+
+    expect(listResponse.statusCode).toBe(200);
+    expect(listBody.items).toHaveLength(2);
+    expect(listBody.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "medication-dispense-demo-002",
+          status: "completed",
+          medicationRequestId: "medication-request-demo-002"
+        })
+      ])
+    );
+
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/medication-dispenses/medication-dispense-demo-002/fhir",
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(fhirResponse.statusCode).toBe(200);
+    expect(fhirResponse.json()).toMatchObject({
+      resourceType: "MedicationDispense",
+      id: "medication-dispense-demo-002",
+      status: "completed",
+      authorizingPrescription: [
+        {
+          reference: "MedicationRequest/medication-request-demo-002"
+        }
+      ],
+      subject: {
+        reference: "Patient/patient-demo-001"
+      }
+    });
+  });
+
+  it("creates a medication dispense linked to the original medication request", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/medication-dispenses",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: "encounter-demo-002",
+        medicationRequestId: "medication-request-demo-002",
+        status: "completed",
+        category: "outpatient",
+        medicationCode: {
+          system: "http://www.whocc.no/atc",
+          code: "C09AA05",
+          display: "Ramipril"
+        },
+        quantity: {
+          value: 30,
+          unit: "viên",
+          system: "http://unitsofmeasure.org",
+          code: "{tablet}"
+        },
+        daysSupply: {
+          value: 30,
+          unit: "ngày",
+          system: "http://unitsofmeasure.org",
+          code: "d"
+        },
+        whenPrepared: "2026-05-27T05:30:00.000Z",
+        whenHandedOver: "2026-05-27T05:45:00.000Z",
+        dispenserPractitionerId: "nurse-demo-001",
+        receiverPractitionerId: "nurse-demo-001",
+        dosageInstruction: {
+          text: "Uống 5 mg mỗi ngày vào buổi sáng",
+          route: "Đường uống",
+          doseQuantity: {
+            value: 5,
+            unit: "mg",
+            system: "http://unitsofmeasure.org",
+            code: "mg"
+          },
+          frequency: 1,
+          period: 1,
+          periodUnit: "d"
+        }
+      }
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({
+      patientId: "patient-demo-001",
+      encounterId: "encounter-demo-002",
+      medicationRequestId: "medication-request-demo-002",
+      category: "outpatient",
+      status: "completed"
     });
   });
 

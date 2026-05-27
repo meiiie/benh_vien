@@ -12,6 +12,7 @@ import type {
   EncounterRepository,
   ImagingStudyRepository,
   MedicationAdministrationRepository,
+  MedicationDispenseRepository,
   MedicationRequestRepository,
   ObservationRepository,
   PatientRepository,
@@ -39,6 +40,8 @@ import { createImagingStudyRepository } from "./modules/imaging-studies/create-i
 import { registerImagingStudyRoutes } from "./modules/imaging-studies/imaging-study-routes.js";
 import { createMedicationAdministrationRepository } from "./modules/medication-administrations/create-medication-administration.repository.js";
 import { registerMedicationAdministrationRoutes } from "./modules/medication-administrations/medication-administration-routes.js";
+import { createMedicationDispenseRepository } from "./modules/medication-dispenses/create-medication-dispense.repository.js";
+import { registerMedicationDispenseRoutes } from "./modules/medication-dispenses/medication-dispense-routes.js";
 import { createMedicationRequestRepository } from "./modules/medication-requests/create-medication-request.repository.js";
 import { registerMedicationRequestRoutes } from "./modules/medication-requests/medication-request-routes.js";
 import { createObservationRepository } from "./modules/observations/create-observation.repository.js";
@@ -64,6 +67,7 @@ export type ServerOptions = {
   readonly diagnosticReportRepository?: DiagnosticReportRepository;
   readonly imagingStudyRepository?: ImagingStudyRepository;
   readonly medicationAdministrationRepository?: MedicationAdministrationRepository;
+  readonly medicationDispenseRepository?: MedicationDispenseRepository;
   readonly medicationRequestRepository?: MedicationRequestRepository;
   readonly serviceRequestRepository?: ServiceRequestRepository;
   readonly workflowTaskRepository?: WorkflowTaskRepository;
@@ -123,6 +127,10 @@ export async function buildServer(options: ServerOptions = {}) {
         {
           name: "medication-requests",
           description: "Quản lý chỉ định thuốc, đơn thuốc và FHIR MedicationRequest"
+        },
+        {
+          name: "medication-dispenses",
+          description: "Quản lý cấp phát thuốc từ dược/kho và FHIR MedicationDispense"
         },
         {
           name: "medication-administrations",
@@ -185,6 +193,8 @@ export async function buildServer(options: ServerOptions = {}) {
     options.observationRepository ?? (await createObservationRepository());
   const medicationRequestRepository =
     options.medicationRequestRepository ?? (await createMedicationRequestRepository());
+  const medicationDispenseRepository =
+    options.medicationDispenseRepository ?? (await createMedicationDispenseRepository());
   const medicationAdministrationRepository =
     options.medicationAdministrationRepository ??
     (await createMedicationAdministrationRepository());
@@ -222,6 +232,7 @@ export async function buildServer(options: ServerOptions = {}) {
         conditionRepository,
         observationRepository,
         medicationRequestRepository,
+        medicationDispenseRepository,
         medicationAdministrationRepository,
         serviceRequestRepository,
         diagnosticReportRepository,
@@ -276,6 +287,14 @@ export async function buildServer(options: ServerOptions = {}) {
         encounterRepository,
         conditionRepository,
         medicationRequestRepository,
+        auditEventRepository
+      );
+      await registerMedicationDispenseRoutes(
+        api,
+        patientRepository,
+        encounterRepository,
+        medicationRequestRepository,
+        medicationDispenseRepository,
         auditEventRepository
       );
       await registerMedicationAdministrationRoutes(

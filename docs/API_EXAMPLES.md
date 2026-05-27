@@ -1,6 +1,6 @@
 # Ví dụ API
 
-API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `Patient`, `ProviderDirectory`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationAdministration`, `ClinicalDocument`, `Consent`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
+API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `Patient`, `ProviderDirectory`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `ClinicalDocument`, `Consent`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
 
 ## Kiểm tra sức khỏe API
 
@@ -141,7 +141,7 @@ curl http://localhost:7310/api/v1/patients/patient-demo-001/fhir-bundle \
   -H "x-recipient-organization-id: hospital-hai-phong-referral"
 ```
 
-Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các tài nguyên Provider Directory (`Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`), các `Encounter`, các `AllergyIntolerance`, các `Condition`, các `ServiceRequest`, các `Task`, các `Procedure`, các `Observation`, các `DiagnosticReport`, các `ImagingStudy`, các `MedicationRequest`, các `MedicationAdministration` và các `DocumentReference` của bệnh nhân. Endpoint này không chỉ kiểm header: `x-consent-reference` phải trỏ tới một consent đang hiệu lực, đúng bệnh nhân và đúng `x-recipient-organization-id`.
+Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các tài nguyên Provider Directory (`Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`), các `Encounter`, các `AllergyIntolerance`, các `Condition`, các `ServiceRequest`, các `Task`, các `Procedure`, các `Observation`, các `DiagnosticReport`, các `ImagingStudy`, các `MedicationRequest`, các `MedicationDispense`, các `MedicationAdministration` và các `DocumentReference` của bệnh nhân. Endpoint này không chỉ kiểm header: `x-consent-reference` phải trỏ tới một consent đang hiệu lực, đúng bệnh nhân và đúng `x-recipient-organization-id`.
 
 ## Xuất gói tài liệu bệnh án sang FHIR document Bundle
 
@@ -153,7 +153,7 @@ curl http://localhost:7310/api/v1/patients/patient-demo-001/fhir-document-bundle
   -H "x-recipient-organization-id: hospital-hai-phong-referral"
 ```
 
-Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `document`, và `entry[0].resource.resourceType` bằng `Composition`. Các section của `Composition` tham chiếu tới nhóm cơ sở/nhân sự/endpoint liên thông, lượt khám, dị ứng, chẩn đoán, y lệnh dịch vụ, công việc thực thi y lệnh, thủ thuật/hoạt động đã thực hiện, chỉ số, báo cáo kết quả, nghiên cứu hình ảnh, chỉ định thuốc, dùng thuốc thực tế và tài liệu lâm sàng trong cùng Bundle.
+Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `document`, và `entry[0].resource.resourceType` bằng `Composition`. Các section của `Composition` tham chiếu tới nhóm cơ sở/nhân sự/endpoint liên thông, lượt khám, dị ứng, chẩn đoán, y lệnh dịch vụ, công việc thực thi y lệnh, thủ thuật/hoạt động đã thực hiện, chỉ số, báo cáo kết quả, nghiên cứu hình ảnh, chỉ định thuốc, cấp phát thuốc, dùng thuốc thực tế và tài liệu lâm sàng trong cùng Bundle.
 
 ## Lấy và mở lượt khám
 
@@ -603,6 +603,69 @@ curl http://localhost:7310/api/v1/medication-requests/medication-request-demo-00
 ```
 
 Kết quả mong muốn là JSON có `resourceType` bằng `MedicationRequest`, có `status`, `intent`, `medicationCodeableConcept`, `subject`, `encounter`, `requester`, `dosageInstruction`, và `reasonReference` nếu chỉ định thuốc được gắn với một chẩn đoán.
+
+## Lấy, tạo và xuất cấp phát thuốc sang FHIR MedicationDispense
+
+```bash
+curl http://localhost:7310/api/v1/patients/patient-demo-001/medication-dispenses \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+```bash
+curl -X POST http://localhost:7310/api/v1/patients/patient-demo-001/medication-dispenses \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "encounterId": "encounter-demo-002",
+    "medicationRequestId": "medication-request-demo-002",
+    "status": "completed",
+    "category": "outpatient",
+    "medicationCode": {
+      "system": "http://www.whocc.no/atc",
+      "code": "C09AA05",
+      "display": "Ramipril"
+    },
+    "quantity": {
+      "value": 30,
+      "unit": "viên",
+      "system": "http://unitsofmeasure.org",
+      "code": "{tablet}"
+    },
+    "daysSupply": {
+      "value": 30,
+      "unit": "ngày",
+      "system": "http://unitsofmeasure.org",
+      "code": "d"
+    },
+    "whenPrepared": "2026-05-27T05:30:00.000Z",
+    "whenHandedOver": "2026-05-27T05:45:00.000Z",
+    "dispenserPractitionerId": "nurse-demo-001",
+    "receiverPractitionerId": "nurse-demo-001",
+    "dosageInstruction": {
+      "text": "Uống 5 mg mỗi ngày vào buổi sáng",
+      "route": "Đường uống",
+      "doseQuantity": {
+        "value": 5,
+        "unit": "mg",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg"
+      },
+      "frequency": 1,
+      "period": 1,
+      "periodUnit": "d"
+    }
+  }'
+```
+
+```bash
+curl http://localhost:7310/api/v1/medication-dispenses/medication-dispense-demo-002/fhir \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+Kết quả mong muốn là JSON có `resourceType` bằng `MedicationDispense`, có `status`, `medicationCodeableConcept`, `subject`, `context`, `authorizingPrescription` trỏ tới `MedicationRequest`, `quantity`, `daysSupply`, `whenPrepared`, `whenHandedOver`, `performer`, `receiver` và `dosageInstruction`. Đây là bản ghi “đã cấp phát thuốc”, không thay thế chỉ định thuốc hoặc lần dùng thuốc thực tế.
 
 ## Lấy, tạo và xuất lần dùng thuốc sang FHIR MedicationAdministration
 

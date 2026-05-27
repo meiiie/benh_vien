@@ -26,6 +26,10 @@ export type Permission =
   | "medication-request:create"
   | "medication-request:read"
   | "medication-request:fhir-export"
+  | "medication-dispense:list"
+  | "medication-dispense:create"
+  | "medication-dispense:read"
+  | "medication-dispense:fhir-export"
   | "medication-administration:list"
   | "medication-administration:create"
   | "medication-administration:read"
@@ -93,6 +97,10 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "medication-request:create",
     "medication-request:read",
     "medication-request:fhir-export",
+    "medication-dispense:list",
+    "medication-dispense:create",
+    "medication-dispense:read",
+    "medication-dispense:fhir-export",
     "medication-administration:list",
     "medication-administration:create",
     "medication-administration:read",
@@ -143,6 +151,9 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "medication-request:list",
     "medication-request:create",
     "medication-request:read",
+    "medication-dispense:list",
+    "medication-dispense:create",
+    "medication-dispense:read",
     "medication-administration:list",
     "medication-administration:create",
     "medication-administration:read",
@@ -175,6 +186,8 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "workflow-task:read",
     "procedure:list",
     "procedure:read",
+    "medication-dispense:list",
+    "medication-dispense:read",
     "medication-administration:list",
     "medication-administration:read",
     "audit-event:list"
@@ -203,6 +216,10 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "medication-request:create",
     "medication-request:read",
     "medication-request:fhir-export",
+    "medication-dispense:list",
+    "medication-dispense:create",
+    "medication-dispense:read",
+    "medication-dispense:fhir-export",
     "medication-administration:list",
     "medication-administration:create",
     "medication-administration:read",

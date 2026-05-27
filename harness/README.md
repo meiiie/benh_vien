@@ -13,7 +13,7 @@ Lệnh này chạy:
 - TypeScript check cho toàn monorepo.
 - Unit test hiện có.
 - Build API, web và packages.
-- Smoke test ánh xạ Patient Record sang FHIR `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `DocumentReference`, `Composition`, `Bundle`, kèm RBAC và audit tối thiểu.
+- Smoke test ánh xạ Patient Record sang FHIR `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `DocumentReference`, `Composition`, `Bundle`, kèm RBAC và audit tối thiểu.
 - Kiểm tra Docker Compose dev/prod parse hợp lệ.
 
 ## Smoke test FHIR

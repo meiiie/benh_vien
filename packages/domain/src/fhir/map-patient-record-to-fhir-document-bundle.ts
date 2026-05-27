@@ -103,6 +103,7 @@ function buildComposition(
       buildSection("Báo cáo kết quả", entries, ["DiagnosticReport"]),
       buildSection("Nghiên cứu hình ảnh", entries, ["ImagingStudy"]),
       buildSection("Chỉ định thuốc", entries, ["MedicationRequest"]),
+      buildSection("Cấp phát thuốc", entries, ["MedicationDispense"]),
       buildSection("Dùng thuốc thực tế", entries, ["MedicationAdministration"]),
       buildSection("Tài liệu lâm sàng", entries, ["DocumentReference"])
     ]

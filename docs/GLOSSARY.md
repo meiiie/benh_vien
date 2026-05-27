@@ -32,7 +32,7 @@ Trong dự án, PACS có thể được minh họa bằng Orthanc. EMR chỉ nê
 
 ## FHIR
 
-**Fast Healthcare Interoperability Resources** là chuẩn trao đổi dữ liệu y tế của HL7. FHIR định nghĩa các resource như `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `MedicationRequest`, `MedicationAdministration`, `DocumentReference`, `Composition`.
+**Fast Healthcare Interoperability Resources** là chuẩn trao đổi dữ liệu y tế của HL7. FHIR định nghĩa các resource như `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `DocumentReference`, `Composition`.
 
 Trong dự án này, FHIR là lớp liên thông. Domain model nội bộ vẫn có thể khác FHIR, sau đó được mapping sang FHIR khi cần trao đổi.
 
@@ -78,11 +78,17 @@ Trong dự án này, DiagnosticReport đóng vòng `ServiceRequest -> Observatio
 
 Trong dự án này, ImagingStudy là lát cắt PACS tối thiểu sau `ServiceRequest` và `DiagnosticReport`: bác sĩ tạo y lệnh hình ảnh, PACS/RIS sinh metadata ảnh, báo cáo hình ảnh được lưu bằng DiagnosticReport, còn Bundle liên viện có thêm chỉ mục ảnh máy đọc được.
 
+## MedicationDispense
+
+**MedicationDispense** là resource FHIR ghi nhận việc thuốc đã được cấp phát cho người bệnh hoặc đơn vị chăm sóc. Resource này nằm giữa `MedicationRequest` và `MedicationAdministration`: `MedicationRequest` là chỉ định, `MedicationDispense` là thuốc đã được cấp/bàn giao, còn `MedicationAdministration` là thuốc đã được dùng hoặc xác nhận dùng.
+
+Trong dự án này, MedicationDispense giúp hồ sơ liên viện trả lời câu hỏi “đã cấp thuốc gì, số lượng bao nhiêu, cho bao nhiêu ngày, ai cấp và bàn giao lúc nào” trước khi đi tới bản ghi dùng thuốc thực tế.
+
 ## MedicationAdministration
 
 **MedicationAdministration** là resource FHIR ghi nhận việc thuốc đã được dùng hoặc được xác nhận dùng cho người bệnh. Resource này khác `MedicationRequest`: `MedicationRequest` là chỉ định/kế hoạch dùng thuốc, còn `MedicationAdministration` là sự kiện thực tế có thời điểm, liều dùng và người/thiết bị xác nhận.
 
-Trong dự án này, MedicationAdministration đóng vòng điều trị thuốc tối thiểu: bác sĩ kê đơn bằng MedicationRequest, nhân sự y tế hoặc hệ thống xác nhận lần dùng thuốc bằng MedicationAdministration, và Bundle liên viện có đủ cả “đã kê gì” lẫn “đã dùng gì”.
+Trong dự án này, MedicationAdministration đóng vòng điều trị thuốc tối thiểu: bác sĩ kê đơn bằng MedicationRequest, khoa dược/kho thuốc ghi nhận cấp phát bằng MedicationDispense, nhân sự y tế hoặc hệ thống xác nhận lần dùng thuốc bằng MedicationAdministration, và Bundle liên viện có đủ “đã kê gì”, “đã cấp gì” lẫn “đã dùng gì”.
 
 ## Composition
 
