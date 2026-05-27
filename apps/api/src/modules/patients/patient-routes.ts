@@ -13,6 +13,7 @@ import {
 import type {
   AuditEventRepository,
   ClinicalDocumentRepository,
+  ConsentRepository,
   EncounterRepository,
   PatientRepository,
   PatientSnapshot
@@ -25,6 +26,7 @@ export async function registerPatientRoutes(
   repository: PatientRepository,
   encounterRepository: EncounterRepository,
   documentRepository: ClinicalDocumentRepository,
+  consentRepository: ConsentRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
   app.get("/patients", async (request, reply) => {
@@ -174,6 +176,21 @@ export async function registerPatientRoutes(
         error: "MISSING_BUNDLE_TRANSFER_CONTEXT",
         message:
           "Cần khai báo x-consent-reference và x-recipient-organization-id khi xuất FHIR Bundle hồ sơ bệnh nhân."
+      });
+    }
+
+    const consent = await consentRepository.findById(transferContext.consentReference);
+
+    if (
+      !consent?.allowsRecordSharing({
+        patientId: params.id,
+        granteeOrganizationId: transferContext.recipientOrganizationId
+      })
+    ) {
+      return reply.status(403).send({
+        error: "CONSENT_NOT_VALID_FOR_TRANSFER",
+        message:
+          "Consent không tồn tại, không còn hiệu lực hoặc không khớp bệnh nhân/đơn vị nhận."
       });
     }
 

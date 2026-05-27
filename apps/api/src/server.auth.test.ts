@@ -167,6 +167,68 @@ describe("API auth and RBAC boundary", () => {
     expect(body.entry).toHaveLength(6);
   });
 
+  it("lists active patient consents for treatment users", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/consents",
+      headers: treatmentHeaders(accessToken)
+    });
+    const body = response.json();
+
+    expect(response.statusCode).toBe(200);
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0]).toMatchObject({
+      id: "consent-demo-transfer-001",
+      patientId: "patient-demo-001",
+      status: "active",
+      category: "record-sharing",
+      granteeOrganizationId: "hospital-hai-phong-referral"
+    });
+  });
+
+  it("creates a patient consent and uses it for Bundle export", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const createResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/consents",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        category: "record-sharing",
+        granteeOrganizationId: "hospital-new-recipient",
+        validFrom: "2026-05-27T00:00:00.000Z",
+        validUntil: "2026-12-31T23:59:59.000Z"
+      }
+    });
+    const createdConsent = createResponse.json();
+
+    expect(createResponse.statusCode).toBe(201);
+    expect(createdConsent.id).toEqual(expect.stringMatching(/^consent-/));
+
+    const bundleResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/fhir-bundle",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "x-consent-reference": createdConsent.id,
+        "x-recipient-organization-id": "hospital-new-recipient"
+      }
+    });
+
+    expect(bundleResponse.statusCode).toBe(200);
+    expect(bundleResponse.json()).toMatchObject({
+      resourceType: "Bundle",
+      type: "collection"
+    });
+  });
+
   it("requires transfer context before exporting a patient-record FHIR Bundle", async () => {
     app = await readyServer();
     const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
@@ -180,6 +242,26 @@ describe("API auth and RBAC boundary", () => {
     expect(response.statusCode).toBe(400);
     expect(response.json()).toMatchObject({
       error: "MISSING_BUNDLE_TRANSFER_CONTEXT"
+    });
+  });
+
+  it("denies Bundle export when consent does not match the recipient", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/fhir-bundle",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "x-consent-reference": "consent-demo-transfer-001",
+        "x-recipient-organization-id": "hospital-not-covered"
+      }
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({
+      error: "CONSENT_NOT_VALID_FOR_TRANSFER"
     });
   });
 });

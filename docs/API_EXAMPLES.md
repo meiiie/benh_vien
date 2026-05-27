@@ -1,6 +1,6 @@
 # Ví dụ API
 
-API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `Patient`, `Encounter`, `ClinicalDocument`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
+API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `Patient`, `Encounter`, `ClinicalDocument`, `Consent`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
 
 ## Kiểm tra sức khỏe API
 
@@ -87,6 +87,34 @@ curl http://localhost:7310/api/v1/patients/patient-demo-001/fhir \
 
 Kết quả mong muốn là JSON có `resourceType` bằng `Patient`, có định danh, họ tên, ngày sinh, giới tính và cơ sở quản lý.
 
+## Lấy consent chia sẻ hồ sơ của bệnh nhân
+
+```bash
+curl http://localhost:7310/api/v1/patients/patient-demo-001/consents \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+Kết quả mong muốn là danh sách consent theo bệnh nhân, gồm trạng thái, loại consent, đơn vị nhận, thời hạn hiệu lực và tài liệu căn cứ nếu có.
+
+## Tạo consent chia sẻ hồ sơ
+
+```bash
+curl -X POST http://localhost:7310/api/v1/patients/patient-demo-001/consents \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "category": "record-sharing",
+    "granteeOrganizationId": "hospital-hai-phong-referral",
+    "evidenceDocumentId": "clinical-document-demo-003",
+    "validFrom": "2026-05-27T00:00:00.000Z",
+    "validUntil": "2026-12-31T23:59:59.000Z"
+  }'
+```
+
+API sẽ ghi audit action `consent.create`. Ở prototype, `grantorActorId` lấy từ Bearer token hiện tại; khi lên thật cần thay bằng workflow ký/xác nhận consent.
+
 ## Xuất gói hồ sơ bệnh nhân sang FHIR Bundle
 
 ```bash
@@ -97,7 +125,7 @@ curl http://localhost:7310/api/v1/patients/patient-demo-001/fhir-bundle \
   -H "x-recipient-organization-id: hospital-hai-phong-referral"
 ```
 
-Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các `Encounter` và các `DocumentReference` của bệnh nhân. Endpoint này cố ý yêu cầu thêm mã căn cứ/chấp thuận chia sẻ và đơn vị nhận để tránh xuất gói chuyển hồ sơ mà thiếu ngữ cảnh pháp lý/nghiệp vụ.
+Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các `Encounter` và các `DocumentReference` của bệnh nhân. Endpoint này không chỉ kiểm header: `x-consent-reference` phải trỏ tới một consent đang hiệu lực, đúng bệnh nhân và đúng `x-recipient-organization-id`.
 
 ## Lấy và mở lượt khám
 

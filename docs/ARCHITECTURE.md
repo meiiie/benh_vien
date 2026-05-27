@@ -20,6 +20,7 @@ Kiến trúc khởi đầu là **modular monolith theo DDD**. Lý do:
 | Identity & Access | Người dùng, vai trò, quyền truy cập, phiên đăng nhập | Khi cần SSO, tích hợp định danh ngoài hoặc nhiều ứng dụng dùng chung |
 | Patient Registry | Hồ sơ hành chính, định danh bệnh nhân, đối soát mã bệnh nhân | Khi cần liên thông nhiều bệnh viện hoặc master patient index |
 | Clinical Records | Bệnh án, chẩn đoán, y lệnh, diễn biến, tài liệu lâm sàng | Khi khối lượng tài liệu và quy trình ký/xác nhận tăng |
+| Consent & Sharing | Consent chia sẻ hồ sơ, đơn vị nhận, thời hạn hiệu lực và căn cứ xuất dữ liệu | Khi có nhiều chính sách chia sẻ, nhiều bệnh viện nhận hoặc cần đồng bộ consent từ hệ thống ngoài |
 | Interoperability | FHIR facade, mapping dữ liệu, luồng gửi/nhận tài liệu | Khi kết nối nhiều chuẩn và nhiều đối tác |
 | Imaging | Tích hợp PACS, DICOM/DICOMweb, báo cáo hình ảnh | Khi dữ liệu ảnh lớn hoặc cần quản trị riêng |
 | Audit & Compliance | Nhật ký truy cập, nhật ký chỉnh sửa, báo cáo tuân thủ | Khi có yêu cầu kiểm toán độc lập |
@@ -80,6 +81,7 @@ sequenceDiagram
 - **Không coi một mã bệnh nhân là đủ.** Cần quản lý nhiều định danh: mã bệnh viện, số định danh cá nhân, mã bảo hiểm y tế, mã hệ thống cũ.
 - **Tài liệu phải đi qua ngữ cảnh lượt khám/đợt điều trị khi có thể.** OpenEMR cho thấy tài liệu rời rạc khó sử dụng nếu không bám vào patient chart và encounter timeline.
 - **Tài liệu bệnh án cần có vòng đời.** Tối thiểu gồm nháp, đã ký, bị thay thế, nhập sai.
+- **Chia sẻ hồ sơ cần consent có trạng thái và thời hạn.** FHIR Bundle liên viện không được xuất chỉ vì người dùng có role điều trị; phải có consent khớp bệnh nhân, đơn vị nhận và thời điểm truy cập.
 - **Ảnh y khoa đi theo chuẩn riêng.** Ảnh X-quang, CT, MRI, siêu âm nên đi qua PACS/DICOM, không nhồi trực tiếp vào bảng bệnh án.
 - **Mọi truy cập nhạy cảm cần kiểm toán.** Bệnh án là dữ liệu đặc biệt nhạy cảm, không thể thiếu audit trail.
 
@@ -90,6 +92,7 @@ Phiên bản hiện tại tạo các bảng tối thiểu:
 - `patients`: hồ sơ hành chính và định danh bệnh nhân, dùng `jsonb` cho nhiều định danh.
 - `encounters`: lượt khám hoặc đợt điều trị, là cầu nối giữa bệnh nhân, tài liệu, người phụ trách và FHIR Encounter.
 - `clinical_documents`: tài liệu lâm sàng có vòng đời nháp, đã ký, bị thay thế hoặc nhập sai.
+- `consents`: consent chia sẻ hồ sơ theo bệnh nhân, đơn vị nhận, trạng thái và thời hạn hiệu lực.
 - `audit_events`: nhật ký thao tác theo thời gian, tài nguyên, bệnh nhân và mục đích sử dụng.
 - `schema_migrations`: quản lý migration đã áp dụng.
 

@@ -5,6 +5,7 @@ import Fastify from "fastify";
 import type {
   AuditEventRepository,
   ClinicalDocumentRepository,
+  ConsentRepository,
   EncounterRepository,
   PatientRepository
 } from "@benh-vien-so/domain";
@@ -13,6 +14,8 @@ import { registerAuditEventRoutes } from "./modules/audit-events/audit-event-rou
 import { registerAuthRoutes } from "./modules/auth/auth-routes.js";
 import { createClinicalDocumentRepository } from "./modules/clinical-documents/create-clinical-document.repository.js";
 import { registerClinicalDocumentRoutes } from "./modules/clinical-documents/clinical-document-routes.js";
+import { createConsentRepository } from "./modules/consents/create-consent.repository.js";
+import { registerConsentRoutes } from "./modules/consents/consent-routes.js";
 import { createEncounterRepository } from "./modules/encounters/create-encounter.repository.js";
 import { registerEncounterRoutes } from "./modules/encounters/encounter-routes.js";
 import { createPatientRepository } from "./modules/patients/create-patient.repository.js";
@@ -22,6 +25,7 @@ export type ServerOptions = {
   readonly patientRepository?: PatientRepository;
   readonly encounterRepository?: EncounterRepository;
   readonly clinicalDocumentRepository?: ClinicalDocumentRepository;
+  readonly consentRepository?: ConsentRepository;
   readonly auditEventRepository?: AuditEventRepository;
   readonly logger?: boolean;
 };
@@ -85,6 +89,8 @@ export async function buildServer(options: ServerOptions = {}) {
     options.encounterRepository ?? (await createEncounterRepository());
   const clinicalDocumentRepository =
     options.clinicalDocumentRepository ?? (await createClinicalDocumentRepository());
+  const consentRepository =
+    options.consentRepository ?? (await createConsentRepository());
   const auditEventRepository =
     options.auditEventRepository ?? (await createAuditEventRepository());
 
@@ -101,6 +107,13 @@ export async function buildServer(options: ServerOptions = {}) {
         patientRepository,
         encounterRepository,
         clinicalDocumentRepository,
+        consentRepository,
+        auditEventRepository
+      );
+      await registerConsentRoutes(
+        api,
+        patientRepository,
+        consentRepository,
         auditEventRepository
       );
       await registerEncounterRoutes(

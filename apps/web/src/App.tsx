@@ -28,6 +28,8 @@ type ClinicalDocumentType =
 type ClinicalDocumentStatus = "draft" | "signed" | "superseded" | "entered-in-error";
 type DemoRole = "clinician" | "nurse" | "auditor" | "admin";
 type PurposeOfUse = "TREATMENT" | "AUDIT" | "OPERATIONS";
+type ConsentStatus = "active" | "revoked" | "expired";
+type ConsentCategory = "record-sharing";
 
 type PatientIdentifier = {
   readonly system: string;
@@ -93,9 +95,11 @@ type AuditAction =
   | "clinical-document.create"
   | "clinical-document.sign"
   | "clinical-document.fhir-export"
+  | "consent.list"
+  | "consent.create"
   | "audit-event.list";
 
-type AuditResourceType = "Patient" | "Encounter" | "ClinicalDocument" | "AuditEvent";
+type AuditResourceType = "Patient" | "Encounter" | "ClinicalDocument" | "Consent" | "AuditEvent";
 
 type AuditEvent = {
   readonly id?: string;
@@ -109,6 +113,20 @@ type AuditEvent = {
   readonly ipAddress?: string;
   readonly userAgent?: string;
   readonly metadata: Record<string, unknown>;
+};
+
+type Consent = {
+  readonly id: string;
+  readonly patientId: string;
+  readonly status: ConsentStatus;
+  readonly category: ConsentCategory;
+  readonly granteeOrganizationId: string;
+  readonly grantorActorId: string;
+  readonly evidenceDocumentId?: string;
+  readonly validFrom: string;
+  readonly validUntil?: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
 };
 
 type PatientsResponse = {
@@ -125,6 +143,10 @@ type ClinicalDocumentsResponse = {
 
 type AuditEventsResponse = {
   readonly items: readonly AuditEvent[];
+};
+
+type ConsentsResponse = {
+  readonly items: readonly Consent[];
 };
 
 type NewPatientForm = {
@@ -202,6 +224,11 @@ const defaultClinicalDocumentForm: NewClinicalDocumentForm = {
 const apiBaseUrl =
   import.meta.env.VITE_API_BASE_URL ??
   (window.location.port === "7311" ? "http://localhost:7310/api/v1" : "/api/v1");
+
+const defaultTransferContext = {
+  consentReference: "consent-demo-transfer-001",
+  recipientOrganizationId: "hospital-hai-phong-referral"
+};
 
 const loginPresets: Record<DemoRole, LoginForm> = {
   clinician: {
@@ -288,6 +315,7 @@ export function App() {
   const [clinicalDocuments, setClinicalDocuments] = useState<readonly ClinicalDocument[]>([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string>();
   const [auditEvents, setAuditEvents] = useState<readonly AuditEvent[]>([]);
+  const [consents, setConsents] = useState<readonly Consent[]>([]);
   const [patientFhirPreview, setPatientFhirPreview] = useState<unknown>();
   const [patientFhirBundlePreview, setPatientFhirBundlePreview] = useState<unknown>();
   const [encounterFhirPreview, setEncounterFhirPreview] = useState<unknown>();
@@ -301,6 +329,7 @@ export function App() {
   const [isLoadingEncounters, setIsLoadingEncounters] = useState(false);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [isLoadingAuditEvents, setIsLoadingAuditEvents] = useState(false);
+  const [isLoadingConsents, setIsLoadingConsents] = useState(false);
   const [isSubmittingPatient, setIsSubmittingPatient] = useState(false);
   const [isSubmittingEncounter, setIsSubmittingEncounter] = useState(false);
   const [isSubmittingDocument, setIsSubmittingDocument] = useState(false);
@@ -335,6 +364,7 @@ export function App() {
       setEncounters([]);
       setClinicalDocuments([]);
       setAuditEvents([]);
+      setConsents([]);
       setSelectedEncounterId(undefined);
       setSelectedDocumentId(undefined);
       return;
@@ -410,7 +440,8 @@ export function App() {
       loadPatientFhirPreview(patientId),
       loadPatientFhirBundlePreview(patientId),
       loadEncounters(patientId),
-      loadClinicalDocuments(patientId)
+      loadClinicalDocuments(patientId),
+      loadConsents(patientId)
     ];
 
     if (canReadAudit) {
@@ -514,6 +545,32 @@ export function App() {
     }
   }
 
+  async function loadConsents(patientId: string) {
+    setIsLoadingConsents(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/consents`, {
+        headers: buildHeaders("TREATMENT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      const data = (await response.json()) as ConsentsResponse;
+      setConsents(data.items);
+    } catch (error) {
+      setConsents([]);
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể tải consent chia sẻ hồ sơ: ${error.message}`
+          : "Không thể tải consent chia sẻ hồ sơ."
+      );
+    } finally {
+      setIsLoadingConsents(false);
+    }
+  }
+
   async function loadPatientFhirPreview(patientId: string) {
     try {
       const response = await fetch(`${apiBaseUrl}/patients/${patientId}/fhir`, {
@@ -539,8 +596,8 @@ export function App() {
     try {
       const response = await fetch(`${apiBaseUrl}/patients/${patientId}/fhir-bundle`, {
         headers: buildHeaders("TREATMENT", {
-          "x-consent-reference": "consent-demo-transfer-001",
-          "x-recipient-organization-id": "hospital-hai-phong-referral"
+          "x-consent-reference": defaultTransferContext.consentReference,
+          "x-recipient-organization-id": defaultTransferContext.recipientOrganizationId
         })
       });
 
@@ -656,6 +713,7 @@ export function App() {
     setEncounters([]);
     setClinicalDocuments([]);
     setAuditEvents([]);
+    setConsents([]);
     setPatientFhirPreview(undefined);
     setPatientFhirBundlePreview(undefined);
     setEncounterFhirPreview(undefined);
@@ -1072,6 +1130,7 @@ export function App() {
           <FhirPanel title="FHIR Patient Record Bundle JSON" badge="Bundle" value={patientFhirBundlePreview} />
           <FhirPanel title="FHIR Encounter JSON" badge="Encounter" value={encounterFhirPreview} />
           <FhirPanel title="FHIR DocumentReference JSON" badge="DocumentReference" value={documentFhirPreview} />
+          {renderConsentInteropPanel()}
           <article className="panel dark-panel">
             <p className="eyebrow">Reference map</p>
             <h2>Chuẩn đang bám theo</h2>
@@ -1157,6 +1216,45 @@ export function App() {
               <small>{patient.address ?? "Chưa có địa chỉ"}</small>
             </button>
           ))}
+        </div>
+      </article>
+    );
+  }
+
+  function renderConsentInteropPanel(): ReactNode {
+    return (
+      <article className="panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Transfer consent</p>
+            <h2>Căn cứ chia sẻ hồ sơ</h2>
+          </div>
+          <span className="pill cyan">{isLoadingConsents ? "loading" : `${consents.length} consent`}</span>
+        </div>
+
+        <div className="detail-grid compact">
+          <Info label="Consent dùng để xuất Bundle" value={defaultTransferContext.consentReference} />
+          <Info label="Đơn vị nhận" value={defaultTransferContext.recipientOrganizationId} />
+        </div>
+
+        <div className="reference-list">
+          {consents.map((consent) => (
+            <div key={consent.id}>
+              <strong>
+                {consent.id} · {formatConsentStatus(consent.status)}
+              </strong>
+              <span>
+                {formatConsentCategory(consent.category)} cho {consent.granteeOrganizationId}, hiệu lực từ{" "}
+                {formatDateTime(consent.validFrom)}
+                {consent.validUntil ? ` đến ${formatDateTime(consent.validUntil)}` : ""}
+              </span>
+            </div>
+          ))}
+          {consents.length === 0 ? (
+            <p className="empty-state">
+              Chưa có consent hợp lệ trong workspace này; FHIR Bundle liên viện sẽ bị API chặn nếu thiếu consent.
+            </p>
+          ) : null}
         </div>
       </article>
     );
@@ -1946,6 +2044,8 @@ function formatAuditAction(action: AuditAction): string {
     "clinical-document.create": "Tạo tài liệu bệnh án",
     "clinical-document.sign": "Ký tài liệu bệnh án",
     "clinical-document.fhir-export": "Xuất FHIR DocumentReference",
+    "consent.list": "Tải consent chia sẻ hồ sơ",
+    "consent.create": "Tạo consent chia sẻ hồ sơ",
     "audit-event.list": "Xem nhật ký kiểm toán"
   };
 
@@ -1957,10 +2057,29 @@ function formatAuditResourceType(resourceType: AuditResourceType): string {
     Patient: "Bệnh nhân",
     Encounter: "Lượt khám",
     ClinicalDocument: "Tài liệu",
+    Consent: "Consent",
     AuditEvent: "Audit"
   };
 
   return labels[resourceType];
+}
+
+function formatConsentStatus(status: ConsentStatus): string {
+  const labels: Record<ConsentStatus, string> = {
+    active: "Đang hiệu lực",
+    revoked: "Đã thu hồi",
+    expired: "Hết hiệu lực"
+  };
+
+  return labels[status];
+}
+
+function formatConsentCategory(category: ConsentCategory): string {
+  const labels: Record<ConsentCategory, string> = {
+    "record-sharing": "Chia sẻ hồ sơ"
+  };
+
+  return labels[category];
 }
 
 function formatDateTime(value: string): string {

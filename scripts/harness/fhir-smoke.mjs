@@ -16,6 +16,7 @@ if (!existsSync(apiAuthEntry)) {
 const {
   AuditEvent,
   ClinicalDocument,
+  Consent,
   Encounter,
   Patient,
   canAccess,
@@ -151,6 +152,36 @@ if (fhirBundle.entry.length !== 3) {
   throw new Error(`Expected bundle to contain 3 entries, received ${fhirBundle.entry.length}`);
 }
 
+const consent = Consent.grant({
+  id: "consent-harness-001",
+  patientId: patient.id,
+  category: "record-sharing",
+  granteeOrganizationId: "hospital-harness-recipient",
+  grantorActorId: "practitioner-harness-001",
+  validFrom: "2026-05-27T00:00:00.000Z",
+  validUntil: "2026-05-28T00:00:00.000Z"
+});
+
+if (
+  !consent.allowsRecordSharing({
+    patientId: patient.id,
+    granteeOrganizationId: "hospital-harness-recipient",
+    at: new Date("2026-05-27T12:00:00.000Z")
+  })
+) {
+  throw new Error("Expected consent to allow record sharing for covered recipient.");
+}
+
+if (
+  consent.allowsRecordSharing({
+    patientId: patient.id,
+    granteeOrganizationId: "hospital-not-covered",
+    at: new Date("2026-05-27T12:00:00.000Z")
+  })
+) {
+  throw new Error("Expected consent to deny record sharing for uncovered recipient.");
+}
+
 const auditEvent = AuditEvent.record({
   actorId: "practitioner-harness-001",
   action: "clinical-document.fhir-export",
@@ -237,6 +268,7 @@ console.log(
       bundleId: fhirBundle.id,
       bundleResourceType: fhirBundle.resourceType,
       bundleEntryCount: fhirBundle.entry.length,
+      consentId: consent.id,
       auditAction: auditEvent.toSnapshot().action,
       auth: {
         actorId: verifiedSession.actor.actorId,

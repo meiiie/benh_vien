@@ -2,6 +2,8 @@ export * from "./shared/domain-error.js";
 export * from "./access-control/access-control.js";
 export * from "./audit-event/audit-event.js";
 export * from "./audit-event/audit-event.repository.js";
+export * from "./consent/consent.js";
+export * from "./consent/consent.repository.js";
 export * from "./patient/patient.js";
 export * from "./patient/patient.repository.js";
 export * from "./encounter/encounter.js";

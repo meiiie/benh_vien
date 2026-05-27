@@ -15,9 +15,16 @@ export type AuditAction =
   | "clinical-document.create"
   | "clinical-document.sign"
   | "clinical-document.fhir-export"
+  | "consent.list"
+  | "consent.create"
   | "audit-event.list";
 
-export type AuditResourceType = "Patient" | "Encounter" | "ClinicalDocument" | "AuditEvent";
+export type AuditResourceType =
+  | "Patient"
+  | "Encounter"
+  | "ClinicalDocument"
+  | "Consent"
+  | "AuditEvent";
 
 export type AuditEventSnapshot = {
   readonly id?: string;
