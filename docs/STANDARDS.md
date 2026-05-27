@@ -14,7 +14,7 @@ Hàm ý cho dự án:
 - Cần có ký/xác nhận điện tử ở vòng đời tài liệu.
 - Cần quản lý định danh bệnh nhân đủ nghiêm túc.
 - Cần audit trail và chính sách bảo vệ dữ liệu.
-- Cần cơ sở dữ liệu có migration, phân quyền, lưu vết, sao lưu và quy trình vận hành; phiên bản hiện tại mới đặt nền `patients`, `encounters`, `observations`, `clinical_documents`, `consents`, `audit_events`, chưa tuyên bố đạt điều kiện triển khai bệnh viện thật.
+- Cần cơ sở dữ liệu có migration, phân quyền, lưu vết, sao lưu và quy trình vận hành; phiên bản hiện tại mới đặt nền `patients`, `encounters`, `conditions`, `observations`, `clinical_documents`, `consents`, `audit_events`, chưa tuyên bố đạt điều kiện triển khai bệnh viện thật.
 
 ## HL7 FHIR R4
 
@@ -25,15 +25,17 @@ Nguồn:
 - [HL7 FHIR R4 Specification](https://hl7.org/fhir/R4/)
 - [FHIR Patient Resource](https://hl7.org/fhir/R4/patient.html)
 - [FHIR Encounter Resource](https://hl7.org/fhir/R4/encounter.html)
+- [FHIR Condition Resource](https://hl7.org/fhir/R4/condition.html)
 - [FHIR Observation Resource](https://hl7.org/fhir/R4/observation.html)
 - [FHIR DocumentReference Resource](https://hl7.org/fhir/R4/documentreference.html)
 
 Hàm ý cho dự án:
 
 - `Patient` là resource nền cho hồ sơ bệnh nhân.
-- `Encounter` đặt ngữ cảnh lượt khám/đợt điều trị cho tài liệu và chỉ số lâm sàng.
+- `Encounter` đặt ngữ cảnh lượt khám/đợt điều trị cho chẩn đoán, tài liệu và chỉ số lâm sàng.
+- `Condition` phù hợp cho chẩn đoán, vấn đề sức khỏe và problem list; nên đi kèm ICD-10/SNOMED CT hoặc danh mục được bệnh viện phê duyệt khi có dữ liệu thật.
 - `Observation` phù hợp cho sinh hiệu, kết quả xét nghiệm và chỉ số có cấu trúc; nên đi kèm mã chuẩn như LOINC khi có dữ liệu thật.
-- Khi phát triển tiếp cần bổ sung `Condition`, `Procedure`, `MedicationRequest`, `Composition` và ràng buộc profile cụ thể hơn.
+- Khi phát triển tiếp cần bổ sung `Procedure`, `MedicationRequest`, `Composition` và ràng buộc profile cụ thể hơn.
 - Với liên thông bệnh án, `DocumentReference` và `Composition` quan trọng hơn việc chỉ gửi một file PDF rời rạc.
 
 ## DICOM và PACS

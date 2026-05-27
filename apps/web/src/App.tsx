@@ -26,6 +26,22 @@ type ClinicalDocumentType =
   | "medical-record"
   | "patient-information";
 type ClinicalDocumentStatus = "draft" | "signed" | "superseded" | "entered-in-error";
+type ConditionClinicalStatus =
+  | "active"
+  | "recurrence"
+  | "relapse"
+  | "inactive"
+  | "remission"
+  | "resolved";
+type ConditionVerificationStatus =
+  | "unconfirmed"
+  | "provisional"
+  | "differential"
+  | "confirmed"
+  | "refuted"
+  | "entered-in-error";
+type ConditionCategory = "problem-list-item" | "encounter-diagnosis";
+type ConditionSeverity = "mild" | "moderate" | "severe";
 type ObservationStatus =
   | "registered"
   | "preliminary"
@@ -94,6 +110,29 @@ type ObservationCode = {
   readonly display: string;
 };
 
+type ConditionCode = {
+  readonly system: string;
+  readonly code: string;
+  readonly display: string;
+};
+
+type Condition = {
+  readonly id: string;
+  readonly patientId: string;
+  readonly encounterId?: string;
+  readonly clinicalStatus: ConditionClinicalStatus;
+  readonly verificationStatus: ConditionVerificationStatus;
+  readonly category: ConditionCategory;
+  readonly code: ConditionCode;
+  readonly severity?: ConditionSeverity;
+  readonly onsetAt?: string;
+  readonly recordedAt: string;
+  readonly recorderPractitionerId: string;
+  readonly note?: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
 type ObservationQuantity = {
   readonly value: number;
   readonly unit: string;
@@ -127,6 +166,10 @@ type AuditAction =
   | "encounter.read"
   | "encounter.finish"
   | "encounter.fhir-export"
+  | "condition.list"
+  | "condition.create"
+  | "condition.read"
+  | "condition.fhir-export"
   | "observation.list"
   | "observation.create"
   | "observation.read"
@@ -142,6 +185,7 @@ type AuditAction =
 type AuditResourceType =
   | "Patient"
   | "Encounter"
+  | "Condition"
   | "Observation"
   | "ClinicalDocument"
   | "Consent"
@@ -187,6 +231,10 @@ type ClinicalDocumentsResponse = {
   readonly items: readonly ClinicalDocument[];
 };
 
+type ConditionsResponse = {
+  readonly items: readonly Condition[];
+};
+
 type ObservationsResponse = {
   readonly items: readonly Observation[];
 };
@@ -225,6 +273,20 @@ type NewClinicalDocumentForm = {
   title: string;
   storageUri: string;
   authorPractitionerId: string;
+};
+
+type NewConditionForm = {
+  encounterId: string;
+  category: ConditionCategory;
+  clinicalStatus: ConditionClinicalStatus;
+  verificationStatus: ConditionVerificationStatus;
+  codeSystem: string;
+  code: string;
+  codeDisplay: string;
+  severity: "" | ConditionSeverity;
+  onsetAt: string;
+  recorderPractitionerId: string;
+  note: string;
 };
 
 type NewObservationForm = {
@@ -285,6 +347,20 @@ const defaultClinicalDocumentForm: NewClinicalDocumentForm = {
   authorPractitionerId: "practitioner-demo-003"
 };
 
+const defaultConditionForm: NewConditionForm = {
+  encounterId: "",
+  category: "encounter-diagnosis",
+  clinicalStatus: "active",
+  verificationStatus: "confirmed",
+  codeSystem: "http://hl7.org/fhir/sid/icd-10",
+  code: "R50.9",
+  codeDisplay: "Sốt chưa rõ nguyên nhân",
+  severity: "mild",
+  onsetAt: "2026-05-27T09:30",
+  recorderPractitionerId: "practitioner-demo-001",
+  note: "Chẩn đoán làm việc trong quá trình khám."
+};
+
 const defaultObservationForm: NewObservationForm = {
   encounterId: "",
   category: "laboratory",
@@ -334,6 +410,7 @@ const loginPresets: Record<DemoRole, LoginForm> = {
 const workflowSteps = [
   "Tiếp nhận bệnh nhân",
   "Mở lượt khám",
+  "Ghi nhận chẩn đoán",
   "Ghi nhận chỉ số",
   "Gắn tài liệu",
   "Ký/xác thực",
@@ -369,7 +446,7 @@ const referenceSignals = [
   },
   {
     name: "HL7 FHIR R4",
-    value: "Patient, Encounter, Observation và DocumentReference là lõi trao đổi dữ liệu trong lát cắt này."
+    value: "Patient, Encounter, Condition, Observation và DocumentReference là lõi trao đổi dữ liệu trong lát cắt này."
   },
   {
     name: "Bối cảnh Việt Nam",
@@ -393,6 +470,8 @@ export function App() {
   const [selectedEncounterId, setSelectedEncounterId] = useState<string>();
   const [clinicalDocuments, setClinicalDocuments] = useState<readonly ClinicalDocument[]>([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string>();
+  const [conditions, setConditions] = useState<readonly Condition[]>([]);
+  const [selectedConditionId, setSelectedConditionId] = useState<string>();
   const [observations, setObservations] = useState<readonly Observation[]>([]);
   const [selectedObservationId, setSelectedObservationId] = useState<string>();
   const [auditEvents, setAuditEvents] = useState<readonly AuditEvent[]>([]);
@@ -401,23 +480,28 @@ export function App() {
   const [patientFhirBundlePreview, setPatientFhirBundlePreview] = useState<unknown>();
   const [encounterFhirPreview, setEncounterFhirPreview] = useState<unknown>();
   const [documentFhirPreview, setDocumentFhirPreview] = useState<unknown>();
+  const [conditionFhirPreview, setConditionFhirPreview] = useState<unknown>();
   const [observationFhirPreview, setObservationFhirPreview] = useState<unknown>();
   const [patientForm, setPatientForm] = useState<NewPatientForm>(defaultPatientForm);
   const [encounterForm, setEncounterForm] = useState<NewEncounterForm>(defaultEncounterForm);
   const [documentForm, setDocumentForm] =
     useState<NewClinicalDocumentForm>(defaultClinicalDocumentForm);
+  const [conditionForm, setConditionForm] =
+    useState<NewConditionForm>(defaultConditionForm);
   const [observationForm, setObservationForm] =
     useState<NewObservationForm>(defaultObservationForm);
   const [statusMessage, setStatusMessage] = useState("Chưa đăng nhập.");
   const [isLoadingPatients, setIsLoadingPatients] = useState(false);
   const [isLoadingEncounters, setIsLoadingEncounters] = useState(false);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const [isLoadingConditions, setIsLoadingConditions] = useState(false);
   const [isLoadingObservations, setIsLoadingObservations] = useState(false);
   const [isLoadingAuditEvents, setIsLoadingAuditEvents] = useState(false);
   const [isLoadingConsents, setIsLoadingConsents] = useState(false);
   const [isSubmittingPatient, setIsSubmittingPatient] = useState(false);
   const [isSubmittingEncounter, setIsSubmittingEncounter] = useState(false);
   const [isSubmittingDocument, setIsSubmittingDocument] = useState(false);
+  const [isSubmittingCondition, setIsSubmittingCondition] = useState(false);
   const [isSubmittingObservation, setIsSubmittingObservation] = useState(false);
   const [isSigningDocument, setIsSigningDocument] = useState(false);
   const [isFinishingEncounter, setIsFinishingEncounter] = useState(false);
@@ -425,12 +509,16 @@ export function App() {
   const selectedPatient = patients.find((patient) => patient.id === selectedPatientId);
   const selectedEncounter = encounters.find((encounter) => encounter.id === selectedEncounterId);
   const selectedDocument = clinicalDocuments.find((document) => document.id === selectedDocumentId);
+  const selectedCondition = conditions.find((condition) => condition.id === selectedConditionId);
   const selectedObservation = observations.find((observation) => observation.id === selectedObservationId);
   const selectedEncounterDocuments = selectedEncounter
     ? clinicalDocuments.filter((document) => document.encounterId === selectedEncounter.id)
     : [];
   const selectedEncounterObservations = selectedEncounter
     ? observations.filter((observation) => observation.encounterId === selectedEncounter.id)
+    : [];
+  const selectedEncounterConditions = selectedEncounter
+    ? conditions.filter((condition) => condition.encounterId === selectedEncounter.id)
     : [];
   const openEncounters = encounters.filter((encounter) => encounter.status === "in-progress");
   const signedDocuments = clinicalDocuments.filter((document) => document.status === "signed");
@@ -451,14 +539,17 @@ export function App() {
       setPatientFhirBundlePreview(undefined);
       setEncounterFhirPreview(undefined);
       setDocumentFhirPreview(undefined);
+      setConditionFhirPreview(undefined);
       setObservationFhirPreview(undefined);
       setEncounters([]);
       setClinicalDocuments([]);
+      setConditions([]);
       setObservations([]);
       setAuditEvents([]);
       setConsents([]);
       setSelectedEncounterId(undefined);
       setSelectedDocumentId(undefined);
+      setSelectedConditionId(undefined);
       setSelectedObservationId(undefined);
       return;
     }
@@ -470,11 +561,13 @@ export function App() {
     if (!selectedEncounterId) {
       setEncounterFhirPreview(undefined);
       setDocumentForm((current) => ({ ...current, encounterId: "" }));
+      setConditionForm((current) => ({ ...current, encounterId: "" }));
       setObservationForm((current) => ({ ...current, encounterId: "" }));
       return;
     }
 
     setDocumentForm((current) => ({ ...current, encounterId: selectedEncounterId }));
+    setConditionForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     setObservationForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     void loadEncounterFhirPreview(selectedEncounterId);
   }, [selectedEncounterId]);
@@ -487,6 +580,15 @@ export function App() {
 
     void loadDocumentFhirPreview(selectedDocumentId);
   }, [selectedDocumentId]);
+
+  useEffect(() => {
+    if (!selectedConditionId) {
+      setConditionFhirPreview(undefined);
+      return;
+    }
+
+    void loadConditionFhirPreview(selectedConditionId);
+  }, [selectedConditionId]);
 
   useEffect(() => {
     if (!selectedObservationId) {
@@ -544,6 +646,7 @@ export function App() {
       loadPatientFhirPreview(patientId),
       loadPatientFhirBundlePreview(patientId),
       loadEncounters(patientId),
+      loadConditions(patientId),
       loadObservations(patientId),
       loadClinicalDocuments(patientId),
       loadConsents(patientId)
@@ -611,6 +714,34 @@ export function App() {
       );
     } finally {
       setIsLoadingDocuments(false);
+    }
+  }
+
+  async function loadConditions(patientId: string, nextSelectedConditionId?: string) {
+    setIsLoadingConditions(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/conditions`, {
+        headers: buildHeaders("TREATMENT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      const data = (await response.json()) as ConditionsResponse;
+      setConditions(data.items);
+      setSelectedConditionId(nextSelectedConditionId ?? data.items[0]?.id);
+    } catch (error) {
+      setConditions([]);
+      setSelectedConditionId(undefined);
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể tải chẩn đoán/vấn đề sức khỏe: ${error.message}`
+          : "Không thể tải chẩn đoán/vấn đề sức khỏe."
+      );
+    } finally {
+      setIsLoadingConditions(false);
     }
   }
 
@@ -791,6 +922,27 @@ export function App() {
     }
   }
 
+  async function loadConditionFhirPreview(conditionId: string) {
+    try {
+      const response = await fetch(`${apiBaseUrl}/conditions/${conditionId}/fhir`, {
+        headers: buildHeaders("TREATMENT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      setConditionFhirPreview(await response.json());
+    } catch (error) {
+      setConditionFhirPreview({
+        error:
+          error instanceof Error
+            ? `Không thể xuất FHIR Condition: ${error.message}`
+            : "Không thể xuất FHIR Condition."
+      });
+    }
+  }
+
   async function loadObservationFhirPreview(observationId: string) {
     try {
       const response = await fetch(`${apiBaseUrl}/observations/${observationId}/fhir`, {
@@ -866,6 +1018,7 @@ export function App() {
     setPatients([]);
     setEncounters([]);
     setClinicalDocuments([]);
+    setConditions([]);
     setObservations([]);
     setAuditEvents([]);
     setConsents([]);
@@ -873,10 +1026,12 @@ export function App() {
     setPatientFhirBundlePreview(undefined);
     setEncounterFhirPreview(undefined);
     setDocumentFhirPreview(undefined);
+    setConditionFhirPreview(undefined);
     setObservationFhirPreview(undefined);
     setSelectedPatientId(undefined);
     setSelectedEncounterId(undefined);
     setSelectedDocumentId(undefined);
+    setSelectedConditionId(undefined);
     setSelectedObservationId(undefined);
   }
 
@@ -1012,6 +1167,61 @@ export function App() {
       );
     } finally {
       setIsFinishingEncounter(false);
+    }
+  }
+
+  async function handleCreateCondition(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedPatient) {
+      setStatusMessage("Cần chọn bệnh nhân trước khi ghi nhận chẩn đoán.");
+      return;
+    }
+
+    setIsSubmittingCondition(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/conditions`, {
+        method: "POST",
+        headers: buildHeaders("TREATMENT", {
+          "Content-Type": "application/json"
+        }),
+        body: JSON.stringify({
+          encounterId: conditionForm.encounterId || undefined,
+          clinicalStatus: conditionForm.clinicalStatus,
+          verificationStatus: conditionForm.verificationStatus,
+          category: conditionForm.category,
+          code: {
+            system: conditionForm.codeSystem,
+            code: conditionForm.code,
+            display: conditionForm.codeDisplay
+          },
+          severity: conditionForm.severity || undefined,
+          onsetAt: conditionForm.onsetAt ? toApiDateTime(conditionForm.onsetAt) : undefined,
+          recorderPractitionerId: conditionForm.recorderPractitionerId,
+          note: conditionForm.note || undefined
+        })
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => undefined);
+        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
+      }
+
+      const createdCondition = (await response.json()) as Condition;
+      await loadConditions(selectedPatient.id, createdCondition.id);
+      await loadPatientFhirBundlePreview(selectedPatient.id);
+      await loadAuditEvents(selectedPatient.id, { silent: true });
+      setAppRoute("workspace");
+      setStatusMessage(`Đã ghi nhận chẩn đoán "${createdCondition.code.display}" cho ${selectedPatient.fullName}.`);
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể ghi nhận chẩn đoán: ${error.message}`
+          : "Không thể ghi nhận chẩn đoán."
+      );
+    } finally {
+      setIsSubmittingCondition(false);
     }
   }
 
@@ -1221,7 +1431,7 @@ export function App() {
         <section className="metric-grid">
           <MetricCard label="Bệnh nhân" value={`${patients.length}`} note="Hồ sơ trong registry demo" />
           <MetricCard label="Lượt khám mở" value={`${openEncounters.length}`} note="Theo bệnh nhân đang chọn" />
-          <MetricCard label="Chỉ số lâm sàng" value={`${observations.length}`} note="Sinh hiệu/xét nghiệm đang có cấu trúc" />
+          <MetricCard label="Chẩn đoán" value={`${conditions.length}`} note="Vấn đề sức khỏe có cấu trúc" />
           <MetricCard label="Tài liệu nháp" value={`${draftDocuments.length}`} note="Cần ký/xác thực" />
         </section>
 
@@ -1242,7 +1452,7 @@ export function App() {
               </button>
               <button type="button" onClick={() => setAppRoute("interop")}>
                 <strong>Xem gói FHIR</strong>
-                <span>Patient, Encounter, Observation và DocumentReference đã có preview.</span>
+                <span>Patient, Encounter, Condition, Observation và DocumentReference đã có preview.</span>
               </button>
             </div>
           </article>
@@ -1254,6 +1464,7 @@ export function App() {
               <div className="detail-grid compact">
                 <Info label="MRN" value={selectedPatient.identifiers[0]?.value ?? selectedPatient.id} />
                 <Info label="Lượt khám gần nhất" value={encounters[0]?.serviceType ?? "Chưa có"} />
+                <Info label="Chẩn đoán/vấn đề" value={`${conditions.length}`} />
                 <Info label="Chỉ số lâm sàng" value={`${observations.length}`} />
                 <Info label="Tài liệu" value={`${clinicalDocuments.length}`} />
                 <Info label="Cập nhật" value={formatDateTime(selectedPatient.updatedAt)} />
@@ -1280,6 +1491,7 @@ export function App() {
           {renderPatientListPanel()}
           {renderPatientDetailPanel()}
           {renderEncounterPanel()}
+          {renderConditionPanel()}
           {renderObservationPanel()}
           {renderCreatePatientPanel()}
         </section>
@@ -1352,6 +1564,7 @@ export function App() {
           <FhirPanel title="FHIR Patient JSON" badge="Patient" value={patientFhirPreview} />
           <FhirPanel title="FHIR Patient Record Bundle JSON" badge="Bundle" value={patientFhirBundlePreview} />
           <FhirPanel title="FHIR Encounter JSON" badge="Encounter" value={encounterFhirPreview} />
+          <FhirPanel title="FHIR Condition JSON" badge="Condition" value={conditionFhirPreview} />
           <FhirPanel title="FHIR Observation JSON" badge="Observation" value={observationFhirPreview} />
           <FhirPanel title="FHIR DocumentReference JSON" badge="DocumentReference" value={documentFhirPreview} />
           {renderConsentInteropPanel()}
@@ -1558,6 +1771,7 @@ export function App() {
                   <Info label="Lý do khám" value={selectedEncounter.reasonText} />
                   <Info label="Khoa/phòng" value={selectedEncounter.departmentId ?? "Chưa gắn"} />
                   <Info label="Nhân sự phụ trách" value={selectedEncounter.attendingPractitionerId} />
+                  <Info label="Chẩn đoán gắn lượt khám" value={`${selectedEncounterConditions.length}`} />
                   <Info label="Chỉ số gắn lượt khám" value={`${selectedEncounterObservations.length}`} />
                   <Info label="Tài liệu gắn lượt khám" value={`${selectedEncounterDocuments.length}`} />
                 </div>
@@ -1633,6 +1847,191 @@ export function App() {
           </label>
           <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingEncounter}>
             {isSubmittingEncounter ? "Đang mở..." : "Mở lượt khám"}
+          </button>
+        </form>
+      </article>
+    );
+  }
+
+  function renderConditionPanel(): ReactNode {
+    return (
+      <article className="panel condition-panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Conditions</p>
+            <h2>Chẩn đoán và vấn đề sức khỏe</h2>
+          </div>
+          <span className="pill cyan">{isLoadingConditions ? "loading" : `${conditions.length} chẩn đoán`}</span>
+        </div>
+
+        <div className="document-layout">
+          <div className="condition-cards">
+            {conditions.map((condition) => (
+              <button
+                className={condition.id === selectedConditionId ? "condition-card selected" : "condition-card"}
+                key={condition.id}
+                type="button"
+                onClick={() => setSelectedConditionId(condition.id)}
+              >
+                <span>{formatConditionCategory(condition.category)}</span>
+                <strong>{condition.code.display}</strong>
+                <small>
+                  {formatConditionClinicalStatus(condition.clinicalStatus)} ·{" "}
+                  {formatDateTime(condition.recordedAt)}
+                </small>
+              </button>
+            ))}
+            {conditions.length === 0 ? (
+              <p className="empty-state">
+                Bệnh nhân này chưa có chẩn đoán có cấu trúc. Hãy ghi nhận vấn đề sức khỏe đầu tiên.
+              </p>
+            ) : null}
+          </div>
+
+          <div className="condition-summary">
+            {selectedCondition ? (
+              <>
+                <div className="document-meta">
+                  <Info label="Nhóm" value={formatConditionCategory(selectedCondition.category)} />
+                  <Info label="Lâm sàng" value={formatConditionClinicalStatus(selectedCondition.clinicalStatus)} />
+                  <Info label="Xác minh" value={formatConditionVerificationStatus(selectedCondition.verificationStatus)} />
+                  <Info label="Mã chuẩn" value={`${selectedCondition.code.system} · ${selectedCondition.code.code}`} />
+                  <Info label="Mức độ" value={selectedCondition.severity ? formatConditionSeverity(selectedCondition.severity) : "Chưa gắn"} />
+                  <Info label="Encounter" value={selectedCondition.encounterId ?? "Chưa gắn"} />
+                </div>
+                <p className="empty-state">
+                  Condition giúp bên nhận hiểu chẩn đoán/vấn đề sức khỏe ở dạng có cấu trúc, thay vì chỉ đọc thủ công trong file PDF.
+                </p>
+              </>
+            ) : (
+              <p className="empty-state">Chọn một chẩn đoán để xem metadata và xuất FHIR Condition.</p>
+            )}
+          </div>
+        </div>
+
+        <form className="condition-form" onSubmit={(event) => void handleCreateCondition(event)}>
+          <label>
+            Gắn với lượt khám
+            <select
+              value={conditionForm.encounterId}
+              onChange={(event) => setConditionForm({ ...conditionForm, encounterId: event.target.value })}
+            >
+              <option value="">Không gắn</option>
+              {encounters.map((encounter) => (
+                <option key={encounter.id} value={encounter.id}>
+                  {encounter.serviceType} · {formatDateTime(encounter.startedAt)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Loại chẩn đoán
+            <select
+              value={conditionForm.category}
+              onChange={(event) =>
+                setConditionForm({ ...conditionForm, category: event.target.value as ConditionCategory })
+              }
+            >
+              <option value="encounter-diagnosis">Chẩn đoán theo lượt khám</option>
+              <option value="problem-list-item">Vấn đề sức khỏe dài hạn</option>
+            </select>
+          </label>
+          <label>
+            Trạng thái lâm sàng
+            <select
+              value={conditionForm.clinicalStatus}
+              onChange={(event) =>
+                setConditionForm({ ...conditionForm, clinicalStatus: event.target.value as ConditionClinicalStatus })
+              }
+            >
+              <option value="active">Đang hoạt động</option>
+              <option value="recurrence">Tái phát</option>
+              <option value="relapse">Diễn tiến lại</option>
+              <option value="inactive">Không hoạt động</option>
+              <option value="remission">Thuyên giảm</option>
+              <option value="resolved">Đã giải quyết</option>
+            </select>
+          </label>
+          <label>
+            Trạng thái xác minh
+            <select
+              value={conditionForm.verificationStatus}
+              onChange={(event) =>
+                setConditionForm({
+                  ...conditionForm,
+                  verificationStatus: event.target.value as ConditionVerificationStatus
+                })
+              }
+            >
+              <option value="confirmed">Đã xác nhận</option>
+              <option value="provisional">Tạm thời</option>
+              <option value="differential">Chẩn đoán phân biệt</option>
+              <option value="unconfirmed">Chưa xác nhận</option>
+              <option value="refuted">Đã loại trừ</option>
+              <option value="entered-in-error">Nhập lỗi</option>
+            </select>
+          </label>
+          <label>
+            Hệ mã
+            <input
+              value={conditionForm.codeSystem}
+              onChange={(event) => setConditionForm({ ...conditionForm, codeSystem: event.target.value })}
+            />
+          </label>
+          <label>
+            Mã chẩn đoán
+            <input
+              value={conditionForm.code}
+              onChange={(event) => setConditionForm({ ...conditionForm, code: event.target.value })}
+            />
+          </label>
+          <label className="wide-field">
+            Tên chẩn đoán
+            <input
+              value={conditionForm.codeDisplay}
+              onChange={(event) => setConditionForm({ ...conditionForm, codeDisplay: event.target.value })}
+            />
+          </label>
+          <label>
+            Mức độ
+            <select
+              value={conditionForm.severity}
+              onChange={(event) =>
+                setConditionForm({ ...conditionForm, severity: event.target.value as "" | ConditionSeverity })
+              }
+            >
+              <option value="">Chưa gắn</option>
+              <option value="mild">Nhẹ</option>
+              <option value="moderate">Trung bình</option>
+              <option value="severe">Nặng</option>
+            </select>
+          </label>
+          <label>
+            Thời điểm khởi phát
+            <input
+              type="datetime-local"
+              value={conditionForm.onsetAt}
+              onChange={(event) => setConditionForm({ ...conditionForm, onsetAt: event.target.value })}
+            />
+          </label>
+          <label className="wide-field">
+            Nhân sự ghi nhận
+            <input
+              value={conditionForm.recorderPractitionerId}
+              onChange={(event) =>
+                setConditionForm({ ...conditionForm, recorderPractitionerId: event.target.value })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Ghi chú
+            <input
+              value={conditionForm.note}
+              onChange={(event) => setConditionForm({ ...conditionForm, note: event.target.value })}
+            />
+          </label>
+          <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingCondition}>
+            {isSubmittingCondition ? "Đang ghi nhận..." : "Ghi nhận chẩn đoán"}
           </button>
         </form>
       </article>
@@ -2095,8 +2494,8 @@ function LandingPage({
           <p className="eyebrow">HoLiLiHu · The Wiii Lab</p>
           <h1>Nền tảng bệnh án điện tử mở cho liên thông y tế</h1>
           <p className="lede">
-            WiiiCare Nexus mô phỏng lõi EMR hiện đại: hồ sơ bệnh nhân, lượt khám, tài liệu bệnh án,
-            chỉ số lâm sàng, audit trail và ánh xạ FHIR để chuẩn bị kết nối giữa các bệnh viện.
+            WiiiCare Nexus mô phỏng lõi EMR hiện đại: hồ sơ bệnh nhân, lượt khám, chẩn đoán,
+            chỉ số lâm sàng, tài liệu bệnh án, audit trail và ánh xạ FHIR để chuẩn bị kết nối giữa các bệnh viện.
           </p>
           <div className="landing-actions">
             <button className="primary-button" type="button" onClick={onLogin}>
@@ -2109,7 +2508,7 @@ function LandingPage({
         </div>
         <aside className="landing-card">
           <span>Product slice</span>
-          <strong>Patient → Encounter → Observation → Document → FHIR</strong>
+          <strong>Patient → Encounter → Condition → Observation → Document → FHIR</strong>
           <small>Không còn là landing page đơn thuần; app có luồng vận hành sau đăng nhập.</small>
         </aside>
       </section>
@@ -2119,7 +2518,7 @@ function LandingPage({
           ["Patient Workspace", "Bàn làm việc theo bệnh nhân, giống nhịp vận hành EMR thật."],
           ["Document Center", "Quản lý CCR, CCDA, hồ sơ bệnh án, xét nghiệm và tài liệu chuyển tuyến."],
           ["Audit & RBAC", "Ghi log truy cập nhạy cảm và kiểm tra quyền theo vai trò demo."],
-          ["FHIR Interop", "Xuất Patient, Encounter, Observation và DocumentReference để chuẩn bị liên thông."]
+          ["FHIR Interop", "Xuất Patient, Encounter, Condition, Observation và DocumentReference để chuẩn bị liên thông."]
         ].map(([title, description]) => (
           <article className="panel" key={title}>
             <p className="eyebrow">{title}</p>
@@ -2424,6 +2823,10 @@ function formatAuditAction(action: AuditAction): string {
     "encounter.read": "Xem lượt khám",
     "encounter.finish": "Kết thúc lượt khám",
     "encounter.fhir-export": "Xuất FHIR Encounter",
+    "condition.list": "Tải chẩn đoán/vấn đề sức khỏe",
+    "condition.create": "Ghi nhận chẩn đoán/vấn đề sức khỏe",
+    "condition.read": "Xem chẩn đoán/vấn đề sức khỏe",
+    "condition.fhir-export": "Xuất FHIR Condition",
     "observation.list": "Tải chỉ số lâm sàng",
     "observation.create": "Ghi nhận chỉ số lâm sàng",
     "observation.read": "Xem chỉ số lâm sàng",
@@ -2444,6 +2847,7 @@ function formatAuditResourceType(resourceType: AuditResourceType): string {
   const labels: Record<AuditResourceType, string> = {
     Patient: "Bệnh nhân",
     Encounter: "Lượt khám",
+    Condition: "Chẩn đoán",
     Observation: "Chỉ số lâm sàng",
     ClinicalDocument: "Tài liệu",
     Consent: "Consent",
@@ -2469,6 +2873,51 @@ function formatConsentCategory(category: ConsentCategory): string {
   };
 
   return labels[category];
+}
+
+function formatConditionCategory(category: ConditionCategory): string {
+  const labels: Record<ConditionCategory, string> = {
+    "encounter-diagnosis": "Chẩn đoán theo lượt khám",
+    "problem-list-item": "Vấn đề sức khỏe dài hạn"
+  };
+
+  return labels[category];
+}
+
+function formatConditionClinicalStatus(status: ConditionClinicalStatus): string {
+  const labels: Record<ConditionClinicalStatus, string> = {
+    active: "Đang hoạt động",
+    inactive: "Không hoạt động",
+    recurrence: "Tái phát",
+    relapse: "Diễn tiến lại",
+    remission: "Thuyên giảm",
+    resolved: "Đã giải quyết"
+  };
+
+  return labels[status];
+}
+
+function formatConditionVerificationStatus(status: ConditionVerificationStatus): string {
+  const labels: Record<ConditionVerificationStatus, string> = {
+    confirmed: "Đã xác nhận",
+    differential: "Chẩn đoán phân biệt",
+    "entered-in-error": "Nhập lỗi",
+    provisional: "Tạm thời",
+    refuted: "Đã loại trừ",
+    unconfirmed: "Chưa xác nhận"
+  };
+
+  return labels[status];
+}
+
+function formatConditionSeverity(severity: ConditionSeverity): string {
+  const labels: Record<ConditionSeverity, string> = {
+    mild: "Nhẹ",
+    moderate: "Trung bình",
+    severe: "Nặng"
+  };
+
+  return labels[severity];
 }
 
 function formatObservationCategory(category: ObservationCategory): string {

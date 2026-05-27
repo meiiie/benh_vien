@@ -13,6 +13,7 @@ import {
 import type {
   AuditEventRepository,
   ClinicalDocumentRepository,
+  ConditionRepository,
   ConsentRepository,
   EncounterRepository,
   ObservationRepository,
@@ -27,6 +28,7 @@ export async function registerPatientRoutes(
   repository: PatientRepository,
   encounterRepository: EncounterRepository,
   documentRepository: ClinicalDocumentRepository,
+  conditionRepository: ConditionRepository,
   observationRepository: ObservationRepository,
   consentRepository: ConsentRepository,
   auditRepository: AuditEventRepository
@@ -196,9 +198,10 @@ export async function registerPatientRoutes(
       });
     }
 
-    const [encounters, documents, observations] = await Promise.all([
+    const [encounters, documents, conditions, observations] = await Promise.all([
       encounterRepository.findByPatientId(params.id),
       documentRepository.findByPatientId(params.id),
+      conditionRepository.findByPatientId(params.id),
       observationRepository.findByPatientId(params.id)
     ]);
 
@@ -214,6 +217,7 @@ export async function registerPatientRoutes(
         consentReference: transferContext.consentReference,
         recipientOrganizationId: transferContext.recipientOrganizationId,
         encounterCount: encounters.length,
+        conditionCount: conditions.length,
         observationCount: observations.length,
         documentCount: documents.length
       }
@@ -222,6 +226,7 @@ export async function registerPatientRoutes(
     return mapPatientRecordToFhirBundle({
       patient,
       encounters,
+      conditions,
       observations,
       documents
     });

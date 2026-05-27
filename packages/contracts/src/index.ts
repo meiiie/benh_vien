@@ -2,6 +2,7 @@ export * from "./auth.contract.js";
 export * from "./audit-event.contract.js";
 export * from "./patient.contract.js";
 export * from "./encounter.contract.js";
+export * from "./condition.contract.js";
 export * from "./observation.contract.js";
 export * from "./clinical-document.contract.js";
 export * from "./consent.contract.js";

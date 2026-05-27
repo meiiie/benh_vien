@@ -1,6 +1,6 @@
 # Ví dụ API
 
-API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `Patient`, `Encounter`, `Observation`, `ClinicalDocument`, `Consent`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
+API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `Patient`, `Encounter`, `Condition`, `Observation`, `ClinicalDocument`, `Consent`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
 
 ## Kiểm tra sức khỏe API
 
@@ -125,7 +125,7 @@ curl http://localhost:7310/api/v1/patients/patient-demo-001/fhir-bundle \
   -H "x-recipient-organization-id: hospital-hai-phong-referral"
 ```
 
-Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các `Encounter`, các `Observation` và các `DocumentReference` của bệnh nhân. Endpoint này không chỉ kiểm header: `x-consent-reference` phải trỏ tới một consent đang hiệu lực, đúng bệnh nhân và đúng `x-recipient-organization-id`.
+Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các `Encounter`, các `Condition`, các `Observation` và các `DocumentReference` của bệnh nhân. Endpoint này không chỉ kiểm header: `x-consent-reference` phải trỏ tới một consent đang hiệu lực, đúng bệnh nhân và đúng `x-recipient-organization-id`.
 
 ## Lấy và mở lượt khám
 
@@ -163,6 +163,44 @@ curl http://localhost:7310/api/v1/encounters/encounter-demo-001/fhir \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-purpose-of-use: TREATMENT"
 ```
+
+## Lấy, tạo và xuất chẩn đoán sang FHIR Condition
+
+```bash
+curl http://localhost:7310/api/v1/patients/patient-demo-001/conditions \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+```bash
+curl -X POST http://localhost:7310/api/v1/patients/patient-demo-001/conditions \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "encounterId": "encounter-demo-002",
+    "category": "encounter-diagnosis",
+    "clinicalStatus": "active",
+    "verificationStatus": "confirmed",
+    "code": {
+      "system": "http://hl7.org/fhir/sid/icd-10",
+      "code": "R50.9",
+      "display": "Sốt chưa rõ nguyên nhân"
+    },
+    "severity": "mild",
+    "onsetAt": "2026-05-27T00:00:00.000Z",
+    "recorderPractitionerId": "practitioner-demo-001",
+    "note": "Chẩn đoán làm việc trong quá trình khám."
+  }'
+```
+
+```bash
+curl http://localhost:7310/api/v1/conditions/condition-demo-001/fhir \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+Kết quả mong muốn là JSON có `resourceType` bằng `Condition`, có `subject`, `encounter` nếu được gắn lượt khám, `clinicalStatus`, `verificationStatus`, `category`, `code`, `recordedDate` và `recorder`.
 
 ## Lấy, tạo và xuất chỉ số sang FHIR Observation
 

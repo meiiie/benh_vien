@@ -5,6 +5,7 @@ import Fastify from "fastify";
 import type {
   AuditEventRepository,
   ClinicalDocumentRepository,
+  ConditionRepository,
   ConsentRepository,
   EncounterRepository,
   ObservationRepository,
@@ -15,6 +16,8 @@ import { registerAuditEventRoutes } from "./modules/audit-events/audit-event-rou
 import { registerAuthRoutes } from "./modules/auth/auth-routes.js";
 import { createClinicalDocumentRepository } from "./modules/clinical-documents/create-clinical-document.repository.js";
 import { registerClinicalDocumentRoutes } from "./modules/clinical-documents/clinical-document-routes.js";
+import { createConditionRepository } from "./modules/conditions/create-condition.repository.js";
+import { registerConditionRoutes } from "./modules/conditions/condition-routes.js";
 import { createConsentRepository } from "./modules/consents/create-consent.repository.js";
 import { registerConsentRoutes } from "./modules/consents/consent-routes.js";
 import { createEncounterRepository } from "./modules/encounters/create-encounter.repository.js";
@@ -27,6 +30,7 @@ import { registerPatientRoutes } from "./modules/patients/patient-routes.js";
 export type ServerOptions = {
   readonly patientRepository?: PatientRepository;
   readonly encounterRepository?: EncounterRepository;
+  readonly conditionRepository?: ConditionRepository;
   readonly observationRepository?: ObservationRepository;
   readonly clinicalDocumentRepository?: ClinicalDocumentRepository;
   readonly consentRepository?: ConsentRepository;
@@ -69,6 +73,10 @@ export async function buildServer(options: ServerOptions = {}) {
           description: "Quản lý lượt khám, đợt điều trị và FHIR Encounter"
         },
         {
+          name: "conditions",
+          description: "Quản lý chẩn đoán, vấn đề sức khỏe và FHIR Condition"
+        },
+        {
           name: "observations",
           description: "Quản lý sinh hiệu, kết quả xét nghiệm có cấu trúc và FHIR Observation"
         },
@@ -95,6 +103,8 @@ export async function buildServer(options: ServerOptions = {}) {
   const patientRepository = options.patientRepository ?? (await createPatientRepository());
   const encounterRepository =
     options.encounterRepository ?? (await createEncounterRepository());
+  const conditionRepository =
+    options.conditionRepository ?? (await createConditionRepository());
   const observationRepository =
     options.observationRepository ?? (await createObservationRepository());
   const clinicalDocumentRepository =
@@ -117,6 +127,7 @@ export async function buildServer(options: ServerOptions = {}) {
         patientRepository,
         encounterRepository,
         clinicalDocumentRepository,
+        conditionRepository,
         observationRepository,
         consentRepository,
         auditEventRepository
@@ -131,6 +142,13 @@ export async function buildServer(options: ServerOptions = {}) {
         api,
         patientRepository,
         encounterRepository,
+        auditEventRepository
+      );
+      await registerConditionRoutes(
+        api,
+        patientRepository,
+        encounterRepository,
+        conditionRepository,
         auditEventRepository
       );
       await registerObservationRoutes(

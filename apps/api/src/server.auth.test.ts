@@ -162,9 +162,72 @@ describe("API auth and RBAC boundary", () => {
       type: "collection"
     });
     expect(resourceTypes).toEqual(
-      expect.arrayContaining(["Patient", "Encounter", "Observation", "DocumentReference"])
+      expect.arrayContaining(["Patient", "Encounter", "Condition", "Observation", "DocumentReference"])
     );
-    expect(body.entry).toHaveLength(8);
+    expect(body.entry).toHaveLength(10);
+  });
+
+  it("lists conditions and exports them as FHIR Condition", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const listResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/conditions",
+      headers: treatmentHeaders(accessToken)
+    });
+    const listBody = listResponse.json();
+
+    expect(listResponse.statusCode).toBe(200);
+    expect(listBody.items).toHaveLength(2);
+
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: `/api/v1/conditions/${listBody.items[0].id}/fhir`,
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(fhirResponse.statusCode).toBe(200);
+    expect(fhirResponse.json()).toMatchObject({
+      resourceType: "Condition",
+      subject: {
+        reference: "Patient/patient-demo-001"
+      }
+    });
+  });
+
+  it("creates a condition attached to the selected patient encounter", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/conditions",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: "encounter-demo-002",
+        category: "encounter-diagnosis",
+        code: {
+          system: "http://hl7.org/fhir/sid/icd-10",
+          code: "R50.9",
+          display: "Sốt chưa rõ nguyên nhân"
+        },
+        severity: "mild",
+        onsetAt: "2026-05-27T00:00:00.000Z",
+        recorderPractitionerId: "practitioner-demo-001",
+        note: "Chẩn đoán thử nghiệm trong API test."
+      }
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({
+      patientId: "patient-demo-001",
+      encounterId: "encounter-demo-002",
+      category: "encounter-diagnosis"
+    });
   });
 
   it("lists observations and exports them as FHIR Observation", async () => {

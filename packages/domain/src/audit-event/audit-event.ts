@@ -11,6 +11,10 @@ export type AuditAction =
   | "encounter.read"
   | "encounter.finish"
   | "encounter.fhir-export"
+  | "condition.list"
+  | "condition.create"
+  | "condition.read"
+  | "condition.fhir-export"
   | "observation.list"
   | "observation.create"
   | "observation.read"
@@ -26,6 +30,7 @@ export type AuditAction =
 export type AuditResourceType =
   | "Patient"
   | "Encounter"
+  | "Condition"
   | "Observation"
   | "ClinicalDocument"
   | "Consent"

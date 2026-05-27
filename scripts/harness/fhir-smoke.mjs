@@ -16,12 +16,14 @@ if (!existsSync(apiAuthEntry)) {
 const {
   AuditEvent,
   ClinicalDocument,
+  Condition,
   Consent,
   Encounter,
   Observation,
   Patient,
   canAccess,
   mapClinicalDocumentToFhir,
+  mapConditionToFhir,
   mapEncounterToFhir,
   mapObservationToFhir,
   mapPatientRecordToFhirBundle,
@@ -105,6 +107,33 @@ if (fhirEncounter.subject.reference !== "Patient/patient-harness-001") {
   );
 }
 
+const condition = Condition.record({
+  id: "condition-harness-001",
+  patientId: patient.id,
+  encounterId: encounter.id,
+  category: "encounter-diagnosis",
+  code: {
+    system: "http://hl7.org/fhir/sid/icd-10",
+    code: "R50.9",
+    display: "Fever, unspecified"
+  },
+  severity: "mild",
+  onsetAt: "2026-05-27T00:00:00.000Z",
+  recorderPractitionerId: "practitioner-harness-001"
+});
+
+const fhirCondition = mapConditionToFhir(condition);
+
+if (fhirCondition.resourceType !== "Condition") {
+  throw new Error(`Expected resourceType Condition, received ${fhirCondition.resourceType}`);
+}
+
+if (fhirCondition.subject.reference !== "Patient/patient-harness-001") {
+  throw new Error(
+    `Expected condition subject Patient/patient-harness-001, received ${fhirCondition.subject.reference}`
+  );
+}
+
 const observation = Observation.record({
   id: "observation-harness-001",
   patientId: patient.id,
@@ -170,6 +199,7 @@ if (fhirDocumentReference.docStatus !== "final") {
 const fhirBundle = mapPatientRecordToFhirBundle({
   patient,
   encounters: [encounter],
+  conditions: [condition],
   observations: [observation],
   documents: [document],
   generatedAt: new Date("2026-05-27T00:00:00.000Z")
@@ -183,8 +213,8 @@ if (fhirBundle.type !== "collection") {
   throw new Error(`Expected bundle type collection, received ${fhirBundle.type}`);
 }
 
-if (fhirBundle.entry.length !== 4) {
-  throw new Error(`Expected bundle to contain 4 entries, received ${fhirBundle.entry.length}`);
+if (fhirBundle.entry.length !== 5) {
+  throw new Error(`Expected bundle to contain 5 entries, received ${fhirBundle.entry.length}`);
 }
 
 const consent = Consent.grant({
@@ -264,6 +294,15 @@ const clinicianCanExportObservation = canAccess(
   "observation:fhir-export"
 );
 
+const clinicianCanExportCondition = canAccess(
+  {
+    actorId: "practitioner-harness-001",
+    role: "clinician",
+    purposeOfUse: "TREATMENT"
+  },
+  "condition:fhir-export"
+);
+
 const nurseCanExportObservation = canAccess(
   {
     actorId: "nurse-harness-001",
@@ -271,6 +310,15 @@ const nurseCanExportObservation = canAccess(
     purposeOfUse: "TREATMENT"
   },
   "observation:fhir-export"
+);
+
+const nurseCanExportCondition = canAccess(
+  {
+    actorId: "nurse-harness-001",
+    role: "nurse",
+    purposeOfUse: "TREATMENT"
+  },
+  "condition:fhir-export"
 );
 
 const clinicianCanReadAudit = canAccess(
@@ -303,8 +351,16 @@ if (!clinicianCanExportObservation) {
   throw new Error("Expected clinician/TREATMENT to export observations.");
 }
 
+if (!clinicianCanExportCondition) {
+  throw new Error("Expected clinician/TREATMENT to export conditions.");
+}
+
 if (nurseCanExportObservation) {
   throw new Error("Expected nurse/TREATMENT to be denied observation:fhir-export.");
+}
+
+if (nurseCanExportCondition) {
+  throw new Error("Expected nurse/TREATMENT to be denied condition:fhir-export.");
 }
 
 if (clinicianCanReadAudit) {
@@ -326,6 +382,8 @@ console.log(
       documentResourceType: fhirDocumentReference.resourceType,
       encounterId: fhirEncounter.id,
       encounterResourceType: fhirEncounter.resourceType,
+      conditionId: fhirCondition.id,
+      conditionResourceType: fhirCondition.resourceType,
       observationId: fhirObservation.id,
       observationResourceType: fhirObservation.resourceType,
       bundleId: fhirBundle.id,
@@ -341,7 +399,9 @@ console.log(
       rbac: {
         clinicianCanCreateEncounter,
         clinicianCanCreateDocument,
+        clinicianCanExportCondition,
         clinicianCanExportObservation,
+        nurseCanExportCondition,
         nurseCanExportObservation,
         clinicianCanReadAudit,
         auditorCanReadAudit
