@@ -1,18 +1,24 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import {
   canAccess,
-  isActorRole,
   isPurposeOfUse
 } from "@benh-vien-so/domain";
 import type { ActorContext, Permission } from "@benh-vien-so/domain";
+import { verifyAccessToken } from "../auth/auth-session.js";
 
-export function readActorContext(request: FastifyRequest): ActorContext {
-  const rawRole = readHeader(request.headers["x-actor-role"]) ?? "clinician";
+export function readActorContext(request: FastifyRequest): ActorContext | undefined {
+  const token = readBearerToken(request.headers.authorization);
+  const session = token ? verifyAccessToken(token) : undefined;
+
+  if (!session) {
+    return undefined;
+  }
+
   const rawPurposeOfUse = readHeader(request.headers["x-purpose-of-use"]) ?? "TREATMENT";
 
   return {
-    actorId: readHeader(request.headers["x-actor-id"]) ?? "demo-clinician",
-    role: isActorRole(rawRole) ? rawRole : "clinician",
+    actorId: session.actor.actorId,
+    role: session.actor.role,
     purposeOfUse: isPurposeOfUse(rawPurposeOfUse) ? rawPurposeOfUse : "TREATMENT"
   };
 }
@@ -23,6 +29,15 @@ export function requirePermission(
   permission: Permission
 ): ActorContext | undefined {
   const actor = readActorContext(request);
+
+  if (!actor) {
+    reply.status(401).send({
+      error: "UNAUTHENTICATED",
+      message: "Cần đăng nhập và gửi Authorization Bearer token hợp lệ."
+    });
+
+    return undefined;
+  }
 
   if (canAccess(actor, permission)) {
     return actor;
@@ -48,4 +63,14 @@ function readHeader(value: string | string[] | undefined): string | undefined {
   }
 
   return value;
+}
+
+function readBearerToken(value: string | string[] | undefined): string | undefined {
+  const header = readHeader(value);
+
+  if (!header?.startsWith("Bearer ")) {
+    return undefined;
+  }
+
+  return header.slice("Bearer ".length).trim();
 }

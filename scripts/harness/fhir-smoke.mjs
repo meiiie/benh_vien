@@ -3,9 +3,14 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const domainEntry = resolve("packages/domain/dist/index.js");
+const apiAuthEntry = resolve("apps/api/dist/modules/auth/auth-session.js");
 
 if (!existsSync(domainEntry)) {
   throw new Error("packages/domain/dist/index.js was not found. Run `pnpm build` first.");
+}
+
+if (!existsSync(apiAuthEntry)) {
+  throw new Error("apps/api/dist/modules/auth/auth-session.js was not found. Run `pnpm build` first.");
 }
 
 const {
@@ -18,6 +23,35 @@ const {
   mapEncounterToFhir,
   mapPatientToFhir
 } = await import(pathToFileURL(domainEntry).href);
+
+const { createAccessToken, verifyAccessToken } = await import(pathToFileURL(apiAuthEntry).href);
+
+const authSession = createAccessToken(
+  {
+    actorId: "practitioner-harness-001",
+    displayName: "Harness Clinician",
+    role: "clinician"
+  },
+  new Date("2026-05-27T00:00:00.000Z")
+);
+
+const verifiedSession = verifyAccessToken(
+  authSession.accessToken,
+  new Date("2026-05-27T00:01:00.000Z")
+);
+
+if (verifiedSession?.actor.actorId !== "practitioner-harness-001") {
+  throw new Error("Expected auth token to verify clinician actor.");
+}
+
+const expiredSession = verifyAccessToken(
+  authSession.accessToken,
+  new Date("2026-05-28T00:01:00.000Z")
+);
+
+if (expiredSession) {
+  throw new Error("Expected auth token to expire after the session TTL.");
+}
 
 const patient = Patient.register({
   id: "patient-harness-001",
@@ -181,6 +215,11 @@ console.log(
       encounterId: fhirEncounter.id,
       encounterResourceType: fhirEncounter.resourceType,
       auditAction: auditEvent.toSnapshot().action,
+      auth: {
+        actorId: verifiedSession.actor.actorId,
+        role: verifiedSession.actor.role,
+        expiresAt: authSession.expiresAt
+      },
       rbac: {
         clinicianCanCreateEncounter,
         clinicianCanCreateDocument,

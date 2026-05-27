@@ -10,8 +10,18 @@ pnpm run ci
 
 ```bash
 curl -fsS http://localhost:7310/health
-curl -fsS http://localhost:7310/api/v1/patients
-curl -fsS http://localhost:7310/api/v1/patients/patient-demo-001/fhir
+
+TOKEN=$(curl -s -X POST http://localhost:7310/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"practitioner-demo-001","password":"demo","role":"clinician"}' | jq -r .accessToken)
+
+curl -fsS http://localhost:7310/api/v1/patients \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+
+curl -fsS http://localhost:7310/api/v1/patients/patient-demo-001/fhir \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
 ```
 
 ## Docker smoke

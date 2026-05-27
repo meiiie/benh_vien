@@ -34,7 +34,7 @@ migrations/ SQL migration cho PostgreSQL
 Ứng dụng web hiện đã có luồng sản phẩm đầy đủ hơn thay vì chỉ một trang demo:
 
 - `Landing`: giới thiệu WiiiCare Nexus, định vị EMR/FHIR và điều hướng vào phiên demo.
-- `Login`: đăng nhập demo có vai trò bác sĩ, kiểm toán hoặc quản trị; đây chưa phải IAM/SSO sản xuất.
+- `Login`: đăng nhập demo phát Bearer token nội bộ cho vai trò bác sĩ, điều dưỡng, kiểm toán hoặc quản trị; đây chưa phải IAM/SSO sản xuất.
 - `Dashboard`: tổng quan số hồ sơ, lượt khám đang mở, tài liệu đã ký, cảnh báo audit và hàng chờ thao tác.
 - `Patient Workspace`: chọn bệnh nhân, xem định danh, mở/kết thúc lượt khám, tạo tài liệu và xem FHIR theo hồ sơ.
 - `Documents`: quản lý tài liệu bệnh án theo nhóm CCD/CCDA/CCR, lab report, medical record và referral.
@@ -82,6 +82,8 @@ Chi tiết xem [docs/runbooks/DOCKER.md](docs/runbooks/DOCKER.md).
 Backend hiện dùng Fastify + TypeScript. Trong Docker, API chạy với `BVS_REPOSITORY=postgres`, migration service tạo schema PostgreSQL trước khi API khởi động. Các bảng nền tảng gồm `patients`, `encounters`, `clinical_documents`, `audit_events` và `schema_migrations`.
 
 Khi chạy local không Docker, có thể dùng in-memory repository để phát triển nhanh; khi cần kiểm chứng sát thực tế, dùng Docker dev/prod để chạy PostgreSQL.
+
+API nghiệp vụ yêu cầu đăng nhập qua `POST /api/v1/auth/login` và gửi `Authorization: Bearer <token>`. Biến `BVS_AUTH_SECRET` phải dài tối thiểu 32 ký tự; ở `NODE_ENV=production`, API sẽ từ chối khởi động nếu thiếu secret hợp lệ.
 
 ## GitHub và release
 

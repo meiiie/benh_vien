@@ -22,6 +22,10 @@ export async function recordAuditEvent(
 ): Promise<void> {
   const actor = readActorContext(request);
 
+  if (!actor) {
+    return;
+  }
+
   await repository.save(
     AuditEvent.record({
       actorId: actor.actorId,

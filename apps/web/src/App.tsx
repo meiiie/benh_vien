@@ -26,7 +26,8 @@ type ClinicalDocumentType =
   | "medical-record"
   | "patient-information";
 type ClinicalDocumentStatus = "draft" | "signed" | "superseded" | "entered-in-error";
-type DemoRole = "clinician" | "auditor" | "admin";
+type DemoRole = "clinician" | "nurse" | "auditor" | "admin";
+type PurposeOfUse = "TREATMENT" | "AUDIT" | "OPERATIONS";
 
 type PatientIdentifier = {
   readonly system: string;
@@ -159,6 +160,16 @@ type LoginForm = {
   role: DemoRole;
 };
 
+type AuthSession = {
+  readonly accessToken: string;
+  readonly expiresAt: string;
+  readonly actor: {
+    readonly actorId: string;
+    readonly displayName: string;
+    readonly role: DemoRole;
+  };
+};
+
 const defaultPatientForm: NewPatientForm = {
   fullName: "Trần Minh Hải",
   birthDate: "1992-09-18",
@@ -191,16 +202,27 @@ const apiBaseUrl =
   import.meta.env.VITE_API_BASE_URL ??
   (window.location.port === "7311" ? "http://localhost:7310/api/v1" : "/api/v1");
 
-const treatmentAuditHeaders = {
-  "x-actor-id": "practitioner-demo-001",
-  "x-actor-role": "clinician",
-  "x-purpose-of-use": "TREATMENT"
-};
-
-const auditReviewHeaders = {
-  "x-actor-id": "security-officer-demo",
-  "x-actor-role": "auditor",
-  "x-purpose-of-use": "AUDIT"
+const loginPresets: Record<DemoRole, LoginForm> = {
+  clinician: {
+    username: "practitioner-demo-001",
+    password: "demo",
+    role: "clinician"
+  },
+  nurse: {
+    username: "nurse-demo-001",
+    password: "demo",
+    role: "nurse"
+  },
+  auditor: {
+    username: "security-officer-demo",
+    password: "demo",
+    role: "auditor"
+  },
+  admin: {
+    username: "admin-demo",
+    password: "demo",
+    role: "admin"
+  }
 };
 
 const workflowSteps = [
@@ -255,11 +277,8 @@ const referenceSignals = [
 export function App() {
   const [appRoute, setAppRoute] = useState<AppRoute>("landing");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loginForm, setLoginForm] = useState<LoginForm>({
-    username: "practitioner-demo-001",
-    password: "demo",
-    role: "clinician"
-  });
+  const [authSession, setAuthSession] = useState<AuthSession>();
+  const [loginForm, setLoginForm] = useState<LoginForm>(loginPresets.clinician);
   const [loginError, setLoginError] = useState<string>();
   const [patients, setPatients] = useState<readonly Patient[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string>();
@@ -295,6 +314,7 @@ export function App() {
   const openEncounters = encounters.filter((encounter) => encounter.status === "in-progress");
   const signedDocuments = clinicalDocuments.filter((document) => document.status === "signed");
   const draftDocuments = clinicalDocuments.filter((document) => document.status === "draft");
+  const canReadAudit = authSession?.actor.role === "auditor" || authSession?.actor.role === "admin";
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -340,12 +360,27 @@ export function App() {
     void loadDocumentFhirPreview(selectedDocumentId);
   }, [selectedDocumentId]);
 
+  function buildHeaders(
+    purposeOfUse: PurposeOfUse,
+    headers: Record<string, string> = {}
+  ): Record<string, string> {
+    if (!authSession) {
+      throw new Error("Chưa có phiên đăng nhập hợp lệ.");
+    }
+
+    return {
+      ...headers,
+      Authorization: `Bearer ${authSession.accessToken}`,
+      "x-purpose-of-use": purposeOfUse
+    };
+  }
+
   async function loadPatients(nextSelectedId?: string) {
     setIsLoadingPatients(true);
 
     try {
       const response = await fetch(`${apiBaseUrl}/patients`, {
-        headers: treatmentAuditHeaders
+        headers: buildHeaders("TREATMENT")
       });
 
       if (!response.ok) {
@@ -368,12 +403,19 @@ export function App() {
   }
 
   async function loadPatientWorkspace(patientId: string) {
-    await Promise.all([
+    const workspaceTasks = [
       loadPatientFhirPreview(patientId),
       loadEncounters(patientId),
-      loadClinicalDocuments(patientId),
-      loadAuditEvents(patientId)
-    ]);
+      loadClinicalDocuments(patientId)
+    ];
+
+    if (canReadAudit) {
+      workspaceTasks.push(loadAuditEvents(patientId, { silent: true }));
+    } else {
+      setAuditEvents([]);
+    }
+
+    await Promise.all(workspaceTasks);
   }
 
   async function loadEncounters(patientId: string, nextSelectedEncounterId?: string) {
@@ -381,7 +423,7 @@ export function App() {
 
     try {
       const response = await fetch(`${apiBaseUrl}/patients/${patientId}/encounters`, {
-        headers: treatmentAuditHeaders
+        headers: buildHeaders("TREATMENT")
       });
 
       if (!response.ok) {
@@ -409,7 +451,7 @@ export function App() {
 
     try {
       const response = await fetch(`${apiBaseUrl}/patients/${patientId}/documents`, {
-        headers: treatmentAuditHeaders
+        headers: buildHeaders("TREATMENT")
       });
 
       if (!response.ok) {
@@ -432,12 +474,22 @@ export function App() {
     }
   }
 
-  async function loadAuditEvents(patientId: string) {
+  async function loadAuditEvents(patientId: string, options: { readonly silent?: boolean } = {}) {
+    if (!canReadAudit) {
+      setAuditEvents([]);
+
+      if (!options.silent) {
+        setStatusMessage("Nhật ký kiểm toán chỉ mở cho vai trò kiểm toán hoặc quản trị.");
+      }
+
+      return;
+    }
+
     setIsLoadingAuditEvents(true);
 
     try {
       const response = await fetch(`${apiBaseUrl}/patients/${patientId}/audit-events`, {
-        headers: auditReviewHeaders
+        headers: buildHeaders("AUDIT")
       });
 
       if (!response.ok) {
@@ -461,7 +513,7 @@ export function App() {
   async function loadPatientFhirPreview(patientId: string) {
     try {
       const response = await fetch(`${apiBaseUrl}/patients/${patientId}/fhir`, {
-        headers: treatmentAuditHeaders
+        headers: buildHeaders("TREATMENT")
       });
 
       if (!response.ok) {
@@ -482,7 +534,7 @@ export function App() {
   async function loadEncounterFhirPreview(encounterId: string) {
     try {
       const response = await fetch(`${apiBaseUrl}/encounters/${encounterId}/fhir`, {
-        headers: treatmentAuditHeaders
+        headers: buildHeaders("TREATMENT")
       });
 
       if (!response.ok) {
@@ -503,7 +555,7 @@ export function App() {
   async function loadDocumentFhirPreview(documentId: string) {
     try {
       const response = await fetch(`${apiBaseUrl}/clinical-documents/${documentId}/fhir`, {
-        headers: treatmentAuditHeaders
+        headers: buildHeaders("TREATMENT")
       });
 
       if (!response.ok) {
@@ -521,7 +573,9 @@ export function App() {
     }
   }
 
-  function handleLogin(event?: FormEvent<HTMLFormElement>) {
+  async function handleLogin(event?: FormEvent<HTMLFormElement>) {
+    const shouldOpenLoginOnFailure = !event;
+
     event?.preventDefault();
 
     if (!loginForm.username.trim() || !loginForm.password.trim()) {
@@ -529,13 +583,44 @@ export function App() {
       return;
     }
 
-    setLoginError(undefined);
-    setIsAuthenticated(true);
-    setAppRoute("dashboard");
-    setStatusMessage("Đã đăng nhập demo. IAM/SSO thật sẽ được tách thành module riêng.");
+    try {
+      setLoginError(undefined);
+      setStatusMessage("Đang xác thực phiên đăng nhập...");
+
+      const response = await fetch(`${apiBaseUrl}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(loginForm)
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => undefined);
+        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
+      }
+
+      const session = (await response.json()) as AuthSession;
+      setAuthSession(session);
+      setIsAuthenticated(true);
+      setAppRoute(session.actor.role === "auditor" ? "audit" : "dashboard");
+      setStatusMessage(
+        `Đã đăng nhập ${session.actor.displayName}; phiên hết hạn ${formatDateTime(session.expiresAt)}.`
+      );
+    } catch (error) {
+      setLoginError(
+        error instanceof Error ? error.message : "Không thể đăng nhập phiên demo."
+      );
+      setStatusMessage("Đăng nhập thất bại.");
+
+      if (shouldOpenLoginOnFailure) {
+        setAppRoute("login");
+      }
+    }
   }
 
   function handleLogout() {
+    setAuthSession(undefined);
     setIsAuthenticated(false);
     setAppRoute("landing");
     setStatusMessage("Đã đăng xuất khỏi phiên demo.");
@@ -543,6 +628,9 @@ export function App() {
     setEncounters([]);
     setClinicalDocuments([]);
     setAuditEvents([]);
+    setPatientFhirPreview(undefined);
+    setEncounterFhirPreview(undefined);
+    setDocumentFhirPreview(undefined);
     setSelectedPatientId(undefined);
     setSelectedEncounterId(undefined);
     setSelectedDocumentId(undefined);
@@ -568,10 +656,9 @@ export function App() {
     try {
       const response = await fetch(`${apiBaseUrl}/patients`, {
         method: "POST",
-        headers: {
-          ...treatmentAuditHeaders,
+        headers: buildHeaders("TREATMENT", {
           "Content-Type": "application/json"
-        },
+        }),
         body: JSON.stringify({
           identifiers,
           fullName: patientForm.fullName,
@@ -616,10 +703,9 @@ export function App() {
     try {
       const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/encounters`, {
         method: "POST",
-        headers: {
-          ...treatmentAuditHeaders,
+        headers: buildHeaders("TREATMENT", {
           "Content-Type": "application/json"
-        },
+        }),
         body: JSON.stringify({
           class: encounterForm.class,
           serviceType: encounterForm.serviceType,
@@ -637,7 +723,7 @@ export function App() {
 
       const createdEncounter = (await response.json()) as Encounter;
       await loadEncounters(selectedPatient.id, createdEncounter.id);
-      await loadAuditEvents(selectedPatient.id);
+      await loadAuditEvents(selectedPatient.id, { silent: true });
       setAppRoute("workspace");
       setStatusMessage(`Đã mở lượt khám "${createdEncounter.serviceType}" cho ${selectedPatient.fullName}.`);
     } catch (error) {
@@ -661,7 +747,7 @@ export function App() {
     try {
       const response = await fetch(`${apiBaseUrl}/encounters/${encounterId}/finish`, {
         method: "POST",
-        headers: treatmentAuditHeaders
+        headers: buildHeaders("TREATMENT")
       });
 
       if (!response.ok) {
@@ -672,7 +758,7 @@ export function App() {
       const finishedEncounter = (await response.json()) as Encounter;
       await loadEncounters(selectedPatient.id, finishedEncounter.id);
       await loadEncounterFhirPreview(finishedEncounter.id);
-      await loadAuditEvents(selectedPatient.id);
+      await loadAuditEvents(selectedPatient.id, { silent: true });
       setStatusMessage(`Đã kết thúc lượt khám "${finishedEncounter.serviceType}".`);
     } catch (error) {
       setStatusMessage(
@@ -698,10 +784,9 @@ export function App() {
     try {
       const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/documents`, {
         method: "POST",
-        headers: {
-          ...treatmentAuditHeaders,
+        headers: buildHeaders("TREATMENT", {
           "Content-Type": "application/json"
-        },
+        }),
         body: JSON.stringify({
           encounterId: documentForm.encounterId || undefined,
           type: documentForm.type,
@@ -718,7 +803,7 @@ export function App() {
 
       const createdDocument = (await response.json()) as ClinicalDocument;
       await loadClinicalDocuments(selectedPatient.id, createdDocument.id);
-      await loadAuditEvents(selectedPatient.id);
+      await loadAuditEvents(selectedPatient.id, { silent: true });
       setAppRoute("documents");
       setStatusMessage(`Đã tạo tài liệu "${createdDocument.title}" ở trạng thái nháp.`);
     } catch (error) {
@@ -738,7 +823,7 @@ export function App() {
     try {
       const response = await fetch(`${apiBaseUrl}/clinical-documents/${documentId}/sign`, {
         method: "POST",
-        headers: treatmentAuditHeaders
+        headers: buildHeaders("TREATMENT")
       });
 
       if (!response.ok) {
@@ -749,7 +834,7 @@ export function App() {
       const signedDocument = (await response.json()) as ClinicalDocument;
       await loadClinicalDocuments(signedDocument.patientId, signedDocument.id);
       await loadDocumentFhirPreview(signedDocument.id);
-      await loadAuditEvents(signedDocument.patientId);
+      await loadAuditEvents(signedDocument.patientId, { silent: true });
       setStatusMessage(`Đã ký tài liệu "${signedDocument.title}".`);
     } catch (error) {
       setStatusMessage(
@@ -775,15 +860,15 @@ export function App() {
       );
     }
 
-    return <LandingPage onDemo={handleLogin} onLogin={() => setAppRoute("login")} />;
+    return <LandingPage onDemo={() => void handleLogin()} onLogin={() => setAppRoute("login")} />;
   }
 
   return (
     <AuthenticatedLayout
       apiBaseUrl={apiBaseUrl}
       currentRoute={appRoute}
-      userRole={loginForm.role}
-      userName={loginForm.username}
+      userRole={authSession?.actor.role ?? loginForm.role}
+      userName={authSession?.actor.displayName ?? loginForm.username}
       onLogout={handleLogout}
       onNavigate={setAppRoute}
       statusMessage={statusMessage}
@@ -925,9 +1010,9 @@ export function App() {
             <p className="eyebrow">Policy note</p>
             <h2>Ranh giới demo</h2>
             <ul className="milestone-list">
-              <li>Giao diện đang mô phỏng actor qua header demo, chưa phải IAM/SSO thật.</li>
-              <li>API đã chặn quyền cơ bản: clinician thao tác điều trị, auditor xem audit.</li>
-              <li>Khi lên sản phẩm thật cần thêm phiên đăng nhập, MFA, token, chính sách consent và log bất biến.</li>
+              <li>Giao diện đã dùng phiên Bearer token nội bộ, chưa phải IAM/SSO bệnh viện thật.</li>
+              <li>API chặn quyền cơ bản: điều trị thao tác hồ sơ, kiểm toán xem nhật ký, quản trị có quyền giám sát.</li>
+              <li>Khi lên sản phẩm thật cần thêm SSO/MFA, consent, chữ ký số và log bất biến.</li>
             </ul>
           </article>
         </section>
@@ -988,10 +1073,12 @@ export function App() {
             <p className="eyebrow">Session</p>
             <h2>Phiên hiện tại</h2>
             <div className="detail-grid compact">
-              <Info label="Người dùng" value={loginForm.username} />
-              <Info label="Vai trò demo" value={formatDemoRole(loginForm.role)} />
+              <Info label="Người dùng" value={authSession?.actor.displayName ?? loginForm.username} />
+              <Info label="Mã actor" value={authSession?.actor.actorId ?? "Chưa xác thực"} />
+              <Info label="Vai trò demo" value={formatDemoRole(authSession?.actor.role ?? loginForm.role)} />
               <Info label="API" value={apiBaseUrl} />
-              <Info label="Mục đích" value="TREATMENT / AUDIT headers" />
+              <Info label="Phiên hết hạn" value={authSession ? formatDateTime(authSession.expiresAt) : "Chưa có"} />
+              <Info label="Mục đích" value="Bearer token + PurposeOfUse" />
             </div>
           </article>
           <article className="panel">
@@ -1343,10 +1430,10 @@ export function App() {
           <button
             className="ghost-button"
             type="button"
-            disabled={!selectedPatient || isLoadingAuditEvents}
+            disabled={!selectedPatient || isLoadingAuditEvents || !canReadAudit}
             onClick={() => selectedPatient && void loadAuditEvents(selectedPatient.id)}
           >
-            {isLoadingAuditEvents ? "Đang tải..." : "Tải audit"}
+            {isLoadingAuditEvents ? "Đang tải..." : canReadAudit ? "Tải audit" : "Cần quyền kiểm toán"}
           </button>
         </div>
 
@@ -1378,8 +1465,9 @@ export function App() {
           ))}
           {auditEvents.length === 0 ? (
             <p className="empty-state">
-              Chưa có audit event cho bệnh nhân đang chọn. Hãy xem FHIR, mở lượt khám hoặc ký tài liệu
-              để phát sinh log.
+              {canReadAudit
+                ? "Chưa có audit event cho bệnh nhân đang chọn. Hãy xem FHIR, mở lượt khám hoặc ký tài liệu để phát sinh log."
+                : "Nhật ký kiểm toán chỉ hiển thị với kiểm toán viên hoặc quản trị viên."}
             </p>
           ) : null}
         </div>
@@ -1485,7 +1573,7 @@ function LandingPage({
             Đăng nhập
           </button>
           <button className="primary-button" type="button" onClick={onDemo}>
-            Vào demo
+            Vào phiên demo
           </button>
         </div>
       </nav>
@@ -1503,7 +1591,7 @@ function LandingPage({
               Đăng nhập demo
             </button>
             <button className="ghost-button" type="button" onClick={onDemo}>
-              Bỏ qua, vào dashboard
+              Vào nhanh bằng tài khoản bác sĩ demo
             </button>
           </div>
         </div>
@@ -1580,9 +1668,10 @@ function LoginPage({
             Vai trò demo
             <select
               value={form.role}
-              onChange={(event) => onChange({ ...form, role: event.target.value as DemoRole })}
+              onChange={(event) => onChange(loginPresets[event.target.value as DemoRole])}
             >
               <option value="clinician">Bác sĩ / điều trị</option>
+              <option value="nurse">Điều dưỡng / tiếp nhận</option>
               <option value="auditor">Kiểm toán</option>
               <option value="admin">Quản trị</option>
             </select>
@@ -1730,7 +1819,8 @@ function formatDemoRole(role: DemoRole): string {
   const labels: Record<DemoRole, string> = {
     admin: "Quản trị",
     auditor: "Kiểm toán",
-    clinician: "Bác sĩ điều trị"
+    clinician: "Bác sĩ điều trị",
+    nurse: "Điều dưỡng tiếp nhận"
   };
 
   return labels[role];

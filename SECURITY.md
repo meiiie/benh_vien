@@ -11,7 +11,7 @@ Tạo GitHub issue private/security advisory nếu repo bật tính năng này, 
 ## Nguyên tắc
 
 - Secret nằm ngoài Git.
+- `BVS_AUTH_SECRET` phải được cấu hình riêng cho từng môi trường và dài tối thiểu 32 ký tự.
 - Dữ liệu bệnh án cần audit trail.
 - API truy cập bệnh nhân phải có authorization theo đối tượng dữ liệu trước khi dùng thật.
 - Docker prod không dùng mật khẩu mẫu trong `.env.prod.example`.
-

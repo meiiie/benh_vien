@@ -19,6 +19,13 @@ Hồ sơ bệnh án là dữ liệu đặc biệt nhạy cảm. Dự án chưa t
 - Security Misconfiguration: bật debug, CORS rộng, thiếu header bảo mật.
 - Improper Inventory Management: API cũ vẫn mở nhưng không được quản lý.
 
+## Trạng thái hiện tại
+
+- API đã yêu cầu `Authorization: Bearer <token>` cho endpoint nghiệp vụ.
+- Token demo do `POST /api/v1/auth/login` phát hành, ký bằng `BVS_AUTH_SECRET`.
+- `x-purpose-of-use` vẫn được dùng để khai báo mục đích truy cập như `TREATMENT` hoặc `AUDIT`; đây là ngữ cảnh sử dụng dữ liệu, không phải định danh người dùng.
+- Cơ chế này chỉ là lớp phiên nội bộ cho prototype, chưa thay thế IAM/SSO, MFA, quản lý thiết bị hoặc chính sách truy cập theo cơ sở y tế.
+
 ## Hướng triển khai sau
 
 - Thêm IAM/SSO bằng Keycloak hoặc nhà cung cấp định danh tương đương.
@@ -26,4 +33,3 @@ Hồ sơ bệnh án là dữ liệu đặc biệt nhạy cảm. Dự án chưa t
 - Tạo bảng audit append-only.
 - Tách secret khỏi mã nguồn.
 - Bổ sung kiểm thử phân quyền và kiểm thử API contract.
-

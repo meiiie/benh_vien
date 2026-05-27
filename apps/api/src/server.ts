@@ -10,6 +10,7 @@ import type {
 } from "@benh-vien-so/domain";
 import { createAuditEventRepository } from "./modules/audit-events/create-audit-event.repository.js";
 import { registerAuditEventRoutes } from "./modules/audit-events/audit-event-routes.js";
+import { registerAuthRoutes } from "./modules/auth/auth-routes.js";
 import { createClinicalDocumentRepository } from "./modules/clinical-documents/create-clinical-document.repository.js";
 import { registerClinicalDocumentRoutes } from "./modules/clinical-documents/clinical-document-routes.js";
 import { createEncounterRepository } from "./modules/encounters/create-encounter.repository.js";
@@ -40,7 +41,20 @@ export async function buildServer(options: ServerOptions = {}) {
         version: "0.2.0",
         description: "API thử nghiệm cho hồ sơ bệnh án điện tử và liên thông FHIR."
       },
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: "http",
+            scheme: "bearer",
+            bearerFormat: "HMAC"
+          }
+        }
+      },
       tags: [
+        {
+          name: "auth",
+          description: "Đăng nhập demo và xác thực phiên truy cập"
+        },
         {
           name: "encounters",
           description: "Quản lý lượt khám, đợt điều trị và FHIR Encounter"
@@ -80,6 +94,7 @@ export async function buildServer(options: ServerOptions = {}) {
 
   await app.register(
     async (api) => {
+      await registerAuthRoutes(api);
       await registerPatientRoutes(api, patientRepository, auditEventRepository);
       await registerEncounterRoutes(
         api,

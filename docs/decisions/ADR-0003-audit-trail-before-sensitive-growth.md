@@ -30,7 +30,7 @@ Tích cực:
 
 Giới hạn còn lại:
 
-- Header `x-actor-id` và `x-purpose-of-use` mới là cơ chế demo, chưa thay thế IAM/RBAC thật.
+- Bearer token nội bộ và header `x-purpose-of-use` mới là cơ chế demo, chưa thay thế IAM/RBAC thật.
 - Chưa có chống sửa/xóa audit log, retention policy, alerting hoặc phân quyền đọc audit.
 - Chưa ánh xạ audit nội bộ sang FHIR `AuditEvent`; hiện mới dùng domain model nội bộ.
 
