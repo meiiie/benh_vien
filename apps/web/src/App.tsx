@@ -97,6 +97,18 @@ type ServiceRequestIntent =
   | "option";
 type ServiceRequestCategory = "laboratory" | "imaging" | "procedure" | "consultation" | "therapy";
 type ServiceRequestPriority = "routine" | "urgent" | "asap" | "stat";
+type DiagnosticReportStatus =
+  | "registered"
+  | "partial"
+  | "preliminary"
+  | "final"
+  | "amended"
+  | "corrected"
+  | "appended"
+  | "cancelled"
+  | "entered-in-error"
+  | "unknown";
+type DiagnosticReportCategory = "laboratory" | "imaging" | "pathology" | "other";
 type DemoRole = "clinician" | "nurse" | "auditor" | "admin";
 type PurposeOfUse = "TREATMENT" | "AUDIT" | "OPERATIONS";
 type ConsentStatus = "active" | "revoked" | "expired";
@@ -299,6 +311,32 @@ type ServiceRequest = {
   readonly updatedAt: string;
 };
 
+type DiagnosticReportCode = {
+  readonly system: string;
+  readonly code: string;
+  readonly display: string;
+};
+
+type DiagnosticReport = {
+  readonly id: string;
+  readonly patientId: string;
+  readonly encounterId?: string;
+  readonly basedOnServiceRequestId?: string;
+  readonly status: DiagnosticReportStatus;
+  readonly category: DiagnosticReportCategory;
+  readonly code: DiagnosticReportCode;
+  readonly effectiveAt: string;
+  readonly issuedAt: string;
+  readonly performerOrganizationId?: string;
+  readonly resultsInterpreterPractitionerId?: string;
+  readonly resultObservationIds: readonly string[];
+  readonly conclusion?: string;
+  readonly presentedFormUrl?: string;
+  readonly presentedFormTitle?: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
 type AuditAction =
   | "patient.list"
   | "patient.create"
@@ -330,6 +368,10 @@ type AuditAction =
   | "service-request.create"
   | "service-request.read"
   | "service-request.fhir-export"
+  | "diagnostic-report.list"
+  | "diagnostic-report.create"
+  | "diagnostic-report.read"
+  | "diagnostic-report.fhir-export"
   | "clinical-document.list"
   | "clinical-document.create"
   | "clinical-document.sign"
@@ -346,6 +388,7 @@ type AuditResourceType =
   | "MedicationRequest"
   | "Observation"
   | "ServiceRequest"
+  | "DiagnosticReport"
   | "ClinicalDocument"
   | "Consent"
   | "AuditEvent";
@@ -408,6 +451,10 @@ type MedicationRequestsResponse = {
 
 type ServiceRequestsResponse = {
   readonly items: readonly ServiceRequest[];
+};
+
+type DiagnosticReportsResponse = {
+  readonly items: readonly DiagnosticReport[];
 };
 
 type AuditEventsResponse = {
@@ -529,6 +576,23 @@ type NewServiceRequestForm = {
   performerOrganizationId: string;
   patientInstruction: string;
   note: string;
+};
+
+type NewDiagnosticReportForm = {
+  encounterId: string;
+  basedOnServiceRequestId: string;
+  category: DiagnosticReportCategory;
+  codeSystem: string;
+  code: string;
+  codeDisplay: string;
+  effectiveAt: string;
+  issuedAt: string;
+  performerOrganizationId: string;
+  resultsInterpreterPractitionerId: string;
+  resultObservationIds: string[];
+  conclusion: string;
+  presentedFormUrl: string;
+  presentedFormTitle: string;
 };
 
 type LoginForm = {
@@ -660,6 +724,23 @@ const defaultServiceRequestForm: NewServiceRequestForm = {
   note: "Chỉ định xét nghiệm/hình ảnh dùng để nối EMR với LIS/PACS."
 };
 
+const defaultDiagnosticReportForm: NewDiagnosticReportForm = {
+  encounterId: "",
+  basedOnServiceRequestId: "",
+  category: "laboratory",
+  codeSystem: "http://loinc.org",
+  code: "58410-2",
+  codeDisplay: "Complete blood count panel",
+  effectiveAt: "2026-05-27T11:30",
+  issuedAt: "2026-05-27T12:00",
+  performerOrganizationId: "department-laboratory",
+  resultsInterpreterPractitionerId: "practitioner-demo-002",
+  resultObservationIds: [],
+  conclusion: "Kết quả phù hợp với bối cảnh lâm sàng hiện tại.",
+  presentedFormUrl: "",
+  presentedFormTitle: ""
+};
+
 const apiBaseUrl =
   import.meta.env.VITE_API_BASE_URL ??
   (window.location.port === "7311" ? "http://localhost:7310/api/v1" : "/api/v1");
@@ -698,6 +779,7 @@ const workflowSteps = [
   "Kiểm tra dị ứng",
   "Ghi nhận chẩn đoán",
   "Chỉ định dịch vụ",
+  "Nhận kết quả",
   "Ghi nhận chỉ số",
   "Kê đơn/thuốc",
   "Gắn tài liệu",
@@ -734,7 +816,7 @@ const referenceSignals = [
   },
   {
     name: "HL7 FHIR R4",
-    value: "Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Observation, MedicationRequest và DocumentReference là lõi trao đổi dữ liệu trong lát cắt này."
+    value: "Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Observation, DiagnosticReport, MedicationRequest và DocumentReference là lõi trao đổi dữ liệu trong lát cắt này."
   },
   {
     name: "Bối cảnh Việt Nam",
@@ -768,6 +850,8 @@ export function App() {
   const [selectedMedicationRequestId, setSelectedMedicationRequestId] = useState<string>();
   const [serviceRequests, setServiceRequests] = useState<readonly ServiceRequest[]>([]);
   const [selectedServiceRequestId, setSelectedServiceRequestId] = useState<string>();
+  const [diagnosticReports, setDiagnosticReports] = useState<readonly DiagnosticReport[]>([]);
+  const [selectedDiagnosticReportId, setSelectedDiagnosticReportId] = useState<string>();
   const [auditEvents, setAuditEvents] = useState<readonly AuditEvent[]>([]);
   const [consents, setConsents] = useState<readonly Consent[]>([]);
   const [patientFhirPreview, setPatientFhirPreview] = useState<unknown>();
@@ -779,6 +863,7 @@ export function App() {
   const [observationFhirPreview, setObservationFhirPreview] = useState<unknown>();
   const [medicationRequestFhirPreview, setMedicationRequestFhirPreview] = useState<unknown>();
   const [serviceRequestFhirPreview, setServiceRequestFhirPreview] = useState<unknown>();
+  const [diagnosticReportFhirPreview, setDiagnosticReportFhirPreview] = useState<unknown>();
   const [patientForm, setPatientForm] = useState<NewPatientForm>(defaultPatientForm);
   const [encounterForm, setEncounterForm] = useState<NewEncounterForm>(defaultEncounterForm);
   const [documentForm, setDocumentForm] =
@@ -793,6 +878,8 @@ export function App() {
     useState<NewMedicationRequestForm>(defaultMedicationRequestForm);
   const [serviceRequestForm, setServiceRequestForm] =
     useState<NewServiceRequestForm>(defaultServiceRequestForm);
+  const [diagnosticReportForm, setDiagnosticReportForm] =
+    useState<NewDiagnosticReportForm>(defaultDiagnosticReportForm);
   const [statusMessage, setStatusMessage] = useState("Chưa đăng nhập.");
   const [isLoadingPatients, setIsLoadingPatients] = useState(false);
   const [isLoadingEncounters, setIsLoadingEncounters] = useState(false);
@@ -802,6 +889,7 @@ export function App() {
   const [isLoadingObservations, setIsLoadingObservations] = useState(false);
   const [isLoadingMedicationRequests, setIsLoadingMedicationRequests] = useState(false);
   const [isLoadingServiceRequests, setIsLoadingServiceRequests] = useState(false);
+  const [isLoadingDiagnosticReports, setIsLoadingDiagnosticReports] = useState(false);
   const [isLoadingAuditEvents, setIsLoadingAuditEvents] = useState(false);
   const [isLoadingConsents, setIsLoadingConsents] = useState(false);
   const [isSubmittingPatient, setIsSubmittingPatient] = useState(false);
@@ -812,6 +900,7 @@ export function App() {
   const [isSubmittingObservation, setIsSubmittingObservation] = useState(false);
   const [isSubmittingMedicationRequest, setIsSubmittingMedicationRequest] = useState(false);
   const [isSubmittingServiceRequest, setIsSubmittingServiceRequest] = useState(false);
+  const [isSubmittingDiagnosticReport, setIsSubmittingDiagnosticReport] = useState(false);
   const [isSigningDocument, setIsSigningDocument] = useState(false);
   const [isFinishingEncounter, setIsFinishingEncounter] = useState(false);
 
@@ -828,6 +917,9 @@ export function App() {
   );
   const selectedServiceRequest = serviceRequests.find(
     (serviceRequest) => serviceRequest.id === selectedServiceRequestId
+  );
+  const selectedDiagnosticReport = diagnosticReports.find(
+    (diagnosticReport) => diagnosticReport.id === selectedDiagnosticReportId
   );
   const selectedEncounterDocuments = selectedEncounter
     ? clinicalDocuments.filter((document) => document.encounterId === selectedEncounter.id)
@@ -846,6 +938,9 @@ export function App() {
     : [];
   const selectedEncounterServiceRequests = selectedEncounter
     ? serviceRequests.filter((serviceRequest) => serviceRequest.encounterId === selectedEncounter.id)
+    : [];
+  const selectedEncounterDiagnosticReports = selectedEncounter
+    ? diagnosticReports.filter((diagnosticReport) => diagnosticReport.encounterId === selectedEncounter.id)
     : [];
   const openEncounters = encounters.filter((encounter) => encounter.status === "in-progress");
   const signedDocuments = clinicalDocuments.filter((document) => document.status === "signed");
@@ -871,6 +966,7 @@ export function App() {
       setObservationFhirPreview(undefined);
       setMedicationRequestFhirPreview(undefined);
       setServiceRequestFhirPreview(undefined);
+      setDiagnosticReportFhirPreview(undefined);
       setEncounters([]);
       setClinicalDocuments([]);
       setAllergyIntolerances([]);
@@ -878,6 +974,7 @@ export function App() {
       setObservations([]);
       setMedicationRequests([]);
       setServiceRequests([]);
+      setDiagnosticReports([]);
       setAuditEvents([]);
       setConsents([]);
       setSelectedEncounterId(undefined);
@@ -887,6 +984,7 @@ export function App() {
       setSelectedObservationId(undefined);
       setSelectedMedicationRequestId(undefined);
       setSelectedServiceRequestId(undefined);
+      setSelectedDiagnosticReportId(undefined);
       return;
     }
 
@@ -902,6 +1000,7 @@ export function App() {
       setObservationForm((current) => ({ ...current, encounterId: "" }));
       setMedicationRequestForm((current) => ({ ...current, encounterId: "" }));
       setServiceRequestForm((current) => ({ ...current, encounterId: "" }));
+      setDiagnosticReportForm((current) => ({ ...current, encounterId: "" }));
       return;
     }
 
@@ -911,6 +1010,7 @@ export function App() {
     setObservationForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     setMedicationRequestForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     setServiceRequestForm((current) => ({ ...current, encounterId: selectedEncounterId }));
+    setDiagnosticReportForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     void loadEncounterFhirPreview(selectedEncounterId);
   }, [selectedEncounterId]);
 
@@ -968,6 +1068,15 @@ export function App() {
     void loadServiceRequestFhirPreview(selectedServiceRequestId);
   }, [selectedServiceRequestId]);
 
+  useEffect(() => {
+    if (!selectedDiagnosticReportId) {
+      setDiagnosticReportFhirPreview(undefined);
+      return;
+    }
+
+    void loadDiagnosticReportFhirPreview(selectedDiagnosticReportId);
+  }, [selectedDiagnosticReportId]);
+
   function buildHeaders(
     purposeOfUse: PurposeOfUse,
     headers: Record<string, string> = {}
@@ -1020,6 +1129,7 @@ export function App() {
       loadObservations(patientId),
       loadMedicationRequests(patientId),
       loadServiceRequests(patientId),
+      loadDiagnosticReports(patientId),
       loadClinicalDocuments(patientId),
       loadConsents(patientId)
     ];
@@ -1235,6 +1345,37 @@ export function App() {
       );
     } finally {
       setIsLoadingServiceRequests(false);
+    }
+  }
+
+  async function loadDiagnosticReports(
+    patientId: string,
+    nextSelectedDiagnosticReportId?: string
+  ) {
+    setIsLoadingDiagnosticReports(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/diagnostic-reports`, {
+        headers: buildHeaders("TREATMENT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      const data = (await response.json()) as DiagnosticReportsResponse;
+      setDiagnosticReports(data.items);
+      setSelectedDiagnosticReportId(nextSelectedDiagnosticReportId ?? data.items[0]?.id);
+    } catch (error) {
+      setDiagnosticReports([]);
+      setSelectedDiagnosticReportId(undefined);
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể tải báo cáo kết quả: ${error.message}`
+          : "Không thể tải báo cáo kết quả."
+      );
+    } finally {
+      setIsLoadingDiagnosticReports(false);
     }
   }
 
@@ -1492,6 +1633,27 @@ export function App() {
     }
   }
 
+  async function loadDiagnosticReportFhirPreview(diagnosticReportId: string) {
+    try {
+      const response = await fetch(`${apiBaseUrl}/diagnostic-reports/${diagnosticReportId}/fhir`, {
+        headers: buildHeaders("TREATMENT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      setDiagnosticReportFhirPreview(await response.json());
+    } catch (error) {
+      setDiagnosticReportFhirPreview({
+        error:
+          error instanceof Error
+            ? `Không thể xuất FHIR DiagnosticReport: ${error.message}`
+            : "Không thể xuất FHIR DiagnosticReport."
+      });
+    }
+  }
+
   async function handleLogin(event?: FormEvent<HTMLFormElement>) {
     const shouldOpenLoginOnFailure = !event;
 
@@ -1551,6 +1713,7 @@ export function App() {
     setObservations([]);
     setMedicationRequests([]);
     setServiceRequests([]);
+    setDiagnosticReports([]);
     setAuditEvents([]);
     setConsents([]);
     setPatientFhirPreview(undefined);
@@ -1562,6 +1725,7 @@ export function App() {
     setObservationFhirPreview(undefined);
     setMedicationRequestFhirPreview(undefined);
     setServiceRequestFhirPreview(undefined);
+    setDiagnosticReportFhirPreview(undefined);
     setSelectedPatientId(undefined);
     setSelectedEncounterId(undefined);
     setSelectedDocumentId(undefined);
@@ -1570,6 +1734,7 @@ export function App() {
     setSelectedObservationId(undefined);
     setSelectedMedicationRequestId(undefined);
     setSelectedServiceRequestId(undefined);
+    setSelectedDiagnosticReportId(undefined);
   }
 
   async function handleCreatePatient(event: FormEvent<HTMLFormElement>) {
@@ -2064,6 +2229,69 @@ export function App() {
     }
   }
 
+  async function handleCreateDiagnosticReport(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedPatient) {
+      setStatusMessage("Cần chọn bệnh nhân trước khi tạo báo cáo kết quả.");
+      return;
+    }
+
+    setIsSubmittingDiagnosticReport(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/diagnostic-reports`, {
+        method: "POST",
+        headers: buildHeaders("TREATMENT", {
+          "Content-Type": "application/json"
+        }),
+        body: JSON.stringify({
+          encounterId: diagnosticReportForm.encounterId || undefined,
+          basedOnServiceRequestId: diagnosticReportForm.basedOnServiceRequestId || undefined,
+          category: diagnosticReportForm.category,
+          code: {
+            system: diagnosticReportForm.codeSystem,
+            code: diagnosticReportForm.code,
+            display: diagnosticReportForm.codeDisplay
+          },
+          effectiveAt: toApiDateTime(diagnosticReportForm.effectiveAt),
+          issuedAt: diagnosticReportForm.issuedAt
+            ? toApiDateTime(diagnosticReportForm.issuedAt)
+            : undefined,
+          performerOrganizationId: diagnosticReportForm.performerOrganizationId || undefined,
+          resultsInterpreterPractitionerId:
+            diagnosticReportForm.resultsInterpreterPractitionerId || undefined,
+          resultObservationIds: diagnosticReportForm.resultObservationIds,
+          conclusion: diagnosticReportForm.conclusion || undefined,
+          presentedFormUrl: diagnosticReportForm.presentedFormUrl || undefined,
+          presentedFormTitle: diagnosticReportForm.presentedFormTitle || undefined
+        })
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => undefined);
+        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
+      }
+
+      const createdDiagnosticReport = (await response.json()) as DiagnosticReport;
+      await loadDiagnosticReports(selectedPatient.id, createdDiagnosticReport.id);
+      await loadPatientFhirBundlePreview(selectedPatient.id);
+      await loadAuditEvents(selectedPatient.id, { silent: true });
+      setAppRoute("workspace");
+      setStatusMessage(
+        `Đã tạo báo cáo kết quả "${createdDiagnosticReport.code.display}" cho ${selectedPatient.fullName}.`
+      );
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể tạo báo cáo kết quả: ${error.message}`
+          : "Không thể tạo báo cáo kết quả."
+      );
+    } finally {
+      setIsSubmittingDiagnosticReport(false);
+    }
+  }
+
   async function handleCreateClinicalDocument(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -2209,6 +2437,7 @@ export function App() {
           <MetricCard label="Dị ứng" value={`${allergyIntolerances.length}`} note="Cảnh báo an toàn" />
           <MetricCard label="Chẩn đoán" value={`${conditions.length}`} note="Vấn đề sức khỏe có cấu trúc" />
           <MetricCard label="Chỉ định DV" value={`${serviceRequests.length}`} note="FHIR ServiceRequest" />
+          <MetricCard label="Kết quả" value={`${diagnosticReports.length}`} note="FHIR DiagnosticReport" />
           <MetricCard label="Chỉ định thuốc" value={`${medicationRequests.length}`} note="FHIR MedicationRequest" />
           <MetricCard label="Tài liệu nháp" value={`${draftDocuments.length}`} note="Cần ký/xác thực" />
         </section>
@@ -2230,7 +2459,7 @@ export function App() {
               </button>
               <button type="button" onClick={() => setAppRoute("interop")}>
                 <strong>Xem gói FHIR</strong>
-                <span>Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Observation, MedicationRequest và DocumentReference đã có preview.</span>
+                <span>Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Observation, DiagnosticReport, MedicationRequest và DocumentReference đã có preview.</span>
               </button>
             </div>
           </article>
@@ -2246,6 +2475,7 @@ export function App() {
                 <Info label="Chẩn đoán/vấn đề" value={`${conditions.length}`} />
                 <Info label="Chỉ định dịch vụ" value={`${serviceRequests.length}`} />
                 <Info label="Chỉ số lâm sàng" value={`${observations.length}`} />
+                <Info label="Báo cáo kết quả" value={`${diagnosticReports.length}`} />
                 <Info label="Chỉ định thuốc" value={`${medicationRequests.length}`} />
                 <Info label="Tài liệu" value={`${clinicalDocuments.length}`} />
                 <Info label="Cập nhật" value={formatDateTime(selectedPatient.updatedAt)} />
@@ -2276,6 +2506,7 @@ export function App() {
           {renderConditionPanel()}
           {renderServiceRequestPanel()}
           {renderObservationPanel()}
+          {renderDiagnosticReportPanel()}
           {renderMedicationRequestPanel()}
           {renderCreatePatientPanel()}
         </section>
@@ -2352,6 +2583,7 @@ export function App() {
           <FhirPanel title="FHIR Condition JSON" badge="Condition" value={conditionFhirPreview} />
           <FhirPanel title="FHIR ServiceRequest JSON" badge="ServiceRequest" value={serviceRequestFhirPreview} />
           <FhirPanel title="FHIR Observation JSON" badge="Observation" value={observationFhirPreview} />
+          <FhirPanel title="FHIR DiagnosticReport JSON" badge="DiagnosticReport" value={diagnosticReportFhirPreview} />
           <FhirPanel title="FHIR MedicationRequest JSON" badge="MedicationRequest" value={medicationRequestFhirPreview} />
           <FhirPanel title="FHIR DocumentReference JSON" badge="DocumentReference" value={documentFhirPreview} />
           {renderConsentInteropPanel()}
@@ -2562,6 +2794,7 @@ export function App() {
                   <Info label="Chẩn đoán gắn lượt khám" value={`${selectedEncounterConditions.length}`} />
                   <Info label="Chỉ định dịch vụ gắn lượt khám" value={`${selectedEncounterServiceRequests.length}`} />
                   <Info label="Chỉ số gắn lượt khám" value={`${selectedEncounterObservations.length}`} />
+                  <Info label="Báo cáo kết quả gắn lượt khám" value={`${selectedEncounterDiagnosticReports.length}`} />
                   <Info label="Thuốc gắn lượt khám" value={`${selectedEncounterMedicationRequests.length}`} />
                   <Info label="Tài liệu gắn lượt khám" value={`${selectedEncounterDocuments.length}`} />
                 </div>
@@ -3488,6 +3721,258 @@ export function App() {
     );
   }
 
+  function renderDiagnosticReportPanel(): ReactNode {
+    return (
+      <article className="panel diagnostic-report-panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Diagnostic reports</p>
+            <h2>Báo cáo kết quả xét nghiệm và hình ảnh</h2>
+          </div>
+          <span className="pill cyan">
+            {isLoadingDiagnosticReports ? "loading" : `${diagnosticReports.length} báo cáo`}
+          </span>
+        </div>
+
+        <div className="document-layout">
+          <div className="diagnostic-report-cards">
+            {diagnosticReports.map((diagnosticReport) => (
+              <button
+                className={
+                  diagnosticReport.id === selectedDiagnosticReportId
+                    ? "diagnostic-report-card selected"
+                    : "diagnostic-report-card"
+                }
+                key={diagnosticReport.id}
+                type="button"
+                onClick={() => setSelectedDiagnosticReportId(diagnosticReport.id)}
+              >
+                <span>{formatDiagnosticReportCategory(diagnosticReport.category)}</span>
+                <strong>{diagnosticReport.code.display}</strong>
+                <small>
+                  {formatDiagnosticReportStatus(diagnosticReport.status)} ·{" "}
+                  {formatDateTime(diagnosticReport.issuedAt)}
+                </small>
+              </button>
+            ))}
+            {diagnosticReports.length === 0 ? (
+              <p className="empty-state">
+                Chưa có báo cáo kết quả. Khi LIS/RIS/PACS trả kết quả, hãy tạo DiagnosticReport để đóng vòng y lệnh.
+              </p>
+            ) : null}
+          </div>
+
+          <div className="diagnostic-report-summary">
+            {selectedDiagnosticReport ? (
+              <>
+                <div className="document-meta">
+                  <Info label="Báo cáo" value={selectedDiagnosticReport.code.display} />
+                  <Info label="Mã báo cáo" value={`${selectedDiagnosticReport.code.system} · ${selectedDiagnosticReport.code.code}`} />
+                  <Info label="Nhóm" value={formatDiagnosticReportCategory(selectedDiagnosticReport.category)} />
+                  <Info label="Trạng thái" value={formatDiagnosticReportStatus(selectedDiagnosticReport.status)} />
+                  <Info label="Y lệnh gốc" value={selectedDiagnosticReport.basedOnServiceRequestId ?? "Chưa gắn"} />
+                  <Info label="Observation kết quả" value={`${selectedDiagnosticReport.resultObservationIds.length}`} />
+                  <Info label="Khoa phát hành" value={selectedDiagnosticReport.performerOrganizationId ?? "Chưa gắn"} />
+                  <Info label="Người diễn giải" value={selectedDiagnosticReport.resultsInterpreterPractitionerId ?? "Chưa gắn"} />
+                </div>
+                <p className="empty-state">
+                  {selectedDiagnosticReport.conclusion ??
+                    "DiagnosticReport gom các Observation hoặc báo cáo dạng tệp để bên nhận hiểu đây là kết quả của một y lệnh ServiceRequest."}
+                </p>
+              </>
+            ) : (
+              <p className="empty-state">Chọn một báo cáo để xem metadata và xuất FHIR DiagnosticReport.</p>
+            )}
+          </div>
+        </div>
+
+        <form className="diagnostic-report-form" onSubmit={(event) => void handleCreateDiagnosticReport(event)}>
+          <label>
+            Gắn với lượt khám
+            <select
+              value={diagnosticReportForm.encounterId}
+              onChange={(event) =>
+                setDiagnosticReportForm({ ...diagnosticReportForm, encounterId: event.target.value })
+              }
+            >
+              <option value="">Không gắn</option>
+              {encounters.map((encounter) => (
+                <option key={encounter.id} value={encounter.id}>
+                  {encounter.serviceType} · {formatDateTime(encounter.startedAt)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Y lệnh gốc
+            <select
+              value={diagnosticReportForm.basedOnServiceRequestId}
+              onChange={(event) =>
+                setDiagnosticReportForm({
+                  ...diagnosticReportForm,
+                  basedOnServiceRequestId: event.target.value
+                })
+              }
+            >
+              <option value="">Không gắn</option>
+              {serviceRequests.map((serviceRequest) => (
+                <option key={serviceRequest.id} value={serviceRequest.id}>
+                  {serviceRequest.code.display}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Nhóm báo cáo
+            <select
+              value={diagnosticReportForm.category}
+              onChange={(event) =>
+                setDiagnosticReportForm({
+                  ...diagnosticReportForm,
+                  category: event.target.value as DiagnosticReportCategory
+                })
+              }
+            >
+              <option value="laboratory">Xét nghiệm</option>
+              <option value="imaging">Chẩn đoán hình ảnh</option>
+              <option value="pathology">Giải phẫu bệnh</option>
+              <option value="other">Khác</option>
+            </select>
+          </label>
+          <label>
+            Hệ mã
+            <input
+              value={diagnosticReportForm.codeSystem}
+              onChange={(event) =>
+                setDiagnosticReportForm({ ...diagnosticReportForm, codeSystem: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Mã báo cáo
+            <input
+              value={diagnosticReportForm.code}
+              onChange={(event) =>
+                setDiagnosticReportForm({ ...diagnosticReportForm, code: event.target.value })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Tên báo cáo
+            <input
+              value={diagnosticReportForm.codeDisplay}
+              onChange={(event) =>
+                setDiagnosticReportForm({ ...diagnosticReportForm, codeDisplay: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Thời điểm hiệu lực
+            <input
+              type="datetime-local"
+              value={diagnosticReportForm.effectiveAt}
+              onChange={(event) =>
+                setDiagnosticReportForm({ ...diagnosticReportForm, effectiveAt: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Thời điểm phát hành
+            <input
+              type="datetime-local"
+              value={diagnosticReportForm.issuedAt}
+              onChange={(event) =>
+                setDiagnosticReportForm({ ...diagnosticReportForm, issuedAt: event.target.value })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Khoa/phòng phát hành
+            <input
+              value={diagnosticReportForm.performerOrganizationId}
+              onChange={(event) =>
+                setDiagnosticReportForm({
+                  ...diagnosticReportForm,
+                  performerOrganizationId: event.target.value
+                })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Người diễn giải kết quả
+            <input
+              value={diagnosticReportForm.resultsInterpreterPractitionerId}
+              onChange={(event) =>
+                setDiagnosticReportForm({
+                  ...diagnosticReportForm,
+                  resultsInterpreterPractitionerId: event.target.value
+                })
+              }
+            />
+          </label>
+          <div className="wide-field checkbox-list">
+            <span>Observation kết quả</span>
+            {observations.map((observation) => {
+              const isChecked = diagnosticReportForm.resultObservationIds.includes(observation.id);
+
+              return (
+                <label className="check-option" key={observation.id}>
+                  <input
+                    checked={isChecked}
+                    type="checkbox"
+                    onChange={(event) => {
+                      const nextIds = event.target.checked
+                        ? [...diagnosticReportForm.resultObservationIds, observation.id]
+                        : diagnosticReportForm.resultObservationIds.filter((id) => id !== observation.id);
+                      setDiagnosticReportForm({
+                        ...diagnosticReportForm,
+                        resultObservationIds: nextIds
+                      });
+                    }}
+                  />
+                  <span>{observation.code.display} · {formatObservationValue(observation)}</span>
+                </label>
+              );
+            })}
+            {observations.length === 0 ? (
+              <small>Chưa có Observation để gắn. Có thể dùng kết luận hoặc tệp báo cáo.</small>
+            ) : null}
+          </div>
+          <label className="wide-field">
+            Kết luận
+            <input
+              value={diagnosticReportForm.conclusion}
+              onChange={(event) =>
+                setDiagnosticReportForm({ ...diagnosticReportForm, conclusion: event.target.value })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Đường dẫn tệp báo cáo
+            <input
+              value={diagnosticReportForm.presentedFormUrl}
+              onChange={(event) =>
+                setDiagnosticReportForm({ ...diagnosticReportForm, presentedFormUrl: event.target.value })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Tiêu đề tệp báo cáo
+            <input
+              value={diagnosticReportForm.presentedFormTitle}
+              onChange={(event) =>
+                setDiagnosticReportForm({ ...diagnosticReportForm, presentedFormTitle: event.target.value })
+              }
+            />
+          </label>
+          <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingDiagnosticReport}>
+            {isSubmittingDiagnosticReport ? "Đang tạo..." : "Tạo báo cáo kết quả"}
+          </button>
+        </form>
+      </article>
+    );
+  }
+
   function renderMedicationRequestPanel(): ReactNode {
     return (
       <article className="panel medication-panel">
@@ -4075,7 +4560,7 @@ function LandingPage({
           <h1>Nền tảng bệnh án điện tử mở cho liên thông y tế</h1>
           <p className="lede">
             WiiiCare Nexus mô phỏng lõi EMR hiện đại: hồ sơ bệnh nhân, lượt khám, dị ứng, chẩn đoán,
-            chỉ định dịch vụ, chỉ số lâm sàng, chỉ định thuốc, tài liệu bệnh án, audit trail và ánh xạ FHIR để chuẩn bị kết nối giữa các bệnh viện.
+            chỉ định dịch vụ, chỉ số lâm sàng, báo cáo kết quả, chỉ định thuốc, tài liệu bệnh án, audit trail và ánh xạ FHIR để chuẩn bị kết nối giữa các bệnh viện.
           </p>
           <div className="landing-actions">
             <button className="primary-button" type="button" onClick={onLogin}>
@@ -4088,7 +4573,7 @@ function LandingPage({
         </div>
         <aside className="landing-card">
           <span>Product slice</span>
-          <strong>Patient → Encounter → AllergyIntolerance → Condition → ServiceRequest → Observation → MedicationRequest → Document → FHIR</strong>
+          <strong>Patient → Encounter → AllergyIntolerance → Condition → ServiceRequest → Observation → DiagnosticReport → MedicationRequest → Document → FHIR</strong>
           <small>Không còn là landing page đơn thuần; app có luồng vận hành sau đăng nhập.</small>
         </aside>
       </section>
@@ -4098,7 +4583,7 @@ function LandingPage({
           ["Patient Workspace", "Bàn làm việc theo bệnh nhân, giống nhịp vận hành EMR thật."],
           ["Document Center", "Quản lý CCR, CCDA, hồ sơ bệnh án, xét nghiệm và tài liệu chuyển tuyến."],
           ["Audit & RBAC", "Ghi log truy cập nhạy cảm và kiểm tra quyền theo vai trò demo."],
-          ["FHIR Interop", "Xuất Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Observation, MedicationRequest và DocumentReference để chuẩn bị liên thông."]
+          ["FHIR Interop", "Xuất Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Observation, DiagnosticReport, MedicationRequest và DocumentReference để chuẩn bị liên thông."]
         ].map(([title, description]) => (
           <article className="panel" key={title}>
             <p className="eyebrow">{title}</p>
@@ -4423,6 +4908,10 @@ function formatAuditAction(action: AuditAction): string {
     "service-request.create": "Tạo chỉ định dịch vụ",
     "service-request.read": "Xem chỉ định dịch vụ",
     "service-request.fhir-export": "Xuất FHIR ServiceRequest",
+    "diagnostic-report.list": "Tải báo cáo kết quả",
+    "diagnostic-report.create": "Tạo báo cáo kết quả",
+    "diagnostic-report.read": "Xem báo cáo kết quả",
+    "diagnostic-report.fhir-export": "Xuất FHIR DiagnosticReport",
     "clinical-document.list": "Tải tài liệu bệnh án",
     "clinical-document.create": "Tạo tài liệu bệnh án",
     "clinical-document.sign": "Ký tài liệu bệnh án",
@@ -4444,6 +4933,7 @@ function formatAuditResourceType(resourceType: AuditResourceType): string {
     MedicationRequest: "Chỉ định thuốc",
     Observation: "Chỉ số lâm sàng",
     ServiceRequest: "Chỉ định dịch vụ",
+    DiagnosticReport: "Báo cáo kết quả",
     ClinicalDocument: "Tài liệu",
     Consent: "Consent",
     AuditEvent: "Audit"
@@ -4715,6 +5205,34 @@ function formatObservationValue(observation: Observation): string {
   }
 
   return observation.valueText ?? "Chưa có giá trị";
+}
+
+function formatDiagnosticReportCategory(category: DiagnosticReportCategory): string {
+  const labels: Record<DiagnosticReportCategory, string> = {
+    imaging: "Chẩn đoán hình ảnh",
+    laboratory: "Xét nghiệm",
+    other: "Khác",
+    pathology: "Giải phẫu bệnh"
+  };
+
+  return labels[category];
+}
+
+function formatDiagnosticReportStatus(status: DiagnosticReportStatus): string {
+  const labels: Record<DiagnosticReportStatus, string> = {
+    amended: "Đã hiệu chỉnh",
+    appended: "Đã bổ sung",
+    cancelled: "Đã hủy",
+    corrected: "Đã sửa",
+    "entered-in-error": "Nhập lỗi",
+    final: "Chính thức",
+    partial: "Một phần",
+    preliminary: "Sơ bộ",
+    registered: "Đã đăng ký",
+    unknown: "Chưa rõ"
+  };
+
+  return labels[status];
 }
 
 function formatDateTime(value: string): string {

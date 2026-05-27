@@ -31,6 +31,10 @@ export type AuditAction =
   | "service-request.create"
   | "service-request.read"
   | "service-request.fhir-export"
+  | "diagnostic-report.list"
+  | "diagnostic-report.create"
+  | "diagnostic-report.read"
+  | "diagnostic-report.fhir-export"
   | "clinical-document.list"
   | "clinical-document.create"
   | "clinical-document.sign"
@@ -47,6 +51,7 @@ export type AuditResourceType =
   | "MedicationRequest"
   | "Observation"
   | "ServiceRequest"
+  | "DiagnosticReport"
   | "ClinicalDocument"
   | "Consent"
   | "AuditEvent";

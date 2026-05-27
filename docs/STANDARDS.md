@@ -14,7 +14,7 @@ Hàm ý cho dự án:
 - Cần có ký/xác nhận điện tử ở vòng đời tài liệu.
 - Cần quản lý định danh bệnh nhân đủ nghiêm túc.
 - Cần audit trail và chính sách bảo vệ dữ liệu.
-- Cần cơ sở dữ liệu có migration, phân quyền, lưu vết, sao lưu và quy trình vận hành; phiên bản hiện tại mới đặt nền `patients`, `encounters`, `allergy_intolerances`, `conditions`, `service_requests`, `observations`, `medication_requests`, `clinical_documents`, `consents`, `audit_events`, chưa tuyên bố đạt điều kiện triển khai bệnh viện thật.
+- Cần cơ sở dữ liệu có migration, phân quyền, lưu vết, sao lưu và quy trình vận hành; phiên bản hiện tại mới đặt nền `patients`, `encounters`, `allergy_intolerances`, `conditions`, `service_requests`, `observations`, `diagnostic_reports`, `medication_requests`, `clinical_documents`, `consents`, `audit_events`, chưa tuyên bố đạt điều kiện triển khai bệnh viện thật.
 
 ## HL7 FHIR R4
 
@@ -29,6 +29,7 @@ Nguồn:
 - [FHIR Condition Resource](https://hl7.org/fhir/R4/condition.html)
 - [FHIR ServiceRequest Resource](https://hl7.org/fhir/R4/servicerequest.html)
 - [FHIR Observation Resource](https://hl7.org/fhir/R4/observation.html)
+- [FHIR DiagnosticReport Resource](https://hl7.org/fhir/R4/diagnosticreport.html)
 - [FHIR MedicationRequest Resource](https://hl7.org/fhir/R4/medicationrequest.html)
 - [FHIR DocumentReference Resource](https://hl7.org/fhir/R4/documentreference.html)
 
@@ -40,6 +41,7 @@ Hàm ý cho dự án:
 - `Condition` phù hợp cho chẩn đoán, vấn đề sức khỏe và problem list; nên đi kèm ICD-10/SNOMED CT hoặc danh mục được bệnh viện phê duyệt khi có dữ liệu thật.
 - `ServiceRequest` phù hợp cho chỉ định xét nghiệm, chẩn đoán hình ảnh, thủ thuật, hội chẩn hoặc dịch vụ điều trị; đây là yêu cầu thực hiện, không phải kết quả cuối cùng. Khi xuất FHIR, nhóm chỉ định nội bộ được ánh xạ sang SNOMED CT theo value set ví dụ của HL7 để tránh dùng mã UI làm mã trao đổi. Kết quả xét nghiệm/hình ảnh về sau nên được biểu diễn bằng `Observation`, `DiagnosticReport`, `ImagingStudy` hoặc tài liệu phù hợp.
 - `Observation` phù hợp cho sinh hiệu, kết quả xét nghiệm và chỉ số có cấu trúc; nên đi kèm mã chuẩn như LOINC khi có dữ liệu thật.
+- `DiagnosticReport` phù hợp cho báo cáo xét nghiệm/hình ảnh đã phát hành; nên dùng `basedOn` để nối y lệnh `ServiceRequest` và `result` để tham chiếu các `Observation` nguyên tử.
 - `MedicationRequest` phù hợp cho yêu cầu/chỉ định dùng thuốc, gồm trạng thái, mục đích, thuốc, bệnh nhân, lượt khám, người kê và hướng dẫn dùng thuốc; không nên đồng nhất với cấp phát hoặc dùng thuốc thực tế vì FHIR có `MedicationDispense` và `MedicationAdministration` riêng.
 - Khi phát triển tiếp cần bổ sung `Procedure`, `MedicationDispense`, `MedicationAdministration`, `Composition` và ràng buộc profile cụ thể hơn.
 - Với liên thông bệnh án, `DocumentReference` và `Composition` quan trọng hơn việc chỉ gửi một file PDF rời rạc.

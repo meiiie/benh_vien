@@ -59,6 +59,14 @@ curl -fsS http://localhost:7310/api/v1/observations/observation-demo-001/fhir \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-purpose-of-use: TREATMENT"
 
+curl -fsS http://localhost:7310/api/v1/patients/patient-demo-001/diagnostic-reports \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+
+curl -fsS http://localhost:7310/api/v1/diagnostic-reports/diagnostic-report-demo-001/fhir \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+
 curl -fsS http://localhost:7310/api/v1/patients/patient-demo-001/medication-requests \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-purpose-of-use: TREATMENT"

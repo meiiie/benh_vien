@@ -8,6 +8,7 @@ import type {
   ClinicalDocumentRepository,
   ConditionRepository,
   ConsentRepository,
+  DiagnosticReportRepository,
   EncounterRepository,
   MedicationRequestRepository,
   ObservationRepository,
@@ -25,6 +26,8 @@ import { createConditionRepository } from "./modules/conditions/create-condition
 import { registerConditionRoutes } from "./modules/conditions/condition-routes.js";
 import { createConsentRepository } from "./modules/consents/create-consent.repository.js";
 import { registerConsentRoutes } from "./modules/consents/consent-routes.js";
+import { createDiagnosticReportRepository } from "./modules/diagnostic-reports/create-diagnostic-report.repository.js";
+import { registerDiagnosticReportRoutes } from "./modules/diagnostic-reports/diagnostic-report-routes.js";
 import { createEncounterRepository } from "./modules/encounters/create-encounter.repository.js";
 import { registerEncounterRoutes } from "./modules/encounters/encounter-routes.js";
 import { createMedicationRequestRepository } from "./modules/medication-requests/create-medication-request.repository.js";
@@ -42,6 +45,7 @@ export type ServerOptions = {
   readonly allergyIntoleranceRepository?: AllergyIntoleranceRepository;
   readonly conditionRepository?: ConditionRepository;
   readonly observationRepository?: ObservationRepository;
+  readonly diagnosticReportRepository?: DiagnosticReportRepository;
   readonly medicationRequestRepository?: MedicationRequestRepository;
   readonly serviceRequestRepository?: ServiceRequestRepository;
   readonly clinicalDocumentRepository?: ClinicalDocumentRepository;
@@ -105,6 +109,10 @@ export async function buildServer(options: ServerOptions = {}) {
           description: "Quản lý chỉ định xét nghiệm, hình ảnh, thủ thuật và FHIR ServiceRequest"
         },
         {
+          name: "diagnostic-reports",
+          description: "Quản lý báo cáo xét nghiệm, hình ảnh và FHIR DiagnosticReport"
+        },
+        {
           name: "clinical-documents",
           description: "Quản lý tài liệu lâm sàng và FHIR DocumentReference"
         },
@@ -137,6 +145,8 @@ export async function buildServer(options: ServerOptions = {}) {
     options.medicationRequestRepository ?? (await createMedicationRequestRepository());
   const serviceRequestRepository =
     options.serviceRequestRepository ?? (await createServiceRequestRepository());
+  const diagnosticReportRepository =
+    options.diagnosticReportRepository ?? (await createDiagnosticReportRepository());
   const clinicalDocumentRepository =
     options.clinicalDocumentRepository ?? (await createClinicalDocumentRepository());
   const consentRepository =
@@ -162,6 +172,7 @@ export async function buildServer(options: ServerOptions = {}) {
         observationRepository,
         medicationRequestRepository,
         serviceRequestRepository,
+        diagnosticReportRepository,
         consentRepository,
         auditEventRepository
       );
@@ -212,6 +223,15 @@ export async function buildServer(options: ServerOptions = {}) {
         encounterRepository,
         conditionRepository,
         serviceRequestRepository,
+        auditEventRepository
+      );
+      await registerDiagnosticReportRoutes(
+        api,
+        patientRepository,
+        encounterRepository,
+        serviceRequestRepository,
+        observationRepository,
+        diagnosticReportRepository,
         auditEventRepository
       );
       await registerClinicalDocumentRoutes(

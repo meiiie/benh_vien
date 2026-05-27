@@ -16,7 +16,7 @@
 ## Giai đoạn 2: Liên thông FHIR
 
 - Kết nối HAPI FHIR ở chế độ thử nghiệm.
-- Mapping `Patient`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Observation`, `MedicationRequest`, `DocumentReference`, `Composition`.
+- Mapping `Patient`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Observation`, `DiagnosticReport`, `MedicationRequest`, `DocumentReference`, `Composition`.
 - Tạo luồng xuất gói hồ sơ bệnh án cho một bệnh nhân.
 - Kiểm tra luồng nhận lại dữ liệu từ FHIR server.
 

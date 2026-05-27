@@ -169,11 +169,12 @@ describe("API auth and RBAC boundary", () => {
         "Condition",
         "ServiceRequest",
         "Observation",
+        "DiagnosticReport",
         "MedicationRequest",
         "DocumentReference"
       ])
     );
-    expect(body.entry).toHaveLength(16);
+    expect(body.entry).toHaveLength(18);
   });
 
   it("lists allergy intolerances and exports them as FHIR AllergyIntolerance", async () => {
@@ -521,6 +522,79 @@ describe("API auth and RBAC boundary", () => {
       encounterId: "encounter-demo-002",
       reasonConditionId: "condition-demo-002",
       category: "laboratory"
+    });
+  });
+
+  it("lists diagnostic reports and exports them as FHIR DiagnosticReport", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const listResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/diagnostic-reports",
+      headers: treatmentHeaders(accessToken)
+    });
+    const listBody = listResponse.json();
+
+    expect(listResponse.statusCode).toBe(200);
+    expect(listBody.items).toHaveLength(2);
+
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: `/api/v1/diagnostic-reports/${listBody.items[0].id}/fhir`,
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(fhirResponse.statusCode).toBe(200);
+    expect(fhirResponse.json()).toMatchObject({
+      resourceType: "DiagnosticReport",
+      subject: {
+        reference: "Patient/patient-demo-001"
+      },
+      basedOn: [
+        {
+          reference: expect.stringMatching(/^ServiceRequest\//)
+        }
+      ]
+    });
+  });
+
+  it("creates a diagnostic report linked to a service request and observation result", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/diagnostic-reports",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: "encounter-demo-001",
+        basedOnServiceRequestId: "service-request-demo-001",
+        category: "laboratory",
+        code: {
+          system: "http://loinc.org",
+          code: "58410-2",
+          display: "Complete blood count panel"
+        },
+        effectiveAt: "2026-05-27T06:00:00.000Z",
+        issuedAt: "2026-05-27T06:30:00.000Z",
+        performerOrganizationId: "department-laboratory",
+        resultsInterpreterPractitionerId: "practitioner-demo-002",
+        resultObservationIds: ["observation-demo-001"],
+        conclusion: "Báo cáo xét nghiệm thử nghiệm trong API test."
+      }
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({
+      patientId: "patient-demo-001",
+      encounterId: "encounter-demo-001",
+      basedOnServiceRequestId: "service-request-demo-001",
+      category: "laboratory",
+      resultObservationIds: ["observation-demo-001"]
     });
   });
 

@@ -19,6 +19,7 @@ const {
   ClinicalDocument,
   Condition,
   Consent,
+  DiagnosticReport,
   Encounter,
   MedicationRequest,
   Observation,
@@ -28,6 +29,7 @@ const {
   mapAllergyIntoleranceToFhir,
   mapClinicalDocumentToFhir,
   mapConditionToFhir,
+  mapDiagnosticReportToFhir,
   mapEncounterToFhir,
   mapMedicationRequestToFhir,
   mapObservationToFhir,
@@ -242,6 +244,43 @@ if (fhirObservation.subject.reference !== "Patient/patient-harness-001") {
   );
 }
 
+const diagnosticReport = DiagnosticReport.issue({
+  id: "diagnostic-report-harness-001",
+  patientId: patient.id,
+  encounterId: encounter.id,
+  basedOnServiceRequestId: serviceRequest.id,
+  category: "laboratory",
+  code: {
+    system: "http://loinc.org",
+    code: "58410-2",
+    display: "Complete blood count panel"
+  },
+  effectiveAt: "2026-05-27T01:30:00.000Z",
+  issuedAt: "2026-05-27T02:00:00.000Z",
+  performerOrganizationId: "department-laboratory",
+  resultsInterpreterPractitionerId: "practitioner-harness-001",
+  resultObservationIds: [observation.id],
+  conclusion: "Harness diagnostic report links order and atomic result."
+});
+
+const fhirDiagnosticReport = mapDiagnosticReportToFhir(diagnosticReport);
+
+if (fhirDiagnosticReport.resourceType !== "DiagnosticReport") {
+  throw new Error(
+    `Expected resourceType DiagnosticReport, received ${fhirDiagnosticReport.resourceType}`
+  );
+}
+
+if (fhirDiagnosticReport.basedOn?.[0]?.reference !== "ServiceRequest/service-request-harness-001") {
+  throw new Error(
+    `Expected diagnostic report basedOn ServiceRequest/service-request-harness-001.`
+  );
+}
+
+if (fhirDiagnosticReport.result?.[0]?.reference !== "Observation/observation-harness-001") {
+  throw new Error(`Expected diagnostic report result Observation/observation-harness-001.`);
+}
+
 const medicationRequest = MedicationRequest.prescribe({
   id: "medication-request-harness-001",
   patientId: patient.id,
@@ -322,6 +361,7 @@ const fhirBundle = mapPatientRecordToFhirBundle({
   conditions: [condition],
   serviceRequests: [serviceRequest],
   observations: [observation],
+  diagnosticReports: [diagnosticReport],
   medicationRequests: [medicationRequest],
   documents: [document],
   generatedAt: new Date("2026-05-27T00:00:00.000Z")
@@ -335,8 +375,8 @@ if (fhirBundle.type !== "collection") {
   throw new Error(`Expected bundle type collection, received ${fhirBundle.type}`);
 }
 
-if (fhirBundle.entry.length !== 8) {
-  throw new Error(`Expected bundle to contain 8 entries, received ${fhirBundle.entry.length}`);
+if (fhirBundle.entry.length !== 9) {
+  throw new Error(`Expected bundle to contain 9 entries, received ${fhirBundle.entry.length}`);
 }
 
 const consent = Consent.grant({
@@ -452,6 +492,15 @@ const clinicianCanExportServiceRequest = canAccess(
   "service-request:fhir-export"
 );
 
+const clinicianCanExportDiagnosticReport = canAccess(
+  {
+    actorId: "practitioner-harness-001",
+    role: "clinician",
+    purposeOfUse: "TREATMENT"
+  },
+  "diagnostic-report:fhir-export"
+);
+
 const nurseCanExportObservation = canAccess(
   {
     actorId: "nurse-harness-001",
@@ -495,6 +544,15 @@ const nurseCanExportServiceRequest = canAccess(
     purposeOfUse: "TREATMENT"
   },
   "service-request:fhir-export"
+);
+
+const nurseCanExportDiagnosticReport = canAccess(
+  {
+    actorId: "nurse-harness-001",
+    role: "nurse",
+    purposeOfUse: "TREATMENT"
+  },
+  "diagnostic-report:fhir-export"
 );
 
 const clinicianCanReadAudit = canAccess(
@@ -543,6 +601,10 @@ if (!clinicianCanExportServiceRequest) {
   throw new Error("Expected clinician/TREATMENT to export service requests.");
 }
 
+if (!clinicianCanExportDiagnosticReport) {
+  throw new Error("Expected clinician/TREATMENT to export diagnostic reports.");
+}
+
 if (nurseCanExportObservation) {
   throw new Error("Expected nurse/TREATMENT to be denied observation:fhir-export.");
 }
@@ -561,6 +623,10 @@ if (nurseCanExportMedicationRequest) {
 
 if (nurseCanExportServiceRequest) {
   throw new Error("Expected nurse/TREATMENT to be denied service-request:fhir-export.");
+}
+
+if (nurseCanExportDiagnosticReport) {
+  throw new Error("Expected nurse/TREATMENT to be denied diagnostic-report:fhir-export.");
 }
 
 if (clinicianCanReadAudit) {
@@ -588,6 +654,8 @@ console.log(
       conditionResourceType: fhirCondition.resourceType,
       observationId: fhirObservation.id,
       observationResourceType: fhirObservation.resourceType,
+      diagnosticReportId: fhirDiagnosticReport.id,
+      diagnosticReportResourceType: fhirDiagnosticReport.resourceType,
       medicationRequestId: fhirMedicationRequest.id,
       medicationRequestResourceType: fhirMedicationRequest.resourceType,
       serviceRequestId: fhirServiceRequest.id,
@@ -607,11 +675,13 @@ console.log(
         clinicianCanCreateDocument,
         clinicianCanExportAllergyIntolerance,
         clinicianCanExportCondition,
+        clinicianCanExportDiagnosticReport,
         clinicianCanExportMedicationRequest,
         clinicianCanExportObservation,
         clinicianCanExportServiceRequest,
         nurseCanExportAllergyIntolerance,
         nurseCanExportCondition,
+        nurseCanExportDiagnosticReport,
         nurseCanExportMedicationRequest,
         nurseCanExportObservation,
         nurseCanExportServiceRequest,

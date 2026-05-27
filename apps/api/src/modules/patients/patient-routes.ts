@@ -16,6 +16,7 @@ import type {
   ClinicalDocumentRepository,
   ConditionRepository,
   ConsentRepository,
+  DiagnosticReportRepository,
   EncounterRepository,
   MedicationRequestRepository,
   ObservationRepository,
@@ -36,6 +37,7 @@ export async function registerPatientRoutes(
   observationRepository: ObservationRepository,
   medicationRequestRepository: MedicationRequestRepository,
   serviceRequestRepository: ServiceRequestRepository,
+  diagnosticReportRepository: DiagnosticReportRepository,
   consentRepository: ConsentRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
@@ -210,6 +212,7 @@ export async function registerPatientRoutes(
       documents,
       conditions,
       observations,
+      diagnosticReports,
       medicationRequests,
       serviceRequests
     ] = await Promise.all([
@@ -218,6 +221,7 @@ export async function registerPatientRoutes(
       documentRepository.findByPatientId(params.id),
       conditionRepository.findByPatientId(params.id),
       observationRepository.findByPatientId(params.id),
+      diagnosticReportRepository.findByPatientId(params.id),
       medicationRequestRepository.findByPatientId(params.id),
       serviceRequestRepository.findByPatientId(params.id)
     ]);
@@ -237,6 +241,7 @@ export async function registerPatientRoutes(
         allergyIntoleranceCount: allergyIntolerances.length,
         conditionCount: conditions.length,
         observationCount: observations.length,
+        diagnosticReportCount: diagnosticReports.length,
         medicationRequestCount: medicationRequests.length,
         serviceRequestCount: serviceRequests.length,
         documentCount: documents.length
@@ -249,6 +254,7 @@ export async function registerPatientRoutes(
       allergyIntolerances,
       conditions,
       observations,
+      diagnosticReports,
       medicationRequests,
       serviceRequests,
       documents

@@ -70,7 +70,7 @@ sequenceDiagram
   EMR->>Audit: Ghi nhật ký thao tác
   User->>App: Ký hoặc xác nhận điện tử
   App->>EMR: Chuyển trạng thái tài liệu sang signed
-  EMR->>FHIR: Chuyển đổi sang FHIR Patient/Encounter/AllergyIntolerance/Condition/ServiceRequest/Observation/MedicationRequest/DocumentReference/Composition
+  EMR->>FHIR: Chuyển đổi sang FHIR Patient/Encounter/AllergyIntolerance/Condition/ServiceRequest/Observation/DiagnosticReport/MedicationRequest/DocumentReference/Composition
   FHIR->>Partner: Chia sẻ theo API hoặc hồ sơ IHE phù hợp
 ```
 
@@ -100,6 +100,7 @@ Phiên bản hiện tại tạo các bảng tối thiểu:
 - `conditions`: chẩn đoán/vấn đề sức khỏe có cấu trúc, gồm trạng thái, mã chẩn đoán, mức độ, thời điểm ghi nhận và người ghi nhận.
 - `service_requests`: chỉ định dịch vụ có cấu trúc, gồm nhóm dịch vụ, mã dịch vụ, ưu tiên, khoa thực hiện, thời điểm dự kiến và người chỉ định.
 - `observations`: sinh hiệu/xét nghiệm có cấu trúc, gồm mã chuẩn, giá trị định lượng hoặc văn bản, thời điểm và người ghi nhận.
+- `diagnostic_reports`: báo cáo kết quả xét nghiệm/hình ảnh, nối y lệnh `service_requests` với các `observations` nguyên tử hoặc báo cáo dạng tệp.
 - `medication_requests`: chỉ định thuốc/đơn thuốc có cấu trúc, gồm mã thuốc, liều dùng, người kê, thời điểm, trạng thái và liên kết chẩn đoán khi có.
 - `clinical_documents`: tài liệu lâm sàng có vòng đời nháp, đã ký, bị thay thế hoặc nhập sai.
 - `consents`: consent chia sẻ hồ sơ theo bệnh nhân, đơn vị nhận, trạng thái và thời hạn hiệu lực.
@@ -109,7 +110,7 @@ Phiên bản hiện tại tạo các bảng tối thiểu:
 ## Luồng mở rộng dự kiến
 
 1. Hoàn thiện registry bệnh nhân và tài liệu lâm sàng tối thiểu.
-2. Kết nối HAPI FHIR để xuất/nhập `Patient`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Observation`, `MedicationRequest`, `DocumentReference`, `Composition`.
+2. Kết nối HAPI FHIR để xuất/nhập `Patient`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Observation`, `DiagnosticReport`, `MedicationRequest`, `DocumentReference`, `Composition`.
 3. Kết nối Orthanc để minh họa PACS/DICOM và DICOMweb.
 4. Bổ sung xác thực, phân quyền, nhật ký kiểm toán và chính sách lưu trữ.
 5. Nếu cần mở rộng lớn, tách `Interoperability`, `Imaging`, `Audit` thành service riêng.

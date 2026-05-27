@@ -1,6 +1,6 @@
 # Ví dụ API
 
-API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `Patient`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Observation`, `MedicationRequest`, `ClinicalDocument`, `Consent`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
+API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `Patient`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Observation`, `DiagnosticReport`, `MedicationRequest`, `ClinicalDocument`, `Consent`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
 
 ## Kiểm tra sức khỏe API
 
@@ -125,7 +125,7 @@ curl http://localhost:7310/api/v1/patients/patient-demo-001/fhir-bundle \
   -H "x-recipient-organization-id: hospital-hai-phong-referral"
 ```
 
-Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các `Encounter`, các `AllergyIntolerance`, các `Condition`, các `ServiceRequest`, các `Observation`, các `MedicationRequest` và các `DocumentReference` của bệnh nhân. Endpoint này không chỉ kiểm header: `x-consent-reference` phải trỏ tới một consent đang hiệu lực, đúng bệnh nhân và đúng `x-recipient-organization-id`.
+Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các `Encounter`, các `AllergyIntolerance`, các `Condition`, các `ServiceRequest`, các `Observation`, các `DiagnosticReport`, các `MedicationRequest` và các `DocumentReference` của bệnh nhân. Endpoint này không chỉ kiểm header: `x-consent-reference` phải trỏ tới một consent đang hiệu lực, đúng bệnh nhân và đúng `x-recipient-organization-id`.
 
 ## Lấy và mở lượt khám
 
@@ -323,6 +323,45 @@ curl http://localhost:7310/api/v1/observations/observation-demo-001/fhir \
 ```
 
 Kết quả mong muốn là JSON có `resourceType` bằng `Observation`, có `subject`, `encounter`, `category`, `code`, `effectiveDateTime` và `valueQuantity`. Ở prototype hiện tại, UI ưu tiên chỉ số định lượng; API vẫn hỗ trợ đúng một trong hai kiểu giá trị: `valueQuantity` hoặc `valueText`.
+
+## Lấy, tạo và xuất báo cáo kết quả sang FHIR DiagnosticReport
+
+```bash
+curl http://localhost:7310/api/v1/patients/patient-demo-001/diagnostic-reports \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+```bash
+curl -X POST http://localhost:7310/api/v1/patients/patient-demo-001/diagnostic-reports \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "encounterId": "encounter-demo-001",
+    "basedOnServiceRequestId": "service-request-demo-001",
+    "category": "laboratory",
+    "code": {
+      "system": "http://loinc.org",
+      "code": "58410-2",
+      "display": "Complete blood count panel"
+    },
+    "effectiveAt": "2026-05-27T06:00:00.000Z",
+    "issuedAt": "2026-05-27T06:30:00.000Z",
+    "performerOrganizationId": "department-laboratory",
+    "resultsInterpreterPractitionerId": "practitioner-demo-002",
+    "resultObservationIds": ["observation-demo-001"],
+    "conclusion": "Báo cáo xét nghiệm demo."
+  }'
+```
+
+```bash
+curl http://localhost:7310/api/v1/diagnostic-reports/diagnostic-report-demo-001/fhir \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+Kết quả mong muốn là JSON có `resourceType` bằng `DiagnosticReport`, có `basedOn` trỏ tới `ServiceRequest`, `result` trỏ tới `Observation`, `subject`, `encounter`, `category`, `code`, `effectiveDateTime`, `issued` và `conclusion`.
 
 ## Lấy, tạo và xuất chỉ định thuốc sang FHIR MedicationRequest
 
