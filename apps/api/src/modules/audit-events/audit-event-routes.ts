@@ -46,6 +46,35 @@ export async function registerAuditEventRoutes(
       items: events.map(toAuditEventResponse)
     };
   });
+
+  app.get("/patients/:patientId/audit-integrity", async (request, reply) => {
+    const actor = requirePermission(request, reply, "audit-event:list");
+
+    if (!actor) {
+      return;
+    }
+
+    const params = PatientAuditEventsParamsSchema.parse(request.params);
+    const patient = await patientRepository.findById(params.patientId);
+
+    if (!patient) {
+      return reply.status(404).send({
+        error: "PATIENT_NOT_FOUND"
+      });
+    }
+
+    await recordAuditEvent(auditRepository, request, {
+      action: "audit-event.integrity-verify",
+      resourceType: "AuditEvent",
+      resourceId: params.patientId,
+      patientId: params.patientId,
+      metadata: {
+        reason: "patient-audit-chain-verification"
+      }
+    });
+
+    return auditRepository.verifyPatientIntegrity(params.patientId);
+  });
 }
 
 function toAuditEventResponse(event: AuditEvent): AuditEventSnapshot {

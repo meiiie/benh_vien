@@ -32,6 +32,7 @@ Hồ sơ bệnh án là dữ liệu đặc biệt nhạy cảm. Dự án chưa t
 - FHIR Bundle chia sẻ liên viện yêu cầu consent tồn tại trong store, còn hiệu lực, đúng bệnh nhân và đúng đơn vị nhận.
 - FHIR document Bundle có `Composition` cũng dùng cùng rào consent và audit như Bundle collection; không có đường xuất tài liệu liên viện “bỏ qua consent”.
 - `RecordTransfer` kiểm consent trước khi tạo, ghi audit khi liệt kê/tạo/xem/xuất FHIR `Task`, và không lưu bản sao đầy đủ của Bundle trong bảng vận hành.
+- `AuditEvent` được niêm phong bằng chuỗi băm `sha256` theo từng bệnh nhân. API kiểm toán có thể gọi `/api/v1/patients/:patientId/audit-integrity` để phát hiện bản ghi chưa niêm phong, nội dung bị sửa hoặc liên kết hash bị đứt.
 - Cơ chế này chỉ là lớp phiên nội bộ cho prototype, chưa thay thế IAM/SSO, MFA, quản lý thiết bị hoặc chính sách truy cập theo cơ sở y tế.
 
 ## Hướng triển khai sau
@@ -39,6 +40,6 @@ Hồ sơ bệnh án là dữ liệu đặc biệt nhạy cảm. Dự án chưa t
 - Thêm IAM/SSO bằng Keycloak hoặc nhà cung cấp định danh tương đương.
 - Thiết kế RBAC kết hợp ABAC: vai trò, khoa phòng, ca trực, quan hệ điều trị và mục đích truy cập.
 - Bổ sung workflow thu hồi consent, ký/xác nhận consent, consent cho người giám hộ/đại diện hợp pháp và trạng thái gửi/nhận thực tế của `RecordTransfer`.
-- Tạo bảng audit append-only.
+- Nâng audit từ chuỗi băm prototype lên lưu trữ append-only/WORM, retention policy, cảnh báo khi chuỗi hash lỗi và quy trình điều tra.
 - Tách secret khỏi mã nguồn.
 - Bổ sung kiểm thử phân quyền và kiểm thử API contract.

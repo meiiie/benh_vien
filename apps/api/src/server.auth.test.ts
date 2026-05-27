@@ -123,6 +123,28 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("returns a verified audit integrity report for auditor review", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "security-officer-demo", "auditor");
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/audit-integrity",
+      headers: auditHeaders(accessToken)
+    });
+    const body = response.json();
+
+    expect(response.statusCode).toBe(200);
+    expect(body).toMatchObject({
+      patientId: "patient-demo-001",
+      status: "verified",
+      verified: true,
+      totalEvents: 1,
+      sealedEvents: 1
+    });
+    expect(body.latestHash).toEqual(expect.stringMatching(/^[a-f0-9]{64}$/));
+  });
+
   it("denies nurse FHIR export even with treatment purpose", async () => {
     app = await readyServer();
     const accessToken = await loginForToken(app, "nurse-demo-001", "nurse");

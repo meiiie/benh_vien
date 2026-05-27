@@ -39,12 +39,14 @@ Tích cực:
 
 - Có thể trình bày được luồng truy vết tối thiểu ngay trên UI.
 - Bảng `audit_events` trong migration đã có vai trò thật thay vì chỉ là placeholder.
-- Harness có smoke check cho `AuditEvent`, không chỉ FHIR mapping.
+- Mỗi `AuditEvent` mới được niêm phong bằng chuỗi băm `sha256` gồm `previousHash`, `payloadHash` và `integrityHash` để phát hiện sửa/xóa log ở mức prototype.
+- API có endpoint `/api/v1/patients/:patientId/audit-integrity` cho vai trò kiểm toán/quản trị kiểm tra chuỗi audit theo bệnh nhân.
+- Harness có smoke check cho `AuditEvent` và trạng thái toàn vẹn audit, không chỉ FHIR mapping.
 
 Giới hạn còn lại:
 
 - Bearer token nội bộ và header `x-purpose-of-use` mới là cơ chế demo, chưa thay thế IAM/RBAC thật.
-- Chưa có chống sửa/xóa audit log, retention policy, alerting hoặc phân quyền đọc audit.
+- Chuỗi băm giúp phát hiện sai lệch nhưng chưa thay thế lưu trữ append-only/WORM, retention policy, alerting hoặc kiểm toán độc lập.
 - Chưa ánh xạ audit nội bộ sang FHIR `AuditEvent`; hiện mới dùng domain model nội bộ.
 
 ## Bước Tiếp Theo

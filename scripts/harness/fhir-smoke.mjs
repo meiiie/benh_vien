@@ -32,6 +32,7 @@ const {
   RecordTransfer,
   ServiceRequest,
   WorkflowTask,
+  buildAuditIntegrityReport,
   canAccess,
   mapAllergyIntoleranceToFhir,
   mapClinicalDocumentToFhir,
@@ -50,7 +51,8 @@ const {
   mapProviderDirectoryToFhirBundle,
   mapRecordTransferToFhirTask,
   mapServiceRequestToFhir,
-  mapWorkflowTaskToFhir
+  mapWorkflowTaskToFhir,
+  sealAuditEvent
 } = await import(pathToFileURL(domainEntry).href);
 
 const { createAccessToken, verifyAccessToken } = await import(pathToFileURL(apiAuthEntry).href);
@@ -829,6 +831,7 @@ if (fhirRecordTransferTask.owner?.reference !== "Organization/hospital-harness-r
 }
 
 const auditEvent = AuditEvent.record({
+  id: "audit-event-harness-001",
   actorId: "practitioner-harness-001",
   action: "clinical-document.fhir-export",
   resourceType: "ClinicalDocument",
@@ -846,6 +849,13 @@ if (auditEvent.toSnapshot().patientId !== "patient-harness-001") {
 
 if (auditEvent.toSnapshot().action !== "clinical-document.fhir-export") {
   throw new Error(`Expected audit action clinical-document.fhir-export.`);
+}
+
+const sealedAuditEvent = sealAuditEvent(auditEvent);
+const auditIntegrityReport = buildAuditIntegrityReport(patient.id, [sealedAuditEvent]);
+
+if (!auditIntegrityReport.verified) {
+  throw new Error("Expected sealed audit event to pass integrity verification.");
 }
 
 const clinicianCanCreateDocument = canAccess(
@@ -1299,6 +1309,8 @@ console.log(
       recordTransferResourceType: fhirRecordTransferTask.resourceType,
       recordTransferFocus: fhirRecordTransferTask.focus?.reference,
       auditAction: auditEvent.toSnapshot().action,
+      auditIntegrityStatus: auditIntegrityReport.status,
+      auditIntegrityLatestHash: auditIntegrityReport.latestHash,
       auth: {
         actorId: verifiedSession.actor.actorId,
         role: verifiedSession.actor.role,

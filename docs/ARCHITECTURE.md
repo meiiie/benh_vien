@@ -96,7 +96,7 @@ sequenceDiagram
 - **Gói bệnh án chuyển viện cần Composition.** `Bundle.type = collection` phù hợp để gom dữ liệu thô; khi cần biểu diễn một tài liệu bệnh án có cấu trúc, dùng `Bundle.type = document` và đặt `Composition` làm entry đầu tiên để mô tả mục lục lâm sàng.
 - **Không để reference FHIR bị treo.** Khi `Patient`, `Encounter`, `DiagnosticReport` hoặc `ImagingStudy` tham chiếu `Organization`, `Practitioner`, `PractitionerRole` hoặc `Endpoint`, gói liên thông cần có Provider Directory tối thiểu để bên nhận hiểu cơ sở quản lý, khoa thực hiện, người phụ trách và endpoint PACS/FHIR/LIS.
 - **Ảnh y khoa đi theo chuẩn riêng.** Ảnh X-quang, CT, MRI, siêu âm nên đi qua PACS/DICOM, không nhồi trực tiếp vào bảng bệnh án. EMR chỉ lưu metadata `ImagingStudy` như DICOM Study Instance UID, Accession Number, modality, series, số ảnh, vùng chụp và endpoint PACS/DICOMweb.
-- **Mọi truy cập nhạy cảm cần kiểm toán.** Bệnh án là dữ liệu đặc biệt nhạy cảm, không thể thiếu audit trail.
+- **Mọi truy cập nhạy cảm cần kiểm toán và kiểm tra toàn vẹn.** Bệnh án là dữ liệu đặc biệt nhạy cảm, không thể thiếu audit trail. Mỗi `AuditEvent` mới được niêm phong bằng `sha256` theo chuỗi băm để phát hiện sửa/xóa log ở mức prototype; triển khai thật vẫn cần cơ chế lưu trữ bất biến, chính sách giữ log và giám sát độc lập.
 
 ## Lược đồ dữ liệu nền tảng
 
@@ -119,7 +119,7 @@ Phiên bản hiện tại tạo các bảng tối thiểu:
 - `consents`: consent chia sẻ hồ sơ theo bệnh nhân, đơn vị nhận, trạng thái và thời hạn hiệu lực.
 - `record_transfers`: gói chuyển hồ sơ liên viện, gồm trạng thái vận hành, FHIR Bundle đích, cơ sở gửi/nhận, consent, lý do chuyển và người tạo yêu cầu.
 - `provider_directory_resources`: danh bạ cơ sở y tế/khoa phòng, nhân sự, vai trò nhân sự và endpoint liên thông; lưu snapshot JSONB để prototype có thể đồng bộ nhanh nhiều loại FHIR resource.
-- `audit_events`: nhật ký thao tác theo thời gian, tài nguyên, bệnh nhân và mục đích sử dụng.
+- `audit_events`: nhật ký thao tác theo thời gian, tài nguyên, bệnh nhân, mục đích sử dụng và chuỗi băm toàn vẹn (`hash_algorithm`, `previous_hash`, `payload_hash`, `integrity_hash`).
 - `schema_migrations`: quản lý migration đã áp dụng.
 
 ## Luồng mở rộng dự kiến

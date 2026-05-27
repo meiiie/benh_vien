@@ -779,7 +779,8 @@ type AuditAction =
   | "clinical-document.fhir-export"
   | "consent.list"
   | "consent.create"
-  | "audit-event.list";
+  | "audit-event.list"
+  | "audit-event.integrity-verify";
 
 type AuditResourceType =
   | "Patient"
@@ -813,6 +814,24 @@ type AuditEvent = {
   readonly ipAddress?: string;
   readonly userAgent?: string;
   readonly metadata: Record<string, unknown>;
+  readonly hashAlgorithm?: "sha256";
+  readonly previousHash?: string;
+  readonly payloadHash?: string;
+  readonly integrityHash?: string;
+};
+
+type AuditIntegrityStatus = "verified" | "unsealed" | "broken";
+
+type AuditIntegrityReport = {
+  readonly patientId: string;
+  readonly checkedAt: string;
+  readonly status: AuditIntegrityStatus;
+  readonly verified: boolean;
+  readonly totalEvents: number;
+  readonly sealedEvents: number;
+  readonly latestHash?: string;
+  readonly brokenAtEventId?: string;
+  readonly brokenReason?: string;
 };
 
 type Consent = {
@@ -908,6 +927,8 @@ type ImagingStudiesResponse = {
 type AuditEventsResponse = {
   readonly items: readonly AuditEvent[];
 };
+
+type AuditIntegrityReportResponse = AuditIntegrityReport;
 
 type ConsentsResponse = {
   readonly items: readonly Consent[];
@@ -1541,6 +1562,8 @@ export function App() {
   const [imagingStudies, setImagingStudies] = useState<readonly ImagingStudy[]>([]);
   const [selectedImagingStudyId, setSelectedImagingStudyId] = useState<string>();
   const [auditEvents, setAuditEvents] = useState<readonly AuditEvent[]>([]);
+  const [auditIntegrityReport, setAuditIntegrityReport] =
+    useState<AuditIntegrityReport>();
   const [consents, setConsents] = useState<readonly Consent[]>([]);
   const [recordTransfers, setRecordTransfers] = useState<readonly RecordTransfer[]>([]);
   const [selectedRecordTransferId, setSelectedRecordTransferId] = useState<string>();
@@ -1610,6 +1633,7 @@ export function App() {
   const [isLoadingDiagnosticReports, setIsLoadingDiagnosticReports] = useState(false);
   const [isLoadingImagingStudies, setIsLoadingImagingStudies] = useState(false);
   const [isLoadingAuditEvents, setIsLoadingAuditEvents] = useState(false);
+  const [isVerifyingAuditIntegrity, setIsVerifyingAuditIntegrity] = useState(false);
   const [isLoadingConsents, setIsLoadingConsents] = useState(false);
   const [isLoadingRecordTransfers, setIsLoadingRecordTransfers] = useState(false);
   const [isLoadingProviderDirectory, setIsLoadingProviderDirectory] = useState(false);
@@ -1752,6 +1776,7 @@ export function App() {
       setDiagnosticReports([]);
       setImagingStudies([]);
       setAuditEvents([]);
+      setAuditIntegrityReport(undefined);
       setConsents([]);
       setRecordTransfers([]);
       setSelectedEncounterId(undefined);
@@ -2026,6 +2051,7 @@ export function App() {
       workspaceTasks.push(loadAuditEvents(patientId, { silent: true }));
     } else {
       setAuditEvents([]);
+      setAuditIntegrityReport(undefined);
     }
 
     await Promise.all(workspaceTasks);
@@ -2426,6 +2452,7 @@ export function App() {
   async function loadAuditEvents(patientId: string, options: { readonly silent?: boolean } = {}) {
     if (!canReadAudit) {
       setAuditEvents([]);
+      setAuditIntegrityReport(undefined);
 
       if (!options.silent) {
         setStatusMessage("Nhật ký kiểm toán chỉ mở cho vai trò kiểm toán hoặc quản trị.");
@@ -2456,6 +2483,53 @@ export function App() {
       );
     } finally {
       setIsLoadingAuditEvents(false);
+    }
+  }
+
+  async function verifyAuditIntegrity(
+    patientId: string,
+    options: { readonly silent?: boolean } = {}
+  ) {
+    if (!canReadAudit) {
+      setAuditIntegrityReport(undefined);
+
+      if (!options.silent) {
+        setStatusMessage("Kiểm tra toàn vẹn audit chỉ mở cho vai trò kiểm toán hoặc quản trị.");
+      }
+
+      return;
+    }
+
+    setIsVerifyingAuditIntegrity(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/audit-integrity`, {
+        headers: buildHeaders("AUDIT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      const data = (await response.json()) as AuditIntegrityReportResponse;
+      setAuditIntegrityReport(data);
+
+      if (!options.silent) {
+        setStatusMessage(
+          data.verified
+            ? "Chuỗi audit đã được xác minh toàn vẹn."
+            : `Chuỗi audit cần kiểm tra: ${formatAuditIntegrityReason(data.brokenReason)}.`
+        );
+      }
+    } catch (error) {
+      setAuditIntegrityReport(undefined);
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể kiểm tra toàn vẹn audit: ${error.message}`
+          : "Không thể kiểm tra toàn vẹn audit."
+      );
+    } finally {
+      setIsVerifyingAuditIntegrity(false);
     }
   }
 
@@ -2955,6 +3029,7 @@ export function App() {
     setDiagnosticReports([]);
     setImagingStudies([]);
     setAuditEvents([]);
+    setAuditIntegrityReport(undefined);
     setConsents([]);
     setProviderDirectory(undefined);
     setPatientFhirPreview(undefined);
@@ -7775,15 +7850,54 @@ export function App() {
             <p className="eyebrow">Security trace</p>
             <h2>Nhật ký kiểm toán</h2>
           </div>
-          <button
-            className="ghost-button"
-            type="button"
-            disabled={!selectedPatient || isLoadingAuditEvents || !canReadAudit}
-            onClick={() => selectedPatient && void loadAuditEvents(selectedPatient.id)}
-          >
-            {isLoadingAuditEvents ? "Đang tải..." : canReadAudit ? "Tải audit" : "Cần quyền kiểm toán"}
-          </button>
+          <div className="panel-actions">
+            <button
+              className="ghost-button"
+              type="button"
+              disabled={!selectedPatient || isLoadingAuditEvents || !canReadAudit}
+              onClick={() => selectedPatient && void loadAuditEvents(selectedPatient.id)}
+            >
+              {isLoadingAuditEvents ? "Đang tải..." : canReadAudit ? "Tải audit" : "Cần quyền kiểm toán"}
+            </button>
+            <button
+              className="ghost-button"
+              type="button"
+              disabled={!selectedPatient || isVerifyingAuditIntegrity || !canReadAudit}
+              onClick={() => selectedPatient && void verifyAuditIntegrity(selectedPatient.id)}
+            >
+              {isVerifyingAuditIntegrity ? "Đang xác minh..." : "Kiểm tra toàn vẹn"}
+            </button>
+          </div>
         </div>
+
+        {auditIntegrityReport ? (
+          <div className={`integrity-card integrity-card--${auditIntegrityReport.status}`}>
+            <div>
+              <span>Trạng thái chuỗi băm</span>
+              <strong>{formatAuditIntegrityStatus(auditIntegrityReport.status)}</strong>
+            </div>
+            <div>
+              <span>Số bản ghi đã kiểm</span>
+              <strong>
+                {auditIntegrityReport.sealedEvents}/{auditIntegrityReport.totalEvents}
+              </strong>
+            </div>
+            <div>
+              <span>Lần kiểm tra</span>
+              <strong>{formatDateTime(auditIntegrityReport.checkedAt)}</strong>
+            </div>
+            <div>
+              <span>Hash mới nhất</span>
+              <strong className="hash-text">{auditIntegrityReport.latestHash ?? "Chưa có"}</strong>
+            </div>
+            {auditIntegrityReport.verified ? null : (
+              <p>
+                Điểm cần kiểm tra: {auditIntegrityReport.brokenAtEventId ?? "không xác định"} ·{" "}
+                {formatAuditIntegrityReason(auditIntegrityReport.brokenReason)}
+              </p>
+            )}
+          </div>
+        ) : null}
 
         <div className="audit-list">
           {auditEvents.map((event) => (
@@ -7808,6 +7922,10 @@ export function App() {
                   {event.purposeOfUse ?? "Chưa khai báo"}
                   {typeof event.metadata.actorRole === "string" ? ` · ${event.metadata.actorRole}` : ""}
                 </strong>
+              </div>
+              <div>
+                <span>Toàn vẹn</span>
+                <strong>{event.integrityHash ? "Đã niêm phong" : "Chưa niêm phong"}</strong>
               </div>
             </div>
           ))}
@@ -8317,10 +8435,32 @@ function formatAuditAction(action: AuditAction): string {
     "clinical-document.fhir-export": "Xuất FHIR DocumentReference",
     "consent.list": "Tải đồng ý chia sẻ hồ sơ",
     "consent.create": "Tạo đồng ý chia sẻ hồ sơ",
-    "audit-event.list": "Xem nhật ký kiểm toán"
+    "audit-event.list": "Xem nhật ký kiểm toán",
+    "audit-event.integrity-verify": "Kiểm tra toàn vẹn audit"
   };
 
   return labels[action];
+}
+
+function formatAuditIntegrityStatus(status: AuditIntegrityStatus): string {
+  const labels: Record<AuditIntegrityStatus, string> = {
+    broken: "Phát hiện sai lệch",
+    unsealed: "Có bản ghi chưa niêm phong",
+    verified: "Đã xác minh"
+  };
+
+  return labels[status];
+}
+
+function formatAuditIntegrityReason(reason: string | undefined): string {
+  const labels: Record<string, string> = {
+    EVENT_NOT_SEALED: "bản ghi chưa có chuỗi băm",
+    INTEGRITY_HASH_MISMATCH: "hash chuỗi không khớp",
+    PAYLOAD_HASH_MISMATCH: "nội dung audit đã thay đổi",
+    PREVIOUS_HASH_MISMATCH: "liên kết với bản ghi trước không khớp"
+  };
+
+  return reason ? labels[reason] ?? reason : "chưa rõ nguyên nhân";
 }
 
 function formatAuditResourceType(resourceType: AuditResourceType): string {

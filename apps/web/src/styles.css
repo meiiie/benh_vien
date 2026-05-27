@@ -148,6 +148,13 @@ h2 {
   padding-bottom: 14px;
 }
 
+.panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .ghost-button,
 .primary-button {
   min-height: 40px;
@@ -955,9 +962,61 @@ select:focus {
   justify-content: flex-end;
 }
 
+.integrity-card {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-left: 4px solid #64748b;
+  border-radius: 8px;
+  padding: 14px;
+  background: #f8fafc;
+}
+
+.integrity-card--verified {
+  border-left-color: #0f766e;
+  background: #f0fdfa;
+}
+
+.integrity-card--unsealed {
+  border-left-color: #b45309;
+  background: #fffbeb;
+}
+
+.integrity-card--broken {
+  border-left-color: #b91c1c;
+  background: #fef2f2;
+}
+
+.integrity-card span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.integrity-card strong,
+.integrity-card p {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--harbor-ink);
+  font-size: 0.875rem;
+  line-height: 1.35;
+}
+
+.integrity-card p {
+  grid-column: 1 / -1;
+}
+
+.hash-text {
+  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
 .audit-item {
   display: grid;
-  grid-template-columns: minmax(180px, 0.8fr) minmax(140px, 0.6fr) minmax(260px, 1fr) minmax(120px, 0.5fr);
+  grid-template-columns: minmax(180px, 0.8fr) minmax(140px, 0.6fr) minmax(260px, 1fr) minmax(120px, 0.5fr) minmax(120px, 0.5fr);
   gap: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1189,9 +1248,19 @@ pre {
   .document-layout,
   .document-meta,
   .document-form,
+  .integrity-card,
   .audit-item,
   .reference-list {
     grid-template-columns: 1fr;
+  }
+
+  .panel-actions {
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  .panel-actions button {
+    flex: 1 1 180px;
   }
 
   .metric-card {

@@ -809,7 +809,17 @@ curl http://localhost:7310/api/v1/patients/patient-demo-001/audit-events \
   -H "x-purpose-of-use: AUDIT"
 ```
 
-Kết quả mong muốn là danh sách sự kiện có `actorId`, `action`, `resourceType`, `resourceId`, `patientId`, `purposeOfUse` và `occurredAt`.
+Kết quả mong muốn là danh sách sự kiện có `actorId`, `action`, `resourceType`, `resourceId`, `patientId`, `purposeOfUse`, `occurredAt`, `payloadHash` và `integrityHash`.
+
+## Kiểm tra toàn vẹn chuỗi audit
+
+```bash
+curl http://localhost:7310/api/v1/patients/patient-demo-001/audit-integrity \
+  -H "Authorization: Bearer $AUDIT_TOKEN" \
+  -H "x-purpose-of-use: AUDIT"
+```
+
+Kết quả mong muốn là JSON có `status = verified`, `verified = true`, số bản ghi đã kiểm và `latestHash`. Nếu có bản ghi cũ chưa được niêm phong hoặc nội dung log bị thay đổi, API trả `status = unsealed` hoặc `status = broken` kèm `brokenAtEventId` và `brokenReason`. Đây là lớp phát hiện sai lệch ở prototype, chưa thay thế ký số, WORM storage hoặc cơ chế audit bất biến ở hạ tầng thật.
 
 ## Kiểm tra chặn quyền RBAC
 

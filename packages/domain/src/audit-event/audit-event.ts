@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { DomainError } from "../shared/domain-error.js";
 
 export type AuditAction =
@@ -68,7 +69,8 @@ export type AuditAction =
   | "clinical-document.fhir-export"
   | "consent.list"
   | "consent.create"
-  | "audit-event.list";
+  | "audit-event.list"
+  | "audit-event.integrity-verify";
 
 export type AuditResourceType =
   | "Patient"
@@ -102,10 +104,31 @@ export type AuditEventSnapshot = {
   readonly ipAddress?: string;
   readonly userAgent?: string;
   readonly metadata: Record<string, unknown>;
+  readonly hashAlgorithm?: "sha256";
+  readonly previousHash?: string;
+  readonly payloadHash?: string;
+  readonly integrityHash?: string;
 };
 
-export type RecordAuditEventInput = Omit<AuditEventSnapshot, "occurredAt"> & {
+export type RecordAuditEventInput = Omit<
+  AuditEventSnapshot,
+  "occurredAt" | "hashAlgorithm" | "previousHash" | "payloadHash" | "integrityHash"
+> & {
   readonly occurredAt?: Date;
+};
+
+export type AuditIntegrityStatus = "verified" | "unsealed" | "broken";
+
+export type AuditIntegrityReport = {
+  readonly patientId: string;
+  readonly checkedAt: string;
+  readonly status: AuditIntegrityStatus;
+  readonly verified: boolean;
+  readonly totalEvents: number;
+  readonly sealedEvents: number;
+  readonly latestHash?: string;
+  readonly brokenAtEventId?: string;
+  readonly brokenReason?: string;
 };
 
 type AuditEventProps = {
@@ -120,6 +143,10 @@ type AuditEventProps = {
   ipAddress?: string;
   userAgent?: string;
   metadata: Record<string, unknown>;
+  hashAlgorithm?: "sha256";
+  previousHash?: string;
+  payloadHash?: string;
+  integrityHash?: string;
 };
 
 export class AuditEvent {
@@ -156,7 +183,11 @@ export class AuditEvent {
       purposeOfUse: snapshot.purposeOfUse,
       ipAddress: snapshot.ipAddress,
       userAgent: snapshot.userAgent,
-      metadata: snapshot.metadata
+      metadata: snapshot.metadata,
+      hashAlgorithm: snapshot.hashAlgorithm,
+      previousHash: snapshot.previousHash,
+      payloadHash: snapshot.payloadHash,
+      integrityHash: snapshot.integrityHash
     });
   }
 
@@ -180,9 +211,164 @@ export class AuditEvent {
       purposeOfUse: this.props.purposeOfUse,
       ipAddress: this.props.ipAddress,
       userAgent: this.props.userAgent,
-      metadata: { ...this.props.metadata }
+      metadata: { ...this.props.metadata },
+      hashAlgorithm: this.props.hashAlgorithm,
+      previousHash: this.props.previousHash,
+      payloadHash: this.props.payloadHash,
+      integrityHash: this.props.integrityHash
     };
   }
+}
+
+export function sealAuditEvent(event: AuditEvent, previousHash?: string): AuditEvent {
+  const snapshot = event.toSnapshot();
+  const payloadHash = hashAuditPayload(snapshot);
+  const integrityHash = hashCanonical({
+    algorithm: "sha256",
+    payloadHash,
+    previousHash: previousHash ?? null
+  });
+
+  return AuditEvent.rehydrate({
+    ...snapshot,
+    hashAlgorithm: "sha256",
+    previousHash,
+    payloadHash,
+    integrityHash
+  });
+}
+
+export function buildAuditIntegrityReport(
+  patientId: string,
+  events: readonly AuditEvent[],
+  checkedAt = new Date()
+): AuditIntegrityReport {
+  let expectedPreviousHash: string | undefined;
+  let sealedEvents = 0;
+
+  for (const event of events) {
+    const snapshot = event.toSnapshot();
+    const eventId = snapshot.id ?? `${snapshot.occurredAt}:${snapshot.action}`;
+
+    if (
+      snapshot.hashAlgorithm !== "sha256" ||
+      !snapshot.payloadHash ||
+      !snapshot.integrityHash
+    ) {
+      return {
+        patientId,
+        checkedAt: checkedAt.toISOString(),
+        status: "unsealed",
+        verified: false,
+        totalEvents: events.length,
+        sealedEvents,
+        latestHash: expectedPreviousHash,
+        brokenAtEventId: eventId,
+        brokenReason: "EVENT_NOT_SEALED"
+      };
+    }
+
+    if (snapshot.previousHash !== expectedPreviousHash) {
+      return {
+        patientId,
+        checkedAt: checkedAt.toISOString(),
+        status: "broken",
+        verified: false,
+        totalEvents: events.length,
+        sealedEvents,
+        latestHash: expectedPreviousHash,
+        brokenAtEventId: eventId,
+        brokenReason: "PREVIOUS_HASH_MISMATCH"
+      };
+    }
+
+    const expectedPayloadHash = hashAuditPayload(snapshot);
+
+    if (snapshot.payloadHash !== expectedPayloadHash) {
+      return {
+        patientId,
+        checkedAt: checkedAt.toISOString(),
+        status: "broken",
+        verified: false,
+        totalEvents: events.length,
+        sealedEvents,
+        latestHash: expectedPreviousHash,
+        brokenAtEventId: eventId,
+        brokenReason: "PAYLOAD_HASH_MISMATCH"
+      };
+    }
+
+    const expectedIntegrityHash = hashCanonical({
+      algorithm: "sha256",
+      payloadHash: snapshot.payloadHash,
+      previousHash: snapshot.previousHash ?? null
+    });
+
+    if (snapshot.integrityHash !== expectedIntegrityHash) {
+      return {
+        patientId,
+        checkedAt: checkedAt.toISOString(),
+        status: "broken",
+        verified: false,
+        totalEvents: events.length,
+        sealedEvents,
+        latestHash: expectedPreviousHash,
+        brokenAtEventId: eventId,
+        brokenReason: "INTEGRITY_HASH_MISMATCH"
+      };
+    }
+
+    sealedEvents += 1;
+    expectedPreviousHash = snapshot.integrityHash;
+  }
+
+  return {
+    patientId,
+    checkedAt: checkedAt.toISOString(),
+    status: "verified",
+    verified: true,
+    totalEvents: events.length,
+    sealedEvents,
+    latestHash: expectedPreviousHash
+  };
+}
+
+function hashAuditPayload(snapshot: AuditEventSnapshot): string {
+  return hashCanonical({
+    id: snapshot.id ?? null,
+    occurredAt: snapshot.occurredAt,
+    actorId: snapshot.actorId,
+    action: snapshot.action,
+    resourceType: snapshot.resourceType,
+    resourceId: snapshot.resourceId,
+    patientId: snapshot.patientId ?? null,
+    purposeOfUse: snapshot.purposeOfUse ?? null,
+    ipAddress: snapshot.ipAddress ?? null,
+    userAgent: snapshot.userAgent ?? null,
+    metadata: snapshot.metadata
+  });
+}
+
+function hashCanonical(value: unknown): string {
+  return createHash("sha256").update(canonicalize(value)).digest("hex");
+}
+
+function canonicalize(value: unknown): string {
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => canonicalize(item)).join(",")}]`;
+  }
+
+  const entries = Object.entries(value as Record<string, unknown>)
+    .filter(([, item]) => item !== undefined)
+    .sort(([left], [right]) => left.localeCompare(right));
+
+  return `{${entries
+    .map(([key, item]) => `${JSON.stringify(key)}:${canonicalize(item)}`)
+    .join(",")}}`;
 }
 
 function normalizeRequired(value: string, message: string): string {
