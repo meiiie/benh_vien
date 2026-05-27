@@ -165,13 +165,86 @@ describe("API auth and RBAC boundary", () => {
       expect.arrayContaining([
         "Patient",
         "Encounter",
+        "AllergyIntolerance",
         "Condition",
         "Observation",
         "MedicationRequest",
         "DocumentReference"
       ])
     );
-    expect(body.entry).toHaveLength(12);
+    expect(body.entry).toHaveLength(14);
+  });
+
+  it("lists allergy intolerances and exports them as FHIR AllergyIntolerance", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const listResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/allergy-intolerances",
+      headers: treatmentHeaders(accessToken)
+    });
+    const listBody = listResponse.json();
+
+    expect(listResponse.statusCode).toBe(200);
+    expect(listBody.items).toHaveLength(2);
+
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: `/api/v1/allergy-intolerances/${listBody.items[0].id}/fhir`,
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(fhirResponse.statusCode).toBe(200);
+    expect(fhirResponse.json()).toMatchObject({
+      resourceType: "AllergyIntolerance",
+      patient: {
+        reference: "Patient/patient-demo-001"
+      }
+    });
+  });
+
+  it("creates an allergy intolerance attached to the selected patient encounter", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/allergy-intolerances",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: "encounter-demo-002",
+        type: "allergy",
+        category: "medication",
+        criticality: "high",
+        code: {
+          system: "http://snomed.info/sct",
+          code: "91936005",
+          display: "Allergy to penicillin"
+        },
+        reaction: {
+          manifestation: {
+            system: "http://snomed.info/sct",
+            code: "271807003",
+            display: "Skin rash"
+          },
+          severity: "moderate"
+        },
+        recorderPractitionerId: "practitioner-demo-001",
+        note: "Cảnh báo dị ứng thử nghiệm trong API test."
+      }
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({
+      patientId: "patient-demo-001",
+      encounterId: "encounter-demo-002",
+      category: "medication",
+      type: "allergy"
+    });
   });
 
   it("lists conditions and exports them as FHIR Condition", async () => {

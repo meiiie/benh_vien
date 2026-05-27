@@ -35,11 +35,11 @@ migrations/ SQL migration cho PostgreSQL
 
 - `Landing`: giới thiệu WiiiCare Nexus, định vị EMR/FHIR và điều hướng vào phiên demo.
 - `Login`: đăng nhập demo phát Bearer token nội bộ cho vai trò bác sĩ, điều dưỡng, kiểm toán hoặc quản trị; đây chưa phải IAM/SSO sản xuất.
-- `Dashboard`: tổng quan số hồ sơ, lượt khám đang mở, chẩn đoán/vấn đề sức khỏe, chỉ định thuốc, tài liệu nháp và hàng chờ thao tác.
-- `Patient Workspace`: chọn bệnh nhân, xem định danh, mở/kết thúc lượt khám, ghi nhận chẩn đoán, chỉ số sinh hiệu/xét nghiệm, chỉ định thuốc, tạo tài liệu và xem FHIR theo hồ sơ.
+- `Dashboard`: tổng quan số hồ sơ, lượt khám đang mở, dị ứng/cảnh báo, chẩn đoán/vấn đề sức khỏe, chỉ định thuốc, tài liệu nháp và hàng chờ thao tác.
+- `Patient Workspace`: chọn bệnh nhân, xem định danh, mở/kết thúc lượt khám, ghi nhận dị ứng/cảnh báo, chẩn đoán, chỉ số sinh hiệu/xét nghiệm, chỉ định thuốc, tạo tài liệu và xem FHIR theo hồ sơ.
 - `Documents`: quản lý tài liệu bệnh án theo nhóm CCD/CCDA/CCR, lab report, medical record và referral.
 - `Audit`: xem nhật ký thao tác nhạy cảm theo bệnh nhân, actor, mục đích sử dụng và tài nguyên.
-- `Interop`: kiểm tra FHIR `Patient`, `Encounter`, `Condition`, `Observation`, `MedicationRequest`, `DocumentReference`, `Bundle` và các hướng mở sang HIS/LIS/PACS.
+- `Interop`: kiểm tra FHIR `Patient`, `Encounter`, `AllergyIntolerance`, `Condition`, `Observation`, `MedicationRequest`, `DocumentReference`, `Bundle` và các hướng mở sang HIS/LIS/PACS.
 - `Settings`: mô tả quyền demo, cấu hình vận hành và các việc cần thay bằng bảo mật thật khi lên production.
 
 ## Ảnh kiểm thử giao diện
@@ -79,7 +79,7 @@ Chi tiết xem [docs/runbooks/DOCKER.md](docs/runbooks/DOCKER.md).
 
 ## Backend và cơ sở dữ liệu
 
-Backend hiện dùng Fastify + TypeScript. Trong Docker, API chạy với `BVS_REPOSITORY=postgres`, migration service tạo schema PostgreSQL trước khi API khởi động. Các bảng nền tảng gồm `patients`, `encounters`, `conditions`, `observations`, `medication_requests`, `clinical_documents`, `consents`, `audit_events` và `schema_migrations`.
+Backend hiện dùng Fastify + TypeScript. Trong Docker, API chạy với `BVS_REPOSITORY=postgres`, migration service tạo schema PostgreSQL trước khi API khởi động. Các bảng nền tảng gồm `patients`, `encounters`, `allergy_intolerances`, `conditions`, `observations`, `medication_requests`, `clinical_documents`, `consents`, `audit_events` và `schema_migrations`.
 
 Khi chạy local không Docker, có thể dùng in-memory repository để phát triển nhanh; khi cần kiểm chứng sát thực tế, dùng Docker dev/prod để chạy PostgreSQL.
 
@@ -102,12 +102,13 @@ Chi tiết version xem [VERSIONING.md](VERSIONING.md).
 - Quản lý lượt khám/đợt điều trị tối thiểu để tài liệu bệnh án có ngữ cảnh lâm sàng.
 - Xuất biểu diễn bệnh nhân sang FHIR `Patient`.
 - Xuất lượt khám sang FHIR `Encounter`.
+- Quản lý dị ứng/cảnh báo an toàn lâm sàng và xuất sang FHIR `AllergyIntolerance`.
 - Quản lý chẩn đoán/vấn đề sức khỏe có cấu trúc và xuất sang FHIR `Condition`.
 - Quản lý chỉ số sinh hiệu/xét nghiệm có cấu trúc và xuất sang FHIR `Observation`.
 - Quản lý chỉ định thuốc/đơn thuốc tối thiểu và xuất sang FHIR `MedicationRequest`.
 - Quản lý tài liệu bệnh án tối thiểu: tạo bản nháp, ký tài liệu và xuất metadata sang FHIR `DocumentReference`.
 - Quản lý consent chia sẻ hồ sơ tối thiểu, gồm lưu consent theo bệnh nhân, đơn vị nhận và thời hạn hiệu lực.
-- Xuất gói hồ sơ bệnh nhân sang FHIR `Bundle` dạng `collection` gồm Patient, Encounter, Condition, Observation, MedicationRequest và DocumentReference; API chỉ cho xuất khi consent còn hiệu lực và khớp đơn vị nhận.
+- Xuất gói hồ sơ bệnh nhân sang FHIR `Bundle` dạng `collection` gồm Patient, Encounter, AllergyIntolerance, Condition, Observation, MedicationRequest và DocumentReference; API chỉ cho xuất khi consent còn hiệu lực và khớp đơn vị nhận.
 - Ghi nhật ký kiểm toán tối thiểu cho các thao tác xem/tạo/ký/xuất dữ liệu nhạy cảm.
 - Chặn quyền tối thiểu ở API theo vai trò demo `clinician`, `nurse`, `auditor`, `admin`.
 - Chuẩn bị đường mở rộng sang hồ sơ lâm sàng, hình ảnh y khoa và liên thông bệnh viện.

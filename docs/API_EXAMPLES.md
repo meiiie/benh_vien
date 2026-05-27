@@ -1,6 +1,6 @@
 # Ví dụ API
 
-API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `Patient`, `Encounter`, `Condition`, `Observation`, `MedicationRequest`, `ClinicalDocument`, `Consent`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
+API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `Patient`, `Encounter`, `AllergyIntolerance`, `Condition`, `Observation`, `MedicationRequest`, `ClinicalDocument`, `Consent`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
 
 ## Kiểm tra sức khỏe API
 
@@ -125,7 +125,7 @@ curl http://localhost:7310/api/v1/patients/patient-demo-001/fhir-bundle \
   -H "x-recipient-organization-id: hospital-hai-phong-referral"
 ```
 
-Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các `Encounter`, các `Condition`, các `Observation`, các `MedicationRequest` và các `DocumentReference` của bệnh nhân. Endpoint này không chỉ kiểm header: `x-consent-reference` phải trỏ tới một consent đang hiệu lực, đúng bệnh nhân và đúng `x-recipient-organization-id`.
+Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các `Encounter`, các `AllergyIntolerance`, các `Condition`, các `Observation`, các `MedicationRequest` và các `DocumentReference` của bệnh nhân. Endpoint này không chỉ kiểm header: `x-consent-reference` phải trỏ tới một consent đang hiệu lực, đúng bệnh nhân và đúng `x-recipient-organization-id`.
 
 ## Lấy và mở lượt khám
 
@@ -201,6 +201,50 @@ curl http://localhost:7310/api/v1/conditions/condition-demo-001/fhir \
 ```
 
 Kết quả mong muốn là JSON có `resourceType` bằng `Condition`, có `subject`, `encounter` nếu được gắn lượt khám, `clinicalStatus`, `verificationStatus`, `category`, `code`, `recordedDate` và `recorder`.
+
+## Lấy, tạo và xuất dị ứng sang FHIR AllergyIntolerance
+
+```bash
+curl http://localhost:7310/api/v1/patients/patient-demo-001/allergy-intolerances \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+```bash
+curl -X POST http://localhost:7310/api/v1/patients/patient-demo-001/allergy-intolerances \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "encounterId": "encounter-demo-002",
+    "type": "allergy",
+    "category": "medication",
+    "criticality": "high",
+    "code": {
+      "system": "http://snomed.info/sct",
+      "code": "91936005",
+      "display": "Allergy to penicillin"
+    },
+    "reaction": {
+      "manifestation": {
+        "system": "http://snomed.info/sct",
+        "code": "271807003",
+        "display": "Skin rash"
+      },
+      "severity": "moderate"
+    },
+    "recorderPractitionerId": "practitioner-demo-001",
+    "note": "Cảnh báo dị ứng cần xem trước khi kê thuốc."
+  }'
+```
+
+```bash
+curl http://localhost:7310/api/v1/allergy-intolerances/allergy-intolerance-demo-001/fhir \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+Kết quả mong muốn là JSON có `resourceType` bằng `AllergyIntolerance`, có `patient`, `clinicalStatus`, `verificationStatus`, `type`, `category`, `criticality`, `code`, `reaction`, `recordedDate` và `recorder`.
 
 ## Lấy, tạo và xuất chỉ số sang FHIR Observation
 

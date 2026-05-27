@@ -42,6 +42,12 @@ type ConditionVerificationStatus =
   | "entered-in-error";
 type ConditionCategory = "problem-list-item" | "encounter-diagnosis";
 type ConditionSeverity = "mild" | "moderate" | "severe";
+type AllergyClinicalStatus = "active" | "inactive" | "resolved";
+type AllergyVerificationStatus = "unconfirmed" | "confirmed" | "refuted" | "entered-in-error";
+type AllergyType = "allergy" | "intolerance";
+type AllergyCategory = "food" | "medication" | "environment" | "biologic";
+type AllergyCriticality = "low" | "high" | "unable-to-assess";
+type AllergyReactionSeverity = "mild" | "moderate" | "severe";
 type ObservationStatus =
   | "registered"
   | "preliminary"
@@ -137,6 +143,36 @@ type ConditionCode = {
   readonly display: string;
 };
 
+type AllergyCode = {
+  readonly system: string;
+  readonly code: string;
+  readonly display: string;
+};
+
+type AllergyReaction = {
+  readonly manifestation: AllergyCode;
+  readonly severity?: AllergyReactionSeverity;
+  readonly description?: string;
+};
+
+type AllergyIntolerance = {
+  readonly id: string;
+  readonly patientId: string;
+  readonly encounterId?: string;
+  readonly clinicalStatus: AllergyClinicalStatus;
+  readonly verificationStatus: AllergyVerificationStatus;
+  readonly type: AllergyType;
+  readonly category: AllergyCategory;
+  readonly criticality?: AllergyCriticality;
+  readonly code: AllergyCode;
+  readonly reaction?: AllergyReaction;
+  readonly recordedAt: string;
+  readonly recorderPractitionerId: string;
+  readonly note?: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
 type Condition = {
   readonly id: string;
   readonly patientId: string;
@@ -228,6 +264,10 @@ type AuditAction =
   | "encounter.read"
   | "encounter.finish"
   | "encounter.fhir-export"
+  | "allergy-intolerance.list"
+  | "allergy-intolerance.create"
+  | "allergy-intolerance.read"
+  | "allergy-intolerance.fhir-export"
   | "condition.list"
   | "condition.create"
   | "condition.read"
@@ -251,6 +291,7 @@ type AuditAction =
 type AuditResourceType =
   | "Patient"
   | "Encounter"
+  | "AllergyIntolerance"
   | "Condition"
   | "MedicationRequest"
   | "Observation"
@@ -300,6 +341,10 @@ type ClinicalDocumentsResponse = {
 
 type ConditionsResponse = {
   readonly items: readonly Condition[];
+};
+
+type AllergyIntolerancesResponse = {
+  readonly items: readonly AllergyIntolerance[];
 };
 
 type ObservationsResponse = {
@@ -356,6 +401,26 @@ type NewConditionForm = {
   codeDisplay: string;
   severity: "" | ConditionSeverity;
   onsetAt: string;
+  recorderPractitionerId: string;
+  note: string;
+};
+
+type NewAllergyIntoleranceForm = {
+  encounterId: string;
+  type: AllergyType;
+  category: AllergyCategory;
+  clinicalStatus: AllergyClinicalStatus;
+  verificationStatus: AllergyVerificationStatus;
+  criticality: "" | AllergyCriticality;
+  codeSystem: string;
+  code: string;
+  codeDisplay: string;
+  manifestationSystem: string;
+  manifestationCode: string;
+  manifestationDisplay: string;
+  reactionSeverity: "" | AllergyReactionSeverity;
+  reactionDescription: string;
+  recordedAt: string;
   recorderPractitionerId: string;
   note: string;
 };
@@ -453,6 +518,26 @@ const defaultConditionForm: NewConditionForm = {
   note: "Chẩn đoán làm việc trong quá trình khám."
 };
 
+const defaultAllergyIntoleranceForm: NewAllergyIntoleranceForm = {
+  encounterId: "",
+  type: "allergy",
+  category: "medication",
+  clinicalStatus: "active",
+  verificationStatus: "confirmed",
+  criticality: "high",
+  codeSystem: "http://snomed.info/sct",
+  code: "91936005",
+  codeDisplay: "Allergy to penicillin",
+  manifestationSystem: "http://snomed.info/sct",
+  manifestationCode: "271807003",
+  manifestationDisplay: "Skin rash",
+  reactionSeverity: "moderate",
+  reactionDescription: "Phát ban sau khi dùng nhóm penicillin theo khai thác bệnh sử.",
+  recordedAt: "2026-05-27T10:20",
+  recorderPractitionerId: "practitioner-demo-001",
+  note: "Cảnh báo dị ứng cần được xem trước khi kê thuốc."
+};
+
 const defaultObservationForm: NewObservationForm = {
   encounterId: "",
   category: "laboratory",
@@ -523,6 +608,7 @@ const loginPresets: Record<DemoRole, LoginForm> = {
 const workflowSteps = [
   "Tiếp nhận bệnh nhân",
   "Mở lượt khám",
+  "Kiểm tra dị ứng",
   "Ghi nhận chẩn đoán",
   "Ghi nhận chỉ số",
   "Kê đơn/thuốc",
@@ -560,7 +646,7 @@ const referenceSignals = [
   },
   {
     name: "HL7 FHIR R4",
-    value: "Patient, Encounter, Condition, Observation, MedicationRequest và DocumentReference là lõi trao đổi dữ liệu trong lát cắt này."
+    value: "Patient, Encounter, AllergyIntolerance, Condition, Observation, MedicationRequest và DocumentReference là lõi trao đổi dữ liệu trong lát cắt này."
   },
   {
     name: "Bối cảnh Việt Nam",
@@ -584,6 +670,8 @@ export function App() {
   const [selectedEncounterId, setSelectedEncounterId] = useState<string>();
   const [clinicalDocuments, setClinicalDocuments] = useState<readonly ClinicalDocument[]>([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string>();
+  const [allergyIntolerances, setAllergyIntolerances] = useState<readonly AllergyIntolerance[]>([]);
+  const [selectedAllergyIntoleranceId, setSelectedAllergyIntoleranceId] = useState<string>();
   const [conditions, setConditions] = useState<readonly Condition[]>([]);
   const [selectedConditionId, setSelectedConditionId] = useState<string>();
   const [observations, setObservations] = useState<readonly Observation[]>([]);
@@ -596,6 +684,7 @@ export function App() {
   const [patientFhirBundlePreview, setPatientFhirBundlePreview] = useState<unknown>();
   const [encounterFhirPreview, setEncounterFhirPreview] = useState<unknown>();
   const [documentFhirPreview, setDocumentFhirPreview] = useState<unknown>();
+  const [allergyIntoleranceFhirPreview, setAllergyIntoleranceFhirPreview] = useState<unknown>();
   const [conditionFhirPreview, setConditionFhirPreview] = useState<unknown>();
   const [observationFhirPreview, setObservationFhirPreview] = useState<unknown>();
   const [medicationRequestFhirPreview, setMedicationRequestFhirPreview] = useState<unknown>();
@@ -603,6 +692,8 @@ export function App() {
   const [encounterForm, setEncounterForm] = useState<NewEncounterForm>(defaultEncounterForm);
   const [documentForm, setDocumentForm] =
     useState<NewClinicalDocumentForm>(defaultClinicalDocumentForm);
+  const [allergyIntoleranceForm, setAllergyIntoleranceForm] =
+    useState<NewAllergyIntoleranceForm>(defaultAllergyIntoleranceForm);
   const [conditionForm, setConditionForm] =
     useState<NewConditionForm>(defaultConditionForm);
   const [observationForm, setObservationForm] =
@@ -613,6 +704,7 @@ export function App() {
   const [isLoadingPatients, setIsLoadingPatients] = useState(false);
   const [isLoadingEncounters, setIsLoadingEncounters] = useState(false);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const [isLoadingAllergyIntolerances, setIsLoadingAllergyIntolerances] = useState(false);
   const [isLoadingConditions, setIsLoadingConditions] = useState(false);
   const [isLoadingObservations, setIsLoadingObservations] = useState(false);
   const [isLoadingMedicationRequests, setIsLoadingMedicationRequests] = useState(false);
@@ -621,6 +713,7 @@ export function App() {
   const [isSubmittingPatient, setIsSubmittingPatient] = useState(false);
   const [isSubmittingEncounter, setIsSubmittingEncounter] = useState(false);
   const [isSubmittingDocument, setIsSubmittingDocument] = useState(false);
+  const [isSubmittingAllergyIntolerance, setIsSubmittingAllergyIntolerance] = useState(false);
   const [isSubmittingCondition, setIsSubmittingCondition] = useState(false);
   const [isSubmittingObservation, setIsSubmittingObservation] = useState(false);
   const [isSubmittingMedicationRequest, setIsSubmittingMedicationRequest] = useState(false);
@@ -630,6 +723,9 @@ export function App() {
   const selectedPatient = patients.find((patient) => patient.id === selectedPatientId);
   const selectedEncounter = encounters.find((encounter) => encounter.id === selectedEncounterId);
   const selectedDocument = clinicalDocuments.find((document) => document.id === selectedDocumentId);
+  const selectedAllergyIntolerance = allergyIntolerances.find(
+    (allergyIntolerance) => allergyIntolerance.id === selectedAllergyIntoleranceId
+  );
   const selectedCondition = conditions.find((condition) => condition.id === selectedConditionId);
   const selectedObservation = observations.find((observation) => observation.id === selectedObservationId);
   const selectedMedicationRequest = medicationRequests.find(
@@ -637,6 +733,9 @@ export function App() {
   );
   const selectedEncounterDocuments = selectedEncounter
     ? clinicalDocuments.filter((document) => document.encounterId === selectedEncounter.id)
+    : [];
+  const selectedEncounterAllergyIntolerances = selectedEncounter
+    ? allergyIntolerances.filter((allergyIntolerance) => allergyIntolerance.encounterId === selectedEncounter.id)
     : [];
   const selectedEncounterObservations = selectedEncounter
     ? observations.filter((observation) => observation.encounterId === selectedEncounter.id)
@@ -666,11 +765,13 @@ export function App() {
       setPatientFhirBundlePreview(undefined);
       setEncounterFhirPreview(undefined);
       setDocumentFhirPreview(undefined);
+      setAllergyIntoleranceFhirPreview(undefined);
       setConditionFhirPreview(undefined);
       setObservationFhirPreview(undefined);
       setMedicationRequestFhirPreview(undefined);
       setEncounters([]);
       setClinicalDocuments([]);
+      setAllergyIntolerances([]);
       setConditions([]);
       setObservations([]);
       setMedicationRequests([]);
@@ -678,6 +779,7 @@ export function App() {
       setConsents([]);
       setSelectedEncounterId(undefined);
       setSelectedDocumentId(undefined);
+      setSelectedAllergyIntoleranceId(undefined);
       setSelectedConditionId(undefined);
       setSelectedObservationId(undefined);
       setSelectedMedicationRequestId(undefined);
@@ -691,6 +793,7 @@ export function App() {
     if (!selectedEncounterId) {
       setEncounterFhirPreview(undefined);
       setDocumentForm((current) => ({ ...current, encounterId: "" }));
+      setAllergyIntoleranceForm((current) => ({ ...current, encounterId: "" }));
       setConditionForm((current) => ({ ...current, encounterId: "" }));
       setObservationForm((current) => ({ ...current, encounterId: "" }));
       setMedicationRequestForm((current) => ({ ...current, encounterId: "" }));
@@ -698,6 +801,7 @@ export function App() {
     }
 
     setDocumentForm((current) => ({ ...current, encounterId: selectedEncounterId }));
+    setAllergyIntoleranceForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     setConditionForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     setObservationForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     setMedicationRequestForm((current) => ({ ...current, encounterId: selectedEncounterId }));
@@ -721,6 +825,15 @@ export function App() {
 
     void loadConditionFhirPreview(selectedConditionId);
   }, [selectedConditionId]);
+
+  useEffect(() => {
+    if (!selectedAllergyIntoleranceId) {
+      setAllergyIntoleranceFhirPreview(undefined);
+      return;
+    }
+
+    void loadAllergyIntoleranceFhirPreview(selectedAllergyIntoleranceId);
+  }, [selectedAllergyIntoleranceId]);
 
   useEffect(() => {
     if (!selectedObservationId) {
@@ -787,6 +900,7 @@ export function App() {
       loadPatientFhirPreview(patientId),
       loadPatientFhirBundlePreview(patientId),
       loadEncounters(patientId),
+      loadAllergyIntolerances(patientId),
       loadConditions(patientId),
       loadObservations(patientId),
       loadMedicationRequests(patientId),
@@ -856,6 +970,37 @@ export function App() {
       );
     } finally {
       setIsLoadingDocuments(false);
+    }
+  }
+
+  async function loadAllergyIntolerances(
+    patientId: string,
+    nextSelectedAllergyIntoleranceId?: string
+  ) {
+    setIsLoadingAllergyIntolerances(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/allergy-intolerances`, {
+        headers: buildHeaders("TREATMENT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      const data = (await response.json()) as AllergyIntolerancesResponse;
+      setAllergyIntolerances(data.items);
+      setSelectedAllergyIntoleranceId(nextSelectedAllergyIntoleranceId ?? data.items[0]?.id);
+    } catch (error) {
+      setAllergyIntolerances([]);
+      setSelectedAllergyIntoleranceId(undefined);
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể tải dị ứng/cảnh báo: ${error.message}`
+          : "Không thể tải dị ứng/cảnh báo."
+      );
+    } finally {
+      setIsLoadingAllergyIntolerances(false);
     }
   }
 
@@ -1116,6 +1261,27 @@ export function App() {
     }
   }
 
+  async function loadAllergyIntoleranceFhirPreview(allergyIntoleranceId: string) {
+    try {
+      const response = await fetch(`${apiBaseUrl}/allergy-intolerances/${allergyIntoleranceId}/fhir`, {
+        headers: buildHeaders("TREATMENT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      setAllergyIntoleranceFhirPreview(await response.json());
+    } catch (error) {
+      setAllergyIntoleranceFhirPreview({
+        error:
+          error instanceof Error
+            ? `Không thể xuất FHIR AllergyIntolerance: ${error.message}`
+            : "Không thể xuất FHIR AllergyIntolerance."
+      });
+    }
+  }
+
   async function loadObservationFhirPreview(observationId: string) {
     try {
       const response = await fetch(`${apiBaseUrl}/observations/${observationId}/fhir`, {
@@ -1212,6 +1378,7 @@ export function App() {
     setPatients([]);
     setEncounters([]);
     setClinicalDocuments([]);
+    setAllergyIntolerances([]);
     setConditions([]);
     setObservations([]);
     setMedicationRequests([]);
@@ -1221,12 +1388,14 @@ export function App() {
     setPatientFhirBundlePreview(undefined);
     setEncounterFhirPreview(undefined);
     setDocumentFhirPreview(undefined);
+    setAllergyIntoleranceFhirPreview(undefined);
     setConditionFhirPreview(undefined);
     setObservationFhirPreview(undefined);
     setMedicationRequestFhirPreview(undefined);
     setSelectedPatientId(undefined);
     setSelectedEncounterId(undefined);
     setSelectedDocumentId(undefined);
+    setSelectedAllergyIntoleranceId(undefined);
     setSelectedConditionId(undefined);
     setSelectedObservationId(undefined);
     setSelectedMedicationRequestId(undefined);
@@ -1364,6 +1533,82 @@ export function App() {
       );
     } finally {
       setIsFinishingEncounter(false);
+    }
+  }
+
+  async function handleCreateAllergyIntolerance(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedPatient) {
+      setStatusMessage("Cần chọn bệnh nhân trước khi ghi nhận dị ứng/cảnh báo.");
+      return;
+    }
+
+    const hasReaction =
+      allergyIntoleranceForm.manifestationCode.trim() ||
+      allergyIntoleranceForm.manifestationDisplay.trim() ||
+      allergyIntoleranceForm.reactionDescription.trim();
+
+    setIsSubmittingAllergyIntolerance(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/allergy-intolerances`, {
+        method: "POST",
+        headers: buildHeaders("TREATMENT", {
+          "Content-Type": "application/json"
+        }),
+        body: JSON.stringify({
+          encounterId: allergyIntoleranceForm.encounterId || undefined,
+          clinicalStatus: allergyIntoleranceForm.clinicalStatus,
+          verificationStatus: allergyIntoleranceForm.verificationStatus,
+          type: allergyIntoleranceForm.type,
+          category: allergyIntoleranceForm.category,
+          criticality: allergyIntoleranceForm.criticality || undefined,
+          code: {
+            system: allergyIntoleranceForm.codeSystem,
+            code: allergyIntoleranceForm.code,
+            display: allergyIntoleranceForm.codeDisplay
+          },
+          reaction: hasReaction
+            ? {
+                manifestation: {
+                  system: allergyIntoleranceForm.manifestationSystem,
+                  code: allergyIntoleranceForm.manifestationCode,
+                  display: allergyIntoleranceForm.manifestationDisplay
+                },
+                severity: allergyIntoleranceForm.reactionSeverity || undefined,
+                description: allergyIntoleranceForm.reactionDescription || undefined
+              }
+            : undefined,
+          recordedAt: allergyIntoleranceForm.recordedAt
+            ? toApiDateTime(allergyIntoleranceForm.recordedAt)
+            : undefined,
+          recorderPractitionerId: allergyIntoleranceForm.recorderPractitionerId,
+          note: allergyIntoleranceForm.note || undefined
+        })
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => undefined);
+        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
+      }
+
+      const createdAllergyIntolerance = (await response.json()) as AllergyIntolerance;
+      await loadAllergyIntolerances(selectedPatient.id, createdAllergyIntolerance.id);
+      await loadPatientFhirBundlePreview(selectedPatient.id);
+      await loadAuditEvents(selectedPatient.id, { silent: true });
+      setAppRoute("workspace");
+      setStatusMessage(
+        `Đã ghi nhận dị ứng/cảnh báo "${createdAllergyIntolerance.code.display}" cho ${selectedPatient.fullName}.`
+      );
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể ghi nhận dị ứng/cảnh báo: ${error.message}`
+          : "Không thể ghi nhận dị ứng/cảnh báo."
+      );
+    } finally {
+      setIsSubmittingAllergyIntolerance(false);
     }
   }
 
@@ -1727,6 +1972,7 @@ export function App() {
         <section className="metric-grid">
           <MetricCard label="Bệnh nhân" value={`${patients.length}`} note="Hồ sơ trong registry demo" />
           <MetricCard label="Lượt khám mở" value={`${openEncounters.length}`} note="Theo bệnh nhân đang chọn" />
+          <MetricCard label="Dị ứng" value={`${allergyIntolerances.length}`} note="Cảnh báo an toàn" />
           <MetricCard label="Chẩn đoán" value={`${conditions.length}`} note="Vấn đề sức khỏe có cấu trúc" />
           <MetricCard label="Chỉ định thuốc" value={`${medicationRequests.length}`} note="FHIR MedicationRequest" />
           <MetricCard label="Tài liệu nháp" value={`${draftDocuments.length}`} note="Cần ký/xác thực" />
@@ -1749,7 +1995,7 @@ export function App() {
               </button>
               <button type="button" onClick={() => setAppRoute("interop")}>
                 <strong>Xem gói FHIR</strong>
-                <span>Patient, Encounter, Condition, Observation, MedicationRequest và DocumentReference đã có preview.</span>
+                <span>Patient, Encounter, AllergyIntolerance, Condition, Observation, MedicationRequest và DocumentReference đã có preview.</span>
               </button>
             </div>
           </article>
@@ -1761,6 +2007,7 @@ export function App() {
               <div className="detail-grid compact">
                 <Info label="MRN" value={selectedPatient.identifiers[0]?.value ?? selectedPatient.id} />
                 <Info label="Lượt khám gần nhất" value={encounters[0]?.serviceType ?? "Chưa có"} />
+                <Info label="Dị ứng/cảnh báo" value={`${allergyIntolerances.length}`} />
                 <Info label="Chẩn đoán/vấn đề" value={`${conditions.length}`} />
                 <Info label="Chỉ số lâm sàng" value={`${observations.length}`} />
                 <Info label="Chỉ định thuốc" value={`${medicationRequests.length}`} />
@@ -1789,6 +2036,7 @@ export function App() {
           {renderPatientListPanel()}
           {renderPatientDetailPanel()}
           {renderEncounterPanel()}
+          {renderAllergyIntolerancePanel()}
           {renderConditionPanel()}
           {renderObservationPanel()}
           {renderMedicationRequestPanel()}
@@ -1863,6 +2111,7 @@ export function App() {
           <FhirPanel title="FHIR Patient JSON" badge="Patient" value={patientFhirPreview} />
           <FhirPanel title="FHIR Patient Record Bundle JSON" badge="Bundle" value={patientFhirBundlePreview} />
           <FhirPanel title="FHIR Encounter JSON" badge="Encounter" value={encounterFhirPreview} />
+          <FhirPanel title="FHIR AllergyIntolerance JSON" badge="AllergyIntolerance" value={allergyIntoleranceFhirPreview} />
           <FhirPanel title="FHIR Condition JSON" badge="Condition" value={conditionFhirPreview} />
           <FhirPanel title="FHIR Observation JSON" badge="Observation" value={observationFhirPreview} />
           <FhirPanel title="FHIR MedicationRequest JSON" badge="MedicationRequest" value={medicationRequestFhirPreview} />
@@ -2071,6 +2320,7 @@ export function App() {
                   <Info label="Lý do khám" value={selectedEncounter.reasonText} />
                   <Info label="Khoa/phòng" value={selectedEncounter.departmentId ?? "Chưa gắn"} />
                   <Info label="Nhân sự phụ trách" value={selectedEncounter.attendingPractitionerId} />
+                  <Info label="Dị ứng gắn lượt khám" value={`${selectedEncounterAllergyIntolerances.length}`} />
                   <Info label="Chẩn đoán gắn lượt khám" value={`${selectedEncounterConditions.length}`} />
                   <Info label="Chỉ số gắn lượt khám" value={`${selectedEncounterObservations.length}`} />
                   <Info label="Thuốc gắn lượt khám" value={`${selectedEncounterMedicationRequests.length}`} />
@@ -2148,6 +2398,289 @@ export function App() {
           </label>
           <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingEncounter}>
             {isSubmittingEncounter ? "Đang mở..." : "Mở lượt khám"}
+          </button>
+        </form>
+      </article>
+    );
+  }
+
+  function renderAllergyIntolerancePanel(): ReactNode {
+    return (
+      <article className="panel allergy-panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Allergy safety</p>
+            <h2>Dị ứng và cảnh báo an toàn</h2>
+          </div>
+          <span className="pill cyan">
+            {isLoadingAllergyIntolerances ? "loading" : `${allergyIntolerances.length} cảnh báo`}
+          </span>
+        </div>
+
+        <div className="document-layout">
+          <div className="allergy-cards">
+            {allergyIntolerances.map((allergyIntolerance) => (
+              <button
+                className={
+                  allergyIntolerance.id === selectedAllergyIntoleranceId
+                    ? "allergy-card selected"
+                    : "allergy-card"
+                }
+                key={allergyIntolerance.id}
+                type="button"
+                onClick={() => setSelectedAllergyIntoleranceId(allergyIntolerance.id)}
+              >
+                <span>{formatAllergyCategory(allergyIntolerance.category)}</span>
+                <strong>{allergyIntolerance.code.display}</strong>
+                <small>
+                  {formatAllergyCriticality(allergyIntolerance.criticality)} ·{" "}
+                  {formatDateTime(allergyIntolerance.recordedAt)}
+                </small>
+              </button>
+            ))}
+            {allergyIntolerances.length === 0 ? (
+              <p className="empty-state">
+                Chưa có dị ứng/cảnh báo có cấu trúc. Khi kê thuốc, đây là vùng cần kiểm tra trước tiên.
+              </p>
+            ) : null}
+          </div>
+
+          <div className="allergy-summary">
+            {selectedAllergyIntolerance ? (
+              <>
+                <div className="document-meta">
+                  <Info label="Tác nhân" value={selectedAllergyIntolerance.code.display} />
+                  <Info label="Loại" value={formatAllergyType(selectedAllergyIntolerance.type)} />
+                  <Info label="Nhóm" value={formatAllergyCategory(selectedAllergyIntolerance.category)} />
+                  <Info label="Mức cảnh báo" value={formatAllergyCriticality(selectedAllergyIntolerance.criticality)} />
+                  <Info label="Lâm sàng" value={formatAllergyClinicalStatus(selectedAllergyIntolerance.clinicalStatus)} />
+                  <Info label="Xác minh" value={formatAllergyVerificationStatus(selectedAllergyIntolerance.verificationStatus)} />
+                  <Info label="Biểu hiện" value={selectedAllergyIntolerance.reaction?.manifestation.display ?? "Chưa ghi"} />
+                  <Info label="Encounter" value={selectedAllergyIntolerance.encounterId ?? "Chưa gắn"} />
+                </div>
+                <p className="empty-state">
+                  AllergyIntolerance giúp hệ thống cảnh báo trước khi kê thuốc hoặc chuyển hồ sơ, tránh để dị ứng chỉ nằm trong ghi chú tự do.
+                </p>
+              </>
+            ) : (
+              <p className="empty-state">Chọn một dị ứng/cảnh báo để xem metadata và xuất FHIR AllergyIntolerance.</p>
+            )}
+          </div>
+        </div>
+
+        <form className="allergy-form" onSubmit={(event) => void handleCreateAllergyIntolerance(event)}>
+          <label>
+            Gắn với lượt khám
+            <select
+              value={allergyIntoleranceForm.encounterId}
+              onChange={(event) =>
+                setAllergyIntoleranceForm({ ...allergyIntoleranceForm, encounterId: event.target.value })
+              }
+            >
+              <option value="">Không gắn</option>
+              {encounters.map((encounter) => (
+                <option key={encounter.id} value={encounter.id}>
+                  {encounter.serviceType} · {formatDateTime(encounter.startedAt)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Loại
+            <select
+              value={allergyIntoleranceForm.type}
+              onChange={(event) =>
+                setAllergyIntoleranceForm({ ...allergyIntoleranceForm, type: event.target.value as AllergyType })
+              }
+            >
+              <option value="allergy">Dị ứng</option>
+              <option value="intolerance">Không dung nạp</option>
+            </select>
+          </label>
+          <label>
+            Nhóm
+            <select
+              value={allergyIntoleranceForm.category}
+              onChange={(event) =>
+                setAllergyIntoleranceForm({
+                  ...allergyIntoleranceForm,
+                  category: event.target.value as AllergyCategory
+                })
+              }
+            >
+              <option value="medication">Thuốc</option>
+              <option value="food">Thực phẩm</option>
+              <option value="environment">Môi trường</option>
+              <option value="biologic">Sinh phẩm</option>
+            </select>
+          </label>
+          <label>
+            Mức cảnh báo
+            <select
+              value={allergyIntoleranceForm.criticality}
+              onChange={(event) =>
+                setAllergyIntoleranceForm({
+                  ...allergyIntoleranceForm,
+                  criticality: event.target.value as "" | AllergyCriticality
+                })
+              }
+            >
+              <option value="">Chưa đánh giá</option>
+              <option value="low">Thấp</option>
+              <option value="high">Cao</option>
+              <option value="unable-to-assess">Chưa thể đánh giá</option>
+            </select>
+          </label>
+          <label>
+            Trạng thái lâm sàng
+            <select
+              value={allergyIntoleranceForm.clinicalStatus}
+              onChange={(event) =>
+                setAllergyIntoleranceForm({
+                  ...allergyIntoleranceForm,
+                  clinicalStatus: event.target.value as AllergyClinicalStatus
+                })
+              }
+            >
+              <option value="active">Đang hoạt động</option>
+              <option value="inactive">Không hoạt động</option>
+              <option value="resolved">Đã giải quyết</option>
+            </select>
+          </label>
+          <label>
+            Trạng thái xác minh
+            <select
+              value={allergyIntoleranceForm.verificationStatus}
+              onChange={(event) =>
+                setAllergyIntoleranceForm({
+                  ...allergyIntoleranceForm,
+                  verificationStatus: event.target.value as AllergyVerificationStatus
+                })
+              }
+            >
+              <option value="confirmed">Đã xác nhận</option>
+              <option value="unconfirmed">Chưa xác nhận</option>
+              <option value="refuted">Đã loại trừ</option>
+              <option value="entered-in-error">Nhập lỗi</option>
+            </select>
+          </label>
+          <label>
+            Hệ mã tác nhân
+            <input
+              value={allergyIntoleranceForm.codeSystem}
+              onChange={(event) =>
+                setAllergyIntoleranceForm({ ...allergyIntoleranceForm, codeSystem: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Mã tác nhân
+            <input
+              value={allergyIntoleranceForm.code}
+              onChange={(event) =>
+                setAllergyIntoleranceForm({ ...allergyIntoleranceForm, code: event.target.value })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Tên tác nhân
+            <input
+              value={allergyIntoleranceForm.codeDisplay}
+              onChange={(event) =>
+                setAllergyIntoleranceForm({ ...allergyIntoleranceForm, codeDisplay: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Mã biểu hiện
+            <input
+              value={allergyIntoleranceForm.manifestationCode}
+              onChange={(event) =>
+                setAllergyIntoleranceForm({
+                  ...allergyIntoleranceForm,
+                  manifestationCode: event.target.value
+                })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Biểu hiện phản ứng
+            <input
+              value={allergyIntoleranceForm.manifestationDisplay}
+              onChange={(event) =>
+                setAllergyIntoleranceForm({
+                  ...allergyIntoleranceForm,
+                  manifestationDisplay: event.target.value
+                })
+              }
+            />
+          </label>
+          <label>
+            Mức độ phản ứng
+            <select
+              value={allergyIntoleranceForm.reactionSeverity}
+              onChange={(event) =>
+                setAllergyIntoleranceForm({
+                  ...allergyIntoleranceForm,
+                  reactionSeverity: event.target.value as "" | AllergyReactionSeverity
+                })
+              }
+            >
+              <option value="">Chưa ghi</option>
+              <option value="mild">Nhẹ</option>
+              <option value="moderate">Trung bình</option>
+              <option value="severe">Nặng</option>
+            </select>
+          </label>
+          <label>
+            Thời điểm ghi nhận
+            <input
+              type="datetime-local"
+              value={allergyIntoleranceForm.recordedAt}
+              onChange={(event) =>
+                setAllergyIntoleranceForm({ ...allergyIntoleranceForm, recordedAt: event.target.value })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Người ghi nhận
+            <input
+              value={allergyIntoleranceForm.recorderPractitionerId}
+              onChange={(event) =>
+                setAllergyIntoleranceForm({
+                  ...allergyIntoleranceForm,
+                  recorderPractitionerId: event.target.value
+                })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Mô tả phản ứng
+            <input
+              value={allergyIntoleranceForm.reactionDescription}
+              onChange={(event) =>
+                setAllergyIntoleranceForm({
+                  ...allergyIntoleranceForm,
+                  reactionDescription: event.target.value
+                })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Ghi chú
+            <input
+              value={allergyIntoleranceForm.note}
+              onChange={(event) =>
+                setAllergyIntoleranceForm({ ...allergyIntoleranceForm, note: event.target.value })
+              }
+            />
+          </label>
+          <button
+            className="primary-button"
+            type="submit"
+            disabled={!selectedPatient || isSubmittingAllergyIntolerance}
+          >
+            {isSubmittingAllergyIntolerance ? "Đang ghi nhận..." : "Ghi nhận dị ứng/cảnh báo"}
           </button>
         </form>
       </article>
@@ -3084,7 +3617,7 @@ function LandingPage({
           <p className="eyebrow">HoLiLiHu · The Wiii Lab</p>
           <h1>Nền tảng bệnh án điện tử mở cho liên thông y tế</h1>
           <p className="lede">
-            WiiiCare Nexus mô phỏng lõi EMR hiện đại: hồ sơ bệnh nhân, lượt khám, chẩn đoán,
+            WiiiCare Nexus mô phỏng lõi EMR hiện đại: hồ sơ bệnh nhân, lượt khám, dị ứng, chẩn đoán,
             chỉ số lâm sàng, chỉ định thuốc, tài liệu bệnh án, audit trail và ánh xạ FHIR để chuẩn bị kết nối giữa các bệnh viện.
           </p>
           <div className="landing-actions">
@@ -3098,7 +3631,7 @@ function LandingPage({
         </div>
         <aside className="landing-card">
           <span>Product slice</span>
-          <strong>Patient → Encounter → Condition → Observation → MedicationRequest → Document → FHIR</strong>
+          <strong>Patient → Encounter → AllergyIntolerance → Condition → Observation → MedicationRequest → Document → FHIR</strong>
           <small>Không còn là landing page đơn thuần; app có luồng vận hành sau đăng nhập.</small>
         </aside>
       </section>
@@ -3108,7 +3641,7 @@ function LandingPage({
           ["Patient Workspace", "Bàn làm việc theo bệnh nhân, giống nhịp vận hành EMR thật."],
           ["Document Center", "Quản lý CCR, CCDA, hồ sơ bệnh án, xét nghiệm và tài liệu chuyển tuyến."],
           ["Audit & RBAC", "Ghi log truy cập nhạy cảm và kiểm tra quyền theo vai trò demo."],
-          ["FHIR Interop", "Xuất Patient, Encounter, Condition, Observation, MedicationRequest và DocumentReference để chuẩn bị liên thông."]
+          ["FHIR Interop", "Xuất Patient, Encounter, AllergyIntolerance, Condition, Observation, MedicationRequest và DocumentReference để chuẩn bị liên thông."]
         ].map(([title, description]) => (
           <article className="panel" key={title}>
             <p className="eyebrow">{title}</p>
@@ -3413,6 +3946,10 @@ function formatAuditAction(action: AuditAction): string {
     "encounter.read": "Xem lượt khám",
     "encounter.finish": "Kết thúc lượt khám",
     "encounter.fhir-export": "Xuất FHIR Encounter",
+    "allergy-intolerance.list": "Tải dị ứng/cảnh báo",
+    "allergy-intolerance.create": "Ghi nhận dị ứng/cảnh báo",
+    "allergy-intolerance.read": "Xem dị ứng/cảnh báo",
+    "allergy-intolerance.fhir-export": "Xuất FHIR AllergyIntolerance",
     "condition.list": "Tải chẩn đoán/vấn đề sức khỏe",
     "condition.create": "Ghi nhận chẩn đoán/vấn đề sức khỏe",
     "condition.read": "Xem chẩn đoán/vấn đề sức khỏe",
@@ -3441,6 +3978,7 @@ function formatAuditResourceType(resourceType: AuditResourceType): string {
   const labels: Record<AuditResourceType, string> = {
     Patient: "Bệnh nhân",
     Encounter: "Lượt khám",
+    AllergyIntolerance: "Dị ứng/cảnh báo",
     Condition: "Chẩn đoán",
     MedicationRequest: "Chỉ định thuốc",
     Observation: "Chỉ số lâm sàng",
@@ -3468,6 +4006,61 @@ function formatConsentCategory(category: ConsentCategory): string {
   };
 
   return labels[category];
+}
+
+function formatAllergyType(type: AllergyType): string {
+  const labels: Record<AllergyType, string> = {
+    allergy: "Dị ứng",
+    intolerance: "Không dung nạp"
+  };
+
+  return labels[type];
+}
+
+function formatAllergyCategory(category: AllergyCategory): string {
+  const labels: Record<AllergyCategory, string> = {
+    biologic: "Sinh phẩm",
+    environment: "Môi trường",
+    food: "Thực phẩm",
+    medication: "Thuốc"
+  };
+
+  return labels[category];
+}
+
+function formatAllergyCriticality(criticality: AllergyCriticality | undefined): string {
+  if (!criticality) {
+    return "Chưa đánh giá";
+  }
+
+  const labels: Record<AllergyCriticality, string> = {
+    high: "Nguy cơ cao",
+    low: "Nguy cơ thấp",
+    "unable-to-assess": "Chưa thể đánh giá"
+  };
+
+  return labels[criticality];
+}
+
+function formatAllergyClinicalStatus(status: AllergyClinicalStatus): string {
+  const labels: Record<AllergyClinicalStatus, string> = {
+    active: "Đang hoạt động",
+    inactive: "Không hoạt động",
+    resolved: "Đã giải quyết"
+  };
+
+  return labels[status];
+}
+
+function formatAllergyVerificationStatus(status: AllergyVerificationStatus): string {
+  const labels: Record<AllergyVerificationStatus, string> = {
+    confirmed: "Đã xác nhận",
+    "entered-in-error": "Nhập lỗi",
+    refuted: "Đã loại trừ",
+    unconfirmed: "Chưa xác nhận"
+  };
+
+  return labels[status];
 }
 
 function formatConditionCategory(category: ConditionCategory): string {

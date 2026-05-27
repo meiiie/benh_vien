@@ -11,6 +11,10 @@ export type AuditAction =
   | "encounter.read"
   | "encounter.finish"
   | "encounter.fhir-export"
+  | "allergy-intolerance.list"
+  | "allergy-intolerance.create"
+  | "allergy-intolerance.read"
+  | "allergy-intolerance.fhir-export"
   | "condition.list"
   | "condition.create"
   | "condition.read"
@@ -34,6 +38,7 @@ export type AuditAction =
 export type AuditResourceType =
   | "Patient"
   | "Encounter"
+  | "AllergyIntolerance"
   | "Condition"
   | "MedicationRequest"
   | "Observation"

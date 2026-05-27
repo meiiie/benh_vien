@@ -4,6 +4,7 @@ import swaggerUi from "@fastify/swagger-ui";
 import Fastify from "fastify";
 import type {
   AuditEventRepository,
+  AllergyIntoleranceRepository,
   ClinicalDocumentRepository,
   ConditionRepository,
   ConsentRepository,
@@ -14,6 +15,8 @@ import type {
 } from "@benh-vien-so/domain";
 import { createAuditEventRepository } from "./modules/audit-events/create-audit-event.repository.js";
 import { registerAuditEventRoutes } from "./modules/audit-events/audit-event-routes.js";
+import { createAllergyIntoleranceRepository } from "./modules/allergy-intolerances/create-allergy-intolerance.repository.js";
+import { registerAllergyIntoleranceRoutes } from "./modules/allergy-intolerances/allergy-intolerance-routes.js";
 import { registerAuthRoutes } from "./modules/auth/auth-routes.js";
 import { createClinicalDocumentRepository } from "./modules/clinical-documents/create-clinical-document.repository.js";
 import { registerClinicalDocumentRoutes } from "./modules/clinical-documents/clinical-document-routes.js";
@@ -33,6 +36,7 @@ import { registerPatientRoutes } from "./modules/patients/patient-routes.js";
 export type ServerOptions = {
   readonly patientRepository?: PatientRepository;
   readonly encounterRepository?: EncounterRepository;
+  readonly allergyIntoleranceRepository?: AllergyIntoleranceRepository;
   readonly conditionRepository?: ConditionRepository;
   readonly observationRepository?: ObservationRepository;
   readonly medicationRequestRepository?: MedicationRequestRepository;
@@ -77,6 +81,10 @@ export async function buildServer(options: ServerOptions = {}) {
           description: "Quản lý lượt khám, đợt điều trị và FHIR Encounter"
         },
         {
+          name: "allergy-intolerances",
+          description: "Quản lý dị ứng, chống chỉ định và FHIR AllergyIntolerance"
+        },
+        {
           name: "conditions",
           description: "Quản lý chẩn đoán, vấn đề sức khỏe và FHIR Condition"
         },
@@ -111,6 +119,8 @@ export async function buildServer(options: ServerOptions = {}) {
   const patientRepository = options.patientRepository ?? (await createPatientRepository());
   const encounterRepository =
     options.encounterRepository ?? (await createEncounterRepository());
+  const allergyIntoleranceRepository =
+    options.allergyIntoleranceRepository ?? (await createAllergyIntoleranceRepository());
   const conditionRepository =
     options.conditionRepository ?? (await createConditionRepository());
   const observationRepository =
@@ -136,6 +146,7 @@ export async function buildServer(options: ServerOptions = {}) {
         api,
         patientRepository,
         encounterRepository,
+        allergyIntoleranceRepository,
         clinicalDocumentRepository,
         conditionRepository,
         observationRepository,
@@ -153,6 +164,13 @@ export async function buildServer(options: ServerOptions = {}) {
         api,
         patientRepository,
         encounterRepository,
+        auditEventRepository
+      );
+      await registerAllergyIntoleranceRoutes(
+        api,
+        patientRepository,
+        encounterRepository,
+        allergyIntoleranceRepository,
         auditEventRepository
       );
       await registerConditionRoutes(

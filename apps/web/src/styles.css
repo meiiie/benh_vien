@@ -503,6 +503,8 @@ h2 {
 .timeline-item small,
 .document-card span,
 .document-card small,
+.allergy-card span,
+.allergy-card small,
 .condition-card span,
 .condition-card small,
 .medication-card span,
@@ -544,7 +546,7 @@ h2 {
 
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -601,6 +603,7 @@ h2 {
 .patient-card,
 .timeline-item,
 .document-card,
+.allergy-card,
 .condition-card,
 .medication-card,
 .observation-card {
@@ -620,6 +623,8 @@ h2 {
 .timeline-item.selected,
 .document-card:hover,
 .document-card.selected,
+.allergy-card:hover,
+.allergy-card.selected,
 .condition-card:hover,
 .condition-card.selected,
 .medication-card:hover,
@@ -641,6 +646,9 @@ h2 {
 .document-card span,
 .document-card strong,
 .document-card small,
+.allergy-card span,
+.allergy-card strong,
+.allergy-card small,
 .condition-card span,
 .condition-card strong,
 .condition-card small,
@@ -676,6 +684,7 @@ h2 {
 .patient-cards,
 .timeline,
 .document-cards,
+.allergy-cards,
 .condition-cards,
 .medication-cards,
 .observation-cards,
@@ -754,6 +763,7 @@ code {
 
 .patient-form,
 .encounter-form,
+.allergy-form,
 .condition-form,
 .medication-form,
 .observation-form,
@@ -795,6 +805,7 @@ select:focus {
 .wide-field,
 .patient-form .primary-button,
 .encounter-form .primary-button,
+.allergy-form .primary-button,
 .condition-form .primary-button,
 .medication-form .primary-button,
 .observation-form .primary-button,
@@ -804,6 +815,7 @@ select:focus {
 
 .document-panel,
 .encounter-panel,
+.allergy-panel,
 .condition-panel,
 .medication-panel,
 .observation-panel,
@@ -838,6 +850,7 @@ select:focus {
 
 .encounter-summary,
 .document-summary,
+.allergy-summary,
 .condition-summary,
 .medication-summary,
 .observation-summary {
@@ -985,7 +998,7 @@ pre {
 
 .workflow-strip {
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-columns: repeat(9, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -1102,6 +1115,7 @@ pre {
   .patient-form,
   .encounter-layout,
   .encounter-form,
+  .allergy-form,
   .condition-form,
   .medication-form,
   .observation-form,

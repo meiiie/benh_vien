@@ -12,6 +12,10 @@ export type Permission =
   | "encounter:read"
   | "encounter:finish"
   | "encounter:fhir-export"
+  | "allergy-intolerance:list"
+  | "allergy-intolerance:create"
+  | "allergy-intolerance:read"
+  | "allergy-intolerance:fhir-export"
   | "condition:list"
   | "condition:create"
   | "condition:read"
@@ -49,6 +53,10 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "encounter:read",
     "encounter:finish",
     "encounter:fhir-export",
+    "allergy-intolerance:list",
+    "allergy-intolerance:create",
+    "allergy-intolerance:read",
+    "allergy-intolerance:fhir-export",
     "condition:list",
     "condition:create",
     "condition:read",
@@ -73,6 +81,9 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "patient:read",
     "encounter:list",
     "encounter:read",
+    "allergy-intolerance:list",
+    "allergy-intolerance:create",
+    "allergy-intolerance:read",
     "condition:list",
     "condition:create",
     "condition:read",
@@ -97,6 +108,10 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "encounter:read",
     "encounter:finish",
     "encounter:fhir-export",
+    "allergy-intolerance:list",
+    "allergy-intolerance:create",
+    "allergy-intolerance:read",
+    "allergy-intolerance:fhir-export",
     "condition:list",
     "condition:create",
     "condition:read",

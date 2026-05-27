@@ -1,5 +1,7 @@
 export * from "./shared/domain-error.js";
 export * from "./access-control/access-control.js";
+export * from "./allergy-intolerance/allergy-intolerance.js";
+export * from "./allergy-intolerance/allergy-intolerance.repository.js";
 export * from "./audit-event/audit-event.js";
 export * from "./audit-event/audit-event.repository.js";
 export * from "./consent/consent.js";
@@ -17,6 +19,7 @@ export * from "./observation/observation.repository.js";
 export * from "./clinical-document/clinical-document.js";
 export * from "./clinical-document/clinical-document.repository.js";
 export * from "./fhir/fhir-types.js";
+export * from "./fhir/map-allergy-intolerance-to-fhir.js";
 export * from "./fhir/map-clinical-document-to-fhir.js";
 export * from "./fhir/map-condition-to-fhir.js";
 export * from "./fhir/map-encounter-to-fhir.js";

@@ -32,9 +32,15 @@ Trong dự án, PACS có thể được minh họa bằng Orthanc. EMR chỉ nê
 
 ## FHIR
 
-**Fast Healthcare Interoperability Resources** là chuẩn trao đổi dữ liệu y tế của HL7. FHIR định nghĩa các resource như `Patient`, `Encounter`, `Observation`, `Condition`, `MedicationRequest`, `DocumentReference`, `Composition`.
+**Fast Healthcare Interoperability Resources** là chuẩn trao đổi dữ liệu y tế của HL7. FHIR định nghĩa các resource như `Patient`, `Encounter`, `AllergyIntolerance`, `Observation`, `Condition`, `MedicationRequest`, `DocumentReference`, `Composition`.
 
 Trong dự án này, FHIR là lớp liên thông. Domain model nội bộ vẫn có thể khác FHIR, sau đó được mapping sang FHIR khi cần trao đổi.
+
+## AllergyIntolerance
+
+**AllergyIntolerance** là resource FHIR dùng để ghi nhận nguy cơ dị ứng, không dung nạp hoặc phản ứng bất lợi với thuốc, thực phẩm, môi trường hoặc sinh phẩm. Trong EMR, phần này nên được đặt nổi bật trước luồng kê thuốc để bác sĩ nhìn thấy cảnh báo an toàn trước khi ra y lệnh.
+
+Trong dự án này, AllergyIntolerance là lát cắt an toàn lâm sàng tối thiểu: ghi tác nhân, nhóm dị ứng, mức cảnh báo, trạng thái xác minh, biểu hiện phản ứng và người ghi nhận.
 
 ## DICOM
 

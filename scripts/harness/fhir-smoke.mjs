@@ -15,6 +15,7 @@ if (!existsSync(apiAuthEntry)) {
 
 const {
   AuditEvent,
+  AllergyIntolerance,
   ClinicalDocument,
   Condition,
   Consent,
@@ -23,6 +24,7 @@ const {
   Observation,
   Patient,
   canAccess,
+  mapAllergyIntoleranceToFhir,
   mapClinicalDocumentToFhir,
   mapConditionToFhir,
   mapEncounterToFhir,
@@ -106,6 +108,44 @@ if (fhirEncounter.resourceType !== "Encounter") {
 if (fhirEncounter.subject.reference !== "Patient/patient-harness-001") {
   throw new Error(
     `Expected encounter subject Patient/patient-harness-001, received ${fhirEncounter.subject.reference}`
+  );
+}
+
+const allergyIntolerance = AllergyIntolerance.record({
+  id: "allergy-intolerance-harness-001",
+  patientId: patient.id,
+  encounterId: encounter.id,
+  type: "allergy",
+  category: "medication",
+  criticality: "high",
+  code: {
+    system: "http://snomed.info/sct",
+    code: "91936005",
+    display: "Allergy to penicillin"
+  },
+  reaction: {
+    manifestation: {
+      system: "http://snomed.info/sct",
+      code: "271807003",
+      display: "Skin rash"
+    },
+    severity: "moderate"
+  },
+  recordedAt: "2026-05-27T00:00:00.000Z",
+  recorderPractitionerId: "practitioner-harness-001"
+});
+
+const fhirAllergyIntolerance = mapAllergyIntoleranceToFhir(allergyIntolerance);
+
+if (fhirAllergyIntolerance.resourceType !== "AllergyIntolerance") {
+  throw new Error(
+    `Expected resourceType AllergyIntolerance, received ${fhirAllergyIntolerance.resourceType}`
+  );
+}
+
+if (fhirAllergyIntolerance.patient.reference !== "Patient/patient-harness-001") {
+  throw new Error(
+    `Expected allergy patient Patient/patient-harness-001, received ${fhirAllergyIntolerance.patient.reference}`
   );
 }
 
@@ -244,6 +284,7 @@ if (fhirDocumentReference.docStatus !== "final") {
 const fhirBundle = mapPatientRecordToFhirBundle({
   patient,
   encounters: [encounter],
+  allergyIntolerances: [allergyIntolerance],
   conditions: [condition],
   observations: [observation],
   medicationRequests: [medicationRequest],
@@ -259,8 +300,8 @@ if (fhirBundle.type !== "collection") {
   throw new Error(`Expected bundle type collection, received ${fhirBundle.type}`);
 }
 
-if (fhirBundle.entry.length !== 6) {
-  throw new Error(`Expected bundle to contain 6 entries, received ${fhirBundle.entry.length}`);
+if (fhirBundle.entry.length !== 7) {
+  throw new Error(`Expected bundle to contain 7 entries, received ${fhirBundle.entry.length}`);
 }
 
 const consent = Consent.grant({
@@ -349,6 +390,15 @@ const clinicianCanExportCondition = canAccess(
   "condition:fhir-export"
 );
 
+const clinicianCanExportAllergyIntolerance = canAccess(
+  {
+    actorId: "practitioner-harness-001",
+    role: "clinician",
+    purposeOfUse: "TREATMENT"
+  },
+  "allergy-intolerance:fhir-export"
+);
+
 const clinicianCanExportMedicationRequest = canAccess(
   {
     actorId: "practitioner-harness-001",
@@ -374,6 +424,15 @@ const nurseCanExportCondition = canAccess(
     purposeOfUse: "TREATMENT"
   },
   "condition:fhir-export"
+);
+
+const nurseCanExportAllergyIntolerance = canAccess(
+  {
+    actorId: "nurse-harness-001",
+    role: "nurse",
+    purposeOfUse: "TREATMENT"
+  },
+  "allergy-intolerance:fhir-export"
 );
 
 const nurseCanExportMedicationRequest = canAccess(
@@ -419,6 +478,10 @@ if (!clinicianCanExportCondition) {
   throw new Error("Expected clinician/TREATMENT to export conditions.");
 }
 
+if (!clinicianCanExportAllergyIntolerance) {
+  throw new Error("Expected clinician/TREATMENT to export allergy intolerances.");
+}
+
 if (!clinicianCanExportMedicationRequest) {
   throw new Error("Expected clinician/TREATMENT to export medication requests.");
 }
@@ -429,6 +492,10 @@ if (nurseCanExportObservation) {
 
 if (nurseCanExportCondition) {
   throw new Error("Expected nurse/TREATMENT to be denied condition:fhir-export.");
+}
+
+if (nurseCanExportAllergyIntolerance) {
+  throw new Error("Expected nurse/TREATMENT to be denied allergy-intolerance:fhir-export.");
 }
 
 if (nurseCanExportMedicationRequest) {
@@ -454,6 +521,8 @@ console.log(
       documentResourceType: fhirDocumentReference.resourceType,
       encounterId: fhirEncounter.id,
       encounterResourceType: fhirEncounter.resourceType,
+      allergyIntoleranceId: fhirAllergyIntolerance.id,
+      allergyIntoleranceResourceType: fhirAllergyIntolerance.resourceType,
       conditionId: fhirCondition.id,
       conditionResourceType: fhirCondition.resourceType,
       observationId: fhirObservation.id,
@@ -473,9 +542,11 @@ console.log(
       rbac: {
         clinicianCanCreateEncounter,
         clinicianCanCreateDocument,
+        clinicianCanExportAllergyIntolerance,
         clinicianCanExportCondition,
         clinicianCanExportMedicationRequest,
         clinicianCanExportObservation,
+        nurseCanExportAllergyIntolerance,
         nurseCanExportCondition,
         nurseCanExportMedicationRequest,
         nurseCanExportObservation,

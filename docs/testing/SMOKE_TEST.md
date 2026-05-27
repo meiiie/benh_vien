@@ -27,6 +27,14 @@ curl -fsS http://localhost:7310/api/v1/patients/patient-demo-001/consents \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-purpose-of-use: TREATMENT"
 
+curl -fsS http://localhost:7310/api/v1/patients/patient-demo-001/allergy-intolerances \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+
+curl -fsS http://localhost:7310/api/v1/allergy-intolerances/allergy-intolerance-demo-001/fhir \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+
 curl -fsS http://localhost:7310/api/v1/patients/patient-demo-001/conditions \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-purpose-of-use: TREATMENT"

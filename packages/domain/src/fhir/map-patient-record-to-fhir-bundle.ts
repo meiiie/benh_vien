@@ -1,3 +1,4 @@
+import type { AllergyIntolerance } from "../allergy-intolerance/allergy-intolerance.js";
 import type { ClinicalDocument } from "../clinical-document/clinical-document.js";
 import type { Condition } from "../condition/condition.js";
 import type { Encounter } from "../encounter/encounter.js";
@@ -6,6 +7,7 @@ import type { Observation } from "../observation/observation.js";
 import type { Patient } from "../patient/patient.js";
 import type {
   FhirBundle,
+  FhirAllergyIntolerance,
   FhirCondition,
   FhirDocumentReference,
   FhirEncounter,
@@ -13,6 +15,7 @@ import type {
   FhirObservation,
   FhirPatient
 } from "./fhir-types.js";
+import { mapAllergyIntoleranceToFhir } from "./map-allergy-intolerance-to-fhir.js";
 import { mapClinicalDocumentToFhir } from "./map-clinical-document-to-fhir.js";
 import { mapConditionToFhir } from "./map-condition-to-fhir.js";
 import { mapEncounterToFhir } from "./map-encounter-to-fhir.js";
@@ -23,6 +26,7 @@ import { mapPatientToFhir } from "./map-patient-to-fhir.js";
 export type PatientRecordBundleInput = {
   readonly patient: Patient;
   readonly encounters: readonly Encounter[];
+  readonly allergyIntolerances?: readonly AllergyIntolerance[];
   readonly conditions?: readonly Condition[];
   readonly observations?: readonly Observation[];
   readonly medicationRequests?: readonly MedicationRequest[];
@@ -34,6 +38,8 @@ export function mapPatientRecordToFhirBundle(input: PatientRecordBundleInput): F
   const generatedAt = input.generatedAt ?? new Date();
   const patient = mapPatientToFhir(input.patient);
   const encounters = input.encounters.map(mapEncounterToFhir);
+  const allergyIntolerances =
+    input.allergyIntolerances?.map(mapAllergyIntoleranceToFhir) ?? [];
   const conditions = input.conditions?.map(mapConditionToFhir) ?? [];
   const observations = input.observations?.map(mapObservationToFhir) ?? [];
   const medicationRequests = input.medicationRequests?.map(mapMedicationRequestToFhir) ?? [];
@@ -41,6 +47,7 @@ export function mapPatientRecordToFhirBundle(input: PatientRecordBundleInput): F
   const resources = [
     patient,
     ...encounters,
+    ...allergyIntolerances,
     ...conditions,
     ...observations,
     ...medicationRequests,
@@ -67,6 +74,7 @@ function toBundleEntry(
   resource:
     | FhirPatient
     | FhirEncounter
+    | FhirAllergyIntolerance
     | FhirCondition
     | FhirObservation
     | FhirMedicationRequest

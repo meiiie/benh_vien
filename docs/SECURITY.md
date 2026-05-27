@@ -24,7 +24,7 @@ Hồ sơ bệnh án là dữ liệu đặc biệt nhạy cảm. Dự án chưa t
 - API đã yêu cầu `Authorization: Bearer <token>` cho endpoint nghiệp vụ.
 - Token demo do `POST /api/v1/auth/login` phát hành, ký bằng `BVS_AUTH_SECRET`.
 - `x-purpose-of-use` vẫn được dùng để khai báo mục đích truy cập như `TREATMENT` hoặc `AUDIT`; đây là ngữ cảnh sử dụng dữ liệu, không phải định danh người dùng.
-- Các endpoint lâm sàng như bệnh nhân, lượt khám, chẩn đoán `Condition`, chỉ số `Observation`, chỉ định thuốc `MedicationRequest`, tài liệu và Bundle đều đi qua kiểm tra quyền ở API.
+- Các endpoint lâm sàng như bệnh nhân, lượt khám, dị ứng/cảnh báo `AllergyIntolerance`, chẩn đoán `Condition`, chỉ số `Observation`, chỉ định thuốc `MedicationRequest`, tài liệu và Bundle đều đi qua kiểm tra quyền ở API.
 - FHIR Bundle chia sẻ liên viện yêu cầu consent tồn tại trong store, còn hiệu lực, đúng bệnh nhân và đúng đơn vị nhận.
 - Cơ chế này chỉ là lớp phiên nội bộ cho prototype, chưa thay thế IAM/SSO, MFA, quản lý thiết bị hoặc chính sách truy cập theo cơ sở y tế.
 

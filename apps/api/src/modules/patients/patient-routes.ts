@@ -12,6 +12,7 @@ import {
 } from "@benh-vien-so/domain";
 import type {
   AuditEventRepository,
+  AllergyIntoleranceRepository,
   ClinicalDocumentRepository,
   ConditionRepository,
   ConsentRepository,
@@ -28,6 +29,7 @@ export async function registerPatientRoutes(
   app: FastifyInstance,
   repository: PatientRepository,
   encounterRepository: EncounterRepository,
+  allergyIntoleranceRepository: AllergyIntoleranceRepository,
   documentRepository: ClinicalDocumentRepository,
   conditionRepository: ConditionRepository,
   observationRepository: ObservationRepository,
@@ -200,8 +202,16 @@ export async function registerPatientRoutes(
       });
     }
 
-    const [encounters, documents, conditions, observations, medicationRequests] = await Promise.all([
+    const [
+      encounters,
+      allergyIntolerances,
+      documents,
+      conditions,
+      observations,
+      medicationRequests
+    ] = await Promise.all([
       encounterRepository.findByPatientId(params.id),
+      allergyIntoleranceRepository.findByPatientId(params.id),
       documentRepository.findByPatientId(params.id),
       conditionRepository.findByPatientId(params.id),
       observationRepository.findByPatientId(params.id),
@@ -220,6 +230,7 @@ export async function registerPatientRoutes(
         consentReference: transferContext.consentReference,
         recipientOrganizationId: transferContext.recipientOrganizationId,
         encounterCount: encounters.length,
+        allergyIntoleranceCount: allergyIntolerances.length,
         conditionCount: conditions.length,
         observationCount: observations.length,
         medicationRequestCount: medicationRequests.length,
@@ -230,6 +241,7 @@ export async function registerPatientRoutes(
     return mapPatientRecordToFhirBundle({
       patient,
       encounters,
+      allergyIntolerances,
       conditions,
       observations,
       medicationRequests,
