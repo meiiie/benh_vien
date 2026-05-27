@@ -87,6 +87,16 @@ curl http://localhost:7310/api/v1/patients/patient-demo-001/fhir \
 
 Kết quả mong muốn là JSON có `resourceType` bằng `Patient`, có định danh, họ tên, ngày sinh, giới tính và cơ sở quản lý.
 
+## Xuất gói hồ sơ bệnh nhân sang FHIR Bundle
+
+```bash
+curl http://localhost:7310/api/v1/patients/patient-demo-001/fhir-bundle \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các `Encounter` và các `DocumentReference` của bệnh nhân. Đây là lát cắt gần hơn với bài toán chia sẻ/chuyển hồ sơ giữa bệnh viện.
+
 ## Lấy và mở lượt khám
 
 ```bash

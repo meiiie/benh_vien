@@ -104,3 +104,23 @@ export type FhirPatient = {
     readonly reference: string;
   };
 };
+
+export type FhirBundleEntry = {
+  readonly fullUrl: string;
+  readonly resource: FhirPatient | FhirEncounter | FhirDocumentReference;
+};
+
+export type FhirBundle = {
+  readonly resourceType: "Bundle";
+  readonly id: string;
+  readonly meta?: {
+    readonly profile?: readonly string[];
+  };
+  readonly identifier?: {
+    readonly system: string;
+    readonly value: string;
+  };
+  readonly type: "collection";
+  readonly timestamp: string;
+  readonly entry: readonly FhirBundleEntry[];
+};

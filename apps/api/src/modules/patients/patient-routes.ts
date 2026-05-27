@@ -7,10 +7,13 @@ import {
 import {
   DomainError,
   Patient,
+  mapPatientRecordToFhirBundle,
   mapPatientToFhir
 } from "@benh-vien-so/domain";
 import type {
   AuditEventRepository,
+  ClinicalDocumentRepository,
+  EncounterRepository,
   PatientRepository,
   PatientSnapshot
 } from "@benh-vien-so/domain";
@@ -20,6 +23,8 @@ import { recordAuditEvent } from "../audit-events/audit-context.js";
 export async function registerPatientRoutes(
   app: FastifyInstance,
   repository: PatientRepository,
+  encounterRepository: EncounterRepository,
+  documentRepository: ClinicalDocumentRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
   app.get("/patients", async (request, reply) => {
@@ -144,6 +149,48 @@ export async function registerPatientRoutes(
     });
 
     return mapPatientToFhir(patient);
+  });
+
+  app.get("/patients/:id/fhir-bundle", async (request, reply) => {
+    const actor = requirePermission(request, reply, "patient:fhir-export");
+
+    if (!actor) {
+      return;
+    }
+
+    const params = PatientIdParamsSchema.parse(request.params);
+    const patient = await repository.findById(params.id);
+
+    if (!patient) {
+      return reply.status(404).send({
+        error: "PATIENT_NOT_FOUND"
+      });
+    }
+
+    const [encounters, documents] = await Promise.all([
+      encounterRepository.findByPatientId(params.id),
+      documentRepository.findByPatientId(params.id)
+    ]);
+
+    await recordAuditEvent(auditRepository, request, {
+      action: "patient.fhir-bundle-export",
+      resourceType: "Patient",
+      resourceId: patient.id,
+      patientId: patient.id,
+      metadata: {
+        standard: "HL7 FHIR R4",
+        resourceType: "Bundle",
+        bundleType: "collection",
+        encounterCount: encounters.length,
+        documentCount: documents.length
+      }
+    });
+
+    return mapPatientRecordToFhirBundle({
+      patient,
+      encounters,
+      documents
+    });
   });
 }
 

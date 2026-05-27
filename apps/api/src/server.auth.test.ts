@@ -139,6 +139,33 @@ describe("API auth and RBAC boundary", () => {
       permission: "patient:fhir-export"
     });
   });
+
+  it("returns a patient-record FHIR Bundle for treatment export", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/fhir-bundle",
+      headers: treatmentHeaders(accessToken)
+    });
+    const body = response.json();
+    const resourceTypes = body.entry.map(
+      (entry: { readonly resource: { readonly resourceType: string } }) =>
+        entry.resource.resourceType
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(body).toMatchObject({
+      resourceType: "Bundle",
+      id: "patient-record-patient-demo-001",
+      type: "collection"
+    });
+    expect(resourceTypes).toEqual(
+      expect.arrayContaining(["Patient", "Encounter", "DocumentReference"])
+    );
+    expect(body.entry).toHaveLength(6);
+  });
 });
 
 async function readyServer(): Promise<FastifyInstance> {

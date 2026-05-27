@@ -96,7 +96,13 @@ export async function buildServer(options: ServerOptions = {}) {
   await app.register(
     async (api) => {
       await registerAuthRoutes(api);
-      await registerPatientRoutes(api, patientRepository, auditEventRepository);
+      await registerPatientRoutes(
+        api,
+        patientRepository,
+        encounterRepository,
+        clinicalDocumentRepository,
+        auditEventRepository
+      );
       await registerEncounterRoutes(
         api,
         patientRepository,

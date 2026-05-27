@@ -21,6 +21,7 @@ const {
   canAccess,
   mapClinicalDocumentToFhir,
   mapEncounterToFhir,
+  mapPatientRecordToFhirBundle,
   mapPatientToFhir
 } = await import(pathToFileURL(domainEntry).href);
 
@@ -131,6 +132,25 @@ if (fhirDocumentReference.docStatus !== "final") {
   throw new Error(`Expected docStatus final, received ${fhirDocumentReference.docStatus}`);
 }
 
+const fhirBundle = mapPatientRecordToFhirBundle({
+  patient,
+  encounters: [encounter],
+  documents: [document],
+  generatedAt: new Date("2026-05-27T00:00:00.000Z")
+});
+
+if (fhirBundle.resourceType !== "Bundle") {
+  throw new Error(`Expected resourceType Bundle, received ${fhirBundle.resourceType}`);
+}
+
+if (fhirBundle.type !== "collection") {
+  throw new Error(`Expected bundle type collection, received ${fhirBundle.type}`);
+}
+
+if (fhirBundle.entry.length !== 3) {
+  throw new Error(`Expected bundle to contain 3 entries, received ${fhirBundle.entry.length}`);
+}
+
 const auditEvent = AuditEvent.record({
   actorId: "practitioner-harness-001",
   action: "clinical-document.fhir-export",
@@ -214,6 +234,9 @@ console.log(
       documentResourceType: fhirDocumentReference.resourceType,
       encounterId: fhirEncounter.id,
       encounterResourceType: fhirEncounter.resourceType,
+      bundleId: fhirBundle.id,
+      bundleResourceType: fhirBundle.resourceType,
+      bundleEntryCount: fhirBundle.entry.length,
       auditAction: auditEvent.toSnapshot().action,
       auth: {
         actorId: verifiedSession.actor.actorId,

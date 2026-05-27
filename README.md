@@ -103,6 +103,7 @@ Chi tiết version xem [VERSIONING.md](VERSIONING.md).
 - Xuất biểu diễn bệnh nhân sang FHIR `Patient`.
 - Xuất lượt khám sang FHIR `Encounter`.
 - Quản lý tài liệu bệnh án tối thiểu: tạo bản nháp, ký tài liệu và xuất metadata sang FHIR `DocumentReference`.
+- Xuất gói hồ sơ bệnh nhân sang FHIR `Bundle` dạng `collection` gồm Patient, Encounter và DocumentReference để mô phỏng chia sẻ liên viện.
 - Ghi nhật ký kiểm toán tối thiểu cho các thao tác xem/tạo/ký/xuất dữ liệu nhạy cảm.
 - Chặn quyền tối thiểu ở API theo vai trò demo `clinician`, `nurse`, `auditor`, `admin`.
 - Chuẩn bị đường mở rộng sang hồ sơ lâm sàng, hình ảnh y khoa và liên thông bệnh viện.

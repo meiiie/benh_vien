@@ -5,6 +5,7 @@ export type AuditAction =
   | "patient.create"
   | "patient.read"
   | "patient.fhir-export"
+  | "patient.fhir-bundle-export"
   | "encounter.list"
   | "encounter.create"
   | "encounter.read"

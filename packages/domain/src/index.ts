@@ -12,3 +12,4 @@ export * from "./fhir/fhir-types.js";
 export * from "./fhir/map-clinical-document-to-fhir.js";
 export * from "./fhir/map-encounter-to-fhir.js";
 export * from "./fhir/map-patient-to-fhir.js";
+export * from "./fhir/map-patient-record-to-fhir-bundle.js";

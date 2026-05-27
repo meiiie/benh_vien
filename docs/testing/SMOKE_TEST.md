@@ -22,6 +22,10 @@ curl -fsS http://localhost:7310/api/v1/patients \
 curl -fsS http://localhost:7310/api/v1/patients/patient-demo-001/fhir \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-purpose-of-use: TREATMENT"
+
+curl -fsS http://localhost:7310/api/v1/patients/patient-demo-001/fhir-bundle \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
 ```
 
 ## Docker smoke

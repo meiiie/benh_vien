@@ -83,6 +83,7 @@ type AuditAction =
   | "patient.create"
   | "patient.read"
   | "patient.fhir-export"
+  | "patient.fhir-bundle-export"
   | "encounter.list"
   | "encounter.create"
   | "encounter.read"
@@ -288,6 +289,7 @@ export function App() {
   const [selectedDocumentId, setSelectedDocumentId] = useState<string>();
   const [auditEvents, setAuditEvents] = useState<readonly AuditEvent[]>([]);
   const [patientFhirPreview, setPatientFhirPreview] = useState<unknown>();
+  const [patientFhirBundlePreview, setPatientFhirBundlePreview] = useState<unknown>();
   const [encounterFhirPreview, setEncounterFhirPreview] = useState<unknown>();
   const [documentFhirPreview, setDocumentFhirPreview] = useState<unknown>();
   const [patientForm, setPatientForm] = useState<NewPatientForm>(defaultPatientForm);
@@ -327,6 +329,7 @@ export function App() {
   useEffect(() => {
     if (!isAuthenticated || !selectedPatientId) {
       setPatientFhirPreview(undefined);
+      setPatientFhirBundlePreview(undefined);
       setEncounterFhirPreview(undefined);
       setDocumentFhirPreview(undefined);
       setEncounters([]);
@@ -405,6 +408,7 @@ export function App() {
   async function loadPatientWorkspace(patientId: string) {
     const workspaceTasks = [
       loadPatientFhirPreview(patientId),
+      loadPatientFhirBundlePreview(patientId),
       loadEncounters(patientId),
       loadClinicalDocuments(patientId)
     ];
@@ -531,6 +535,27 @@ export function App() {
     }
   }
 
+  async function loadPatientFhirBundlePreview(patientId: string) {
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/fhir-bundle`, {
+        headers: buildHeaders("TREATMENT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      setPatientFhirBundlePreview(await response.json());
+    } catch (error) {
+      setPatientFhirBundlePreview({
+        error:
+          error instanceof Error
+            ? `Không thể xuất FHIR Bundle hồ sơ bệnh nhân: ${error.message}`
+            : "Không thể xuất FHIR Bundle hồ sơ bệnh nhân."
+      });
+    }
+  }
+
   async function loadEncounterFhirPreview(encounterId: string) {
     try {
       const response = await fetch(`${apiBaseUrl}/encounters/${encounterId}/fhir`, {
@@ -629,6 +654,7 @@ export function App() {
     setClinicalDocuments([]);
     setAuditEvents([]);
     setPatientFhirPreview(undefined);
+    setPatientFhirBundlePreview(undefined);
     setEncounterFhirPreview(undefined);
     setDocumentFhirPreview(undefined);
     setSelectedPatientId(undefined);
@@ -1040,6 +1066,7 @@ export function App() {
 
         <section className="workspace">
           <FhirPanel title="FHIR Patient JSON" badge="Patient" value={patientFhirPreview} />
+          <FhirPanel title="FHIR Patient Record Bundle JSON" badge="Bundle" value={patientFhirBundlePreview} />
           <FhirPanel title="FHIR Encounter JSON" badge="Encounter" value={encounterFhirPreview} />
           <FhirPanel title="FHIR DocumentReference JSON" badge="DocumentReference" value={documentFhirPreview} />
           <article className="panel dark-panel">
@@ -1906,6 +1933,7 @@ function formatAuditAction(action: AuditAction): string {
     "patient.create": "Tạo hồ sơ bệnh nhân",
     "patient.read": "Xem hồ sơ bệnh nhân",
     "patient.fhir-export": "Xuất FHIR Patient",
+    "patient.fhir-bundle-export": "Xuất FHIR Bundle hồ sơ",
     "encounter.list": "Tải danh sách lượt khám",
     "encounter.create": "Mở lượt khám",
     "encounter.read": "Xem lượt khám",
