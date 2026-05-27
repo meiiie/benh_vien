@@ -16,15 +16,15 @@
 ## Giai đoạn 2: Liên thông FHIR
 
 - Kết nối HAPI FHIR ở chế độ thử nghiệm.
-- Mapping `Patient`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Observation`, `DiagnosticReport`, `MedicationRequest`, `DocumentReference`, `Composition`.
+- Mapping `Patient`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `DocumentReference`, `Composition`.
 - Tạo luồng xuất gói hồ sơ bệnh án cho một bệnh nhân.
 - Kiểm tra luồng nhận lại dữ liệu từ FHIR server.
 
 ## Giai đoạn 3: Ảnh y khoa và PACS
 
 - Kết nối Orthanc.
-- Lưu metadata ảnh trong EMR, ảnh thật nằm trong PACS.
-- Hiển thị danh sách study/series và liên kết báo cáo chẩn đoán hình ảnh.
+- Đã có lát cắt tối thiểu để lưu metadata ảnh trong EMR bằng FHIR `ImagingStudy`; ảnh thật vẫn nằm trong PACS.
+- Đã hiển thị danh sách study/series và liên kết y lệnh, báo cáo chẩn đoán hình ảnh trong Patient Workspace.
 - Nghiên cứu DICOMweb nếu cần tích hợp hiện đại hơn.
 
 ## Giai đoạn 4: Bảo mật, vận hành và chuẩn hóa

@@ -10,6 +10,7 @@ import type {
   ConsentRepository,
   DiagnosticReportRepository,
   EncounterRepository,
+  ImagingStudyRepository,
   MedicationRequestRepository,
   ObservationRepository,
   PatientRepository,
@@ -30,6 +31,8 @@ import { createDiagnosticReportRepository } from "./modules/diagnostic-reports/c
 import { registerDiagnosticReportRoutes } from "./modules/diagnostic-reports/diagnostic-report-routes.js";
 import { createEncounterRepository } from "./modules/encounters/create-encounter.repository.js";
 import { registerEncounterRoutes } from "./modules/encounters/encounter-routes.js";
+import { createImagingStudyRepository } from "./modules/imaging-studies/create-imaging-study.repository.js";
+import { registerImagingStudyRoutes } from "./modules/imaging-studies/imaging-study-routes.js";
 import { createMedicationRequestRepository } from "./modules/medication-requests/create-medication-request.repository.js";
 import { registerMedicationRequestRoutes } from "./modules/medication-requests/medication-request-routes.js";
 import { createObservationRepository } from "./modules/observations/create-observation.repository.js";
@@ -46,6 +49,7 @@ export type ServerOptions = {
   readonly conditionRepository?: ConditionRepository;
   readonly observationRepository?: ObservationRepository;
   readonly diagnosticReportRepository?: DiagnosticReportRepository;
+  readonly imagingStudyRepository?: ImagingStudyRepository;
   readonly medicationRequestRepository?: MedicationRequestRepository;
   readonly serviceRequestRepository?: ServiceRequestRepository;
   readonly clinicalDocumentRepository?: ClinicalDocumentRepository;
@@ -113,6 +117,10 @@ export async function buildServer(options: ServerOptions = {}) {
           description: "Quản lý báo cáo xét nghiệm, hình ảnh và FHIR DiagnosticReport"
         },
         {
+          name: "imaging-studies",
+          description: "Quan ly metadata PACS/DICOM va FHIR ImagingStudy"
+        },
+        {
           name: "clinical-documents",
           description: "Quản lý tài liệu lâm sàng và FHIR DocumentReference"
         },
@@ -147,6 +155,8 @@ export async function buildServer(options: ServerOptions = {}) {
     options.serviceRequestRepository ?? (await createServiceRequestRepository());
   const diagnosticReportRepository =
     options.diagnosticReportRepository ?? (await createDiagnosticReportRepository());
+  const imagingStudyRepository =
+    options.imagingStudyRepository ?? (await createImagingStudyRepository());
   const clinicalDocumentRepository =
     options.clinicalDocumentRepository ?? (await createClinicalDocumentRepository());
   const consentRepository =
@@ -173,6 +183,7 @@ export async function buildServer(options: ServerOptions = {}) {
         medicationRequestRepository,
         serviceRequestRepository,
         diagnosticReportRepository,
+        imagingStudyRepository,
         consentRepository,
         auditEventRepository
       );
@@ -232,6 +243,15 @@ export async function buildServer(options: ServerOptions = {}) {
         serviceRequestRepository,
         observationRepository,
         diagnosticReportRepository,
+        auditEventRepository
+      );
+      await registerImagingStudyRoutes(
+        api,
+        patientRepository,
+        encounterRepository,
+        serviceRequestRepository,
+        diagnosticReportRepository,
+        imagingStudyRepository,
         auditEventRepository
       );
       await registerClinicalDocumentRoutes(

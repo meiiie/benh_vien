@@ -3,6 +3,7 @@ import type { ClinicalDocument } from "../clinical-document/clinical-document.js
 import type { Condition } from "../condition/condition.js";
 import type { DiagnosticReport } from "../diagnostic-report/diagnostic-report.js";
 import type { Encounter } from "../encounter/encounter.js";
+import type { ImagingStudy } from "../imaging-study/imaging-study.js";
 import type { MedicationRequest } from "../medication-request/medication-request.js";
 import type { Observation } from "../observation/observation.js";
 import type { Patient } from "../patient/patient.js";
@@ -14,6 +15,7 @@ import type {
   FhirDiagnosticReport,
   FhirDocumentReference,
   FhirEncounter,
+  FhirImagingStudy,
   FhirMedicationRequest,
   FhirObservation,
   FhirPatient,
@@ -24,6 +26,7 @@ import { mapClinicalDocumentToFhir } from "./map-clinical-document-to-fhir.js";
 import { mapConditionToFhir } from "./map-condition-to-fhir.js";
 import { mapDiagnosticReportToFhir } from "./map-diagnostic-report-to-fhir.js";
 import { mapEncounterToFhir } from "./map-encounter-to-fhir.js";
+import { mapImagingStudyToFhir } from "./map-imaging-study-to-fhir.js";
 import { mapMedicationRequestToFhir } from "./map-medication-request-to-fhir.js";
 import { mapObservationToFhir } from "./map-observation-to-fhir.js";
 import { mapPatientToFhir } from "./map-patient-to-fhir.js";
@@ -37,6 +40,7 @@ export type PatientRecordBundleInput = {
   readonly serviceRequests?: readonly ServiceRequest[];
   readonly observations?: readonly Observation[];
   readonly diagnosticReports?: readonly DiagnosticReport[];
+  readonly imagingStudies?: readonly ImagingStudy[];
   readonly medicationRequests?: readonly MedicationRequest[];
   readonly documents: readonly ClinicalDocument[];
   readonly generatedAt?: Date;
@@ -52,6 +56,7 @@ export function mapPatientRecordToFhirBundle(input: PatientRecordBundleInput): F
   const serviceRequests = input.serviceRequests?.map(mapServiceRequestToFhir) ?? [];
   const observations = input.observations?.map(mapObservationToFhir) ?? [];
   const diagnosticReports = input.diagnosticReports?.map(mapDiagnosticReportToFhir) ?? [];
+  const imagingStudies = input.imagingStudies?.map(mapImagingStudyToFhir) ?? [];
   const medicationRequests = input.medicationRequests?.map(mapMedicationRequestToFhir) ?? [];
   const documents = input.documents.map(mapClinicalDocumentToFhir);
   const resources = [
@@ -62,6 +67,7 @@ export function mapPatientRecordToFhirBundle(input: PatientRecordBundleInput): F
     ...serviceRequests,
     ...observations,
     ...diagnosticReports,
+    ...imagingStudies,
     ...medicationRequests,
     ...documents
   ];
@@ -90,6 +96,7 @@ function toBundleEntry(
     | FhirCondition
     | FhirObservation
     | FhirDiagnosticReport
+    | FhirImagingStudy
     | FhirMedicationRequest
     | FhirServiceRequest
     | FhirDocumentReference

@@ -36,6 +36,10 @@ export type Permission =
   | "diagnostic-report:create"
   | "diagnostic-report:read"
   | "diagnostic-report:fhir-export"
+  | "imaging-study:list"
+  | "imaging-study:create"
+  | "imaging-study:read"
+  | "imaging-study:fhir-export"
   | "clinical-document:list"
   | "clinical-document:create"
   | "clinical-document:sign"
@@ -85,6 +89,10 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "diagnostic-report:create",
     "diagnostic-report:read",
     "diagnostic-report:fhir-export",
+    "imaging-study:list",
+    "imaging-study:create",
+    "imaging-study:read",
+    "imaging-study:fhir-export",
     "clinical-document:list",
     "clinical-document:create",
     "clinical-document:sign",
@@ -115,6 +123,9 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "diagnostic-report:list",
     "diagnostic-report:create",
     "diagnostic-report:read",
+    "imaging-study:list",
+    "imaging-study:create",
+    "imaging-study:read",
     "clinical-document:list",
     "clinical-document:create",
     "consent:list"
@@ -154,6 +165,10 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "diagnostic-report:create",
     "diagnostic-report:read",
     "diagnostic-report:fhir-export",
+    "imaging-study:list",
+    "imaging-study:create",
+    "imaging-study:read",
+    "imaging-study:fhir-export",
     "clinical-document:list",
     "clinical-document:create",
     "clinical-document:sign",

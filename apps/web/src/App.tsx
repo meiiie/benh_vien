@@ -109,6 +109,12 @@ type DiagnosticReportStatus =
   | "entered-in-error"
   | "unknown";
 type DiagnosticReportCategory = "laboratory" | "imaging" | "pathology" | "other";
+type ImagingStudyStatus =
+  | "registered"
+  | "available"
+  | "cancelled"
+  | "entered-in-error"
+  | "unknown";
 type DemoRole = "clinician" | "nurse" | "auditor" | "admin";
 type PurposeOfUse = "TREATMENT" | "AUDIT" | "OPERATIONS";
 type ConsentStatus = "active" | "revoked" | "expired";
@@ -337,6 +343,43 @@ type DiagnosticReport = {
   readonly updatedAt: string;
 };
 
+type ImagingStudyCoding = {
+  readonly system: string;
+  readonly code: string;
+  readonly display: string;
+};
+
+type ImagingStudySeries = {
+  readonly uid: string;
+  readonly number?: number;
+  readonly modality: ImagingStudyCoding;
+  readonly description?: string;
+  readonly numberOfInstances: number;
+  readonly bodySite?: ImagingStudyCoding;
+  readonly startedAt?: string;
+};
+
+type ImagingStudy = {
+  readonly id: string;
+  readonly patientId: string;
+  readonly encounterId?: string;
+  readonly basedOnServiceRequestId?: string;
+  readonly diagnosticReportId?: string;
+  readonly status: ImagingStudyStatus;
+  readonly studyInstanceUid: string;
+  readonly accessionNumber?: string;
+  readonly description?: string;
+  readonly startedAt?: string;
+  readonly referrerPractitionerId?: string;
+  readonly interpreterPractitionerId?: string;
+  readonly endpointId?: string;
+  readonly numberOfSeries: number;
+  readonly numberOfInstances: number;
+  readonly series: readonly ImagingStudySeries[];
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
 type AuditAction =
   | "patient.list"
   | "patient.create"
@@ -372,6 +415,10 @@ type AuditAction =
   | "diagnostic-report.create"
   | "diagnostic-report.read"
   | "diagnostic-report.fhir-export"
+  | "imaging-study.list"
+  | "imaging-study.create"
+  | "imaging-study.read"
+  | "imaging-study.fhir-export"
   | "clinical-document.list"
   | "clinical-document.create"
   | "clinical-document.sign"
@@ -389,6 +436,7 @@ type AuditResourceType =
   | "Observation"
   | "ServiceRequest"
   | "DiagnosticReport"
+  | "ImagingStudy"
   | "ClinicalDocument"
   | "Consent"
   | "AuditEvent";
@@ -455,6 +503,10 @@ type ServiceRequestsResponse = {
 
 type DiagnosticReportsResponse = {
   readonly items: readonly DiagnosticReport[];
+};
+
+type ImagingStudiesResponse = {
+  readonly items: readonly ImagingStudy[];
 };
 
 type AuditEventsResponse = {
@@ -593,6 +645,29 @@ type NewDiagnosticReportForm = {
   conclusion: string;
   presentedFormUrl: string;
   presentedFormTitle: string;
+};
+
+type NewImagingStudyForm = {
+  encounterId: string;
+  basedOnServiceRequestId: string;
+  diagnosticReportId: string;
+  studyInstanceUid: string;
+  accessionNumber: string;
+  description: string;
+  startedAt: string;
+  referrerPractitionerId: string;
+  interpreterPractitionerId: string;
+  endpointId: string;
+  seriesUid: string;
+  seriesNumber: string;
+  modalitySystem: string;
+  modalityCode: string;
+  modalityDisplay: string;
+  seriesDescription: string;
+  numberOfInstances: string;
+  bodySiteSystem: string;
+  bodySiteCode: string;
+  bodySiteDisplay: string;
 };
 
 type LoginForm = {
@@ -741,6 +816,29 @@ const defaultDiagnosticReportForm: NewDiagnosticReportForm = {
   presentedFormTitle: ""
 };
 
+const defaultImagingStudyForm: NewImagingStudyForm = {
+  encounterId: "",
+  basedOnServiceRequestId: "",
+  diagnosticReportId: "",
+  studyInstanceUid: "1.2.826.0.1.3680043.10.543.202605270002",
+  accessionNumber: "HP-CXR-20260527-0002",
+  description: "Chest X-ray follow-up study",
+  startedAt: "2026-05-27T12:10",
+  referrerPractitionerId: "practitioner-demo-001",
+  interpreterPractitionerId: "practitioner-demo-001",
+  endpointId: "endpoint-pacs-hai-phong-demo",
+  seriesUid: "1.2.826.0.1.3680043.10.543.202605270002.1",
+  seriesNumber: "1",
+  modalitySystem: "http://dicom.nema.org/resources/ontology/DCM",
+  modalityCode: "DX",
+  modalityDisplay: "Digital Radiography",
+  seriesDescription: "PA and lateral chest radiographs",
+  numberOfInstances: "2",
+  bodySiteSystem: "http://snomed.info/sct",
+  bodySiteCode: "51185008",
+  bodySiteDisplay: "Thoracic structure"
+};
+
 const apiBaseUrl =
   import.meta.env.VITE_API_BASE_URL ??
   (window.location.port === "7311" ? "http://localhost:7310/api/v1" : "/api/v1");
@@ -780,6 +878,7 @@ const workflowSteps = [
   "Ghi nhận chẩn đoán",
   "Chỉ định dịch vụ",
   "Nhận kết quả",
+  "Gắn metadata PACS",
   "Ghi nhận chỉ số",
   "Kê đơn/thuốc",
   "Gắn tài liệu",
@@ -816,7 +915,7 @@ const referenceSignals = [
   },
   {
     name: "HL7 FHIR R4",
-    value: "Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Observation, DiagnosticReport, MedicationRequest và DocumentReference là lõi trao đổi dữ liệu trong lát cắt này."
+    value: "Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Observation, DiagnosticReport, ImagingStudy, MedicationRequest và DocumentReference là lõi trao đổi dữ liệu trong lát cắt này."
   },
   {
     name: "Bối cảnh Việt Nam",
@@ -852,6 +951,8 @@ export function App() {
   const [selectedServiceRequestId, setSelectedServiceRequestId] = useState<string>();
   const [diagnosticReports, setDiagnosticReports] = useState<readonly DiagnosticReport[]>([]);
   const [selectedDiagnosticReportId, setSelectedDiagnosticReportId] = useState<string>();
+  const [imagingStudies, setImagingStudies] = useState<readonly ImagingStudy[]>([]);
+  const [selectedImagingStudyId, setSelectedImagingStudyId] = useState<string>();
   const [auditEvents, setAuditEvents] = useState<readonly AuditEvent[]>([]);
   const [consents, setConsents] = useState<readonly Consent[]>([]);
   const [patientFhirPreview, setPatientFhirPreview] = useState<unknown>();
@@ -864,6 +965,7 @@ export function App() {
   const [medicationRequestFhirPreview, setMedicationRequestFhirPreview] = useState<unknown>();
   const [serviceRequestFhirPreview, setServiceRequestFhirPreview] = useState<unknown>();
   const [diagnosticReportFhirPreview, setDiagnosticReportFhirPreview] = useState<unknown>();
+  const [imagingStudyFhirPreview, setImagingStudyFhirPreview] = useState<unknown>();
   const [patientForm, setPatientForm] = useState<NewPatientForm>(defaultPatientForm);
   const [encounterForm, setEncounterForm] = useState<NewEncounterForm>(defaultEncounterForm);
   const [documentForm, setDocumentForm] =
@@ -880,6 +982,8 @@ export function App() {
     useState<NewServiceRequestForm>(defaultServiceRequestForm);
   const [diagnosticReportForm, setDiagnosticReportForm] =
     useState<NewDiagnosticReportForm>(defaultDiagnosticReportForm);
+  const [imagingStudyForm, setImagingStudyForm] =
+    useState<NewImagingStudyForm>(defaultImagingStudyForm);
   const [statusMessage, setStatusMessage] = useState("Chưa đăng nhập.");
   const [isLoadingPatients, setIsLoadingPatients] = useState(false);
   const [isLoadingEncounters, setIsLoadingEncounters] = useState(false);
@@ -890,6 +994,7 @@ export function App() {
   const [isLoadingMedicationRequests, setIsLoadingMedicationRequests] = useState(false);
   const [isLoadingServiceRequests, setIsLoadingServiceRequests] = useState(false);
   const [isLoadingDiagnosticReports, setIsLoadingDiagnosticReports] = useState(false);
+  const [isLoadingImagingStudies, setIsLoadingImagingStudies] = useState(false);
   const [isLoadingAuditEvents, setIsLoadingAuditEvents] = useState(false);
   const [isLoadingConsents, setIsLoadingConsents] = useState(false);
   const [isSubmittingPatient, setIsSubmittingPatient] = useState(false);
@@ -901,6 +1006,7 @@ export function App() {
   const [isSubmittingMedicationRequest, setIsSubmittingMedicationRequest] = useState(false);
   const [isSubmittingServiceRequest, setIsSubmittingServiceRequest] = useState(false);
   const [isSubmittingDiagnosticReport, setIsSubmittingDiagnosticReport] = useState(false);
+  const [isSubmittingImagingStudy, setIsSubmittingImagingStudy] = useState(false);
   const [isSigningDocument, setIsSigningDocument] = useState(false);
   const [isFinishingEncounter, setIsFinishingEncounter] = useState(false);
 
@@ -920,6 +1026,9 @@ export function App() {
   );
   const selectedDiagnosticReport = diagnosticReports.find(
     (diagnosticReport) => diagnosticReport.id === selectedDiagnosticReportId
+  );
+  const selectedImagingStudy = imagingStudies.find(
+    (imagingStudy) => imagingStudy.id === selectedImagingStudyId
   );
   const selectedEncounterDocuments = selectedEncounter
     ? clinicalDocuments.filter((document) => document.encounterId === selectedEncounter.id)
@@ -941,6 +1050,9 @@ export function App() {
     : [];
   const selectedEncounterDiagnosticReports = selectedEncounter
     ? diagnosticReports.filter((diagnosticReport) => diagnosticReport.encounterId === selectedEncounter.id)
+    : [];
+  const selectedEncounterImagingStudies = selectedEncounter
+    ? imagingStudies.filter((imagingStudy) => imagingStudy.encounterId === selectedEncounter.id)
     : [];
   const openEncounters = encounters.filter((encounter) => encounter.status === "in-progress");
   const signedDocuments = clinicalDocuments.filter((document) => document.status === "signed");
@@ -967,6 +1079,7 @@ export function App() {
       setMedicationRequestFhirPreview(undefined);
       setServiceRequestFhirPreview(undefined);
       setDiagnosticReportFhirPreview(undefined);
+      setImagingStudyFhirPreview(undefined);
       setEncounters([]);
       setClinicalDocuments([]);
       setAllergyIntolerances([]);
@@ -975,6 +1088,7 @@ export function App() {
       setMedicationRequests([]);
       setServiceRequests([]);
       setDiagnosticReports([]);
+      setImagingStudies([]);
       setAuditEvents([]);
       setConsents([]);
       setSelectedEncounterId(undefined);
@@ -985,6 +1099,7 @@ export function App() {
       setSelectedMedicationRequestId(undefined);
       setSelectedServiceRequestId(undefined);
       setSelectedDiagnosticReportId(undefined);
+      setSelectedImagingStudyId(undefined);
       return;
     }
 
@@ -1001,6 +1116,7 @@ export function App() {
       setMedicationRequestForm((current) => ({ ...current, encounterId: "" }));
       setServiceRequestForm((current) => ({ ...current, encounterId: "" }));
       setDiagnosticReportForm((current) => ({ ...current, encounterId: "" }));
+      setImagingStudyForm((current) => ({ ...current, encounterId: "" }));
       return;
     }
 
@@ -1011,6 +1127,7 @@ export function App() {
     setMedicationRequestForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     setServiceRequestForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     setDiagnosticReportForm((current) => ({ ...current, encounterId: selectedEncounterId }));
+    setImagingStudyForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     void loadEncounterFhirPreview(selectedEncounterId);
   }, [selectedEncounterId]);
 
@@ -1077,6 +1194,15 @@ export function App() {
     void loadDiagnosticReportFhirPreview(selectedDiagnosticReportId);
   }, [selectedDiagnosticReportId]);
 
+  useEffect(() => {
+    if (!selectedImagingStudyId) {
+      setImagingStudyFhirPreview(undefined);
+      return;
+    }
+
+    void loadImagingStudyFhirPreview(selectedImagingStudyId);
+  }, [selectedImagingStudyId]);
+
   function buildHeaders(
     purposeOfUse: PurposeOfUse,
     headers: Record<string, string> = {}
@@ -1130,6 +1256,7 @@ export function App() {
       loadMedicationRequests(patientId),
       loadServiceRequests(patientId),
       loadDiagnosticReports(patientId),
+      loadImagingStudies(patientId),
       loadClinicalDocuments(patientId),
       loadConsents(patientId)
     ];
@@ -1376,6 +1503,34 @@ export function App() {
       );
     } finally {
       setIsLoadingDiagnosticReports(false);
+    }
+  }
+
+  async function loadImagingStudies(patientId: string, nextSelectedImagingStudyId?: string) {
+    setIsLoadingImagingStudies(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/imaging-studies`, {
+        headers: buildHeaders("TREATMENT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      const data = (await response.json()) as ImagingStudiesResponse;
+      setImagingStudies(data.items);
+      setSelectedImagingStudyId(nextSelectedImagingStudyId ?? data.items[0]?.id);
+    } catch (error) {
+      setImagingStudies([]);
+      setSelectedImagingStudyId(undefined);
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể tải nghiên cứu hình ảnh/PACS: ${error.message}`
+          : "Không thể tải nghiên cứu hình ảnh/PACS."
+      );
+    } finally {
+      setIsLoadingImagingStudies(false);
     }
   }
 
@@ -1654,6 +1809,27 @@ export function App() {
     }
   }
 
+  async function loadImagingStudyFhirPreview(imagingStudyId: string) {
+    try {
+      const response = await fetch(`${apiBaseUrl}/imaging-studies/${imagingStudyId}/fhir`, {
+        headers: buildHeaders("TREATMENT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      setImagingStudyFhirPreview(await response.json());
+    } catch (error) {
+      setImagingStudyFhirPreview({
+        error:
+          error instanceof Error
+            ? `Không thể xuất FHIR ImagingStudy: ${error.message}`
+            : "Không thể xuất FHIR ImagingStudy."
+      });
+    }
+  }
+
   async function handleLogin(event?: FormEvent<HTMLFormElement>) {
     const shouldOpenLoginOnFailure = !event;
 
@@ -1714,6 +1890,7 @@ export function App() {
     setMedicationRequests([]);
     setServiceRequests([]);
     setDiagnosticReports([]);
+    setImagingStudies([]);
     setAuditEvents([]);
     setConsents([]);
     setPatientFhirPreview(undefined);
@@ -1726,6 +1903,7 @@ export function App() {
     setMedicationRequestFhirPreview(undefined);
     setServiceRequestFhirPreview(undefined);
     setDiagnosticReportFhirPreview(undefined);
+    setImagingStudyFhirPreview(undefined);
     setSelectedPatientId(undefined);
     setSelectedEncounterId(undefined);
     setSelectedDocumentId(undefined);
@@ -1735,6 +1913,7 @@ export function App() {
     setSelectedMedicationRequestId(undefined);
     setSelectedServiceRequestId(undefined);
     setSelectedDiagnosticReportId(undefined);
+    setSelectedImagingStudyId(undefined);
   }
 
   async function handleCreatePatient(event: FormEvent<HTMLFormElement>) {
@@ -2292,6 +2471,85 @@ export function App() {
     }
   }
 
+  async function handleCreateImagingStudy(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedPatient) {
+      setStatusMessage("Cần chọn bệnh nhân trước khi tạo nghiên cứu hình ảnh.");
+      return;
+    }
+
+    setIsSubmittingImagingStudy(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/imaging-studies`, {
+        method: "POST",
+        headers: buildHeaders("TREATMENT", {
+          "Content-Type": "application/json"
+        }),
+        body: JSON.stringify({
+          encounterId: imagingStudyForm.encounterId || undefined,
+          basedOnServiceRequestId: imagingStudyForm.basedOnServiceRequestId || undefined,
+          diagnosticReportId: imagingStudyForm.diagnosticReportId || undefined,
+          studyInstanceUid: imagingStudyForm.studyInstanceUid,
+          accessionNumber: imagingStudyForm.accessionNumber || undefined,
+          description: imagingStudyForm.description || undefined,
+          startedAt: imagingStudyForm.startedAt ? toApiDateTime(imagingStudyForm.startedAt) : undefined,
+          referrerPractitionerId: imagingStudyForm.referrerPractitionerId || undefined,
+          interpreterPractitionerId: imagingStudyForm.interpreterPractitionerId || undefined,
+          endpointId: imagingStudyForm.endpointId || undefined,
+          series: [
+            {
+              uid: imagingStudyForm.seriesUid,
+              number: imagingStudyForm.seriesNumber
+                ? Number.parseInt(imagingStudyForm.seriesNumber, 10)
+                : undefined,
+              modality: {
+                system: imagingStudyForm.modalitySystem,
+                code: imagingStudyForm.modalityCode,
+                display: imagingStudyForm.modalityDisplay
+              },
+              description: imagingStudyForm.seriesDescription || undefined,
+              numberOfInstances: imagingStudyForm.numberOfInstances
+                ? Number.parseInt(imagingStudyForm.numberOfInstances, 10)
+                : undefined,
+              bodySite:
+                imagingStudyForm.bodySiteCode || imagingStudyForm.bodySiteDisplay
+                  ? {
+                      system: imagingStudyForm.bodySiteSystem,
+                      code: imagingStudyForm.bodySiteCode,
+                      display: imagingStudyForm.bodySiteDisplay
+                    }
+                  : undefined
+            }
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => undefined);
+        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
+      }
+
+      const createdImagingStudy = (await response.json()) as ImagingStudy;
+      await loadImagingStudies(selectedPatient.id, createdImagingStudy.id);
+      await loadPatientFhirBundlePreview(selectedPatient.id);
+      await loadAuditEvents(selectedPatient.id, { silent: true });
+      setAppRoute("workspace");
+      setStatusMessage(
+        `Đã tạo nghiên cứu hình ảnh "${createdImagingStudy.description ?? createdImagingStudy.studyInstanceUid}" cho ${selectedPatient.fullName}.`
+      );
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể tạo nghiên cứu hình ảnh: ${error.message}`
+          : "Không thể tạo nghiên cứu hình ảnh."
+      );
+    } finally {
+      setIsSubmittingImagingStudy(false);
+    }
+  }
+
   async function handleCreateClinicalDocument(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -2438,6 +2696,7 @@ export function App() {
           <MetricCard label="Chẩn đoán" value={`${conditions.length}`} note="Vấn đề sức khỏe có cấu trúc" />
           <MetricCard label="Chỉ định DV" value={`${serviceRequests.length}`} note="FHIR ServiceRequest" />
           <MetricCard label="Kết quả" value={`${diagnosticReports.length}`} note="FHIR DiagnosticReport" />
+          <MetricCard label="Ảnh y khoa" value={`${imagingStudies.length}`} note="FHIR ImagingStudy" />
           <MetricCard label="Chỉ định thuốc" value={`${medicationRequests.length}`} note="FHIR MedicationRequest" />
           <MetricCard label="Tài liệu nháp" value={`${draftDocuments.length}`} note="Cần ký/xác thực" />
         </section>
@@ -2459,7 +2718,7 @@ export function App() {
               </button>
               <button type="button" onClick={() => setAppRoute("interop")}>
                 <strong>Xem gói FHIR</strong>
-                <span>Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Observation, DiagnosticReport, MedicationRequest và DocumentReference đã có preview.</span>
+                <span>Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Observation, DiagnosticReport, ImagingStudy, MedicationRequest và DocumentReference đã có preview.</span>
               </button>
             </div>
           </article>
@@ -2476,6 +2735,7 @@ export function App() {
                 <Info label="Chỉ định dịch vụ" value={`${serviceRequests.length}`} />
                 <Info label="Chỉ số lâm sàng" value={`${observations.length}`} />
                 <Info label="Báo cáo kết quả" value={`${diagnosticReports.length}`} />
+                <Info label="Nghiên cứu hình ảnh" value={`${imagingStudies.length}`} />
                 <Info label="Chỉ định thuốc" value={`${medicationRequests.length}`} />
                 <Info label="Tài liệu" value={`${clinicalDocuments.length}`} />
                 <Info label="Cập nhật" value={formatDateTime(selectedPatient.updatedAt)} />
@@ -2507,6 +2767,7 @@ export function App() {
           {renderServiceRequestPanel()}
           {renderObservationPanel()}
           {renderDiagnosticReportPanel()}
+          {renderImagingStudyPanel()}
           {renderMedicationRequestPanel()}
           {renderCreatePatientPanel()}
         </section>
@@ -2584,6 +2845,7 @@ export function App() {
           <FhirPanel title="FHIR ServiceRequest JSON" badge="ServiceRequest" value={serviceRequestFhirPreview} />
           <FhirPanel title="FHIR Observation JSON" badge="Observation" value={observationFhirPreview} />
           <FhirPanel title="FHIR DiagnosticReport JSON" badge="DiagnosticReport" value={diagnosticReportFhirPreview} />
+          <FhirPanel title="FHIR ImagingStudy JSON" badge="ImagingStudy" value={imagingStudyFhirPreview} />
           <FhirPanel title="FHIR MedicationRequest JSON" badge="MedicationRequest" value={medicationRequestFhirPreview} />
           <FhirPanel title="FHIR DocumentReference JSON" badge="DocumentReference" value={documentFhirPreview} />
           {renderConsentInteropPanel()}
@@ -2795,6 +3057,7 @@ export function App() {
                   <Info label="Chỉ định dịch vụ gắn lượt khám" value={`${selectedEncounterServiceRequests.length}`} />
                   <Info label="Chỉ số gắn lượt khám" value={`${selectedEncounterObservations.length}`} />
                   <Info label="Báo cáo kết quả gắn lượt khám" value={`${selectedEncounterDiagnosticReports.length}`} />
+                  <Info label="Ảnh y khoa gắn lượt khám" value={`${selectedEncounterImagingStudies.length}`} />
                   <Info label="Thuốc gắn lượt khám" value={`${selectedEncounterMedicationRequests.length}`} />
                   <Info label="Tài liệu gắn lượt khám" value={`${selectedEncounterDocuments.length}`} />
                 </div>
@@ -3973,6 +4236,303 @@ export function App() {
     );
   }
 
+  function renderImagingStudyPanel(): ReactNode {
+    return (
+      <article className="panel imaging-study-panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">PACS / DICOM</p>
+            <h2>Nghiên cứu hình ảnh y khoa</h2>
+          </div>
+          <span className="pill cyan">
+            {isLoadingImagingStudies ? "loading" : `${imagingStudies.length} nghiên cứu`}
+          </span>
+        </div>
+
+        <div className="document-layout">
+          <div className="imaging-study-cards">
+            {imagingStudies.map((imagingStudy) => (
+              <button
+                className={
+                  imagingStudy.id === selectedImagingStudyId
+                    ? "imaging-study-card selected"
+                    : "imaging-study-card"
+                }
+                key={imagingStudy.id}
+                type="button"
+                onClick={() => setSelectedImagingStudyId(imagingStudy.id)}
+              >
+                <span>{formatImagingStudyStatus(imagingStudy.status)}</span>
+                <strong>{imagingStudy.description ?? imagingStudy.studyInstanceUid}</strong>
+                <small>
+                  {imagingStudy.series[0]?.modality.display ?? "DICOM"} ·{" "}
+                  {imagingStudy.startedAt ? formatDateTime(imagingStudy.startedAt) : "Chưa có thời điểm"}
+                </small>
+              </button>
+            ))}
+            {imagingStudies.length === 0 ? (
+              <p className="empty-state">
+                Chưa có ImagingStudy. Khi PACS/RIS có metadata DICOM, hãy tạo nghiên cứu hình ảnh để Bundle không chỉ có báo cáo PDF mà còn có chỉ mục ảnh máy đọc được.
+              </p>
+            ) : null}
+          </div>
+
+          <div className="imaging-study-summary">
+            {selectedImagingStudy ? (
+              <>
+                <div className="document-meta">
+                  <Info label="Mô tả" value={selectedImagingStudy.description ?? "Chưa có mô tả"} />
+                  <Info label="Study UID" value={selectedImagingStudy.studyInstanceUid} />
+                  <Info label="Accession" value={selectedImagingStudy.accessionNumber ?? "Chưa gắn"} />
+                  <Info label="Trạng thái" value={formatImagingStudyStatus(selectedImagingStudy.status)} />
+                  <Info label="Y lệnh gốc" value={selectedImagingStudy.basedOnServiceRequestId ?? "Chưa gắn"} />
+                  <Info label="Báo cáo liên quan" value={selectedImagingStudy.diagnosticReportId ?? "Chưa gắn"} />
+                  <Info label="Endpoint PACS" value={selectedImagingStudy.endpointId ?? "Chưa gắn"} />
+                  <Info label="Số ảnh" value={`${selectedImagingStudy.numberOfInstances} ảnh / ${selectedImagingStudy.numberOfSeries} series`} />
+                </div>
+                <div className="reference-list">
+                  {selectedImagingStudy.series.map((series) => (
+                    <div key={series.uid}>
+                      <strong>
+                        Series {series.number ?? "-"} · {series.modality.display}
+                      </strong>
+                      <span>
+                        UID {series.uid}; {series.numberOfInstances} ảnh
+                        {series.bodySite ? `; vùng chụp ${series.bodySite.display}` : ""}.
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="empty-state">Chọn một nghiên cứu hình ảnh để xem metadata PACS/DICOM và xuất FHIR ImagingStudy.</p>
+            )}
+          </div>
+        </div>
+
+        <form className="imaging-study-form" onSubmit={(event) => void handleCreateImagingStudy(event)}>
+          <label>
+            Gắn với lượt khám
+            <select
+              value={imagingStudyForm.encounterId}
+              onChange={(event) =>
+                setImagingStudyForm({ ...imagingStudyForm, encounterId: event.target.value })
+              }
+            >
+              <option value="">Không gắn</option>
+              {encounters.map((encounter) => (
+                <option key={encounter.id} value={encounter.id}>
+                  {encounter.serviceType} · {formatDateTime(encounter.startedAt)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Y lệnh gốc
+            <select
+              value={imagingStudyForm.basedOnServiceRequestId}
+              onChange={(event) =>
+                setImagingStudyForm({
+                  ...imagingStudyForm,
+                  basedOnServiceRequestId: event.target.value
+                })
+              }
+            >
+              <option value="">Không gắn</option>
+              {serviceRequests.map((serviceRequest) => (
+                <option key={serviceRequest.id} value={serviceRequest.id}>
+                  {serviceRequest.code.display}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Báo cáo liên quan
+            <select
+              value={imagingStudyForm.diagnosticReportId}
+              onChange={(event) =>
+                setImagingStudyForm({
+                  ...imagingStudyForm,
+                  diagnosticReportId: event.target.value
+                })
+              }
+            >
+              <option value="">Không gắn</option>
+              {diagnosticReports.map((diagnosticReport) => (
+                <option key={diagnosticReport.id} value={diagnosticReport.id}>
+                  {diagnosticReport.code.display}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="wide-field">
+            DICOM Study Instance UID
+            <input
+              value={imagingStudyForm.studyInstanceUid}
+              onChange={(event) =>
+                setImagingStudyForm({ ...imagingStudyForm, studyInstanceUid: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Accession number
+            <input
+              value={imagingStudyForm.accessionNumber}
+              onChange={(event) =>
+                setImagingStudyForm({ ...imagingStudyForm, accessionNumber: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Thời điểm bắt đầu
+            <input
+              type="datetime-local"
+              value={imagingStudyForm.startedAt}
+              onChange={(event) =>
+                setImagingStudyForm({ ...imagingStudyForm, startedAt: event.target.value })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Mô tả nghiên cứu
+            <input
+              value={imagingStudyForm.description}
+              onChange={(event) =>
+                setImagingStudyForm({ ...imagingStudyForm, description: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Bác sĩ chỉ định
+            <input
+              value={imagingStudyForm.referrerPractitionerId}
+              onChange={(event) =>
+                setImagingStudyForm({
+                  ...imagingStudyForm,
+                  referrerPractitionerId: event.target.value
+                })
+              }
+            />
+          </label>
+          <label>
+            Bác sĩ đọc ảnh
+            <input
+              value={imagingStudyForm.interpreterPractitionerId}
+              onChange={(event) =>
+                setImagingStudyForm({
+                  ...imagingStudyForm,
+                  interpreterPractitionerId: event.target.value
+                })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Endpoint PACS/DICOMweb
+            <input
+              value={imagingStudyForm.endpointId}
+              onChange={(event) =>
+                setImagingStudyForm({ ...imagingStudyForm, endpointId: event.target.value })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            DICOM Series Instance UID
+            <input
+              value={imagingStudyForm.seriesUid}
+              onChange={(event) =>
+                setImagingStudyForm({ ...imagingStudyForm, seriesUid: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Số thứ tự series
+            <input
+              value={imagingStudyForm.seriesNumber}
+              onChange={(event) =>
+                setImagingStudyForm({ ...imagingStudyForm, seriesNumber: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Số ảnh
+            <input
+              value={imagingStudyForm.numberOfInstances}
+              onChange={(event) =>
+                setImagingStudyForm({ ...imagingStudyForm, numberOfInstances: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Hệ mã modality
+            <input
+              value={imagingStudyForm.modalitySystem}
+              onChange={(event) =>
+                setImagingStudyForm({ ...imagingStudyForm, modalitySystem: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Mã modality
+            <input
+              value={imagingStudyForm.modalityCode}
+              onChange={(event) =>
+                setImagingStudyForm({ ...imagingStudyForm, modalityCode: event.target.value })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Tên modality
+            <input
+              value={imagingStudyForm.modalityDisplay}
+              onChange={(event) =>
+                setImagingStudyForm({ ...imagingStudyForm, modalityDisplay: event.target.value })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Mô tả series
+            <input
+              value={imagingStudyForm.seriesDescription}
+              onChange={(event) =>
+                setImagingStudyForm({ ...imagingStudyForm, seriesDescription: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Hệ mã vùng chụp
+            <input
+              value={imagingStudyForm.bodySiteSystem}
+              onChange={(event) =>
+                setImagingStudyForm({ ...imagingStudyForm, bodySiteSystem: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Mã vùng chụp
+            <input
+              value={imagingStudyForm.bodySiteCode}
+              onChange={(event) =>
+                setImagingStudyForm({ ...imagingStudyForm, bodySiteCode: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Tên vùng chụp
+            <input
+              value={imagingStudyForm.bodySiteDisplay}
+              onChange={(event) =>
+                setImagingStudyForm({ ...imagingStudyForm, bodySiteDisplay: event.target.value })
+              }
+            />
+          </label>
+          <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingImagingStudy}>
+            {isSubmittingImagingStudy ? "Đang tạo..." : "Tạo ImagingStudy"}
+          </button>
+        </form>
+      </article>
+    );
+  }
+
   function renderMedicationRequestPanel(): ReactNode {
     return (
       <article className="panel medication-panel">
@@ -4573,7 +5133,7 @@ function LandingPage({
         </div>
         <aside className="landing-card">
           <span>Product slice</span>
-          <strong>Patient → Encounter → AllergyIntolerance → Condition → ServiceRequest → Observation → DiagnosticReport → MedicationRequest → Document → FHIR</strong>
+          <strong>Patient → Encounter → AllergyIntolerance → Condition → ServiceRequest → Observation → DiagnosticReport → ImagingStudy → MedicationRequest → Document → FHIR</strong>
           <small>Không còn là landing page đơn thuần; app có luồng vận hành sau đăng nhập.</small>
         </aside>
       </section>
@@ -4583,7 +5143,7 @@ function LandingPage({
           ["Patient Workspace", "Bàn làm việc theo bệnh nhân, giống nhịp vận hành EMR thật."],
           ["Document Center", "Quản lý CCR, CCDA, hồ sơ bệnh án, xét nghiệm và tài liệu chuyển tuyến."],
           ["Audit & RBAC", "Ghi log truy cập nhạy cảm và kiểm tra quyền theo vai trò demo."],
-          ["FHIR Interop", "Xuất Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Observation, DiagnosticReport, MedicationRequest và DocumentReference để chuẩn bị liên thông."]
+          ["FHIR Interop", "Xuất Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Observation, DiagnosticReport, ImagingStudy, MedicationRequest và DocumentReference để chuẩn bị liên thông."]
         ].map(([title, description]) => (
           <article className="panel" key={title}>
             <p className="eyebrow">{title}</p>
@@ -4912,6 +5472,10 @@ function formatAuditAction(action: AuditAction): string {
     "diagnostic-report.create": "Tạo báo cáo kết quả",
     "diagnostic-report.read": "Xem báo cáo kết quả",
     "diagnostic-report.fhir-export": "Xuất FHIR DiagnosticReport",
+    "imaging-study.list": "Tải nghiên cứu hình ảnh",
+    "imaging-study.create": "Tạo nghiên cứu hình ảnh",
+    "imaging-study.read": "Xem nghiên cứu hình ảnh",
+    "imaging-study.fhir-export": "Xuất FHIR ImagingStudy",
     "clinical-document.list": "Tải tài liệu bệnh án",
     "clinical-document.create": "Tạo tài liệu bệnh án",
     "clinical-document.sign": "Ký tài liệu bệnh án",
@@ -4934,6 +5498,7 @@ function formatAuditResourceType(resourceType: AuditResourceType): string {
     Observation: "Chỉ số lâm sàng",
     ServiceRequest: "Chỉ định dịch vụ",
     DiagnosticReport: "Báo cáo kết quả",
+    ImagingStudy: "Nghiên cứu hình ảnh",
     ClinicalDocument: "Tài liệu",
     Consent: "Consent",
     AuditEvent: "Audit"
@@ -5228,6 +5793,18 @@ function formatDiagnosticReportStatus(status: DiagnosticReportStatus): string {
     final: "Chính thức",
     partial: "Một phần",
     preliminary: "Sơ bộ",
+    registered: "Đã đăng ký",
+    unknown: "Chưa rõ"
+  };
+
+  return labels[status];
+}
+
+function formatImagingStudyStatus(status: ImagingStudyStatus): string {
+  const labels: Record<ImagingStudyStatus, string> = {
+    available: "Sẵn sàng",
+    cancelled: "Đã hủy",
+    "entered-in-error": "Nhập lỗi",
     registered: "Đã đăng ký",
     unknown: "Chưa rõ"
   };

@@ -170,11 +170,12 @@ describe("API auth and RBAC boundary", () => {
         "ServiceRequest",
         "Observation",
         "DiagnosticReport",
+        "ImagingStudy",
         "MedicationRequest",
         "DocumentReference"
       ])
     );
-    expect(body.entry).toHaveLength(18);
+    expect(body.entry).toHaveLength(19);
   });
 
   it("lists allergy intolerances and exports them as FHIR AllergyIntolerance", async () => {
@@ -595,6 +596,100 @@ describe("API auth and RBAC boundary", () => {
       basedOnServiceRequestId: "service-request-demo-001",
       category: "laboratory",
       resultObservationIds: ["observation-demo-001"]
+    });
+  });
+
+  it("lists imaging studies and exports them as FHIR ImagingStudy", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const listResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/imaging-studies",
+      headers: treatmentHeaders(accessToken)
+    });
+    const listBody = listResponse.json();
+
+    expect(listResponse.statusCode).toBe(200);
+    expect(listBody.items).toHaveLength(1);
+
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: `/api/v1/imaging-studies/${listBody.items[0].id}/fhir`,
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(fhirResponse.statusCode).toBe(200);
+    expect(fhirResponse.json()).toMatchObject({
+      resourceType: "ImagingStudy",
+      subject: {
+        reference: "Patient/patient-demo-001"
+      },
+      basedOn: [
+        {
+          reference: "ServiceRequest/service-request-demo-002"
+        }
+      ],
+      identifier: expect.arrayContaining([
+        expect.objectContaining({
+          system: "urn:dicom:uid",
+          value: "urn:oid:1.2.826.0.1.3680043.10.543.202605270001"
+        })
+      ])
+    });
+  });
+
+  it("creates an imaging study linked to a service request and diagnostic report", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/imaging-studies",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: "encounter-demo-002",
+        basedOnServiceRequestId: "service-request-demo-002",
+        diagnosticReportId: "diagnostic-report-demo-002",
+        studyInstanceUid: "1.2.826.0.1.3680043.10.543.202605270099",
+        accessionNumber: "HP-CXR-TEST-001",
+        description: "Chest X-ray test study",
+        startedAt: "2026-05-27T07:00:00.000Z",
+        referrerPractitionerId: "practitioner-demo-001",
+        interpreterPractitionerId: "practitioner-demo-001",
+        endpointId: "endpoint-pacs-hai-phong-demo",
+        series: [
+          {
+            uid: "1.2.826.0.1.3680043.10.543.202605270099.1",
+            number: 1,
+            modality: {
+              system: "http://dicom.nema.org/resources/ontology/DCM",
+              code: "DX",
+              display: "Digital Radiography"
+            },
+            description: "PA and lateral chest radiographs",
+            numberOfInstances: 2,
+            bodySite: {
+              system: "http://snomed.info/sct",
+              code: "51185008",
+              display: "Thoracic structure"
+            }
+          }
+        ]
+      }
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({
+      patientId: "patient-demo-001",
+      encounterId: "encounter-demo-002",
+      basedOnServiceRequestId: "service-request-demo-002",
+      diagnosticReportId: "diagnostic-report-demo-002",
+      numberOfSeries: 1,
+      numberOfInstances: 2
     });
   });
 

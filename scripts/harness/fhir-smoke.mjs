@@ -21,6 +21,7 @@ const {
   Consent,
   DiagnosticReport,
   Encounter,
+  ImagingStudy,
   MedicationRequest,
   Observation,
   Patient,
@@ -31,6 +32,7 @@ const {
   mapConditionToFhir,
   mapDiagnosticReportToFhir,
   mapEncounterToFhir,
+  mapImagingStudyToFhir,
   mapMedicationRequestToFhir,
   mapObservationToFhir,
   mapPatientRecordToFhirBundle,
@@ -281,6 +283,55 @@ if (fhirDiagnosticReport.result?.[0]?.reference !== "Observation/observation-har
   throw new Error(`Expected diagnostic report result Observation/observation-harness-001.`);
 }
 
+const imagingStudy = ImagingStudy.record({
+  id: "imaging-study-harness-001",
+  patientId: patient.id,
+  encounterId: encounter.id,
+  basedOnServiceRequestId: serviceRequest.id,
+  diagnosticReportId: diagnosticReport.id,
+  studyInstanceUid: "1.2.826.0.1.3680043.10.543.202605270101",
+  accessionNumber: "HP-CXR-HARNESS-001",
+  description: "Harness chest X-ray study",
+  startedAt: "2026-05-27T01:10:00.000Z",
+  referrerPractitionerId: "practitioner-harness-001",
+  interpreterPractitionerId: "practitioner-harness-001",
+  endpointId: "endpoint-pacs-harness-001",
+  series: [
+    {
+      uid: "1.2.826.0.1.3680043.10.543.202605270101.1",
+      number: 1,
+      modality: {
+        system: "http://dicom.nema.org/resources/ontology/DCM",
+        code: "DX",
+        display: "Digital Radiography"
+      },
+      description: "PA and lateral chest radiographs",
+      numberOfInstances: 2,
+      bodySite: {
+        system: "http://snomed.info/sct",
+        code: "51185008",
+        display: "Thoracic structure"
+      }
+    }
+  ]
+});
+
+const fhirImagingStudy = mapImagingStudyToFhir(imagingStudy);
+
+if (fhirImagingStudy.resourceType !== "ImagingStudy") {
+  throw new Error(`Expected resourceType ImagingStudy, received ${fhirImagingStudy.resourceType}`);
+}
+
+if (fhirImagingStudy.subject.reference !== "Patient/patient-harness-001") {
+  throw new Error(
+    `Expected imaging study subject Patient/patient-harness-001, received ${fhirImagingStudy.subject.reference}`
+  );
+}
+
+if (fhirImagingStudy.basedOn?.[0]?.reference !== "ServiceRequest/service-request-harness-001") {
+  throw new Error(`Expected imaging study basedOn ServiceRequest/service-request-harness-001.`);
+}
+
 const medicationRequest = MedicationRequest.prescribe({
   id: "medication-request-harness-001",
   patientId: patient.id,
@@ -362,6 +413,7 @@ const fhirBundle = mapPatientRecordToFhirBundle({
   serviceRequests: [serviceRequest],
   observations: [observation],
   diagnosticReports: [diagnosticReport],
+  imagingStudies: [imagingStudy],
   medicationRequests: [medicationRequest],
   documents: [document],
   generatedAt: new Date("2026-05-27T00:00:00.000Z")
@@ -375,8 +427,8 @@ if (fhirBundle.type !== "collection") {
   throw new Error(`Expected bundle type collection, received ${fhirBundle.type}`);
 }
 
-if (fhirBundle.entry.length !== 9) {
-  throw new Error(`Expected bundle to contain 9 entries, received ${fhirBundle.entry.length}`);
+if (fhirBundle.entry.length !== 10) {
+  throw new Error(`Expected bundle to contain 10 entries, received ${fhirBundle.entry.length}`);
 }
 
 const consent = Consent.grant({
@@ -501,6 +553,15 @@ const clinicianCanExportDiagnosticReport = canAccess(
   "diagnostic-report:fhir-export"
 );
 
+const clinicianCanExportImagingStudy = canAccess(
+  {
+    actorId: "practitioner-harness-001",
+    role: "clinician",
+    purposeOfUse: "TREATMENT"
+  },
+  "imaging-study:fhir-export"
+);
+
 const nurseCanExportObservation = canAccess(
   {
     actorId: "nurse-harness-001",
@@ -555,6 +616,15 @@ const nurseCanExportDiagnosticReport = canAccess(
   "diagnostic-report:fhir-export"
 );
 
+const nurseCanExportImagingStudy = canAccess(
+  {
+    actorId: "nurse-harness-001",
+    role: "nurse",
+    purposeOfUse: "TREATMENT"
+  },
+  "imaging-study:fhir-export"
+);
+
 const clinicianCanReadAudit = canAccess(
   {
     actorId: "practitioner-harness-001",
@@ -605,6 +675,10 @@ if (!clinicianCanExportDiagnosticReport) {
   throw new Error("Expected clinician/TREATMENT to export diagnostic reports.");
 }
 
+if (!clinicianCanExportImagingStudy) {
+  throw new Error("Expected clinician/TREATMENT to export imaging studies.");
+}
+
 if (nurseCanExportObservation) {
   throw new Error("Expected nurse/TREATMENT to be denied observation:fhir-export.");
 }
@@ -627,6 +701,10 @@ if (nurseCanExportServiceRequest) {
 
 if (nurseCanExportDiagnosticReport) {
   throw new Error("Expected nurse/TREATMENT to be denied diagnostic-report:fhir-export.");
+}
+
+if (nurseCanExportImagingStudy) {
+  throw new Error("Expected nurse/TREATMENT to be denied imaging-study:fhir-export.");
 }
 
 if (clinicianCanReadAudit) {
@@ -656,6 +734,8 @@ console.log(
       observationResourceType: fhirObservation.resourceType,
       diagnosticReportId: fhirDiagnosticReport.id,
       diagnosticReportResourceType: fhirDiagnosticReport.resourceType,
+      imagingStudyId: fhirImagingStudy.id,
+      imagingStudyResourceType: fhirImagingStudy.resourceType,
       medicationRequestId: fhirMedicationRequest.id,
       medicationRequestResourceType: fhirMedicationRequest.resourceType,
       serviceRequestId: fhirServiceRequest.id,
@@ -676,12 +756,14 @@ console.log(
         clinicianCanExportAllergyIntolerance,
         clinicianCanExportCondition,
         clinicianCanExportDiagnosticReport,
+        clinicianCanExportImagingStudy,
         clinicianCanExportMedicationRequest,
         clinicianCanExportObservation,
         clinicianCanExportServiceRequest,
         nurseCanExportAllergyIntolerance,
         nurseCanExportCondition,
         nurseCanExportDiagnosticReport,
+        nurseCanExportImagingStudy,
         nurseCanExportMedicationRequest,
         nurseCanExportObservation,
         nurseCanExportServiceRequest,

@@ -13,7 +13,7 @@ Lệnh này chạy:
 - TypeScript check cho toàn monorepo.
 - Unit test hiện có.
 - Build API, web và packages.
-- Smoke test ánh xạ bệnh nhân sang FHIR `Patient`.
+- Smoke test ánh xạ Patient Record sang FHIR `Patient`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `DocumentReference`, `Bundle`, kèm RBAC và audit tối thiểu.
 - Kiểm tra Docker Compose dev/prod parse hợp lệ.
 
 ## Smoke test FHIR
@@ -23,7 +23,7 @@ pnpm build
 pnpm harness:smoke
 ```
 
-Smoke test này xác nhận domain `Patient` nội bộ có thể chuyển thành FHIR `Patient`, đây là đường sống của hướng liên thông.
+Smoke test này xác nhận các domain lâm sàng nội bộ có thể chuyển thành các resource FHIR cốt lõi, bao gồm cả `ImagingStudy` cho metadata PACS/DICOM; đây là đường sống của hướng liên thông.
 
 ## Nguyên tắc mở rộng harness
 

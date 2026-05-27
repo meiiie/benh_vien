@@ -514,7 +514,9 @@ h2 {
 .service-card span,
 .service-card small,
 .diagnostic-report-card span,
-.diagnostic-report-card small {
+.diagnostic-report-card small,
+.imaging-study-card span,
+.imaging-study-card small {
   color: var(--muted);
 }
 
@@ -550,7 +552,7 @@ h2 {
 
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-columns: repeat(9, minmax(0, 1fr));
   gap: 0;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -612,7 +614,8 @@ h2 {
 .medication-card,
 .observation-card,
 .service-card,
-.diagnostic-report-card {
+.diagnostic-report-card,
+.imaging-study-card {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -640,7 +643,9 @@ h2 {
 .service-card:hover,
 .service-card.selected,
 .diagnostic-report-card:hover,
-.diagnostic-report-card.selected {
+.diagnostic-report-card.selected,
+.imaging-study-card:hover,
+.imaging-study-card.selected {
   border-color: rgba(0, 86, 210, 0.36);
   background: var(--primary-soft);
 }
@@ -673,7 +678,10 @@ h2 {
 .service-card small,
 .diagnostic-report-card span,
 .diagnostic-report-card strong,
-.diagnostic-report-card small {
+.diagnostic-report-card small,
+.imaging-study-card span,
+.imaging-study-card strong,
+.imaging-study-card small {
   display: block;
 }
 
@@ -706,6 +714,7 @@ h2 {
 .observation-cards,
 .service-cards,
 .diagnostic-report-cards,
+.imaging-study-cards,
 .audit-list {
   display: grid;
   gap: 10px;
@@ -787,6 +796,7 @@ code {
 .observation-form,
 .service-form,
 .diagnostic-report-form,
+.imaging-study-form,
 .document-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -831,6 +841,7 @@ select:focus {
 .observation-form .primary-button,
 .service-form .primary-button,
 .diagnostic-report-form .primary-button,
+.imaging-study-form .primary-button,
 .document-form .primary-button {
   grid-column: 1 / -1;
 }
@@ -870,6 +881,7 @@ select:focus {
 .observation-panel,
 .service-panel,
 .diagnostic-report-panel,
+.imaging-study-panel,
 .audit-panel {
   grid-column: 1 / -1;
 }
@@ -904,7 +916,8 @@ select:focus {
 .allergy-summary,
 .condition-summary,
 .medication-summary,
-.observation-summary {
+.observation-summary,
+.imaging-study-summary {
   display: grid;
   align-content: start;
   gap: 14px;
@@ -1172,6 +1185,7 @@ pre {
   .observation-form,
   .service-form,
   .diagnostic-report-form,
+  .imaging-study-form,
   .document-layout,
   .document-meta,
   .document-form,

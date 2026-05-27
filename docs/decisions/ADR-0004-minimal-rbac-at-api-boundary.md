@@ -12,8 +12,8 @@ Sau khi đã có audit trail, hệ thống vẫn chưa đủ an toàn nếu mọ
 
 Thêm access-control domain với các vai trò demo:
 
-- `clinician`: thực hiện nghiệp vụ điều trị, tạo bệnh nhân, mở lượt khám, ghi nhận dị ứng/cảnh báo, chẩn đoán/chỉ định dịch vụ/chỉ số/báo cáo kết quả/chỉ định thuốc, tạo/ký tài liệu và xuất FHIR phục vụ điều trị.
-- `nurse`: đọc bệnh nhân, đọc/tạo tài liệu, ghi nhận dị ứng/cảnh báo, chẩn đoán/chỉ định dịch vụ/chỉ số/báo cáo kết quả/chỉ định thuốc, nhưng không ký và không xuất FHIR.
+- `clinician`: thực hiện nghiệp vụ điều trị, tạo bệnh nhân, mở lượt khám, ghi nhận dị ứng/cảnh báo, chẩn đoán/chỉ định dịch vụ/chỉ số/báo cáo kết quả/nghiên cứu hình ảnh/chỉ định thuốc, tạo/ký tài liệu và xuất FHIR phục vụ điều trị.
+- `nurse`: đọc bệnh nhân, đọc/tạo tài liệu, ghi nhận dị ứng/cảnh báo, chẩn đoán/chỉ định dịch vụ/chỉ số/báo cáo kết quả/nghiên cứu hình ảnh/chỉ định thuốc, nhưng không ký và không xuất FHIR.
 - `auditor`: đọc hồ sơ tối thiểu và đọc audit trail khi `purposeOfUse` là `AUDIT`.
 - `admin`: có toàn quyền trong prototype.
 

@@ -54,6 +54,12 @@ Trong dự án này, ServiceRequest là cầu nối từ EMR sang LIS/PACS/RIS: 
 
 Trong dự án này, DiagnosticReport đóng vòng `ServiceRequest -> Observation -> DiagnosticReport`: y lệnh đi ra LIS/RIS/PACS, kết quả nguyên tử được lưu bằng Observation, còn báo cáo tổng hợp/kết luận được xuất bằng DiagnosticReport.
 
+## ImagingStudy
+
+**ImagingStudy** là resource FHIR mô tả metadata của một nghiên cứu hình ảnh DICOM/PACS. Nó không chứa ảnh nhị phân, mà mô tả Study Instance UID, Accession Number, modality, series, số ảnh, bệnh nhân, lượt khám, y lệnh gốc và endpoint để truy xuất ảnh qua PACS/DICOMweb.
+
+Trong dự án này, ImagingStudy là lát cắt PACS tối thiểu sau `ServiceRequest` và `DiagnosticReport`: bác sĩ tạo y lệnh hình ảnh, PACS/RIS sinh metadata ảnh, báo cáo hình ảnh được lưu bằng DiagnosticReport, còn Bundle liên viện có thêm chỉ mục ảnh máy đọc được.
+
 ## DICOM
 
 **Digital Imaging and Communications in Medicine** là chuẩn quốc tế cho hình ảnh y khoa và thông tin liên quan.

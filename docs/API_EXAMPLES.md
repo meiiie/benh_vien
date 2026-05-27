@@ -1,6 +1,6 @@
 # Ví dụ API
 
-API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `Patient`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Observation`, `DiagnosticReport`, `MedicationRequest`, `ClinicalDocument`, `Consent`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
+API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `Patient`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `ClinicalDocument`, `Consent`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
 
 ## Kiểm tra sức khỏe API
 
@@ -125,7 +125,7 @@ curl http://localhost:7310/api/v1/patients/patient-demo-001/fhir-bundle \
   -H "x-recipient-organization-id: hospital-hai-phong-referral"
 ```
 
-Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các `Encounter`, các `AllergyIntolerance`, các `Condition`, các `ServiceRequest`, các `Observation`, các `DiagnosticReport`, các `MedicationRequest` và các `DocumentReference` của bệnh nhân. Endpoint này không chỉ kiểm header: `x-consent-reference` phải trỏ tới một consent đang hiệu lực, đúng bệnh nhân và đúng `x-recipient-organization-id`.
+Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các `Encounter`, các `AllergyIntolerance`, các `Condition`, các `ServiceRequest`, các `Observation`, các `DiagnosticReport`, các `ImagingStudy`, các `MedicationRequest` và các `DocumentReference` của bệnh nhân. Endpoint này không chỉ kiểm header: `x-consent-reference` phải trỏ tới một consent đang hiệu lực, đúng bệnh nhân và đúng `x-recipient-organization-id`.
 
 ## Lấy và mở lượt khám
 
@@ -362,6 +362,59 @@ curl http://localhost:7310/api/v1/diagnostic-reports/diagnostic-report-demo-001/
 ```
 
 Kết quả mong muốn là JSON có `resourceType` bằng `DiagnosticReport`, có `basedOn` trỏ tới `ServiceRequest`, `result` trỏ tới `Observation`, `subject`, `encounter`, `category`, `code`, `effectiveDateTime`, `issued` và `conclusion`.
+
+## Lấy, tạo và xuất nghiên cứu hình ảnh sang FHIR ImagingStudy
+
+```bash
+curl http://localhost:7310/api/v1/patients/patient-demo-001/imaging-studies \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+```bash
+curl -X POST http://localhost:7310/api/v1/patients/patient-demo-001/imaging-studies \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT" \
+  -H "content-type: application/json" \
+  -d '{
+    "encounterId": "encounter-demo-002",
+    "basedOnServiceRequestId": "service-request-demo-002",
+    "diagnosticReportId": "diagnostic-report-demo-002",
+    "studyInstanceUid": "1.2.826.0.1.3680043.10.543.202605270099",
+    "accessionNumber": "HP-CXR-20260527-0099",
+    "description": "Chest X-ray follow-up study",
+    "startedAt": "2026-05-27T07:00:00.000Z",
+    "referrerPractitionerId": "practitioner-demo-001",
+    "interpreterPractitionerId": "practitioner-demo-001",
+    "endpointId": "endpoint-pacs-hai-phong-demo",
+    "series": [
+      {
+        "uid": "1.2.826.0.1.3680043.10.543.202605270099.1",
+        "number": 1,
+        "modality": {
+          "system": "http://dicom.nema.org/resources/ontology/DCM",
+          "code": "DX",
+          "display": "Digital Radiography"
+        },
+        "description": "PA and lateral chest radiographs",
+        "numberOfInstances": 2,
+        "bodySite": {
+          "system": "http://snomed.info/sct",
+          "code": "51185008",
+          "display": "Thoracic structure"
+        }
+      }
+    ]
+  }'
+```
+
+```bash
+curl http://localhost:7310/api/v1/imaging-studies/imaging-study-demo-001/fhir \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+Kết quả mong muốn là JSON có `resourceType` bằng `ImagingStudy`, có `identifier.system = urn:dicom:uid`, `identifier.value` dạng `urn:oid:<StudyInstanceUID>`, `subject`, `encounter`, `basedOn`, `endpoint`, `numberOfSeries`, `numberOfInstances` và `series`. Ảnh thật vẫn thuộc PACS/DICOMweb; API chỉ lưu metadata và liên kết truy xuất.
 
 ## Lấy, tạo và xuất chỉ định thuốc sang FHIR MedicationRequest
 
