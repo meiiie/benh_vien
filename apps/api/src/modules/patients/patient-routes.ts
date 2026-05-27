@@ -274,6 +274,7 @@ export async function registerPatientRoutes(
         serviceRequestCount: serviceRequests.length,
         workflowTaskCount: workflowTasks.length,
         procedureCount: procedures.length,
+        consentResourceCount: 1,
         documentCount: documents.length,
         providerDirectoryEntryCount:
           providerDirectory.toSnapshot().organizations.length +
@@ -297,6 +298,7 @@ export async function registerPatientRoutes(
       serviceRequests,
       workflowTasks,
       procedures,
+      consents: [consent],
       documents,
       providerDirectory
     });
@@ -399,6 +401,7 @@ export async function registerPatientRoutes(
         serviceRequestCount: serviceRequests.length,
         workflowTaskCount: workflowTasks.length,
         procedureCount: procedures.length,
+        consentResourceCount: 1,
         documentCount: documents.length,
         providerDirectoryEntryCount:
           providerDirectory.toSnapshot().organizations.length +
@@ -422,6 +425,7 @@ export async function registerPatientRoutes(
       serviceRequests,
       workflowTasks,
       procedures,
+      consents: [consent],
       documents,
       providerDirectory,
       authorPractitionerId: actor.actorId

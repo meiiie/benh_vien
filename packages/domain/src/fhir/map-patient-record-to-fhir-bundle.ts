@@ -1,5 +1,6 @@
 import type { AllergyIntolerance } from "../allergy-intolerance/allergy-intolerance.js";
 import type { ClinicalDocument } from "../clinical-document/clinical-document.js";
+import type { Consent } from "../consent/consent.js";
 import type { Condition } from "../condition/condition.js";
 import type { DiagnosticReport } from "../diagnostic-report/diagnostic-report.js";
 import type { Encounter } from "../encounter/encounter.js";
@@ -16,6 +17,7 @@ import type { WorkflowTask } from "../workflow-task/workflow-task.js";
 import type {
   FhirBundle,
   FhirAllergyIntolerance,
+  FhirConsent,
   FhirCondition,
   FhirDiagnosticReport,
   FhirDocumentReference,
@@ -36,6 +38,7 @@ import type {
 } from "./fhir-types.js";
 import { mapAllergyIntoleranceToFhir } from "./map-allergy-intolerance-to-fhir.js";
 import { mapClinicalDocumentToFhir } from "./map-clinical-document-to-fhir.js";
+import { mapConsentToFhir } from "./map-consent-to-fhir.js";
 import { mapConditionToFhir } from "./map-condition-to-fhir.js";
 import { mapDiagnosticReportToFhir } from "./map-diagnostic-report-to-fhir.js";
 import { mapEncounterToFhir } from "./map-encounter-to-fhir.js";
@@ -64,6 +67,7 @@ export type PatientRecordBundleInput = {
   readonly medicationRequests?: readonly MedicationRequest[];
   readonly medicationDispenses?: readonly MedicationDispense[];
   readonly medicationAdministrations?: readonly MedicationAdministration[];
+  readonly consents?: readonly Consent[];
   readonly documents: readonly ClinicalDocument[];
   readonly providerDirectory?: ProviderDirectory;
   readonly generatedAt?: Date;
@@ -87,6 +91,7 @@ export function mapPatientRecordToFhirBundle(input: PatientRecordBundleInput): F
     input.medicationDispenses?.map(mapMedicationDispenseToFhir) ?? [];
   const medicationAdministrations =
     input.medicationAdministrations?.map(mapMedicationAdministrationToFhir) ?? [];
+  const consents = input.consents?.map(mapConsentToFhir) ?? [];
   const documents = input.documents.map(mapClinicalDocumentToFhir);
   const providerResources = input.providerDirectory
     ? mapProviderDirectoryToFhirResources(input.providerDirectory)
@@ -94,6 +99,7 @@ export function mapPatientRecordToFhirBundle(input: PatientRecordBundleInput): F
   const resources = [
     patient,
     ...providerResources,
+    ...consents,
     ...encounters,
     ...allergyIntolerances,
     ...conditions,
@@ -144,6 +150,7 @@ function toBundleEntry(
     | FhirPractitioner
     | FhirPractitionerRole
     | FhirEndpoint
+    | FhirConsent
     | FhirDocumentReference
 ): FhirBundle["entry"][number] {
   return {

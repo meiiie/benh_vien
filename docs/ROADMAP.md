@@ -11,20 +11,20 @@
 - Patient Registry: nhiều định danh cho một bệnh nhân.
 - Provider Directory: cơ sở y tế, khoa/phòng, nhân sự, vai trò và endpoint liên thông.
 - Workflow core: hàng đợi thực thi y lệnh bằng FHIR `Task`, nối `ServiceRequest` với kết quả trả về từ LIS/PACS/RIS.
-- Procedure core: bản ghi thủ thuật/hoạt động y tế đã thực hiện bằng FHIR `Procedure`, nối y lệnh, người thực hiện, thời gian và báo cáo liên quan.
+- Procedure core: bản ghi thủ thuật hoặc hoạt động y tế đã thực hiện bằng FHIR `Procedure`, nối y lệnh, người thực hiện, thời gian và báo cáo liên quan.
 - Medication dispense core: bản ghi cấp phát thuốc bằng FHIR `MedicationDispense`, nối `MedicationRequest` với số lượng cấp, số ngày cấp, thời điểm chuẩn bị/bàn giao, người cấp phát và người nhận.
 - Medication administration core: bản ghi dùng thuốc thực tế bằng FHIR `MedicationAdministration`, nối `MedicationRequest` với thời điểm dùng, liều thực tế và người/thiết bị xác nhận.
-- Clinical Records: tài liệu bệnh án, trạng thái ký/xác nhận, lịch sử chỉnh sửa.
-- Consent core: đồng ý chia sẻ hồ sơ, hiệu lực theo thời gian, thu hồi consent và audit các thao tác chia sẻ.
+- Clinical Records: tài liệu bệnh án, trạng thái ký/xác nhận và lịch sử chỉnh sửa.
+- Consent core: đồng ý chia sẻ hồ sơ, hiệu lực theo thời gian, thu hồi consent, xuất FHIR `Consent` và audit các thao tác chia sẻ.
 - Record Transfer core: gói chuyển hồ sơ liên viện, trạng thái vận hành, cơ sở gửi/nhận, consent và FHIR `Task` điều phối.
 - Audit & Compliance: nhật ký xem, sửa, ký, xuất hồ sơ và kiểm tra toàn vẹn chuỗi băm ở mức prototype.
-- Web demo: màn hình bệnh nhân, danh sách tài liệu, trạng thái ký.
+- Web demo: màn hình bệnh nhân, danh sách tài liệu, consent, gói chuyển hồ sơ và trạng thái liên thông.
 
 ## Giai đoạn 2: Liên thông FHIR
 
 - Kết nối HAPI FHIR ở chế độ thử nghiệm.
-- Mapping `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `DocumentReference`, `Composition` và `Task` điều phối chuyển hồ sơ.
-- Tạo luồng xuất gói hồ sơ bệnh án cho một bệnh nhân.
+- Mapping `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Consent`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `DocumentReference`, `Composition` và `Task` điều phối chuyển hồ sơ.
+- Tạo luồng xuất gói hồ sơ bệnh án cho một bệnh nhân, gồm cả căn cứ đồng ý chia sẻ để tránh tham chiếu treo.
 - Kiểm tra luồng nhận lại dữ liệu từ FHIR server.
 
 ## Giai đoạn 3: Ảnh y khoa và PACS

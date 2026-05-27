@@ -9,6 +9,10 @@ export const PatientConsentParamsSchema = z.object({
   consentId: z.string().min(1)
 });
 
+export const ConsentIdParamsSchema = z.object({
+  consentId: z.string().min(1)
+});
+
 export const CreateConsentRequestSchema = z.object({
   category: z.literal("record-sharing").default("record-sharing"),
   granteeOrganizationId: z.string().min(1),
@@ -23,5 +27,6 @@ export const RevokeConsentRequestSchema = z.object({
 
 export type PatientConsentsParams = z.infer<typeof PatientConsentsParamsSchema>;
 export type PatientConsentParams = z.infer<typeof PatientConsentParamsSchema>;
+export type ConsentIdParams = z.infer<typeof ConsentIdParamsSchema>;
 export type CreateConsentRequest = z.infer<typeof CreateConsentRequestSchema>;
 export type RevokeConsentRequest = z.infer<typeof RevokeConsentRequestSchema>;

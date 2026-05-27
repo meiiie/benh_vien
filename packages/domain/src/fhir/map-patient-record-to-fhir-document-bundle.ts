@@ -93,6 +93,7 @@ function buildComposition(
         "PractitionerRole",
         "Endpoint"
       ]),
+      buildSection("Đồng ý chia sẻ hồ sơ", entries, ["Consent"]),
       buildSection("Lượt khám", entries, ["Encounter"]),
       buildSection("Dị ứng và cảnh báo", entries, ["AllergyIntolerance"]),
       buildSection("Chẩn đoán và vấn đề sức khỏe", entries, ["Condition"]),

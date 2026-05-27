@@ -91,7 +91,7 @@ sequenceDiagram
 - **Chỉ số lâm sàng cần có cấu trúc máy đọc được.** Sinh hiệu và xét nghiệm không nên chỉ nằm trong PDF; tối thiểu cần mã chuẩn, giá trị, đơn vị, thời điểm, người ghi nhận và liên kết bệnh nhân/lượt khám.
 - **Chỉ định thuốc cần tách khỏi văn bản tự do trong tài liệu.** Tối thiểu cần mã thuốc, hướng dẫn dùng, người kê, trạng thái, mục đích, liên kết bệnh nhân/lượt khám và chẩn đoán liên quan khi có thể.
 - **Tài liệu bệnh án cần có vòng đời.** Tối thiểu gồm nháp, đã ký, bị thay thế, nhập sai.
-- **Chia sẻ hồ sơ cần consent có trạng thái và thời hạn.** FHIR Bundle liên viện không được xuất chỉ vì người dùng có role điều trị; phải có consent khớp bệnh nhân, đơn vị nhận và thời điểm truy cập. Consent đã bị thu hồi phải chặn các lần xuất hoặc chuyển hồ sơ mới.
+- **Chia sẻ hồ sơ cần consent có trạng thái và thời hạn.** FHIR Bundle liên viện không được xuất chỉ vì người dùng có role điều trị; phải có consent khớp bệnh nhân, đơn vị nhận và thời điểm truy cập. Consent đã bị thu hồi phải chặn các lần xuất hoặc chuyển hồ sơ mới; khi đóng gói FHIR, consent liên quan cần xuất thành resource `Consent` để tránh reference treo.
 - **Gói chuyển hồ sơ là workflow, không phải bản sao dữ liệu lâm sàng.** `RecordTransfer` giữ trạng thái gửi/nhận, cơ sở gửi/nhận, consent, lý do chuyển và `bundleId`; khi xuất chuẩn, nó thành FHIR `Task` trỏ tới `Bundle`, không nhân đôi toàn bộ hồ sơ bệnh án.
 - **Gói bệnh án chuyển viện cần Composition.** `Bundle.type = collection` phù hợp để gom dữ liệu thô; khi cần biểu diễn một tài liệu bệnh án có cấu trúc, dùng `Bundle.type = document` và đặt `Composition` làm entry đầu tiên để mô tả mục lục lâm sàng.
 - **Không để reference FHIR bị treo.** Khi `Patient`, `Encounter`, `DiagnosticReport` hoặc `ImagingStudy` tham chiếu `Organization`, `Practitioner`, `PractitionerRole` hoặc `Endpoint`, gói liên thông cần có Provider Directory tối thiểu để bên nhận hiểu cơ sở quản lý, khoa thực hiện, người phụ trách và endpoint PACS/FHIR/LIS.
@@ -116,7 +116,7 @@ Phiên bản hiện tại tạo các bảng tối thiểu:
 - `medication_dispenses`: cấp phát thuốc theo FHIR `MedicationDispense`, gồm chỉ định thuốc gốc, số lượng cấp, số ngày cấp, thời điểm chuẩn bị/bàn giao, người cấp phát và người nhận thuốc.
 - `medication_administrations`: lần dùng thuốc thực tế, gồm trạng thái, thuốc, liều thực tế, thời điểm, người/thiết bị xác nhận và liên kết tới `medication_requests` khi có.
 - `clinical_documents`: tài liệu lâm sàng có vòng đời nháp, đã ký, bị thay thế hoặc nhập sai.
-- `consents`: consent chia sẻ hồ sơ theo bệnh nhân, đơn vị nhận, trạng thái, thời hạn hiệu lực, người thu hồi, thời điểm thu hồi và lý do thu hồi nếu có.
+- `consents`: consent chia sẻ hồ sơ theo bệnh nhân, đơn vị nhận, trạng thái, thời hạn hiệu lực, người thu hồi, thời điểm thu hồi và lý do thu hồi nếu có; xuất sang FHIR `Consent` khi cần giải nghĩa căn cứ chia sẻ.
 - `record_transfers`: gói chuyển hồ sơ liên viện, gồm trạng thái vận hành, FHIR Bundle đích, cơ sở gửi/nhận, consent, lý do chuyển và người tạo yêu cầu.
 - `provider_directory_resources`: danh bạ cơ sở y tế/khoa phòng, nhân sự, vai trò nhân sự và endpoint liên thông; lưu snapshot JSONB để prototype có thể đồng bộ nhanh nhiều loại FHIR resource.
 - `audit_events`: nhật ký thao tác theo thời gian, tài nguyên, bệnh nhân, mục đích sử dụng và chuỗi băm toàn vẹn (`hash_algorithm`, `previous_hash`, `payload_hash`, `integrity_hash`).

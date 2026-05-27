@@ -36,6 +36,7 @@ const {
   canAccess,
   mapAllergyIntoleranceToFhir,
   mapClinicalDocumentToFhir,
+  mapConsentToFhir,
   mapConditionToFhir,
   mapDiagnosticReportToFhir,
   mapEncounterToFhir,
@@ -699,77 +700,6 @@ if (fhirDocumentReference.docStatus !== "final") {
   throw new Error(`Expected docStatus final, received ${fhirDocumentReference.docStatus}`);
 }
 
-const fhirBundle = mapPatientRecordToFhirBundle({
-  patient,
-  encounters: [encounter],
-  allergyIntolerances: [allergyIntolerance],
-  conditions: [condition],
-  serviceRequests: [serviceRequest],
-  workflowTasks: [workflowTask],
-  procedures: [procedure],
-  observations: [observation],
-  diagnosticReports: [diagnosticReport],
-  imagingStudies: [imagingStudy],
-  medicationRequests: [medicationRequest],
-  medicationDispenses: [medicationDispense],
-  medicationAdministrations: [medicationAdministration],
-  documents: [document],
-  providerDirectory,
-  generatedAt: new Date("2026-05-27T00:00:00.000Z")
-});
-
-if (fhirBundle.resourceType !== "Bundle") {
-  throw new Error(`Expected resourceType Bundle, received ${fhirBundle.resourceType}`);
-}
-
-if (fhirBundle.type !== "collection") {
-  throw new Error(`Expected bundle type collection, received ${fhirBundle.type}`);
-}
-
-if (fhirBundle.entry.length !== 20) {
-  throw new Error(`Expected bundle to contain 20 entries, received ${fhirBundle.entry.length}`);
-}
-
-const fhirDocumentBundle = mapPatientRecordToFhirDocumentBundle({
-  patient,
-  encounters: [encounter],
-  allergyIntolerances: [allergyIntolerance],
-  conditions: [condition],
-  serviceRequests: [serviceRequest],
-  workflowTasks: [workflowTask],
-  procedures: [procedure],
-  observations: [observation],
-  diagnosticReports: [diagnosticReport],
-  imagingStudies: [imagingStudy],
-  medicationRequests: [medicationRequest],
-  medicationDispenses: [medicationDispense],
-  medicationAdministrations: [medicationAdministration],
-  documents: [document],
-  providerDirectory,
-  generatedAt: new Date("2026-05-27T00:00:00.000Z"),
-  authorPractitionerId: "practitioner-harness-001"
-});
-
-if (fhirDocumentBundle.resourceType !== "Bundle") {
-  throw new Error(
-    `Expected document bundle resourceType Bundle, received ${fhirDocumentBundle.resourceType}`
-  );
-}
-
-if (fhirDocumentBundle.type !== "document") {
-  throw new Error(`Expected document bundle type document, received ${fhirDocumentBundle.type}`);
-}
-
-if (fhirDocumentBundle.entry[0]?.resource.resourceType !== "Composition") {
-  throw new Error("Expected first document bundle entry to be Composition.");
-}
-
-if (fhirDocumentBundle.entry.length !== 21) {
-  throw new Error(
-    `Expected document bundle to contain 21 entries, received ${fhirDocumentBundle.entry.length}`
-  );
-}
-
 const consent = Consent.grant({
   id: "consent-harness-001",
   patientId: patient.id,
@@ -779,6 +709,15 @@ const consent = Consent.grant({
   validFrom: "2026-05-27T00:00:00.000Z",
   validUntil: "2026-05-28T00:00:00.000Z"
 });
+const fhirConsent = mapConsentToFhir(consent);
+
+if (fhirConsent.resourceType !== "Consent") {
+  throw new Error(`Expected FHIR Consent, received ${fhirConsent.resourceType}.`);
+}
+
+if (fhirConsent.status !== "active") {
+  throw new Error(`Expected active FHIR Consent, received ${fhirConsent.status}.`);
+}
 
 if (
   !consent.allowsRecordSharing({
@@ -800,6 +739,79 @@ if (
   throw new Error("Expected consent to deny record sharing for uncovered recipient.");
 }
 
+const fhirBundle = mapPatientRecordToFhirBundle({
+  patient,
+  encounters: [encounter],
+  allergyIntolerances: [allergyIntolerance],
+  conditions: [condition],
+  serviceRequests: [serviceRequest],
+  workflowTasks: [workflowTask],
+  procedures: [procedure],
+  observations: [observation],
+  diagnosticReports: [diagnosticReport],
+  imagingStudies: [imagingStudy],
+  medicationRequests: [medicationRequest],
+  medicationDispenses: [medicationDispense],
+  medicationAdministrations: [medicationAdministration],
+  consents: [consent],
+  documents: [document],
+  providerDirectory,
+  generatedAt: new Date("2026-05-27T00:00:00.000Z")
+});
+
+if (fhirBundle.resourceType !== "Bundle") {
+  throw new Error(`Expected resourceType Bundle, received ${fhirBundle.resourceType}`);
+}
+
+if (fhirBundle.type !== "collection") {
+  throw new Error(`Expected bundle type collection, received ${fhirBundle.type}`);
+}
+
+if (fhirBundle.entry.length !== 21) {
+  throw new Error(`Expected bundle to contain 21 entries, received ${fhirBundle.entry.length}`);
+}
+
+const fhirDocumentBundle = mapPatientRecordToFhirDocumentBundle({
+  patient,
+  encounters: [encounter],
+  allergyIntolerances: [allergyIntolerance],
+  conditions: [condition],
+  serviceRequests: [serviceRequest],
+  workflowTasks: [workflowTask],
+  procedures: [procedure],
+  observations: [observation],
+  diagnosticReports: [diagnosticReport],
+  imagingStudies: [imagingStudy],
+  medicationRequests: [medicationRequest],
+  medicationDispenses: [medicationDispense],
+  medicationAdministrations: [medicationAdministration],
+  consents: [consent],
+  documents: [document],
+  providerDirectory,
+  generatedAt: new Date("2026-05-27T00:00:00.000Z"),
+  authorPractitionerId: "practitioner-harness-001"
+});
+
+if (fhirDocumentBundle.resourceType !== "Bundle") {
+  throw new Error(
+    `Expected document bundle resourceType Bundle, received ${fhirDocumentBundle.resourceType}`
+  );
+}
+
+if (fhirDocumentBundle.type !== "document") {
+  throw new Error(`Expected document bundle type document, received ${fhirDocumentBundle.type}`);
+}
+
+if (fhirDocumentBundle.entry[0]?.resource.resourceType !== "Composition") {
+  throw new Error("Expected first document bundle entry to be Composition.");
+}
+
+if (fhirDocumentBundle.entry.length !== 22) {
+  throw new Error(
+    `Expected document bundle to contain 22 entries, received ${fhirDocumentBundle.entry.length}`
+  );
+}
+
 const revokedConsent = Consent.grant({
   id: "consent-harness-revoked-001",
   patientId: patient.id,
@@ -815,6 +827,15 @@ revokedConsent.revoke({
   revokedAt: new Date("2026-05-27T12:10:00.000Z"),
   reason: "Harness consent revocation"
 });
+const revokedFhirConsent = mapConsentToFhir(revokedConsent);
+
+if (revokedFhirConsent.status !== "inactive") {
+  throw new Error(`Expected revoked FHIR Consent to be inactive, received ${revokedFhirConsent.status}.`);
+}
+
+if (revokedFhirConsent.provision?.period?.end !== "2026-05-27T12:10:00.000Z") {
+  throw new Error("Expected revoked FHIR Consent period to end at the revocation time.");
+}
 
 if (
   revokedConsent.allowsRecordSharing({
@@ -1028,6 +1049,15 @@ const clinicianCanRevokeConsent = canAccess(
   "consent:revoke"
 );
 
+const clinicianCanExportConsent = canAccess(
+  {
+    actorId: "practitioner-harness-001",
+    role: "clinician",
+    purposeOfUse: "TREATMENT"
+  },
+  "consent:fhir-export"
+);
+
 const nurseCanExportObservation = canAccess(
   {
     actorId: "nurse-harness-001",
@@ -1154,6 +1184,15 @@ const nurseCanRevokeConsent = canAccess(
   "consent:revoke"
 );
 
+const nurseCanExportConsent = canAccess(
+  {
+    actorId: "nurse-harness-001",
+    role: "nurse",
+    purposeOfUse: "TREATMENT"
+  },
+  "consent:fhir-export"
+);
+
 const nurseCanReadProviderDirectory = canAccess(
   {
     actorId: "nurse-harness-001",
@@ -1245,6 +1284,10 @@ if (!clinicianCanRevokeConsent) {
   throw new Error("Expected clinician/TREATMENT to revoke record-sharing consent.");
 }
 
+if (!clinicianCanExportConsent) {
+  throw new Error("Expected clinician/TREATMENT to export FHIR Consent.");
+}
+
 if (nurseCanExportObservation) {
   throw new Error("Expected nurse/TREATMENT to be denied observation:fhir-export.");
 }
@@ -1303,6 +1346,10 @@ if (nurseCanRevokeConsent) {
   throw new Error("Expected nurse/TREATMENT to be denied consent:revoke.");
 }
 
+if (nurseCanExportConsent) {
+  throw new Error("Expected nurse/TREATMENT to be denied consent:fhir-export.");
+}
+
 if (!nurseCanReadProviderDirectory) {
   throw new Error("Expected nurse/TREATMENT to read provider directory.");
 }
@@ -1357,7 +1404,9 @@ console.log(
       documentBundleFirstResourceType: fhirDocumentBundle.entry[0]?.resource.resourceType,
       documentBundleEntryCount: fhirDocumentBundle.entry.length,
       consentId: consent.id,
+      consentResourceType: fhirConsent.resourceType,
       revokedConsentStatus: revokedConsent.toSnapshot().status,
+      revokedFhirConsentStatus: revokedFhirConsent.status,
       recordTransferId: fhirRecordTransferTask.id,
       recordTransferResourceType: fhirRecordTransferTask.resourceType,
       recordTransferFocus: fhirRecordTransferTask.focus?.reference,
@@ -1383,6 +1432,7 @@ console.log(
         clinicianCanExportProviderDirectory,
         clinicianCanExportRecordTransfer,
         clinicianCanRevokeConsent,
+        clinicianCanExportConsent,
         clinicianCanExportServiceRequest,
         clinicianCanExportWorkflowTask,
         clinicianCanExportProcedure,
@@ -1397,6 +1447,7 @@ console.log(
         nurseCanExportProviderDirectory,
         nurseCanExportRecordTransfer,
         nurseCanRevokeConsent,
+        nurseCanExportConsent,
         nurseCanReadProviderDirectory,
         nurseCanExportServiceRequest,
         nurseCanExportWorkflowTask,

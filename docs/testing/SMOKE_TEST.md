@@ -35,6 +35,10 @@ curl -fsS http://localhost:7310/api/v1/patients/patient-demo-001/consents \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-purpose-of-use: TREATMENT"
 
+curl -fsS http://localhost:7310/api/v1/consents/consent-demo-transfer-001/fhir \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+
 REVOKE_CONSENT_ID=$(curl -fsS -X POST http://localhost:7310/api/v1/patients/patient-demo-001/consents \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-purpose-of-use: TREATMENT" \

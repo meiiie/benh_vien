@@ -1,12 +1,13 @@
 import type { FastifyInstance } from "fastify";
 import { nanoid } from "nanoid";
 import {
+  ConsentIdParamsSchema,
   CreateConsentRequestSchema,
   PatientConsentParamsSchema,
   PatientConsentsParamsSchema,
   RevokeConsentRequestSchema
 } from "@benh-vien-so/contracts";
-import { Consent, DomainError } from "@benh-vien-so/domain";
+import { Consent, DomainError, mapConsentToFhir } from "@benh-vien-so/domain";
 import type {
   AuditEventRepository,
   ConsentRepository,
@@ -178,6 +179,37 @@ export async function registerConsentRoutes(
 
       throw error;
     }
+  });
+
+  app.get("/consents/:consentId/fhir", async (request, reply) => {
+    const actor = requirePermission(request, reply, "consent:fhir-export");
+
+    if (!actor) {
+      return;
+    }
+
+    const params = ConsentIdParamsSchema.parse(request.params);
+    const consent = await consentRepository.findById(params.consentId);
+
+    if (!consent) {
+      return reply.status(404).send({
+        error: "CONSENT_NOT_FOUND"
+      });
+    }
+
+    await recordAuditEvent(auditRepository, request, {
+      action: "consent.fhir-export",
+      resourceType: "Consent",
+      resourceId: consent.id,
+      patientId: consent.patientId,
+      metadata: {
+        standard: "HL7 FHIR R4",
+        resourceType: "Consent",
+        status: consent.status
+      }
+    });
+
+    return mapConsentToFhir(consent);
   });
 }
 

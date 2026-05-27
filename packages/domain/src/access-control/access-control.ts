@@ -69,6 +69,7 @@ export type Permission =
   | "consent:list"
   | "consent:create"
   | "consent:revoke"
+  | "consent:fhir-export"
   | "audit-event:list";
 
 export type ActorContext = {
@@ -144,7 +145,8 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "clinical-document:fhir-export",
     "consent:list",
     "consent:create",
-    "consent:revoke"
+    "consent:revoke",
+    "consent:fhir-export"
   ],
   nurse: [
     "patient:list",
@@ -273,6 +275,7 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "consent:list",
     "consent:create",
     "consent:revoke",
+    "consent:fhir-export",
     "audit-event:list"
   ]
 };

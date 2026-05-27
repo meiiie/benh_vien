@@ -190,6 +190,7 @@ describe("API auth and RBAC boundary", () => {
         "Practitioner",
         "PractitionerRole",
         "Endpoint",
+        "Consent",
         "Encounter",
         "AllergyIntolerance",
         "Condition",
@@ -205,7 +206,7 @@ describe("API auth and RBAC boundary", () => {
         "DocumentReference"
       ])
     );
-    expect(body.entry).toHaveLength(43);
+    expect(body.entry).toHaveLength(44);
   });
 
   it("returns a patient-record FHIR document Bundle with Composition first", async () => {
@@ -236,11 +237,14 @@ describe("API auth and RBAC boundary", () => {
         }
       ]
     });
-    expect(body.entry).toHaveLength(44);
+    expect(body.entry).toHaveLength(45);
     expect(body.entry[0].resource.section).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           title: "Cơ sở, nhân sự và endpoint liên thông"
+        }),
+        expect.objectContaining({
+          title: "Đồng ý chia sẻ hồ sơ"
         }),
         expect.objectContaining({
           title: "Luồng công việc thực thi chỉ định"
@@ -1241,6 +1245,38 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("exports patient consent as FHIR Consent", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/consents/consent-demo-transfer-001/fhir",
+      headers: treatmentHeaders(accessToken)
+    });
+    const body = response.json();
+
+    expect(response.statusCode).toBe(200);
+    expect(body).toMatchObject({
+      resourceType: "Consent",
+      id: "consent-demo-transfer-001",
+      status: "active",
+      patient: {
+        reference: "Patient/patient-demo-001"
+      },
+      provision: {
+        type: "permit",
+        actor: [
+          {
+            reference: {
+              reference: "Organization/hospital-hai-phong-referral"
+            }
+          }
+        ]
+      }
+    });
+  });
+
   it("revokes a patient consent and blocks later record sharing", async () => {
     app = await readyServer();
     const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
@@ -1284,6 +1320,24 @@ describe("API auth and RBAC boundary", () => {
       revocationReason: "Người bệnh rút lại đồng ý chia sẻ hồ sơ."
     });
     expect(revokedConsent.revokedAt).toEqual(expect.any(String));
+
+    const fhirConsentResponse = await app.inject({
+      method: "GET",
+      url: `/api/v1/consents/${createdConsent.id}/fhir`,
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(fhirConsentResponse.statusCode).toBe(200);
+    expect(fhirConsentResponse.json()).toMatchObject({
+      resourceType: "Consent",
+      id: createdConsent.id,
+      status: "inactive",
+      extension: expect.arrayContaining([
+        expect.objectContaining({
+          url: "urn:wiiicare:nexus:fhir:StructureDefinition/consent-revocation"
+        })
+      ])
+    });
 
     const bundleResponse = await app.inject({
       method: "GET",

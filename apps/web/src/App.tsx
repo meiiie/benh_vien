@@ -780,6 +780,7 @@ type AuditAction =
   | "consent.list"
   | "consent.create"
   | "consent.revoke"
+  | "consent.fhir-export"
   | "audit-event.list"
   | "audit-event.integrity-verify";
 
@@ -1576,6 +1577,7 @@ export function App() {
   const [patientFhirBundlePreview, setPatientFhirBundlePreview] = useState<unknown>();
   const [patientFhirDocumentBundlePreview, setPatientFhirDocumentBundlePreview] = useState<unknown>();
   const [providerDirectoryFhirPreview, setProviderDirectoryFhirPreview] = useState<unknown>();
+  const [consentFhirPreview, setConsentFhirPreview] = useState<unknown>();
   const [recordTransferFhirTaskPreview, setRecordTransferFhirTaskPreview] =
     useState<unknown>();
   const [encounterFhirPreview, setEncounterFhirPreview] = useState<unknown>();
@@ -1753,6 +1755,7 @@ export function App() {
       setPatientFhirPreview(undefined);
       setPatientFhirBundlePreview(undefined);
       setPatientFhirDocumentBundlePreview(undefined);
+      setConsentFhirPreview(undefined);
       setEncounterFhirPreview(undefined);
       setRecordTransferFhirTaskPreview(undefined);
       setDocumentFhirPreview(undefined);
@@ -2049,6 +2052,7 @@ export function App() {
       loadImagingStudies(patientId),
       loadClinicalDocuments(patientId),
       loadConsents(patientId),
+      loadConsentFhirPreview(defaultTransferContext.consentReference),
       loadRecordTransfers(patientId)
     ];
 
@@ -2591,6 +2595,7 @@ export function App() {
 
       const revokedConsent = (await response.json()) as Consent;
       await loadConsents(selectedPatient.id);
+      await loadConsentFhirPreview(revokedConsent.id);
       setStatusMessage(`Đã thu hồi consent ${revokedConsent.id}; các lần xuất/chuyển hồ sơ mới sẽ bị chặn nếu dùng consent này.`);
     } catch (error) {
       setStatusMessage(
@@ -2653,6 +2658,27 @@ export function App() {
           error instanceof Error
             ? `Không thể xuất FHIR Task chuyển hồ sơ: ${error.message}`
             : "Không thể xuất FHIR Task chuyển hồ sơ."
+      });
+    }
+  }
+
+  async function loadConsentFhirPreview(consentId: string) {
+    try {
+      const response = await fetch(`${apiBaseUrl}/consents/${consentId}/fhir`, {
+        headers: buildHeaders("TREATMENT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      setConsentFhirPreview(await response.json());
+    } catch (error) {
+      setConsentFhirPreview({
+        error:
+          error instanceof Error
+            ? `Không thể xuất FHIR Consent: ${error.message}`
+            : "Không thể xuất FHIR Consent."
       });
     }
   }
@@ -4465,6 +4491,7 @@ export function App() {
           <FhirPanel title="FHIR MedicationAdministration JSON" badge="MedicationAdministration" value={medicationAdministrationFhirPreview} />
           <FhirPanel title="FHIR DocumentReference JSON" badge="DocumentReference" value={documentFhirPreview} />
           {renderConsentInteropPanel()}
+          <FhirPanel title="FHIR Consent JSON" badge="Consent" value={consentFhirPreview} />
           {renderRecordTransferInteropPanel()}
           <FhirPanel title="FHIR Record Transfer Task JSON" badge="Task" value={recordTransferFhirTaskPreview} />
           <article className="panel dark-panel">
@@ -4580,18 +4607,27 @@ export function App() {
                 <strong>
                   {consent.id} · {formatConsentStatus(consent.status)}
                 </strong>
-                <button
-                  className="ghost-button compact-button"
-                  type="button"
-                  disabled={
-                    consent.status !== "active" ||
-                    revokingConsentId === consent.id ||
-                    !selectedPatient
-                  }
-                  onClick={() => void handleRevokeConsent(consent)}
-                >
-                  {revokingConsentId === consent.id ? "Đang thu hồi..." : "Thu hồi"}
-                </button>
+                <div className="reference-actions">
+                  <button
+                    className="ghost-button compact-button"
+                    type="button"
+                    onClick={() => void loadConsentFhirPreview(consent.id)}
+                  >
+                    FHIR
+                  </button>
+                  <button
+                    className="ghost-button compact-button"
+                    type="button"
+                    disabled={
+                      consent.status !== "active" ||
+                      revokingConsentId === consent.id ||
+                      !selectedPatient
+                    }
+                    onClick={() => void handleRevokeConsent(consent)}
+                  >
+                    {revokingConsentId === consent.id ? "Đang thu hồi..." : "Thu hồi"}
+                  </button>
+                </div>
               </div>
               <span>
                 {formatConsentCategory(consent.category)} cho {consent.granteeOrganizationId}, hiệu lực từ{" "}
@@ -8500,6 +8536,7 @@ function formatAuditAction(action: AuditAction): string {
     "consent.list": "Tải đồng ý chia sẻ hồ sơ",
     "consent.create": "Tạo đồng ý chia sẻ hồ sơ",
     "consent.revoke": "Thu hồi đồng ý chia sẻ hồ sơ",
+    "consent.fhir-export": "Xuất FHIR Consent",
     "audit-event.list": "Xem nhật ký kiểm toán",
     "audit-event.integrity-verify": "Kiểm tra toàn vẹn audit"
   };

@@ -70,6 +70,7 @@ export type AuditAction =
   | "consent.list"
   | "consent.create"
   | "consent.revoke"
+  | "consent.fhir-export"
   | "audit-event.list"
   | "audit-event.integrity-verify";
 

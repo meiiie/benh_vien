@@ -39,6 +39,7 @@ export * from "./clinical-document/clinical-document.repository.js";
 export * from "./fhir/fhir-types.js";
 export * from "./fhir/map-allergy-intolerance-to-fhir.js";
 export * from "./fhir/map-clinical-document-to-fhir.js";
+export * from "./fhir/map-consent-to-fhir.js";
 export * from "./fhir/map-condition-to-fhir.js";
 export * from "./fhir/map-diagnostic-report-to-fhir.js";
 export * from "./fhir/map-encounter-to-fhir.js";
