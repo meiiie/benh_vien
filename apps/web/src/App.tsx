@@ -127,6 +127,24 @@ type WorkflowTaskReferenceResourceType =
   | "DiagnosticReport"
   | "ImagingStudy"
   | "DocumentReference";
+type ProcedureStatus =
+  | "preparation"
+  | "in-progress"
+  | "not-done"
+  | "on-hold"
+  | "stopped"
+  | "completed"
+  | "entered-in-error"
+  | "unknown";
+type ProcedureCategory =
+  | "surgical"
+  | "diagnostic"
+  | "therapeutic"
+  | "counseling"
+  | "rehabilitation"
+  | "other";
+type ProcedurePerformerActorType = "Practitioner" | "PractitionerRole" | "Organization";
+type ProcedureReportReferenceResourceType = "DiagnosticReport" | "DocumentReference" | "Composition";
 type DiagnosticReportStatus =
   | "registered"
   | "partial"
@@ -487,6 +505,52 @@ type WorkflowTask = {
   readonly updatedAt: string;
 };
 
+type ProcedureCoding = {
+  readonly system: string;
+  readonly code: string;
+  readonly display: string;
+};
+
+type ProcedurePerformedPeriod = {
+  readonly start?: string;
+  readonly end?: string;
+};
+
+type ProcedurePerformer = {
+  readonly actorType: ProcedurePerformerActorType;
+  readonly actorId: string;
+  readonly function?: ProcedureCoding;
+  readonly onBehalfOfOrganizationId?: string;
+};
+
+type ProcedureReportReference = {
+  readonly resourceType: ProcedureReportReferenceResourceType;
+  readonly id: string;
+};
+
+type Procedure = {
+  readonly id: string;
+  readonly patientId: string;
+  readonly encounterId?: string;
+  readonly basedOnServiceRequestId?: string;
+  readonly partOfProcedureId?: string;
+  readonly status: ProcedureStatus;
+  readonly statusReason?: ProcedureCoding;
+  readonly category: ProcedureCategory;
+  readonly code: ProcedureCoding;
+  readonly performedPeriod?: ProcedurePerformedPeriod;
+  readonly recorderPractitionerId?: string;
+  readonly asserterPractitionerId?: string;
+  readonly performers: readonly ProcedurePerformer[];
+  readonly reasonConditionId?: string;
+  readonly bodySite?: ProcedureCoding;
+  readonly outcome?: ProcedureCoding;
+  readonly reportReferences: readonly ProcedureReportReference[];
+  readonly note?: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
 type DiagnosticReportCode = {
   readonly system: string;
   readonly code: string;
@@ -588,6 +652,10 @@ type AuditAction =
   | "workflow-task.create"
   | "workflow-task.read"
   | "workflow-task.fhir-export"
+  | "procedure.list"
+  | "procedure.create"
+  | "procedure.read"
+  | "procedure.fhir-export"
   | "diagnostic-report.list"
   | "diagnostic-report.create"
   | "diagnostic-report.read"
@@ -614,6 +682,7 @@ type AuditResourceType =
   | "Observation"
   | "ServiceRequest"
   | "Task"
+  | "Procedure"
   | "DiagnosticReport"
   | "ImagingStudy"
   | "ClinicalDocument"
@@ -682,6 +751,10 @@ type ServiceRequestsResponse = {
 
 type WorkflowTasksResponse = {
   readonly items: readonly WorkflowTask[];
+};
+
+type ProceduresResponse = {
+  readonly items: readonly Procedure[];
 };
 
 type DiagnosticReportsResponse = {
@@ -810,6 +883,36 @@ type NewServiceRequestForm = {
   requesterPractitionerId: string;
   performerOrganizationId: string;
   patientInstruction: string;
+  note: string;
+};
+
+type NewProcedureForm = {
+  encounterId: string;
+  basedOnServiceRequestId: string;
+  reasonConditionId: string;
+  category: ProcedureCategory;
+  status: ProcedureStatus;
+  codeSystem: string;
+  code: string;
+  codeDisplay: string;
+  performedStart: string;
+  performedEnd: string;
+  performerActorType: ProcedurePerformerActorType;
+  performerActorId: string;
+  performerFunctionSystem: string;
+  performerFunctionCode: string;
+  performerFunctionDisplay: string;
+  onBehalfOfOrganizationId: string;
+  recorderPractitionerId: string;
+  asserterPractitionerId: string;
+  bodySiteSystem: string;
+  bodySiteCode: string;
+  bodySiteDisplay: string;
+  outcomeSystem: string;
+  outcomeCode: string;
+  outcomeDisplay: string;
+  reportReferenceType: ProcedureReportReferenceResourceType;
+  reportReferenceId: string;
   note: string;
 };
 
@@ -982,6 +1085,36 @@ const defaultServiceRequestForm: NewServiceRequestForm = {
   note: "Chỉ định xét nghiệm/hình ảnh dùng để nối EMR với LIS/PACS."
 };
 
+const defaultProcedureForm: NewProcedureForm = {
+  encounterId: "",
+  basedOnServiceRequestId: "",
+  reasonConditionId: "",
+  category: "diagnostic",
+  status: "completed",
+  codeSystem: "http://snomed.info/sct",
+  code: "168537006",
+  codeDisplay: "Chest X-ray",
+  performedStart: "2026-05-27T12:15",
+  performedEnd: "2026-05-27T12:30",
+  performerActorType: "Practitioner",
+  performerActorId: "practitioner-demo-001",
+  performerFunctionSystem: "urn:wiiicare:nexus:procedure-performer-function",
+  performerFunctionCode: "clinical-performer",
+  performerFunctionDisplay: "Người thực hiện lâm sàng",
+  onBehalfOfOrganizationId: "department-diagnostic-imaging",
+  recorderPractitionerId: "practitioner-demo-001",
+  asserterPractitionerId: "practitioner-demo-001",
+  bodySiteSystem: "http://snomed.info/sct",
+  bodySiteCode: "51185008",
+  bodySiteDisplay: "Thoracic structure",
+  outcomeSystem: "urn:wiiicare:nexus:procedure-outcome",
+  outcomeCode: "completed",
+  outcomeDisplay: "Hoàn tất thủ thuật",
+  reportReferenceType: "DiagnosticReport",
+  reportReferenceId: "",
+  note: "Procedure ghi nhận hành động y tế đã thực hiện, khác với ServiceRequest là y lệnh và Task là hàng đợi thực thi."
+};
+
 const defaultDiagnosticReportForm: NewDiagnosticReportForm = {
   encounterId: "",
   basedOnServiceRequestId: "",
@@ -1061,6 +1194,7 @@ const workflowSteps = [
   "Ghi nhận chẩn đoán",
   "Chỉ định dịch vụ",
   "Theo dõi Task thực thi",
+  "Ghi nhận Procedure",
   "Nhận kết quả",
   "Gắn metadata PACS",
   "Định danh cơ sở/endpoint",
@@ -1100,7 +1234,7 @@ const referenceSignals = [
   },
   {
     name: "HL7 FHIR R4",
-    value: "Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, DocumentReference cùng Organization/Practitioner/Endpoint là lõi trao đổi dữ liệu trong lát cắt này."
+    value: "Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, DocumentReference cùng Organization/Practitioner/Endpoint là lõi trao đổi dữ liệu trong lát cắt này."
   },
   {
     name: "Bối cảnh Việt Nam",
@@ -1136,6 +1270,8 @@ export function App() {
   const [selectedServiceRequestId, setSelectedServiceRequestId] = useState<string>();
   const [workflowTasks, setWorkflowTasks] = useState<readonly WorkflowTask[]>([]);
   const [selectedWorkflowTaskId, setSelectedWorkflowTaskId] = useState<string>();
+  const [procedures, setProcedures] = useState<readonly Procedure[]>([]);
+  const [selectedProcedureId, setSelectedProcedureId] = useState<string>();
   const [diagnosticReports, setDiagnosticReports] = useState<readonly DiagnosticReport[]>([]);
   const [selectedDiagnosticReportId, setSelectedDiagnosticReportId] = useState<string>();
   const [imagingStudies, setImagingStudies] = useState<readonly ImagingStudy[]>([]);
@@ -1155,6 +1291,7 @@ export function App() {
   const [medicationRequestFhirPreview, setMedicationRequestFhirPreview] = useState<unknown>();
   const [serviceRequestFhirPreview, setServiceRequestFhirPreview] = useState<unknown>();
   const [workflowTaskFhirPreview, setWorkflowTaskFhirPreview] = useState<unknown>();
+  const [procedureFhirPreview, setProcedureFhirPreview] = useState<unknown>();
   const [diagnosticReportFhirPreview, setDiagnosticReportFhirPreview] = useState<unknown>();
   const [imagingStudyFhirPreview, setImagingStudyFhirPreview] = useState<unknown>();
   const [patientForm, setPatientForm] = useState<NewPatientForm>(defaultPatientForm);
@@ -1171,6 +1308,8 @@ export function App() {
     useState<NewMedicationRequestForm>(defaultMedicationRequestForm);
   const [serviceRequestForm, setServiceRequestForm] =
     useState<NewServiceRequestForm>(defaultServiceRequestForm);
+  const [procedureForm, setProcedureForm] =
+    useState<NewProcedureForm>(defaultProcedureForm);
   const [diagnosticReportForm, setDiagnosticReportForm] =
     useState<NewDiagnosticReportForm>(defaultDiagnosticReportForm);
   const [imagingStudyForm, setImagingStudyForm] =
@@ -1185,6 +1324,7 @@ export function App() {
   const [isLoadingMedicationRequests, setIsLoadingMedicationRequests] = useState(false);
   const [isLoadingServiceRequests, setIsLoadingServiceRequests] = useState(false);
   const [isLoadingWorkflowTasks, setIsLoadingWorkflowTasks] = useState(false);
+  const [isLoadingProcedures, setIsLoadingProcedures] = useState(false);
   const [isLoadingDiagnosticReports, setIsLoadingDiagnosticReports] = useState(false);
   const [isLoadingImagingStudies, setIsLoadingImagingStudies] = useState(false);
   const [isLoadingAuditEvents, setIsLoadingAuditEvents] = useState(false);
@@ -1198,6 +1338,7 @@ export function App() {
   const [isSubmittingObservation, setIsSubmittingObservation] = useState(false);
   const [isSubmittingMedicationRequest, setIsSubmittingMedicationRequest] = useState(false);
   const [isSubmittingServiceRequest, setIsSubmittingServiceRequest] = useState(false);
+  const [isSubmittingProcedure, setIsSubmittingProcedure] = useState(false);
   const [isSubmittingDiagnosticReport, setIsSubmittingDiagnosticReport] = useState(false);
   const [isSubmittingImagingStudy, setIsSubmittingImagingStudy] = useState(false);
   const [isSigningDocument, setIsSigningDocument] = useState(false);
@@ -1218,6 +1359,7 @@ export function App() {
     (serviceRequest) => serviceRequest.id === selectedServiceRequestId
   );
   const selectedWorkflowTask = workflowTasks.find((task) => task.id === selectedWorkflowTaskId);
+  const selectedProcedure = procedures.find((procedure) => procedure.id === selectedProcedureId);
   const selectedDiagnosticReport = diagnosticReports.find(
     (diagnosticReport) => diagnosticReport.id === selectedDiagnosticReportId
   );
@@ -1244,6 +1386,9 @@ export function App() {
     : [];
   const selectedEncounterWorkflowTasks = selectedEncounter
     ? workflowTasks.filter((task) => task.encounterId === selectedEncounter.id)
+    : [];
+  const selectedEncounterProcedures = selectedEncounter
+    ? procedures.filter((procedure) => procedure.encounterId === selectedEncounter.id)
     : [];
   const selectedEncounterDiagnosticReports = selectedEncounter
     ? diagnosticReports.filter((diagnosticReport) => diagnosticReport.encounterId === selectedEncounter.id)
@@ -1278,6 +1423,7 @@ export function App() {
       setMedicationRequestFhirPreview(undefined);
       setServiceRequestFhirPreview(undefined);
       setWorkflowTaskFhirPreview(undefined);
+      setProcedureFhirPreview(undefined);
       setDiagnosticReportFhirPreview(undefined);
       setImagingStudyFhirPreview(undefined);
       setEncounters([]);
@@ -1288,6 +1434,7 @@ export function App() {
       setMedicationRequests([]);
       setServiceRequests([]);
       setWorkflowTasks([]);
+      setProcedures([]);
       setDiagnosticReports([]);
       setImagingStudies([]);
       setAuditEvents([]);
@@ -1300,6 +1447,7 @@ export function App() {
       setSelectedMedicationRequestId(undefined);
       setSelectedServiceRequestId(undefined);
       setSelectedWorkflowTaskId(undefined);
+      setSelectedProcedureId(undefined);
       setSelectedDiagnosticReportId(undefined);
       setSelectedImagingStudyId(undefined);
       return;
@@ -1317,6 +1465,7 @@ export function App() {
       setObservationForm((current) => ({ ...current, encounterId: "" }));
       setMedicationRequestForm((current) => ({ ...current, encounterId: "" }));
       setServiceRequestForm((current) => ({ ...current, encounterId: "" }));
+      setProcedureForm((current) => ({ ...current, encounterId: "" }));
       setDiagnosticReportForm((current) => ({ ...current, encounterId: "" }));
       setImagingStudyForm((current) => ({ ...current, encounterId: "" }));
       return;
@@ -1328,6 +1477,7 @@ export function App() {
     setObservationForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     setMedicationRequestForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     setServiceRequestForm((current) => ({ ...current, encounterId: selectedEncounterId }));
+    setProcedureForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     setDiagnosticReportForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     setImagingStudyForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     void loadEncounterFhirPreview(selectedEncounterId);
@@ -1395,6 +1545,15 @@ export function App() {
 
     void loadWorkflowTaskFhirPreview(selectedWorkflowTaskId);
   }, [selectedWorkflowTaskId]);
+
+  useEffect(() => {
+    if (!selectedProcedureId) {
+      setProcedureFhirPreview(undefined);
+      return;
+    }
+
+    void loadProcedureFhirPreview(selectedProcedureId);
+  }, [selectedProcedureId]);
 
   useEffect(() => {
     if (!selectedDiagnosticReportId) {
@@ -1504,6 +1663,7 @@ export function App() {
       loadMedicationRequests(patientId),
       loadServiceRequests(patientId),
       loadWorkflowTasks(patientId),
+      loadProcedures(patientId),
       loadDiagnosticReports(patientId),
       loadImagingStudies(patientId),
       loadClinicalDocuments(patientId),
@@ -1749,6 +1909,34 @@ export function App() {
       );
     } finally {
       setIsLoadingWorkflowTasks(false);
+    }
+  }
+
+  async function loadProcedures(patientId: string, nextSelectedProcedureId?: string) {
+    setIsLoadingProcedures(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/procedures`, {
+        headers: buildHeaders("TREATMENT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      const data = (await response.json()) as ProceduresResponse;
+      setProcedures(data.items);
+      setSelectedProcedureId(nextSelectedProcedureId ?? data.items[0]?.id);
+    } catch (error) {
+      setProcedures([]);
+      setSelectedProcedureId(undefined);
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể tải thủ thuật/hoạt động đã thực hiện: ${error.message}`
+          : "Không thể tải thủ thuật/hoạt động đã thực hiện."
+      );
+    } finally {
+      setIsLoadingProcedures(false);
     }
   }
 
@@ -2110,6 +2298,27 @@ export function App() {
     }
   }
 
+  async function loadProcedureFhirPreview(procedureId: string) {
+    try {
+      const response = await fetch(`${apiBaseUrl}/procedures/${procedureId}/fhir`, {
+        headers: buildHeaders("TREATMENT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      setProcedureFhirPreview(await response.json());
+    } catch (error) {
+      setProcedureFhirPreview({
+        error:
+          error instanceof Error
+            ? `Không thể xuất FHIR Procedure: ${error.message}`
+            : "Không thể xuất FHIR Procedure."
+      });
+    }
+  }
+
   async function loadDiagnosticReportFhirPreview(diagnosticReportId: string) {
     try {
       const response = await fetch(`${apiBaseUrl}/diagnostic-reports/${diagnosticReportId}/fhir`, {
@@ -2212,6 +2421,7 @@ export function App() {
     setMedicationRequests([]);
     setServiceRequests([]);
     setWorkflowTasks([]);
+    setProcedures([]);
     setDiagnosticReports([]);
     setImagingStudies([]);
     setAuditEvents([]);
@@ -2229,6 +2439,7 @@ export function App() {
     setMedicationRequestFhirPreview(undefined);
     setServiceRequestFhirPreview(undefined);
     setWorkflowTaskFhirPreview(undefined);
+    setProcedureFhirPreview(undefined);
     setDiagnosticReportFhirPreview(undefined);
     setImagingStudyFhirPreview(undefined);
     setSelectedPatientId(undefined);
@@ -2240,6 +2451,7 @@ export function App() {
     setSelectedMedicationRequestId(undefined);
     setSelectedServiceRequestId(undefined);
     setSelectedWorkflowTaskId(undefined);
+    setSelectedProcedureId(undefined);
     setSelectedDiagnosticReportId(undefined);
     setSelectedImagingStudyId(undefined);
   }
@@ -2736,6 +2948,119 @@ export function App() {
     }
   }
 
+  async function handleCreateProcedure(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedPatient) {
+      setStatusMessage("Cần chọn bệnh nhân trước khi ghi nhận thủ thuật/hoạt động đã thực hiện.");
+      return;
+    }
+
+    setIsSubmittingProcedure(true);
+
+    const reportReferences =
+      procedureForm.reportReferenceId.trim().length > 0
+        ? [
+            {
+              resourceType: procedureForm.reportReferenceType,
+              id: procedureForm.reportReferenceId
+            }
+          ]
+        : [];
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/procedures`, {
+        method: "POST",
+        headers: buildHeaders("TREATMENT", {
+          "Content-Type": "application/json"
+        }),
+        body: JSON.stringify({
+          encounterId: procedureForm.encounterId || undefined,
+          basedOnServiceRequestId: procedureForm.basedOnServiceRequestId || undefined,
+          reasonConditionId: procedureForm.reasonConditionId || undefined,
+          category: procedureForm.category,
+          status: procedureForm.status,
+          code: {
+            system: procedureForm.codeSystem,
+            code: procedureForm.code,
+            display: procedureForm.codeDisplay
+          },
+          performedPeriod:
+            procedureForm.performedStart || procedureForm.performedEnd
+              ? {
+                  start: procedureForm.performedStart
+                    ? toApiDateTime(procedureForm.performedStart)
+                    : undefined,
+                  end: procedureForm.performedEnd
+                    ? toApiDateTime(procedureForm.performedEnd)
+                    : undefined
+                }
+              : undefined,
+          performers: procedureForm.performerActorId
+            ? [
+                {
+                  actorType: procedureForm.performerActorType,
+                  actorId: procedureForm.performerActorId,
+                  function:
+                    procedureForm.performerFunctionCode && procedureForm.performerFunctionDisplay
+                      ? {
+                          system: procedureForm.performerFunctionSystem,
+                          code: procedureForm.performerFunctionCode,
+                          display: procedureForm.performerFunctionDisplay
+                        }
+                      : undefined,
+                  onBehalfOfOrganizationId: procedureForm.onBehalfOfOrganizationId || undefined
+                }
+              ]
+            : [],
+          recorderPractitionerId: procedureForm.recorderPractitionerId || undefined,
+          asserterPractitionerId: procedureForm.asserterPractitionerId || undefined,
+          bodySite:
+            procedureForm.bodySiteCode && procedureForm.bodySiteDisplay
+              ? {
+                  system: procedureForm.bodySiteSystem,
+                  code: procedureForm.bodySiteCode,
+                  display: procedureForm.bodySiteDisplay
+                }
+              : undefined,
+          outcome:
+            procedureForm.outcomeCode && procedureForm.outcomeDisplay
+              ? {
+                  system: procedureForm.outcomeSystem,
+                  code: procedureForm.outcomeCode,
+                  display: procedureForm.outcomeDisplay
+                }
+              : undefined,
+          reportReferences,
+          note: procedureForm.note || undefined
+        })
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => undefined);
+        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
+      }
+
+      const createdProcedure = (await response.json()) as Procedure;
+      await loadProcedures(selectedPatient.id, createdProcedure.id);
+      await loadPatientFhirBundlePreview(selectedPatient.id);
+      await loadPatientFhirDocumentBundlePreview(selectedPatient.id);
+      await loadAuditEvents(selectedPatient.id, { silent: true });
+      setAppRoute("workspace");
+      setStatusMessage(
+        `Đã ghi nhận Procedure "${createdProcedure.code.display}" cho ${selectedPatient.fullName}.`
+      );
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể ghi nhận thủ thuật/hoạt động: ${error.message}`
+          : "Không thể ghi nhận thủ thuật/hoạt động."
+      );
+    } finally {
+      setIsSubmittingProcedure(false);
+    }
+  }
+
   async function handleCreateDiagnosticReport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -3029,6 +3354,7 @@ export function App() {
           <MetricCard label="Chẩn đoán" value={`${conditions.length}`} note="Vấn đề sức khỏe có cấu trúc" />
           <MetricCard label="Chỉ định DV" value={`${serviceRequests.length}`} note="FHIR ServiceRequest" />
           <MetricCard label="Công việc" value={`${workflowTasks.length}`} note="FHIR Task" />
+          <MetricCard label="Thủ thuật" value={`${procedures.length}`} note="FHIR Procedure" />
           <MetricCard label="Kết quả" value={`${diagnosticReports.length}`} note="FHIR DiagnosticReport" />
           <MetricCard label="Ảnh y khoa" value={`${imagingStudies.length}`} note="FHIR ImagingStudy" />
           <MetricCard label="Chỉ định thuốc" value={`${medicationRequests.length}`} note="FHIR MedicationRequest" />
@@ -3052,7 +3378,7 @@ export function App() {
               </button>
               <button type="button" onClick={() => setAppRoute("interop")}>
                 <strong>Xem gói FHIR</strong>
-                <span>Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Observation, DiagnosticReport, ImagingStudy, MedicationRequest và DocumentReference đã có preview.</span>
+                <span>Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest và DocumentReference đã có preview.</span>
               </button>
             </div>
           </article>
@@ -3068,6 +3394,7 @@ export function App() {
                 <Info label="Chẩn đoán/vấn đề" value={`${conditions.length}`} />
                 <Info label="Chỉ định dịch vụ" value={`${serviceRequests.length}`} />
                 <Info label="Công việc thực thi" value={`${workflowTasks.length}`} />
+                <Info label="Thủ thuật/hoạt động" value={`${procedures.length}`} />
                 <Info label="Chỉ số lâm sàng" value={`${observations.length}`} />
                 <Info label="Báo cáo kết quả" value={`${diagnosticReports.length}`} />
                 <Info label="Nghiên cứu hình ảnh" value={`${imagingStudies.length}`} />
@@ -3101,6 +3428,7 @@ export function App() {
           {renderConditionPanel()}
           {renderServiceRequestPanel()}
           {renderWorkflowTaskPanel()}
+          {renderProcedurePanel()}
           {renderObservationPanel()}
           {renderDiagnosticReportPanel()}
           {renderImagingStudyPanel()}
@@ -3183,6 +3511,7 @@ export function App() {
           <FhirPanel title="FHIR Condition JSON" badge="Condition" value={conditionFhirPreview} />
           <FhirPanel title="FHIR ServiceRequest JSON" badge="ServiceRequest" value={serviceRequestFhirPreview} />
           <FhirPanel title="FHIR Task JSON" badge="Task" value={workflowTaskFhirPreview} />
+          <FhirPanel title="FHIR Procedure JSON" badge="Procedure" value={procedureFhirPreview} />
           <FhirPanel title="FHIR Observation JSON" badge="Observation" value={observationFhirPreview} />
           <FhirPanel title="FHIR DiagnosticReport JSON" badge="DiagnosticReport" value={diagnosticReportFhirPreview} />
           <FhirPanel title="FHIR ImagingStudy JSON" badge="ImagingStudy" value={imagingStudyFhirPreview} />
@@ -3444,6 +3773,7 @@ export function App() {
                   <Info label="Chẩn đoán gắn lượt khám" value={`${selectedEncounterConditions.length}`} />
                   <Info label="Chỉ định dịch vụ gắn lượt khám" value={`${selectedEncounterServiceRequests.length}`} />
                   <Info label="Công việc thực thi gắn lượt khám" value={`${selectedEncounterWorkflowTasks.length}`} />
+                  <Info label="Thủ thuật/hoạt động gắn lượt khám" value={`${selectedEncounterProcedures.length}`} />
                   <Info label="Chỉ số gắn lượt khám" value={`${selectedEncounterObservations.length}`} />
                   <Info label="Báo cáo kết quả gắn lượt khám" value={`${selectedEncounterDiagnosticReports.length}`} />
                   <Info label="Ảnh y khoa gắn lượt khám" value={`${selectedEncounterImagingStudies.length}`} />
@@ -4298,6 +4628,288 @@ export function App() {
             )}
           </div>
         </div>
+      </article>
+    );
+  }
+
+  function renderProcedurePanel(): ReactNode {
+    return (
+      <article className="panel service-request-panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Clinical procedures</p>
+            <h2>Thủ thuật và hoạt động đã thực hiện</h2>
+          </div>
+          <span className="pill cyan">
+            {isLoadingProcedures ? "loading" : `${procedures.length} bản ghi`}
+          </span>
+        </div>
+
+        <div className="document-layout">
+          <div className="service-cards">
+            {procedures.map((procedure) => (
+              <button
+                className={procedure.id === selectedProcedureId ? "service-card selected" : "service-card"}
+                key={procedure.id}
+                type="button"
+                onClick={() => setSelectedProcedureId(procedure.id)}
+              >
+                <span>{formatProcedureCategory(procedure.category)}</span>
+                <strong>{procedure.code.display}</strong>
+                <small>
+                  {formatProcedureStatus(procedure.status)} ·{" "}
+                  {procedure.performedPeriod?.start
+                    ? formatDateTime(procedure.performedPeriod.start)
+                    : formatDateTime(procedure.updatedAt)}
+                </small>
+              </button>
+            ))}
+            {procedures.length === 0 ? (
+              <p className="empty-state">
+                Chưa có Procedure cho bệnh nhân này. Procedure ghi lại hành động y tế đã thực hiện, còn ServiceRequest là y lệnh và Task là hàng đợi xử lý.
+              </p>
+            ) : null}
+          </div>
+
+          <div className="service-summary">
+            {selectedProcedure ? (
+              <>
+                <div className="document-meta">
+                  <Info label="Hoạt động" value={selectedProcedure.code.display} />
+                  <Info label="Mã chuẩn" value={`${selectedProcedure.code.system} · ${selectedProcedure.code.code}`} />
+                  <Info label="Nhóm" value={formatProcedureCategory(selectedProcedure.category)} />
+                  <Info label="Trạng thái FHIR" value={formatProcedureStatus(selectedProcedure.status)} />
+                  <Info label="Y lệnh gốc" value={selectedProcedure.basedOnServiceRequestId ?? "Chưa gắn"} />
+                  <Info label="Chẩn đoán/lý do" value={selectedProcedure.reasonConditionId ?? "Chưa gắn"} />
+                  <Info
+                    label="Bắt đầu"
+                    value={
+                      selectedProcedure.performedPeriod?.start
+                        ? formatDateTime(selectedProcedure.performedPeriod.start)
+                        : "Chưa gắn"
+                    }
+                  />
+                  <Info
+                    label="Kết thúc"
+                    value={
+                      selectedProcedure.performedPeriod?.end
+                        ? formatDateTime(selectedProcedure.performedPeriod.end)
+                        : "Chưa gắn"
+                    }
+                  />
+                  <Info label="Người ghi nhận" value={selectedProcedure.recorderPractitionerId ?? "Chưa gắn"} />
+                  <Info label="Người xác nhận" value={selectedProcedure.asserterPractitionerId ?? "Chưa gắn"} />
+                  <Info label="Vị trí/cơ quan" value={selectedProcedure.bodySite?.display ?? "Chưa gắn"} />
+                  <Info label="Kết quả thủ thuật" value={selectedProcedure.outcome?.display ?? "Chưa gắn"} />
+                </div>
+                <div className="reference-list compact-list">
+                  <div>
+                    <strong>Người/đơn vị thực hiện</strong>
+                    <span>{formatProcedurePerformers(selectedProcedure.performers)}</span>
+                  </div>
+                  <div>
+                    <strong>Báo cáo liên quan</strong>
+                    <span>{formatProcedureReferences(selectedProcedure.reportReferences)}</span>
+                  </div>
+                </div>
+                <p className="empty-state">
+                  Procedure là lớp “đã làm gì cho người bệnh”: ví dụ chụp X-quang, thủ thuật, tư vấn hoặc phục hồi chức năng. Nó giúp Bundle không chỉ có y lệnh và kết quả, mà còn có dấu vết lâm sàng của hành động đã diễn ra.
+                </p>
+              </>
+            ) : (
+              <p className="empty-state">Chọn một Procedure để xem metadata và xuất FHIR Procedure.</p>
+            )}
+          </div>
+        </div>
+
+        <form className="service-form" onSubmit={(event) => void handleCreateProcedure(event)}>
+          <label>
+            Gắn với lượt khám
+            <select
+              value={procedureForm.encounterId}
+              onChange={(event) => setProcedureForm({ ...procedureForm, encounterId: event.target.value })}
+            >
+              <option value="">Không gắn</option>
+              {encounters.map((encounter) => (
+                <option key={encounter.id} value={encounter.id}>
+                  {encounter.serviceType} · {formatDateTime(encounter.startedAt)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Y lệnh gốc
+            <select
+              value={procedureForm.basedOnServiceRequestId}
+              onChange={(event) =>
+                setProcedureForm({ ...procedureForm, basedOnServiceRequestId: event.target.value })
+              }
+            >
+              <option value="">Không gắn</option>
+              {serviceRequests.map((serviceRequest) => (
+                <option key={serviceRequest.id} value={serviceRequest.id}>
+                  {serviceRequest.code.display}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Chẩn đoán/lý do
+            <select
+              value={procedureForm.reasonConditionId}
+              onChange={(event) => setProcedureForm({ ...procedureForm, reasonConditionId: event.target.value })}
+            >
+              <option value="">Không gắn</option>
+              {conditions.map((condition) => (
+                <option key={condition.id} value={condition.id}>
+                  {condition.code.display}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Nhóm Procedure
+            <select
+              value={procedureForm.category}
+              onChange={(event) =>
+                setProcedureForm({ ...procedureForm, category: event.target.value as ProcedureCategory })
+              }
+            >
+              <option value="diagnostic">Chẩn đoán</option>
+              <option value="therapeutic">Điều trị</option>
+              <option value="surgical">Phẫu thuật</option>
+              <option value="counseling">Tư vấn</option>
+              <option value="rehabilitation">Phục hồi chức năng</option>
+              <option value="other">Khác</option>
+            </select>
+          </label>
+          <label>
+            Trạng thái
+            <select
+              value={procedureForm.status}
+              onChange={(event) =>
+                setProcedureForm({ ...procedureForm, status: event.target.value as ProcedureStatus })
+              }
+            >
+              <option value="completed">Hoàn tất</option>
+              <option value="in-progress">Đang thực hiện</option>
+              <option value="preparation">Chuẩn bị</option>
+              <option value="not-done">Không thực hiện</option>
+              <option value="on-hold">Tạm giữ</option>
+              <option value="stopped">Đã dừng</option>
+              <option value="unknown">Chưa rõ</option>
+            </select>
+          </label>
+          <label>
+            Hệ mã
+            <input
+              value={procedureForm.codeSystem}
+              onChange={(event) => setProcedureForm({ ...procedureForm, codeSystem: event.target.value })}
+            />
+          </label>
+          <label>
+            Mã Procedure
+            <input
+              value={procedureForm.code}
+              onChange={(event) => setProcedureForm({ ...procedureForm, code: event.target.value })}
+            />
+          </label>
+          <label className="wide-field">
+            Tên Procedure
+            <input
+              value={procedureForm.codeDisplay}
+              onChange={(event) => setProcedureForm({ ...procedureForm, codeDisplay: event.target.value })}
+            />
+          </label>
+          <label>
+            Bắt đầu
+            <input
+              type="datetime-local"
+              value={procedureForm.performedStart}
+              onChange={(event) => setProcedureForm({ ...procedureForm, performedStart: event.target.value })}
+            />
+          </label>
+          <label>
+            Kết thúc
+            <input
+              type="datetime-local"
+              value={procedureForm.performedEnd}
+              onChange={(event) => setProcedureForm({ ...procedureForm, performedEnd: event.target.value })}
+            />
+          </label>
+          <label>
+            Người/đơn vị thực hiện
+            <input
+              value={procedureForm.performerActorId}
+              onChange={(event) => setProcedureForm({ ...procedureForm, performerActorId: event.target.value })}
+            />
+          </label>
+          <label>
+            Đại diện khoa/phòng
+            <input
+              value={procedureForm.onBehalfOfOrganizationId}
+              onChange={(event) =>
+                setProcedureForm({ ...procedureForm, onBehalfOfOrganizationId: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Chức năng thực hiện
+            <input
+              value={procedureForm.performerFunctionDisplay}
+              onChange={(event) =>
+                setProcedureForm({ ...procedureForm, performerFunctionDisplay: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Người ghi nhận
+            <input
+              value={procedureForm.recorderPractitionerId}
+              onChange={(event) =>
+                setProcedureForm({ ...procedureForm, recorderPractitionerId: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Vị trí/cơ quan
+            <input
+              value={procedureForm.bodySiteDisplay}
+              onChange={(event) => setProcedureForm({ ...procedureForm, bodySiteDisplay: event.target.value })}
+            />
+          </label>
+          <label>
+            Kết quả
+            <input
+              value={procedureForm.outcomeDisplay}
+              onChange={(event) => setProcedureForm({ ...procedureForm, outcomeDisplay: event.target.value })}
+            />
+          </label>
+          <label>
+            Báo cáo liên quan
+            <select
+              value={procedureForm.reportReferenceId}
+              onChange={(event) => setProcedureForm({ ...procedureForm, reportReferenceId: event.target.value })}
+            >
+              <option value="">Không gắn</option>
+              {diagnosticReports.map((diagnosticReport) => (
+                <option key={diagnosticReport.id} value={diagnosticReport.id}>
+                  {diagnosticReport.code.display}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="wide-field">
+            Ghi chú
+            <textarea
+              value={procedureForm.note}
+              onChange={(event) => setProcedureForm({ ...procedureForm, note: event.target.value })}
+            />
+          </label>
+          <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingProcedure}>
+            {isSubmittingProcedure ? "Đang ghi nhận..." : "Ghi nhận Procedure"}
+          </button>
+        </form>
       </article>
     );
   }
@@ -5597,7 +6209,7 @@ function LandingPage({
           <h1>Nền tảng bệnh án điện tử mở cho liên thông y tế</h1>
           <p className="lede">
             WiiiCare Nexus mô phỏng lõi EMR hiện đại: hồ sơ bệnh nhân, Provider Directory, lượt khám, dị ứng, chẩn đoán,
-            chỉ định dịch vụ, Task thực thi, chỉ số lâm sàng, báo cáo kết quả, chỉ định thuốc, tài liệu bệnh án, audit trail và ánh xạ FHIR để chuẩn bị kết nối giữa các bệnh viện.
+            chỉ định dịch vụ, Task thực thi, Procedure đã thực hiện, chỉ số lâm sàng, báo cáo kết quả, chỉ định thuốc, tài liệu bệnh án, audit trail và ánh xạ FHIR để chuẩn bị kết nối giữa các bệnh viện.
           </p>
           <div className="landing-actions">
             <button className="primary-button" type="button" onClick={onLogin}>
@@ -5610,7 +6222,7 @@ function LandingPage({
         </div>
         <aside className="landing-card">
           <span>Product slice</span>
-          <strong>Patient → Provider Directory → Encounter → AllergyIntolerance → Condition → ServiceRequest → Task → Observation → DiagnosticReport → ImagingStudy → MedicationRequest → Document → FHIR</strong>
+          <strong>Patient → Provider Directory → Encounter → AllergyIntolerance → Condition → ServiceRequest → Task → Procedure → Observation → DiagnosticReport → ImagingStudy → MedicationRequest → Document → FHIR</strong>
           <small>Không còn là landing page đơn thuần; app có luồng vận hành sau đăng nhập.</small>
         </aside>
       </section>
@@ -5620,7 +6232,7 @@ function LandingPage({
           ["Patient Workspace", "Bàn làm việc theo bệnh nhân, giống nhịp vận hành EMR thật."],
           ["Document Center", "Quản lý CCR, CCDA, hồ sơ bệnh án, xét nghiệm và tài liệu chuyển tuyến."],
           ["Audit & RBAC", "Ghi log truy cập nhạy cảm và kiểm tra quyền theo vai trò demo."],
-          ["FHIR Interop", "Xuất Patient, Provider Directory, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Observation, DiagnosticReport, ImagingStudy, MedicationRequest và DocumentReference để chuẩn bị liên thông."]
+          ["FHIR Interop", "Xuất Patient, Provider Directory, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest và DocumentReference để chuẩn bị liên thông."]
         ].map(([title, description]) => (
           <article className="panel" key={title}>
             <p className="eyebrow">{title}</p>
@@ -5952,6 +6564,10 @@ function formatAuditAction(action: AuditAction): string {
     "workflow-task.create": "Tạo công việc thực thi",
     "workflow-task.read": "Xem công việc thực thi",
     "workflow-task.fhir-export": "Xuất FHIR Task",
+    "procedure.list": "Tải thủ thuật/hoạt động",
+    "procedure.create": "Ghi nhận thủ thuật/hoạt động",
+    "procedure.read": "Xem thủ thuật/hoạt động",
+    "procedure.fhir-export": "Xuất FHIR Procedure",
     "diagnostic-report.list": "Tải báo cáo kết quả",
     "diagnostic-report.create": "Tạo báo cáo kết quả",
     "diagnostic-report.read": "Xem báo cáo kết quả",
@@ -5983,6 +6599,7 @@ function formatAuditResourceType(resourceType: AuditResourceType): string {
     Observation: "Chỉ số lâm sàng",
     ServiceRequest: "Chỉ định dịch vụ",
     Task: "Công việc thực thi",
+    Procedure: "Thủ thuật/hoạt động",
     DiagnosticReport: "Báo cáo kết quả",
     ImagingStudy: "Nghiên cứu hình ảnh",
     ClinicalDocument: "Tài liệu",
@@ -6268,6 +6885,60 @@ function formatWorkflowTaskReferences(references: readonly WorkflowTaskReference
   return references
     .map((reference) => `${reference.label ?? reference.resourceType}: ${reference.resourceType}/${reference.id}`)
     .join(" · ");
+}
+
+function formatProcedureStatus(status: ProcedureStatus): string {
+  const labels: Record<ProcedureStatus, string> = {
+    preparation: "Chuẩn bị",
+    "in-progress": "Đang thực hiện",
+    "not-done": "Không thực hiện",
+    "on-hold": "Tạm giữ",
+    stopped: "Đã dừng",
+    completed: "Hoàn tất",
+    "entered-in-error": "Nhập lỗi",
+    unknown: "Chưa rõ"
+  };
+
+  return labels[status];
+}
+
+function formatProcedureCategory(category: ProcedureCategory): string {
+  const labels: Record<ProcedureCategory, string> = {
+    surgical: "Phẫu thuật",
+    diagnostic: "Chẩn đoán",
+    therapeutic: "Điều trị",
+    counseling: "Tư vấn",
+    rehabilitation: "Phục hồi chức năng",
+    other: "Khác"
+  };
+
+  return labels[category];
+}
+
+function formatProcedurePerformers(performers: readonly ProcedurePerformer[]): string {
+  if (performers.length === 0) {
+    return "Chưa có";
+  }
+
+  return performers
+    .map((performer) =>
+      [
+        `${performer.actorType}/${performer.actorId}`,
+        performer.function?.display,
+        performer.onBehalfOfOrganizationId ? `thay mặt ${performer.onBehalfOfOrganizationId}` : undefined
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    )
+    .join(", ");
+}
+
+function formatProcedureReferences(references: readonly ProcedureReportReference[]): string {
+  if (references.length === 0) {
+    return "Chưa có";
+  }
+
+  return references.map((reference) => `${reference.resourceType}/${reference.id}`).join(", ");
 }
 
 function formatObservationCategory(category: ObservationCategory): string {

@@ -7,6 +7,7 @@ import type { ImagingStudy } from "../imaging-study/imaging-study.js";
 import type { MedicationRequest } from "../medication-request/medication-request.js";
 import type { Observation } from "../observation/observation.js";
 import type { Patient } from "../patient/patient.js";
+import type { Procedure } from "../procedure/procedure.js";
 import type { ProviderDirectory } from "../provider-directory/provider-directory.js";
 import type { ServiceRequest } from "../service-request/service-request.js";
 import type { WorkflowTask } from "../workflow-task/workflow-task.js";
@@ -23,6 +24,7 @@ import type {
   FhirObservation,
   FhirOrganization,
   FhirPatient,
+  FhirProcedure,
   FhirPractitioner,
   FhirPractitionerRole,
   FhirServiceRequest,
@@ -37,6 +39,7 @@ import { mapImagingStudyToFhir } from "./map-imaging-study-to-fhir.js";
 import { mapMedicationRequestToFhir } from "./map-medication-request-to-fhir.js";
 import { mapObservationToFhir } from "./map-observation-to-fhir.js";
 import { mapPatientToFhir } from "./map-patient-to-fhir.js";
+import { mapProcedureToFhir } from "./map-procedure-to-fhir.js";
 import { mapProviderDirectoryToFhirResources } from "./map-provider-directory-to-fhir.js";
 import { mapServiceRequestToFhir } from "./map-service-request-to-fhir.js";
 import { mapWorkflowTaskToFhir } from "./map-workflow-task-to-fhir.js";
@@ -48,6 +51,7 @@ export type PatientRecordBundleInput = {
   readonly conditions?: readonly Condition[];
   readonly serviceRequests?: readonly ServiceRequest[];
   readonly workflowTasks?: readonly WorkflowTask[];
+  readonly procedures?: readonly Procedure[];
   readonly observations?: readonly Observation[];
   readonly diagnosticReports?: readonly DiagnosticReport[];
   readonly imagingStudies?: readonly ImagingStudy[];
@@ -66,6 +70,7 @@ export function mapPatientRecordToFhirBundle(input: PatientRecordBundleInput): F
   const conditions = input.conditions?.map(mapConditionToFhir) ?? [];
   const serviceRequests = input.serviceRequests?.map(mapServiceRequestToFhir) ?? [];
   const workflowTasks = input.workflowTasks?.map(mapWorkflowTaskToFhir) ?? [];
+  const procedures = input.procedures?.map(mapProcedureToFhir) ?? [];
   const observations = input.observations?.map(mapObservationToFhir) ?? [];
   const diagnosticReports = input.diagnosticReports?.map(mapDiagnosticReportToFhir) ?? [];
   const imagingStudies = input.imagingStudies?.map(mapImagingStudyToFhir) ?? [];
@@ -82,6 +87,7 @@ export function mapPatientRecordToFhirBundle(input: PatientRecordBundleInput): F
     ...conditions,
     ...serviceRequests,
     ...workflowTasks,
+    ...procedures,
     ...observations,
     ...diagnosticReports,
     ...imagingStudies,
@@ -117,6 +123,7 @@ function toBundleEntry(
     | FhirMedicationRequest
     | FhirServiceRequest
     | FhirTask
+    | FhirProcedure
     | FhirOrganization
     | FhirPractitioner
     | FhirPractitionerRole

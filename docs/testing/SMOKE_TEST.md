@@ -67,6 +67,14 @@ curl -fsS http://localhost:7310/api/v1/workflow-tasks/workflow-task-demo-001/fhi
   -H "Authorization: Bearer $TOKEN" \
   -H "x-purpose-of-use: TREATMENT"
 
+curl -fsS http://localhost:7310/api/v1/patients/patient-demo-001/procedures \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+
+curl -fsS http://localhost:7310/api/v1/procedures/procedure-demo-001/fhir \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+
 curl -fsS http://localhost:7310/api/v1/patients/patient-demo-001/observations \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-purpose-of-use: TREATMENT"

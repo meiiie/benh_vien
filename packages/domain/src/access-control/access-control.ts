@@ -38,6 +38,10 @@ export type Permission =
   | "workflow-task:create"
   | "workflow-task:read"
   | "workflow-task:fhir-export"
+  | "procedure:list"
+  | "procedure:create"
+  | "procedure:read"
+  | "procedure:fhir-export"
   | "diagnostic-report:list"
   | "diagnostic-report:create"
   | "diagnostic-report:read"
@@ -97,6 +101,10 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "workflow-task:create",
     "workflow-task:read",
     "workflow-task:fhir-export",
+    "procedure:list",
+    "procedure:create",
+    "procedure:read",
+    "procedure:fhir-export",
     "diagnostic-report:list",
     "diagnostic-report:create",
     "diagnostic-report:read",
@@ -136,6 +144,9 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "workflow-task:list",
     "workflow-task:create",
     "workflow-task:read",
+    "procedure:list",
+    "procedure:create",
+    "procedure:read",
     "diagnostic-report:list",
     "diagnostic-report:create",
     "diagnostic-report:read",
@@ -151,6 +162,8 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "provider-directory:read",
     "workflow-task:list",
     "workflow-task:read",
+    "procedure:list",
+    "procedure:read",
     "audit-event:list"
   ],
   admin: [
@@ -189,6 +202,10 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "workflow-task:create",
     "workflow-task:read",
     "workflow-task:fhir-export",
+    "procedure:list",
+    "procedure:create",
+    "procedure:read",
+    "procedure:fhir-export",
     "diagnostic-report:list",
     "diagnostic-report:create",
     "diagnostic-report:read",

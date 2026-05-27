@@ -14,6 +14,7 @@ import type {
   MedicationRequestRepository,
   ObservationRepository,
   PatientRepository,
+  ProcedureRepository,
   ProviderDirectoryRepository,
   ServiceRequestRepository,
   WorkflowTaskRepository
@@ -41,6 +42,8 @@ import { createObservationRepository } from "./modules/observations/create-obser
 import { registerObservationRoutes } from "./modules/observations/observation-routes.js";
 import { createPatientRepository } from "./modules/patients/create-patient.repository.js";
 import { registerPatientRoutes } from "./modules/patients/patient-routes.js";
+import { createProcedureRepository } from "./modules/procedures/create-procedure.repository.js";
+import { registerProcedureRoutes } from "./modules/procedures/procedure-routes.js";
 import { createProviderDirectoryRepository } from "./modules/provider-directory/create-provider-directory.repository.js";
 import { registerProviderDirectoryRoutes } from "./modules/provider-directory/provider-directory-routes.js";
 import { createServiceRequestRepository } from "./modules/service-requests/create-service-request.repository.js";
@@ -60,6 +63,7 @@ export type ServerOptions = {
   readonly medicationRequestRepository?: MedicationRequestRepository;
   readonly serviceRequestRepository?: ServiceRequestRepository;
   readonly workflowTaskRepository?: WorkflowTaskRepository;
+  readonly procedureRepository?: ProcedureRepository;
   readonly clinicalDocumentRepository?: ClinicalDocumentRepository;
   readonly consentRepository?: ConsentRepository;
   readonly auditEventRepository?: AuditEventRepository;
@@ -125,6 +129,10 @@ export async function buildServer(options: ServerOptions = {}) {
           description: "Quản lý hàng đợi thực thi y lệnh và FHIR Task"
         },
         {
+          name: "procedures",
+          description: "Quản lý thủ thuật, hoạt động y tế đã thực hiện và FHIR Procedure"
+        },
+        {
           name: "diagnostic-reports",
           description: "Quản lý báo cáo xét nghiệm, hình ảnh và FHIR DiagnosticReport"
         },
@@ -173,6 +181,8 @@ export async function buildServer(options: ServerOptions = {}) {
     options.serviceRequestRepository ?? (await createServiceRequestRepository());
   const workflowTaskRepository =
     options.workflowTaskRepository ?? (await createWorkflowTaskRepository());
+  const procedureRepository =
+    options.procedureRepository ?? (await createProcedureRepository());
   const diagnosticReportRepository =
     options.diagnosticReportRepository ?? (await createDiagnosticReportRepository());
   const imagingStudyRepository =
@@ -206,6 +216,7 @@ export async function buildServer(options: ServerOptions = {}) {
         imagingStudyRepository,
         providerDirectoryRepository,
         workflowTaskRepository,
+        procedureRepository,
         consentRepository,
         auditEventRepository
       );
@@ -269,6 +280,17 @@ export async function buildServer(options: ServerOptions = {}) {
         encounterRepository,
         serviceRequestRepository,
         workflowTaskRepository,
+        auditEventRepository
+      );
+      await registerProcedureRoutes(
+        api,
+        patientRepository,
+        encounterRepository,
+        conditionRepository,
+        serviceRequestRepository,
+        diagnosticReportRepository,
+        clinicalDocumentRepository,
+        procedureRepository,
         auditEventRepository
       );
       await registerDiagnosticReportRoutes(

@@ -36,10 +36,10 @@ migrations/ SQL migration cho PostgreSQL
 - `Landing`: giới thiệu WiiiCare Nexus, định vị EMR/FHIR và điều hướng vào phiên demo.
 - `Login`: đăng nhập demo phát Bearer token nội bộ cho vai trò bác sĩ, điều dưỡng, kiểm toán hoặc quản trị; đây chưa phải IAM/SSO sản xuất.
 - `Dashboard`: tổng quan số hồ sơ, lượt khám đang mở, dị ứng/cảnh báo, chẩn đoán/vấn đề sức khỏe, chỉ định dịch vụ, công việc thực thi, chỉ định thuốc, tài liệu nháp và hàng chờ thao tác.
-- `Patient Workspace`: chọn bệnh nhân, xem định danh, mở/kết thúc lượt khám, ghi nhận dị ứng/cảnh báo, chẩn đoán, chỉ định xét nghiệm/hình ảnh/thủ thuật, theo dõi công việc thực thi y lệnh, chỉ số sinh hiệu/xét nghiệm, chỉ định thuốc, tạo tài liệu và xem FHIR theo hồ sơ.
+- `Patient Workspace`: chọn bệnh nhân, xem định danh, mở/kết thúc lượt khám, ghi nhận dị ứng/cảnh báo, chẩn đoán, chỉ định xét nghiệm/hình ảnh/thủ thuật, theo dõi công việc thực thi y lệnh, ghi nhận thủ thuật/hoạt động đã thực hiện, chỉ số sinh hiệu/xét nghiệm, chỉ định thuốc, tạo tài liệu và xem FHIR theo hồ sơ.
 - `Documents`: quản lý tài liệu bệnh án theo nhóm CCD/CCDA/CCR, lab report, medical record và referral.
 - `Audit`: xem nhật ký thao tác nhạy cảm theo bệnh nhân, actor, mục đích sử dụng và tài nguyên.
-- `Interop`: kiểm tra FHIR `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `DocumentReference`, `Composition`, `Bundle` và các hướng mở sang HIS/LIS/PACS.
+- `Interop`: kiểm tra FHIR `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `DocumentReference`, `Composition`, `Bundle` và các hướng mở sang HIS/LIS/PACS.
 - `Settings`: mô tả quyền demo, cấu hình vận hành và các việc cần thay bằng bảo mật thật khi lên production.
 
 ## Ảnh kiểm thử giao diện
@@ -79,7 +79,7 @@ Chi tiết xem [docs/runbooks/DOCKER.md](docs/runbooks/DOCKER.md).
 
 ## Backend và cơ sở dữ liệu
 
-Backend hiện dùng Fastify + TypeScript. Trong Docker, API chạy với `BVS_REPOSITORY=postgres`, migration service tạo schema PostgreSQL trước khi API khởi động. Các bảng nền tảng gồm `patients`, `encounters`, `allergy_intolerances`, `conditions`, `service_requests`, `workflow_tasks`, `observations`, `diagnostic_reports`, `imaging_studies`, `medication_requests`, `clinical_documents`, `consents`, `provider_directory_resources`, `audit_events` và `schema_migrations`.
+Backend hiện dùng Fastify + TypeScript. Trong Docker, API chạy với `BVS_REPOSITORY=postgres`, migration service tạo schema PostgreSQL trước khi API khởi động. Các bảng nền tảng gồm `patients`, `encounters`, `allergy_intolerances`, `conditions`, `service_requests`, `workflow_tasks`, `procedures`, `observations`, `diagnostic_reports`, `imaging_studies`, `medication_requests`, `clinical_documents`, `consents`, `provider_directory_resources`, `audit_events` và `schema_migrations`.
 
 Khi chạy local không Docker, có thể dùng in-memory repository để phát triển nhanh; khi cần kiểm chứng sát thực tế, dùng Docker dev/prod để chạy PostgreSQL.
 
@@ -106,6 +106,7 @@ Chi tiết version xem [VERSIONING.md](VERSIONING.md).
 - Quản lý chẩn đoán/vấn đề sức khỏe có cấu trúc và xuất sang FHIR `Condition`.
 - Quản lý chỉ định xét nghiệm/chẩn đoán hình ảnh/thủ thuật và xuất sang FHIR `ServiceRequest`.
 - Quản lý hàng đợi/công việc thực thi y lệnh và xuất sang FHIR `Task`, nối `ServiceRequest` với kết quả đầu ra như `Observation`, `DiagnosticReport` hoặc `ImagingStudy`.
+- Quản lý thủ thuật/hoạt động y tế đã thực hiện và xuất sang FHIR `Procedure`, nối lại y lệnh gốc, người thực hiện, thời gian thực hiện, vị trí cơ thể, kết quả thủ thuật và báo cáo liên quan.
 - Quản lý chỉ số sinh hiệu/xét nghiệm có cấu trúc và xuất sang FHIR `Observation`.
 - Quản lý báo cáo kết quả xét nghiệm/chẩn đoán hình ảnh và xuất sang FHIR `DiagnosticReport`, có thể nối `basedOn` tới `ServiceRequest` và `result` tới `Observation`.
 - Quản lý metadata ảnh y khoa/PACS tối thiểu và xuất sang FHIR `ImagingStudy`, gồm DICOM Study Instance UID, Accession Number, modality, series, số ảnh, vùng chụp và endpoint PACS/DICOMweb.
@@ -113,7 +114,7 @@ Chi tiết version xem [VERSIONING.md](VERSIONING.md).
 - Quản lý tài liệu bệnh án tối thiểu: tạo bản nháp, ký tài liệu và xuất metadata sang FHIR `DocumentReference`.
 - Quản lý consent chia sẻ hồ sơ tối thiểu, gồm lưu consent theo bệnh nhân, đơn vị nhận và thời hạn hiệu lực.
 - Quản lý Provider Directory tối thiểu gồm cơ sở y tế/khoa phòng, nhân sự, vai trò nhân sự và endpoint liên thông FHIR/LIS/PACS; xuất sang FHIR `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`.
-- Xuất gói hồ sơ bệnh nhân sang FHIR `Bundle` dạng `collection` gồm Patient, Provider Directory resources, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Observation, DiagnosticReport, ImagingStudy, MedicationRequest và DocumentReference; API chỉ cho xuất khi consent còn hiệu lực và khớp đơn vị nhận.
+- Xuất gói hồ sơ bệnh nhân sang FHIR `Bundle` dạng `collection` gồm Patient, Provider Directory resources, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest và DocumentReference; API chỉ cho xuất khi consent còn hiệu lực và khớp đơn vị nhận.
 - Xuất gói tài liệu bệnh án sang FHIR `Bundle` dạng `document`, có `Composition` là entry đầu tiên để đóng vai trò mục lục lâm sàng cho hồ sơ chuyển viện/liên viện.
 - Ghi nhật ký kiểm toán tối thiểu cho các thao tác xem/tạo/ký/xuất dữ liệu nhạy cảm.
 - Chặn quyền tối thiểu ở API theo vai trò demo `clinician`, `nurse`, `auditor`, `admin`.

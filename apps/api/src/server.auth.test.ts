@@ -173,6 +173,7 @@ describe("API auth and RBAC boundary", () => {
         "Condition",
         "ServiceRequest",
         "Task",
+        "Procedure",
         "Observation",
         "DiagnosticReport",
         "ImagingStudy",
@@ -180,7 +181,7 @@ describe("API auth and RBAC boundary", () => {
         "DocumentReference"
       ])
     );
-    expect(body.entry).toHaveLength(37);
+    expect(body.entry).toHaveLength(39);
   });
 
   it("returns a patient-record FHIR document Bundle with Composition first", async () => {
@@ -211,7 +212,7 @@ describe("API auth and RBAC boundary", () => {
         }
       ]
     });
-    expect(body.entry).toHaveLength(38);
+    expect(body.entry).toHaveLength(40);
     expect(body.entry[0].resource.section).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -219,6 +220,9 @@ describe("API auth and RBAC boundary", () => {
         }),
         expect.objectContaining({
           title: "Luồng công việc thực thi chỉ định"
+        }),
+        expect.objectContaining({
+          title: "Thủ thuật và hoạt động đã thực hiện"
         })
       ])
     );
@@ -310,6 +314,114 @@ describe("API auth and RBAC boundary", () => {
           }
         })
       ])
+    });
+  });
+
+  it("lists procedures and exports them as FHIR Procedure", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const listResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/procedures",
+      headers: treatmentHeaders(accessToken)
+    });
+    const listBody = listResponse.json();
+
+    expect(listResponse.statusCode).toBe(200);
+    expect(listBody.items).toHaveLength(2);
+    expect(listBody.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "procedure-demo-001",
+          status: "completed",
+          basedOnServiceRequestId: "service-request-demo-002"
+        })
+      ])
+    );
+
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/procedures/procedure-demo-001/fhir",
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(fhirResponse.statusCode).toBe(200);
+    expect(fhirResponse.json()).toMatchObject({
+      resourceType: "Procedure",
+      id: "procedure-demo-001",
+      status: "completed",
+      basedOn: [
+        {
+          reference: "ServiceRequest/service-request-demo-002"
+        }
+      ],
+      subject: {
+        reference: "Patient/patient-demo-001"
+      },
+      report: [
+        {
+          reference: "DiagnosticReport/diagnostic-report-demo-002"
+        }
+      ]
+    });
+  });
+
+  it("creates a procedure linked to a service request and diagnostic report", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/procedures",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: "encounter-demo-002",
+        basedOnServiceRequestId: "service-request-demo-002",
+        reasonConditionId: "condition-demo-002",
+        status: "completed",
+        category: "diagnostic",
+        code: {
+          system: "http://snomed.info/sct",
+          code: "168537006",
+          display: "Chest X-ray"
+        },
+        performedPeriod: {
+          start: "2026-05-27T07:10:00.000Z",
+          end: "2026-05-27T07:20:00.000Z"
+        },
+        performers: [
+          {
+            actorType: "Practitioner",
+            actorId: "practitioner-demo-001",
+            onBehalfOfOrganizationId: "department-diagnostic-imaging"
+          }
+        ],
+        reportReferences: [
+          {
+            resourceType: "DiagnosticReport",
+            id: "diagnostic-report-demo-002"
+          }
+        ],
+        note: "Procedure thử nghiệm trong API test."
+      }
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({
+      patientId: "patient-demo-001",
+      encounterId: "encounter-demo-002",
+      basedOnServiceRequestId: "service-request-demo-002",
+      category: "diagnostic",
+      reportReferences: [
+        {
+          resourceType: "DiagnosticReport",
+          id: "diagnostic-report-demo-002"
+        }
+      ]
     });
   });
 

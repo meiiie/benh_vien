@@ -25,6 +25,7 @@ const {
   MedicationRequest,
   Observation,
   Patient,
+  Procedure,
   ProviderDirectory,
   ServiceRequest,
   WorkflowTask,
@@ -40,6 +41,7 @@ const {
   mapPatientRecordToFhirDocumentBundle,
   mapPatientRecordToFhirBundle,
   mapPatientToFhir,
+  mapProcedureToFhir,
   mapProviderDirectoryToFhirBundle,
   mapServiceRequestToFhir,
   mapWorkflowTaskToFhir
@@ -471,6 +473,52 @@ if (fhirWorkflowTask.focus?.reference !== "ServiceRequest/service-request-harnes
   throw new Error("Expected workflow task focus ServiceRequest/service-request-harness-001.");
 }
 
+const procedure = Procedure.record({
+  id: "procedure-harness-001",
+  patientId: patient.id,
+  encounterId: encounter.id,
+  basedOnServiceRequestId: serviceRequest.id,
+  status: "completed",
+  category: "diagnostic",
+  code: {
+    system: "http://snomed.info/sct",
+    code: "168537006",
+    display: "Chest X-ray"
+  },
+  performedPeriod: {
+    start: "2026-05-27T01:00:00.000Z",
+    end: "2026-05-27T01:10:00.000Z"
+  },
+  recorderPractitionerId: "practitioner-harness-001",
+  performers: [
+    {
+      actorType: "Practitioner",
+      actorId: "practitioner-harness-001",
+      onBehalfOfOrganizationId: "department-harness-001"
+    }
+  ],
+  reportReferences: [
+    {
+      resourceType: "DiagnosticReport",
+      id: diagnosticReport.id
+    }
+  ]
+});
+
+const fhirProcedure = mapProcedureToFhir(procedure);
+
+if (fhirProcedure.resourceType !== "Procedure") {
+  throw new Error(`Expected resourceType Procedure, received ${fhirProcedure.resourceType}`);
+}
+
+if (fhirProcedure.basedOn?.[0]?.reference !== "ServiceRequest/service-request-harness-001") {
+  throw new Error("Expected procedure basedOn ServiceRequest/service-request-harness-001.");
+}
+
+if (fhirProcedure.report?.[0]?.reference !== "DiagnosticReport/diagnostic-report-harness-001") {
+  throw new Error("Expected procedure report DiagnosticReport/diagnostic-report-harness-001.");
+}
+
 const medicationRequest = MedicationRequest.prescribe({
   id: "medication-request-harness-001",
   patientId: patient.id,
@@ -551,6 +599,7 @@ const fhirBundle = mapPatientRecordToFhirBundle({
   conditions: [condition],
   serviceRequests: [serviceRequest],
   workflowTasks: [workflowTask],
+  procedures: [procedure],
   observations: [observation],
   diagnosticReports: [diagnosticReport],
   imagingStudies: [imagingStudy],
@@ -568,8 +617,8 @@ if (fhirBundle.type !== "collection") {
   throw new Error(`Expected bundle type collection, received ${fhirBundle.type}`);
 }
 
-if (fhirBundle.entry.length !== 17) {
-  throw new Error(`Expected bundle to contain 17 entries, received ${fhirBundle.entry.length}`);
+if (fhirBundle.entry.length !== 18) {
+  throw new Error(`Expected bundle to contain 18 entries, received ${fhirBundle.entry.length}`);
 }
 
 const fhirDocumentBundle = mapPatientRecordToFhirDocumentBundle({
@@ -579,6 +628,7 @@ const fhirDocumentBundle = mapPatientRecordToFhirDocumentBundle({
   conditions: [condition],
   serviceRequests: [serviceRequest],
   workflowTasks: [workflowTask],
+  procedures: [procedure],
   observations: [observation],
   diagnosticReports: [diagnosticReport],
   imagingStudies: [imagingStudy],
@@ -603,9 +653,9 @@ if (fhirDocumentBundle.entry[0]?.resource.resourceType !== "Composition") {
   throw new Error("Expected first document bundle entry to be Composition.");
 }
 
-if (fhirDocumentBundle.entry.length !== 18) {
+if (fhirDocumentBundle.entry.length !== 19) {
   throw new Error(
-    `Expected document bundle to contain 18 entries, received ${fhirDocumentBundle.entry.length}`
+    `Expected document bundle to contain 19 entries, received ${fhirDocumentBundle.entry.length}`
   );
 }
 
@@ -731,6 +781,15 @@ const clinicianCanExportWorkflowTask = canAccess(
   "workflow-task:fhir-export"
 );
 
+const clinicianCanExportProcedure = canAccess(
+  {
+    actorId: "practitioner-harness-001",
+    role: "clinician",
+    purposeOfUse: "TREATMENT"
+  },
+  "procedure:fhir-export"
+);
+
 const clinicianCanExportDiagnosticReport = canAccess(
   {
     actorId: "practitioner-harness-001",
@@ -810,6 +869,15 @@ const nurseCanExportWorkflowTask = canAccess(
     purposeOfUse: "TREATMENT"
   },
   "workflow-task:fhir-export"
+);
+
+const nurseCanExportProcedure = canAccess(
+  {
+    actorId: "nurse-harness-001",
+    role: "nurse",
+    purposeOfUse: "TREATMENT"
+  },
+  "procedure:fhir-export"
 );
 
 const nurseCanExportDiagnosticReport = canAccess(
@@ -898,6 +966,10 @@ if (!clinicianCanExportWorkflowTask) {
   throw new Error("Expected clinician/TREATMENT to export workflow tasks.");
 }
 
+if (!clinicianCanExportProcedure) {
+  throw new Error("Expected clinician/TREATMENT to export procedures.");
+}
+
 if (!clinicianCanExportDiagnosticReport) {
   throw new Error("Expected clinician/TREATMENT to export diagnostic reports.");
 }
@@ -932,6 +1004,10 @@ if (nurseCanExportServiceRequest) {
 
 if (nurseCanExportWorkflowTask) {
   throw new Error("Expected nurse/TREATMENT to be denied workflow-task:fhir-export.");
+}
+
+if (nurseCanExportProcedure) {
+  throw new Error("Expected nurse/TREATMENT to be denied procedure:fhir-export.");
 }
 
 if (nurseCanExportDiagnosticReport) {
@@ -986,6 +1062,8 @@ console.log(
       serviceRequestResourceType: fhirServiceRequest.resourceType,
       workflowTaskId: fhirWorkflowTask.id,
       workflowTaskResourceType: fhirWorkflowTask.resourceType,
+      procedureId: fhirProcedure.id,
+      procedureResourceType: fhirProcedure.resourceType,
       bundleId: fhirBundle.id,
       bundleResourceType: fhirBundle.resourceType,
       bundleEntryCount: fhirBundle.entry.length,
@@ -1012,6 +1090,7 @@ console.log(
         clinicianCanExportProviderDirectory,
         clinicianCanExportServiceRequest,
         clinicianCanExportWorkflowTask,
+        clinicianCanExportProcedure,
         nurseCanExportAllergyIntolerance,
         nurseCanExportCondition,
         nurseCanExportDiagnosticReport,
@@ -1022,6 +1101,7 @@ console.log(
         nurseCanReadProviderDirectory,
         nurseCanExportServiceRequest,
         nurseCanExportWorkflowTask,
+        nurseCanExportProcedure,
         clinicianCanReadAudit,
         auditorCanReadAudit
       }

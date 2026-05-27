@@ -68,11 +68,11 @@ sequenceDiagram
   participant Partner as Hệ thống nhận liên thông
 
   User->>App: Tạo/cập nhật nội dung bệnh án
-  App->>EMR: Ghi lượt khám, dị ứng/cảnh báo, chẩn đoán, chỉ định dịch vụ, Task thực thi, chỉ số lâm sàng, chỉ định thuốc và tài liệu
+  App->>EMR: Ghi lượt khám, dị ứng/cảnh báo, chẩn đoán, chỉ định dịch vụ, Task thực thi, Procedure đã thực hiện, chỉ số lâm sàng, chỉ định thuốc và tài liệu
   EMR->>Audit: Ghi nhật ký thao tác
   User->>App: Ký hoặc xác nhận điện tử
   App->>EMR: Chuyển trạng thái tài liệu sang signed
-  EMR->>FHIR: Chuyển đổi sang FHIR Patient/Organization/Practitioner/PractitionerRole/Endpoint/Encounter/AllergyIntolerance/Condition/ServiceRequest/Task/Observation/DiagnosticReport/ImagingStudy/MedicationRequest/DocumentReference/Composition
+  EMR->>FHIR: Chuyển đổi sang FHIR Patient/Organization/Practitioner/PractitionerRole/Endpoint/Encounter/AllergyIntolerance/Condition/ServiceRequest/Task/Procedure/Observation/DiagnosticReport/ImagingStudy/MedicationRequest/DocumentReference/Composition
   FHIR->>Partner: Chia sẻ theo API hoặc hồ sơ IHE phù hợp
 ```
 
@@ -86,6 +86,7 @@ sequenceDiagram
 - **Chẩn đoán/vấn đề sức khỏe cần tách khỏi ghi chú tự do.** Tối thiểu cần mã chuẩn, trạng thái lâm sàng, trạng thái xác minh, mức độ, người ghi nhận và liên kết bệnh nhân/lượt khám khi có thể.
 - **Chỉ định dịch vụ là cầu nối tới LIS/PACS/RIS.** Xét nghiệm, chẩn đoán hình ảnh, thủ thuật và hội chẩn cần có y lệnh riêng trước khi kết quả về; tối thiểu cần mã dịch vụ, nhóm dịch vụ, ưu tiên, người chỉ định, khoa thực hiện, thời điểm dự kiến và chẩn đoán liên quan khi có.
 - **Task là lớp theo dõi thực thi, không phải y lệnh mới.** `ServiceRequest` nói “cần làm gì”; `Task` nói “ai đang xử lý, trạng thái đến đâu, đầu ra nào đã sinh ra”. Đây là lớp cần thiết để nối EMR với hàng đợi LIS/PACS/RIS mà không trộn trạng thái vận hành vào y lệnh.
+- **Procedure là bản ghi hành động đã thực hiện, không phải hàng đợi.** `ServiceRequest` là y lệnh, `Task` là trạng thái vận hành, còn `Procedure` là bằng chứng lâm sàng rằng thủ thuật/hoạt động đã diễn ra, ai thực hiện, thời điểm nào, kết quả gì và báo cáo nào liên quan.
 - **Chỉ số lâm sàng cần có cấu trúc máy đọc được.** Sinh hiệu và xét nghiệm không nên chỉ nằm trong PDF; tối thiểu cần mã chuẩn, giá trị, đơn vị, thời điểm, người ghi nhận và liên kết bệnh nhân/lượt khám.
 - **Chỉ định thuốc cần tách khỏi văn bản tự do trong tài liệu.** Tối thiểu cần mã thuốc, hướng dẫn dùng, người kê, trạng thái, mục đích, liên kết bệnh nhân/lượt khám và chẩn đoán liên quan khi có thể.
 - **Tài liệu bệnh án cần có vòng đời.** Tối thiểu gồm nháp, đã ký, bị thay thế, nhập sai.
@@ -105,6 +106,7 @@ Phiên bản hiện tại tạo các bảng tối thiểu:
 - `conditions`: chẩn đoán/vấn đề sức khỏe có cấu trúc, gồm trạng thái, mã chẩn đoán, mức độ, thời điểm ghi nhận và người ghi nhận.
 - `service_requests`: chỉ định dịch vụ có cấu trúc, gồm nhóm dịch vụ, mã dịch vụ, ưu tiên, khoa thực hiện, thời điểm dự kiến và người chỉ định.
 - `workflow_tasks`: hàng đợi/công việc thực thi y lệnh, gồm trạng thái FHIR Task, trạng thái nghiệp vụ, chủ sở hữu, thời gian xử lý, input và output tham chiếu.
+- `procedures`: thủ thuật/hoạt động y tế đã thực hiện, gồm trạng thái FHIR Procedure, y lệnh gốc, thời gian thực hiện, người/khoa thực hiện, body site, outcome và báo cáo liên quan.
 - `observations`: sinh hiệu/xét nghiệm có cấu trúc, gồm mã chuẩn, giá trị định lượng hoặc văn bản, thời điểm và người ghi nhận.
 - `diagnostic_reports`: báo cáo kết quả xét nghiệm/hình ảnh, nối y lệnh `service_requests` với các `observations` nguyên tử hoặc báo cáo dạng tệp.
 - `imaging_studies`: metadata ảnh y khoa/PACS, gồm Study Instance UID, Accession Number, modality, series, số ảnh, vùng chụp và endpoint PACS/DICOMweb; ảnh thật vẫn nằm ngoài EMR.
@@ -118,7 +120,7 @@ Phiên bản hiện tại tạo các bảng tối thiểu:
 ## Luồng mở rộng dự kiến
 
 1. Hoàn thiện registry bệnh nhân và tài liệu lâm sàng tối thiểu.
-2. Kết nối HAPI FHIR để xuất/nhập `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `DocumentReference`, `Composition`.
+2. Kết nối HAPI FHIR để xuất/nhập `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `DocumentReference`, `Composition`.
 3. Kết nối Orthanc để minh họa PACS/DICOM và DICOMweb.
 4. Bổ sung xác thực, phân quyền, nhật ký kiểm toán và chính sách lưu trữ.
 5. Nếu cần mở rộng lớn, tách `Interoperability`, `Imaging`, `Audit` thành service riêng.

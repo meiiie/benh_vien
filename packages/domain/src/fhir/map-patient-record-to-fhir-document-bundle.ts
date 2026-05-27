@@ -98,6 +98,7 @@ function buildComposition(
       buildSection("Chẩn đoán và vấn đề sức khỏe", entries, ["Condition"]),
       buildSection("Y lệnh dịch vụ", entries, ["ServiceRequest"]),
       buildSection("Luồng công việc thực thi chỉ định", entries, ["Task"]),
+      buildSection("Thủ thuật và hoạt động đã thực hiện", entries, ["Procedure"]),
       buildSection("Chỉ số và kết quả nguyên tử", entries, ["Observation"]),
       buildSection("Báo cáo kết quả", entries, ["DiagnosticReport"]),
       buildSection("Nghiên cứu hình ảnh", entries, ["ImagingStudy"]),

@@ -32,7 +32,7 @@ Trong dự án, PACS có thể được minh họa bằng Orthanc. EMR chỉ nê
 
 ## FHIR
 
-**Fast Healthcare Interoperability Resources** là chuẩn trao đổi dữ liệu y tế của HL7. FHIR định nghĩa các resource như `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Observation`, `DiagnosticReport`, `MedicationRequest`, `DocumentReference`, `Composition`.
+**Fast Healthcare Interoperability Resources** là chuẩn trao đổi dữ liệu y tế của HL7. FHIR định nghĩa các resource như `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `MedicationRequest`, `DocumentReference`, `Composition`.
 
 Trong dự án này, FHIR là lớp liên thông. Domain model nội bộ vẫn có thể khác FHIR, sau đó được mapping sang FHIR khi cần trao đổi.
 
@@ -59,6 +59,12 @@ Trong dự án này, ServiceRequest là cầu nối từ EMR sang LIS/PACS/RIS: 
 **Task** là resource FHIR dùng để theo dõi một công việc cần thực hiện hoặc đang được thực hiện. Task phù hợp với hàng đợi nhận mẫu xét nghiệm, lịch chụp ảnh, đọc kết quả, hoàn tất báo cáo hoặc các bước vận hành khác.
 
 Trong dự án này, Task đóng vòng `ServiceRequest -> Task -> Output`: y lệnh gốc vẫn là ServiceRequest, còn Task theo dõi trạng thái thực thi, đơn vị phụ trách, thời gian bắt đầu/kết thúc và kết quả đầu ra như Observation, DiagnosticReport hoặc ImagingStudy.
+
+## Procedure
+
+**Procedure** là resource FHIR dùng để ghi nhận thủ thuật hoặc hoạt động y tế đã thực hiện cho người bệnh. Procedure khác `ServiceRequest` ở chỗ nó không phải yêu cầu thực hiện, và khác `Task` ở chỗ nó không phải hàng đợi vận hành.
+
+Trong dự án này, Procedure đóng vai trò “đã làm gì cho bệnh nhân”: ghi y lệnh gốc nếu có, lượt khám, thời gian thực hiện, người/khoa thực hiện, vị trí cơ thể, kết quả thủ thuật và báo cáo liên quan. Ví dụ: chụp X-quang đã thực hiện, tư vấn người bệnh hoặc một thủ thuật điều trị.
 
 ## DiagnosticReport
 
