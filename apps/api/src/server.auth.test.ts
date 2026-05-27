@@ -57,6 +57,36 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("returns readiness checks for repository-backed dependencies", async () => {
+    app = await readyServer();
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/ready"
+    });
+    const body = response.json();
+
+    expect(response.statusCode).toBe(200);
+    expect(body).toMatchObject({
+      status: "ready",
+      service: "benh-vien-so-api",
+      repository: "in-memory",
+      checks: {
+        patients: {
+          status: "ok",
+          count: 1
+        },
+        providerDirectory: {
+          status: "ok",
+          organizations: expect.any(Number),
+          practitioners: expect.any(Number),
+          endpoints: expect.any(Number)
+        }
+      }
+    });
+    expect(body.latencyMs).toEqual(expect.any(Number));
+  });
+
   it("serves FHIR CapabilityStatement metadata without a demo session", async () => {
     app = await readyServer();
 

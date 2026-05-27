@@ -231,6 +231,54 @@ export async function buildServer(options: ServerOptions = {}) {
     service: "benh-vien-so-api"
   }));
 
+  app.get("/ready", async (_request, reply) => {
+    const checkedAt = new Date().toISOString();
+    const startedAt = Date.now();
+
+    try {
+      const [patients, providerDirectory] = await Promise.all([
+        patientRepository.findAll(),
+        providerDirectoryRepository.findDirectory()
+      ]);
+      const providerDirectorySnapshot = providerDirectory.toSnapshot();
+
+      return {
+        status: "ready",
+        service: "benh-vien-so-api",
+        repository: process.env.BVS_REPOSITORY ?? "in-memory",
+        checkedAt,
+        latencyMs: Date.now() - startedAt,
+        checks: {
+          patients: {
+            status: "ok",
+            count: patients.length
+          },
+          providerDirectory: {
+            status: "ok",
+            organizations: providerDirectorySnapshot.organizations.length,
+            practitioners: providerDirectorySnapshot.practitioners.length,
+            endpoints: providerDirectorySnapshot.endpoints.length
+          }
+        }
+      };
+    } catch {
+      return reply.status(503).send({
+        status: "not_ready",
+        service: "benh-vien-so-api",
+        repository: process.env.BVS_REPOSITORY ?? "in-memory",
+        checkedAt,
+        checks: {
+          patients: {
+            status: "unknown"
+          },
+          providerDirectory: {
+            status: "unknown"
+          }
+        }
+      });
+    }
+  });
+
   await app.register(
     async (api) => {
       api.get("/fhir/metadata", async () =>

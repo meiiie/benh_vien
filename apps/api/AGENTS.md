@@ -15,7 +15,6 @@ pnpm dev:api
 ## Rules
 
 - API public phải nằm dưới `/api/v1`.
-- `/health` giữ không version để Docker/Kubernetes healthcheck đơn giản.
+- `/health` giữ không version để kiểm tra process/liveness đơn giản; `/ready` dùng cho readiness vì có kiểm tra repository nền tảng.
 - Route handler không trả domain object nếu về sau có dữ liệu nhạy cảm; dùng response DTO rõ ràng.
 - Lỗi validate trả `400`; lỗi nghiệp vụ trả `422`; không lộ stack trace cho client.
-

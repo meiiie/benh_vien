@@ -10,6 +10,7 @@ pnpm run ci
 
 ```bash
 curl -fsS http://localhost:7310/health
+curl -fsS http://localhost:7310/ready
 
 curl -fsS http://localhost:7310/api/v1/fhir/metadata
 

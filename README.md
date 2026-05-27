@@ -81,6 +81,8 @@ Chi tiết xem [docs/runbooks/DOCKER.md](docs/runbooks/DOCKER.md).
 
 Backend hiện dùng Fastify + TypeScript. Trong Docker, API chạy với `BVS_REPOSITORY=postgres`, migration service tạo schema PostgreSQL trước khi API khởi động. Các bảng nền tảng gồm `patients`, `encounters`, `allergy_intolerances`, `conditions`, `service_requests`, `workflow_tasks`, `procedures`, `observations`, `diagnostic_reports`, `imaging_studies`, `medication_requests`, `medication_dispenses`, `medication_administrations`, `clinical_documents`, `consents`, `record_transfers`, `provider_directory_resources`, `audit_events` và `schema_migrations`. Bảng `consents` có metadata thu hồi để chặn các lần xuất/chuyển hồ sơ mới sau khi người bệnh rút lại đồng ý. Bảng `audit_events` có thêm chuỗi băm `sha256` để phát hiện sửa/xóa log ở mức prototype và có thể xuất thành FHIR `AuditEvent` Bundle cho kiểm toán.
 
+API có `/health` cho liveness và `/ready` cho readiness; `/ready` kiểm tra API đọc được repository bệnh nhân và Provider Directory trước khi container được xem là sẵn sàng nhận traffic.
+
 Khi chạy local không Docker, có thể dùng in-memory repository để phát triển nhanh; khi cần kiểm chứng sát thực tế, dùng Docker dev/prod để chạy PostgreSQL.
 
 API nghiệp vụ yêu cầu đăng nhập qua `POST /api/v1/auth/login` và gửi `Authorization: Bearer <token>`. Biến `BVS_AUTH_SECRET` phải dài tối thiểu 32 ký tự; ở `NODE_ENV=production`, API sẽ từ chối khởi động nếu thiếu secret hợp lệ.

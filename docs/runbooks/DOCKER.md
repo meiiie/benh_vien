@@ -34,11 +34,14 @@ Khi đó có thêm:
 ```bash
 docker compose --env-file .env.prod.example -f docker-compose.yml -f docker-compose.prod.yml up -d --build --wait postgres valkey minio migrate api web
 curl -fsS http://localhost:7310/health
+curl -fsS http://localhost:7310/ready
 curl -fsS http://localhost:8080/health
 curl -fsS http://localhost:8080/api/v1/patients
 docker compose --env-file .env.prod.example -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -c "select version from schema_migrations order by version;"
 docker compose --env-file .env.prod.example -f docker-compose.yml -f docker-compose.prod.yml down -v --remove-orphans
 ```
+
+`/health` là liveness check tối thiểu. `/ready` đọc repository bệnh nhân và Provider Directory nên phù hợp hơn để xác nhận API có thể nhận traffic nghiệp vụ sau khi container khởi động.
 
 ## Validate compose
 
