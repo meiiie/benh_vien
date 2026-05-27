@@ -25,7 +25,9 @@ curl -fsS http://localhost:7310/api/v1/patients/patient-demo-001/fhir \
 
 curl -fsS http://localhost:7310/api/v1/patients/patient-demo-001/fhir-bundle \
   -H "Authorization: Bearer $TOKEN" \
-  -H "x-purpose-of-use: TREATMENT"
+  -H "x-purpose-of-use: TREATMENT" \
+  -H "x-consent-reference: consent-demo-transfer-001" \
+  -H "x-recipient-organization-id: hospital-hai-phong-referral"
 ```
 
 ## Docker smoke

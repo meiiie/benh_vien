@@ -92,10 +92,12 @@ Kết quả mong muốn là JSON có `resourceType` bằng `Patient`, có địn
 ```bash
 curl http://localhost:7310/api/v1/patients/patient-demo-001/fhir-bundle \
   -H "Authorization: Bearer $TOKEN" \
-  -H "x-purpose-of-use: TREATMENT"
+  -H "x-purpose-of-use: TREATMENT" \
+  -H "x-consent-reference: consent-demo-transfer-001" \
+  -H "x-recipient-organization-id: hospital-hai-phong-referral"
 ```
 
-Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các `Encounter` và các `DocumentReference` của bệnh nhân. Đây là lát cắt gần hơn với bài toán chia sẻ/chuyển hồ sơ giữa bệnh viện.
+Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các `Encounter` và các `DocumentReference` của bệnh nhân. Endpoint này cố ý yêu cầu thêm mã căn cứ/chấp thuận chia sẻ và đơn vị nhận để tránh xuất gói chuyển hồ sơ mà thiếu ngữ cảnh pháp lý/nghiệp vụ.
 
 ## Lấy và mở lượt khám
 

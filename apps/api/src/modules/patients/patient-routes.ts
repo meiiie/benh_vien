@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import { nanoid } from "nanoid";
 import {
   CreatePatientRequestSchema,
@@ -167,6 +167,16 @@ export async function registerPatientRoutes(
       });
     }
 
+    const transferContext = readBundleTransferContext(request.headers);
+
+    if (!transferContext) {
+      return reply.status(400).send({
+        error: "MISSING_BUNDLE_TRANSFER_CONTEXT",
+        message:
+          "Cần khai báo x-consent-reference và x-recipient-organization-id khi xuất FHIR Bundle hồ sơ bệnh nhân."
+      });
+    }
+
     const [encounters, documents] = await Promise.all([
       encounterRepository.findByPatientId(params.id),
       documentRepository.findByPatientId(params.id)
@@ -181,6 +191,8 @@ export async function registerPatientRoutes(
         standard: "HL7 FHIR R4",
         resourceType: "Bundle",
         bundleType: "collection",
+        consentReference: transferContext.consentReference,
+        recipientOrganizationId: transferContext.recipientOrganizationId,
         encounterCount: encounters.length,
         documentCount: documents.length
       }
@@ -196,4 +208,33 @@ export async function registerPatientRoutes(
 
 function toPatientResponse(patient: Patient): PatientSnapshot {
   return patient.toSnapshot();
+}
+
+function readBundleTransferContext(
+  headers: FastifyRequest["headers"]
+):
+  | {
+      readonly consentReference: string;
+      readonly recipientOrganizationId: string;
+    }
+  | undefined {
+  const consentReference = readHeader(headers["x-consent-reference"])?.trim();
+  const recipientOrganizationId = readHeader(headers["x-recipient-organization-id"])?.trim();
+
+  if (!consentReference || !recipientOrganizationId) {
+    return undefined;
+  }
+
+  return {
+    consentReference,
+    recipientOrganizationId
+  };
+}
+
+function readHeader(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) {
+    return value[0];
+  }
+
+  return value;
 }

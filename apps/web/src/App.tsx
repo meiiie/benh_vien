@@ -538,7 +538,10 @@ export function App() {
   async function loadPatientFhirBundlePreview(patientId: string) {
     try {
       const response = await fetch(`${apiBaseUrl}/patients/${patientId}/fhir-bundle`, {
-        headers: buildHeaders("TREATMENT")
+        headers: buildHeaders("TREATMENT", {
+          "x-consent-reference": "consent-demo-transfer-001",
+          "x-recipient-organization-id": "hospital-hai-phong-referral"
+        })
       });
 
       if (!response.ok) {

@@ -147,7 +147,7 @@ describe("API auth and RBAC boundary", () => {
     const response = await app.inject({
       method: "GET",
       url: "/api/v1/patients/patient-demo-001/fhir-bundle",
-      headers: treatmentHeaders(accessToken)
+      headers: bundleTransferHeaders(accessToken)
     });
     const body = response.json();
     const resourceTypes = body.entry.map(
@@ -165,6 +165,22 @@ describe("API auth and RBAC boundary", () => {
       expect.arrayContaining(["Patient", "Encounter", "DocumentReference"])
     );
     expect(body.entry).toHaveLength(6);
+  });
+
+  it("requires transfer context before exporting a patient-record FHIR Bundle", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/fhir-bundle",
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({
+      error: "MISSING_BUNDLE_TRANSFER_CONTEXT"
+    });
   });
 });
 
@@ -214,6 +230,14 @@ function treatmentHeaders(accessToken: string): Record<string, string> {
   return {
     authorization: `Bearer ${accessToken}`,
     "x-purpose-of-use": "TREATMENT"
+  };
+}
+
+function bundleTransferHeaders(accessToken: string): Record<string, string> {
+  return {
+    ...treatmentHeaders(accessToken),
+    "x-consent-reference": "consent-demo-transfer-001",
+    "x-recipient-organization-id": "hospital-hai-phong-referral"
   };
 }
 
