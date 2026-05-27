@@ -10,7 +10,7 @@ Bệnh án điện tử không chỉ là form nhập dữ liệu. Khi đặt tro
 
 ## Quyết định
 
-Dùng FHIR R4 làm lớp trao đổi dữ liệu chính, DICOM/PACS cho ảnh y khoa, IHE MHD cho hướng chia sẻ tài liệu và IHE PIXm cho định danh bệnh nhân liên miền. Domain model nội bộ vẫn giữ ngữ nghĩa riêng, sau đó mapping sang chuẩn khi trao đổi.
+Dùng FHIR R4 làm lớp trao đổi dữ liệu chính, DICOM/PACS cho ảnh y khoa, IHE MHD cho hướng chia sẻ tài liệu và IHE PIXm cho định danh bệnh nhân liên miền. Domain model nội bộ vẫn giữ ngữ nghĩa riêng, sau đó mapping sang chuẩn khi trao đổi; với workflow, `ServiceRequest` là y lệnh còn `Task` là trạng thái thực thi y lệnh.
 
 ## Hệ quả
 
@@ -18,4 +18,3 @@ Dùng FHIR R4 làm lớp trao đổi dữ liệu chính, DICOM/PACS cho ảnh y 
 - Prototype có thể kết nối HAPI FHIR và Orthanc.
 - Cần đầu tư mapping và kiểm thử tương thích.
 - Không nên nhầm FHIR server với toàn bộ hệ thống EMR.
-

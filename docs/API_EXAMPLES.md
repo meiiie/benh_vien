@@ -1,6 +1,6 @@
 # Ví dụ API
 
-API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `Patient`, `ProviderDirectory`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `ClinicalDocument`, `Consent`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
+API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `Patient`, `ProviderDirectory`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `ClinicalDocument`, `Consent`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
 
 ## Kiểm tra sức khỏe API
 
@@ -141,7 +141,7 @@ curl http://localhost:7310/api/v1/patients/patient-demo-001/fhir-bundle \
   -H "x-recipient-organization-id: hospital-hai-phong-referral"
 ```
 
-Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các tài nguyên Provider Directory (`Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`), các `Encounter`, các `AllergyIntolerance`, các `Condition`, các `ServiceRequest`, các `Observation`, các `DiagnosticReport`, các `ImagingStudy`, các `MedicationRequest` và các `DocumentReference` của bệnh nhân. Endpoint này không chỉ kiểm header: `x-consent-reference` phải trỏ tới một consent đang hiệu lực, đúng bệnh nhân và đúng `x-recipient-organization-id`.
+Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các tài nguyên Provider Directory (`Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`), các `Encounter`, các `AllergyIntolerance`, các `Condition`, các `ServiceRequest`, các `Task`, các `Observation`, các `DiagnosticReport`, các `ImagingStudy`, các `MedicationRequest` và các `DocumentReference` của bệnh nhân. Endpoint này không chỉ kiểm header: `x-consent-reference` phải trỏ tới một consent đang hiệu lực, đúng bệnh nhân và đúng `x-recipient-organization-id`.
 
 ## Xuất gói tài liệu bệnh án sang FHIR document Bundle
 
@@ -153,7 +153,7 @@ curl http://localhost:7310/api/v1/patients/patient-demo-001/fhir-document-bundle
   -H "x-recipient-organization-id: hospital-hai-phong-referral"
 ```
 
-Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `document`, và `entry[0].resource.resourceType` bằng `Composition`. Các section của `Composition` tham chiếu tới nhóm cơ sở/nhân sự/endpoint liên thông, lượt khám, dị ứng, chẩn đoán, y lệnh dịch vụ, chỉ số, báo cáo kết quả, nghiên cứu hình ảnh, chỉ định thuốc và tài liệu lâm sàng trong cùng Bundle.
+Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `document`, và `entry[0].resource.resourceType` bằng `Composition`. Các section của `Composition` tham chiếu tới nhóm cơ sở/nhân sự/endpoint liên thông, lượt khám, dị ứng, chẩn đoán, y lệnh dịch vụ, công việc thực thi y lệnh, chỉ số, báo cáo kết quả, nghiên cứu hình ảnh, chỉ định thuốc và tài liệu lâm sàng trong cùng Bundle.
 
 ## Lấy và mở lượt khám
 
@@ -311,6 +311,64 @@ curl http://localhost:7310/api/v1/service-requests/service-request-demo-001/fhir
 ```
 
 Kết quả mong muốn là JSON có `resourceType` bằng `ServiceRequest`, có `status`, `intent`, `category`, `priority`, `code`, `subject`, `encounter`, `requester`, `performer`, `occurrenceDateTime` và `reasonReference` nếu chỉ định dịch vụ được gắn với một chẩn đoán.
+
+## Lấy, tạo và xuất công việc thực thi sang FHIR Task
+
+```bash
+curl http://localhost:7310/api/v1/patients/patient-demo-001/workflow-tasks \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+```bash
+curl -X POST http://localhost:7310/api/v1/patients/patient-demo-001/workflow-tasks \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "encounterId": "encounter-demo-001",
+    "basedOnServiceRequestId": "service-request-demo-001",
+    "status": "completed",
+    "priority": "urgent",
+    "code": {
+      "system": "urn:wiiicare:nexus:task-code",
+      "code": "fulfill-laboratory-order",
+      "display": "Thực hiện chỉ định xét nghiệm"
+    },
+    "businessStatus": {
+      "code": "result-issued",
+      "display": "Kết quả đã phát hành"
+    },
+    "requesterPractitionerId": "practitioner-demo-002",
+    "ownerOrganizationId": "department-laboratory",
+    "executionPeriod": {
+      "start": "2026-05-26T04:00:00.000Z",
+      "end": "2026-05-26T04:45:00.000Z"
+    },
+    "inputReferences": [
+      {
+        "resourceType": "ServiceRequest",
+        "id": "service-request-demo-001",
+        "label": "Chỉ định công thức máu"
+      }
+    ],
+    "outputReferences": [
+      {
+        "resourceType": "DiagnosticReport",
+        "id": "diagnostic-report-demo-001",
+        "label": "Báo cáo công thức máu"
+      }
+    ]
+  }'
+```
+
+```bash
+curl http://localhost:7310/api/v1/workflow-tasks/workflow-task-demo-001/fhir \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+Kết quả mong muốn là JSON có `resourceType` bằng `Task`, có `status`, `businessStatus`, `focus`/`basedOn` trỏ tới `ServiceRequest`, `for` trỏ tới `Patient`, `owner` trỏ tới khoa/phòng hoặc nhân sự phụ trách, `executionPeriod`, `input` và `output`. Đây là lớp theo dõi hàng đợi LIS/PACS/RIS, không phải y lệnh mới.
 
 ## Lấy, tạo và xuất chỉ số sang FHIR Observation
 

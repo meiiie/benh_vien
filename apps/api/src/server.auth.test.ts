@@ -172,6 +172,7 @@ describe("API auth and RBAC boundary", () => {
         "AllergyIntolerance",
         "Condition",
         "ServiceRequest",
+        "Task",
         "Observation",
         "DiagnosticReport",
         "ImagingStudy",
@@ -179,7 +180,7 @@ describe("API auth and RBAC boundary", () => {
         "DocumentReference"
       ])
     );
-    expect(body.entry).toHaveLength(35);
+    expect(body.entry).toHaveLength(37);
   });
 
   it("returns a patient-record FHIR document Bundle with Composition first", async () => {
@@ -210,11 +211,14 @@ describe("API auth and RBAC boundary", () => {
         }
       ]
     });
-    expect(body.entry).toHaveLength(36);
+    expect(body.entry).toHaveLength(38);
     expect(body.entry[0].resource.section).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           title: "Cơ sở, nhân sự và endpoint liên thông"
+        }),
+        expect.objectContaining({
+          title: "Luồng công việc thực thi chỉ định"
         })
       ])
     );
@@ -258,6 +262,54 @@ describe("API auth and RBAC boundary", () => {
       managingOrganization: {
         reference: "Organization/department-diagnostic-imaging"
       }
+    });
+  });
+
+  it("lists workflow tasks and exports them as FHIR Task", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const listResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/workflow-tasks",
+      headers: treatmentHeaders(accessToken)
+    });
+    const listBody = listResponse.json();
+
+    expect(listResponse.statusCode).toBe(200);
+    expect(listBody.items).toHaveLength(2);
+    expect(listBody.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "workflow-task-demo-002",
+          status: "completed",
+          basedOnServiceRequestId: "service-request-demo-002"
+        })
+      ])
+    );
+
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/workflow-tasks/workflow-task-demo-002/fhir",
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(fhirResponse.statusCode).toBe(200);
+    expect(fhirResponse.json()).toMatchObject({
+      resourceType: "Task",
+      id: "workflow-task-demo-002",
+      status: "completed",
+      focus: {
+        reference: "ServiceRequest/service-request-demo-002"
+      },
+      output: expect.arrayContaining([
+        expect.objectContaining({
+          valueReference: {
+            reference: "ImagingStudy/imaging-study-demo-001",
+            display: "Metadata DICOM X-quang ngực"
+          }
+        })
+      ])
     });
   });
 

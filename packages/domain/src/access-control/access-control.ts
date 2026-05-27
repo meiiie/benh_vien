@@ -34,6 +34,10 @@ export type Permission =
   | "service-request:create"
   | "service-request:read"
   | "service-request:fhir-export"
+  | "workflow-task:list"
+  | "workflow-task:create"
+  | "workflow-task:read"
+  | "workflow-task:fhir-export"
   | "diagnostic-report:list"
   | "diagnostic-report:create"
   | "diagnostic-report:read"
@@ -89,6 +93,10 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "service-request:create",
     "service-request:read",
     "service-request:fhir-export",
+    "workflow-task:list",
+    "workflow-task:create",
+    "workflow-task:read",
+    "workflow-task:fhir-export",
     "diagnostic-report:list",
     "diagnostic-report:create",
     "diagnostic-report:read",
@@ -125,6 +133,9 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "service-request:list",
     "service-request:create",
     "service-request:read",
+    "workflow-task:list",
+    "workflow-task:create",
+    "workflow-task:read",
     "diagnostic-report:list",
     "diagnostic-report:create",
     "diagnostic-report:read",
@@ -135,7 +146,13 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "clinical-document:create",
     "consent:list"
   ],
-  auditor: ["patient:read", "provider-directory:read", "audit-event:list"],
+  auditor: [
+    "patient:read",
+    "provider-directory:read",
+    "workflow-task:list",
+    "workflow-task:read",
+    "audit-event:list"
+  ],
   admin: [
     "patient:list",
     "patient:create",
@@ -168,6 +185,10 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "service-request:create",
     "service-request:read",
     "service-request:fhir-export",
+    "workflow-task:list",
+    "workflow-task:create",
+    "workflow-task:read",
+    "workflow-task:fhir-export",
     "diagnostic-report:list",
     "diagnostic-report:create",
     "diagnostic-report:read",

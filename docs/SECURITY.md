@@ -24,7 +24,8 @@ Hồ sơ bệnh án là dữ liệu đặc biệt nhạy cảm. Dự án chưa t
 - API đã yêu cầu `Authorization: Bearer <token>` cho endpoint nghiệp vụ.
 - Token demo do `POST /api/v1/auth/login` phát hành, ký bằng `BVS_AUTH_SECRET`.
 - `x-purpose-of-use` vẫn được dùng để khai báo mục đích truy cập như `TREATMENT` hoặc `AUDIT`; đây là ngữ cảnh sử dụng dữ liệu, không phải định danh người dùng.
-- Các endpoint lâm sàng như bệnh nhân, Provider Directory, lượt khám, dị ứng/cảnh báo `AllergyIntolerance`, chẩn đoán `Condition`, chỉ định dịch vụ `ServiceRequest`, chỉ số `Observation`, báo cáo kết quả `DiagnosticReport`, nghiên cứu hình ảnh `ImagingStudy`, chỉ định thuốc `MedicationRequest`, tài liệu và Bundle đều đi qua kiểm tra quyền ở API.
+- Các endpoint lâm sàng như bệnh nhân, Provider Directory, lượt khám, dị ứng/cảnh báo `AllergyIntolerance`, chẩn đoán `Condition`, chỉ định dịch vụ `ServiceRequest`, công việc thực thi `Task`, chỉ số `Observation`, báo cáo kết quả `DiagnosticReport`, nghiên cứu hình ảnh `ImagingStudy`, chỉ định thuốc `MedicationRequest`, tài liệu và Bundle đều đi qua kiểm tra quyền ở API.
+- `Task` có quyền đọc/tạo/xuất riêng để tránh trộn quyền y lệnh với quyền thao tác hàng đợi vận hành. Điều dưỡng có thể tạo/đọc công việc nhưng không xuất FHIR; bác sĩ/quản trị có thể xuất khi mục đích sử dụng là điều trị.
 - Provider Directory được cho phép đọc rộng hơn dữ liệu bệnh án để điều dưỡng/bác sĩ thấy mã cơ sở, khoa phòng và endpoint; xuất Provider Directory sang FHIR vẫn bị giới hạn theo quyền `provider-directory:fhir-export`.
 - FHIR Bundle chia sẻ liên viện yêu cầu consent tồn tại trong store, còn hiệu lực, đúng bệnh nhân và đúng đơn vị nhận.
 - FHIR document Bundle có `Composition` cũng dùng cùng rào consent và audit như Bundle collection; không có đường xuất tài liệu liên viện “bỏ qua consent”.

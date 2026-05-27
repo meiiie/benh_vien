@@ -97,6 +97,36 @@ type ServiceRequestIntent =
   | "option";
 type ServiceRequestCategory = "laboratory" | "imaging" | "procedure" | "consultation" | "therapy";
 type ServiceRequestPriority = "routine" | "urgent" | "asap" | "stat";
+type WorkflowTaskStatus =
+  | "draft"
+  | "requested"
+  | "received"
+  | "accepted"
+  | "rejected"
+  | "ready"
+  | "cancelled"
+  | "in-progress"
+  | "on-hold"
+  | "failed"
+  | "completed"
+  | "entered-in-error";
+type WorkflowTaskIntent =
+  | "unknown"
+  | "proposal"
+  | "plan"
+  | "order"
+  | "original-order"
+  | "reflex-order"
+  | "filler-order"
+  | "instance-order"
+  | "option";
+type WorkflowTaskPriority = "routine" | "urgent" | "asap" | "stat";
+type WorkflowTaskReferenceResourceType =
+  | "ServiceRequest"
+  | "Observation"
+  | "DiagnosticReport"
+  | "ImagingStudy"
+  | "DocumentReference";
 type DiagnosticReportStatus =
   | "registered"
   | "partial"
@@ -411,6 +441,52 @@ type ServiceRequest = {
   readonly updatedAt: string;
 };
 
+type WorkflowTaskCode = {
+  readonly system: string;
+  readonly code: string;
+  readonly display: string;
+};
+
+type WorkflowTaskBusinessStatus = {
+  readonly code: string;
+  readonly display: string;
+};
+
+type WorkflowTaskReference = {
+  readonly resourceType: WorkflowTaskReferenceResourceType;
+  readonly id: string;
+  readonly label?: string;
+};
+
+type WorkflowTaskExecutionPeriod = {
+  readonly start?: string;
+  readonly end?: string;
+};
+
+type WorkflowTask = {
+  readonly id: string;
+  readonly patientId: string;
+  readonly encounterId?: string;
+  readonly basedOnServiceRequestId?: string;
+  readonly status: WorkflowTaskStatus;
+  readonly intent: WorkflowTaskIntent;
+  readonly priority: WorkflowTaskPriority;
+  readonly code: WorkflowTaskCode;
+  readonly description?: string;
+  readonly businessStatus?: WorkflowTaskBusinessStatus;
+  readonly requesterPractitionerId?: string;
+  readonly ownerOrganizationId?: string;
+  readonly ownerPractitionerId?: string;
+  readonly authoredOn: string;
+  readonly lastModified: string;
+  readonly executionPeriod?: WorkflowTaskExecutionPeriod;
+  readonly inputReferences: readonly WorkflowTaskReference[];
+  readonly outputReferences: readonly WorkflowTaskReference[];
+  readonly note?: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
 type DiagnosticReportCode = {
   readonly system: string;
   readonly code: string;
@@ -508,6 +584,10 @@ type AuditAction =
   | "service-request.create"
   | "service-request.read"
   | "service-request.fhir-export"
+  | "workflow-task.list"
+  | "workflow-task.create"
+  | "workflow-task.read"
+  | "workflow-task.fhir-export"
   | "diagnostic-report.list"
   | "diagnostic-report.create"
   | "diagnostic-report.read"
@@ -533,6 +613,7 @@ type AuditResourceType =
   | "MedicationRequest"
   | "Observation"
   | "ServiceRequest"
+  | "Task"
   | "DiagnosticReport"
   | "ImagingStudy"
   | "ClinicalDocument"
@@ -597,6 +678,10 @@ type MedicationRequestsResponse = {
 
 type ServiceRequestsResponse = {
   readonly items: readonly ServiceRequest[];
+};
+
+type WorkflowTasksResponse = {
+  readonly items: readonly WorkflowTask[];
 };
 
 type DiagnosticReportsResponse = {
@@ -975,6 +1060,7 @@ const workflowSteps = [
   "Kiểm tra dị ứng",
   "Ghi nhận chẩn đoán",
   "Chỉ định dịch vụ",
+  "Theo dõi Task thực thi",
   "Nhận kết quả",
   "Gắn metadata PACS",
   "Định danh cơ sở/endpoint",
@@ -1014,7 +1100,7 @@ const referenceSignals = [
   },
   {
     name: "HL7 FHIR R4",
-    value: "Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, DocumentReference cùng Organization/Practitioner/Endpoint là lõi trao đổi dữ liệu trong lát cắt này."
+    value: "Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, DocumentReference cùng Organization/Practitioner/Endpoint là lõi trao đổi dữ liệu trong lát cắt này."
   },
   {
     name: "Bối cảnh Việt Nam",
@@ -1048,6 +1134,8 @@ export function App() {
   const [selectedMedicationRequestId, setSelectedMedicationRequestId] = useState<string>();
   const [serviceRequests, setServiceRequests] = useState<readonly ServiceRequest[]>([]);
   const [selectedServiceRequestId, setSelectedServiceRequestId] = useState<string>();
+  const [workflowTasks, setWorkflowTasks] = useState<readonly WorkflowTask[]>([]);
+  const [selectedWorkflowTaskId, setSelectedWorkflowTaskId] = useState<string>();
   const [diagnosticReports, setDiagnosticReports] = useState<readonly DiagnosticReport[]>([]);
   const [selectedDiagnosticReportId, setSelectedDiagnosticReportId] = useState<string>();
   const [imagingStudies, setImagingStudies] = useState<readonly ImagingStudy[]>([]);
@@ -1066,6 +1154,7 @@ export function App() {
   const [observationFhirPreview, setObservationFhirPreview] = useState<unknown>();
   const [medicationRequestFhirPreview, setMedicationRequestFhirPreview] = useState<unknown>();
   const [serviceRequestFhirPreview, setServiceRequestFhirPreview] = useState<unknown>();
+  const [workflowTaskFhirPreview, setWorkflowTaskFhirPreview] = useState<unknown>();
   const [diagnosticReportFhirPreview, setDiagnosticReportFhirPreview] = useState<unknown>();
   const [imagingStudyFhirPreview, setImagingStudyFhirPreview] = useState<unknown>();
   const [patientForm, setPatientForm] = useState<NewPatientForm>(defaultPatientForm);
@@ -1095,6 +1184,7 @@ export function App() {
   const [isLoadingObservations, setIsLoadingObservations] = useState(false);
   const [isLoadingMedicationRequests, setIsLoadingMedicationRequests] = useState(false);
   const [isLoadingServiceRequests, setIsLoadingServiceRequests] = useState(false);
+  const [isLoadingWorkflowTasks, setIsLoadingWorkflowTasks] = useState(false);
   const [isLoadingDiagnosticReports, setIsLoadingDiagnosticReports] = useState(false);
   const [isLoadingImagingStudies, setIsLoadingImagingStudies] = useState(false);
   const [isLoadingAuditEvents, setIsLoadingAuditEvents] = useState(false);
@@ -1127,6 +1217,7 @@ export function App() {
   const selectedServiceRequest = serviceRequests.find(
     (serviceRequest) => serviceRequest.id === selectedServiceRequestId
   );
+  const selectedWorkflowTask = workflowTasks.find((task) => task.id === selectedWorkflowTaskId);
   const selectedDiagnosticReport = diagnosticReports.find(
     (diagnosticReport) => diagnosticReport.id === selectedDiagnosticReportId
   );
@@ -1150,6 +1241,9 @@ export function App() {
     : [];
   const selectedEncounterServiceRequests = selectedEncounter
     ? serviceRequests.filter((serviceRequest) => serviceRequest.encounterId === selectedEncounter.id)
+    : [];
+  const selectedEncounterWorkflowTasks = selectedEncounter
+    ? workflowTasks.filter((task) => task.encounterId === selectedEncounter.id)
     : [];
   const selectedEncounterDiagnosticReports = selectedEncounter
     ? diagnosticReports.filter((diagnosticReport) => diagnosticReport.encounterId === selectedEncounter.id)
@@ -1183,6 +1277,7 @@ export function App() {
       setObservationFhirPreview(undefined);
       setMedicationRequestFhirPreview(undefined);
       setServiceRequestFhirPreview(undefined);
+      setWorkflowTaskFhirPreview(undefined);
       setDiagnosticReportFhirPreview(undefined);
       setImagingStudyFhirPreview(undefined);
       setEncounters([]);
@@ -1192,6 +1287,7 @@ export function App() {
       setObservations([]);
       setMedicationRequests([]);
       setServiceRequests([]);
+      setWorkflowTasks([]);
       setDiagnosticReports([]);
       setImagingStudies([]);
       setAuditEvents([]);
@@ -1203,6 +1299,7 @@ export function App() {
       setSelectedObservationId(undefined);
       setSelectedMedicationRequestId(undefined);
       setSelectedServiceRequestId(undefined);
+      setSelectedWorkflowTaskId(undefined);
       setSelectedDiagnosticReportId(undefined);
       setSelectedImagingStudyId(undefined);
       return;
@@ -1289,6 +1386,15 @@ export function App() {
 
     void loadServiceRequestFhirPreview(selectedServiceRequestId);
   }, [selectedServiceRequestId]);
+
+  useEffect(() => {
+    if (!selectedWorkflowTaskId) {
+      setWorkflowTaskFhirPreview(undefined);
+      return;
+    }
+
+    void loadWorkflowTaskFhirPreview(selectedWorkflowTaskId);
+  }, [selectedWorkflowTaskId]);
 
   useEffect(() => {
     if (!selectedDiagnosticReportId) {
@@ -1397,6 +1503,7 @@ export function App() {
       loadObservations(patientId),
       loadMedicationRequests(patientId),
       loadServiceRequests(patientId),
+      loadWorkflowTasks(patientId),
       loadDiagnosticReports(patientId),
       loadImagingStudies(patientId),
       loadClinicalDocuments(patientId),
@@ -1614,6 +1721,34 @@ export function App() {
       );
     } finally {
       setIsLoadingServiceRequests(false);
+    }
+  }
+
+  async function loadWorkflowTasks(patientId: string, nextSelectedWorkflowTaskId?: string) {
+    setIsLoadingWorkflowTasks(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/workflow-tasks`, {
+        headers: buildHeaders("TREATMENT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      const data = (await response.json()) as WorkflowTasksResponse;
+      setWorkflowTasks(data.items);
+      setSelectedWorkflowTaskId(nextSelectedWorkflowTaskId ?? data.items[0]?.id);
+    } catch (error) {
+      setWorkflowTasks([]);
+      setSelectedWorkflowTaskId(undefined);
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể tải hàng đợi công việc: ${error.message}`
+          : "Không thể tải hàng đợi công việc."
+      );
+    } finally {
+      setIsLoadingWorkflowTasks(false);
     }
   }
 
@@ -1954,6 +2089,27 @@ export function App() {
     }
   }
 
+  async function loadWorkflowTaskFhirPreview(taskId: string) {
+    try {
+      const response = await fetch(`${apiBaseUrl}/workflow-tasks/${taskId}/fhir`, {
+        headers: buildHeaders("TREATMENT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      setWorkflowTaskFhirPreview(await response.json());
+    } catch (error) {
+      setWorkflowTaskFhirPreview({
+        error:
+          error instanceof Error
+            ? `Không thể xuất FHIR Task: ${error.message}`
+            : "Không thể xuất FHIR Task."
+      });
+    }
+  }
+
   async function loadDiagnosticReportFhirPreview(diagnosticReportId: string) {
     try {
       const response = await fetch(`${apiBaseUrl}/diagnostic-reports/${diagnosticReportId}/fhir`, {
@@ -2055,6 +2211,7 @@ export function App() {
     setObservations([]);
     setMedicationRequests([]);
     setServiceRequests([]);
+    setWorkflowTasks([]);
     setDiagnosticReports([]);
     setImagingStudies([]);
     setAuditEvents([]);
@@ -2071,6 +2228,7 @@ export function App() {
     setObservationFhirPreview(undefined);
     setMedicationRequestFhirPreview(undefined);
     setServiceRequestFhirPreview(undefined);
+    setWorkflowTaskFhirPreview(undefined);
     setDiagnosticReportFhirPreview(undefined);
     setImagingStudyFhirPreview(undefined);
     setSelectedPatientId(undefined);
@@ -2081,6 +2239,7 @@ export function App() {
     setSelectedObservationId(undefined);
     setSelectedMedicationRequestId(undefined);
     setSelectedServiceRequestId(undefined);
+    setSelectedWorkflowTaskId(undefined);
     setSelectedDiagnosticReportId(undefined);
     setSelectedImagingStudyId(undefined);
   }
@@ -2869,6 +3028,7 @@ export function App() {
           <MetricCard label="Dị ứng" value={`${allergyIntolerances.length}`} note="Cảnh báo an toàn" />
           <MetricCard label="Chẩn đoán" value={`${conditions.length}`} note="Vấn đề sức khỏe có cấu trúc" />
           <MetricCard label="Chỉ định DV" value={`${serviceRequests.length}`} note="FHIR ServiceRequest" />
+          <MetricCard label="Công việc" value={`${workflowTasks.length}`} note="FHIR Task" />
           <MetricCard label="Kết quả" value={`${diagnosticReports.length}`} note="FHIR DiagnosticReport" />
           <MetricCard label="Ảnh y khoa" value={`${imagingStudies.length}`} note="FHIR ImagingStudy" />
           <MetricCard label="Chỉ định thuốc" value={`${medicationRequests.length}`} note="FHIR MedicationRequest" />
@@ -2892,7 +3052,7 @@ export function App() {
               </button>
               <button type="button" onClick={() => setAppRoute("interop")}>
                 <strong>Xem gói FHIR</strong>
-                <span>Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Observation, DiagnosticReport, ImagingStudy, MedicationRequest và DocumentReference đã có preview.</span>
+                <span>Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Observation, DiagnosticReport, ImagingStudy, MedicationRequest và DocumentReference đã có preview.</span>
               </button>
             </div>
           </article>
@@ -2907,6 +3067,7 @@ export function App() {
                 <Info label="Dị ứng/cảnh báo" value={`${allergyIntolerances.length}`} />
                 <Info label="Chẩn đoán/vấn đề" value={`${conditions.length}`} />
                 <Info label="Chỉ định dịch vụ" value={`${serviceRequests.length}`} />
+                <Info label="Công việc thực thi" value={`${workflowTasks.length}`} />
                 <Info label="Chỉ số lâm sàng" value={`${observations.length}`} />
                 <Info label="Báo cáo kết quả" value={`${diagnosticReports.length}`} />
                 <Info label="Nghiên cứu hình ảnh" value={`${imagingStudies.length}`} />
@@ -2939,6 +3100,7 @@ export function App() {
           {renderAllergyIntolerancePanel()}
           {renderConditionPanel()}
           {renderServiceRequestPanel()}
+          {renderWorkflowTaskPanel()}
           {renderObservationPanel()}
           {renderDiagnosticReportPanel()}
           {renderImagingStudyPanel()}
@@ -3020,6 +3182,7 @@ export function App() {
           <FhirPanel title="FHIR AllergyIntolerance JSON" badge="AllergyIntolerance" value={allergyIntoleranceFhirPreview} />
           <FhirPanel title="FHIR Condition JSON" badge="Condition" value={conditionFhirPreview} />
           <FhirPanel title="FHIR ServiceRequest JSON" badge="ServiceRequest" value={serviceRequestFhirPreview} />
+          <FhirPanel title="FHIR Task JSON" badge="Task" value={workflowTaskFhirPreview} />
           <FhirPanel title="FHIR Observation JSON" badge="Observation" value={observationFhirPreview} />
           <FhirPanel title="FHIR DiagnosticReport JSON" badge="DiagnosticReport" value={diagnosticReportFhirPreview} />
           <FhirPanel title="FHIR ImagingStudy JSON" badge="ImagingStudy" value={imagingStudyFhirPreview} />
@@ -3280,6 +3443,7 @@ export function App() {
                   <Info label="Dị ứng gắn lượt khám" value={`${selectedEncounterAllergyIntolerances.length}`} />
                   <Info label="Chẩn đoán gắn lượt khám" value={`${selectedEncounterConditions.length}`} />
                   <Info label="Chỉ định dịch vụ gắn lượt khám" value={`${selectedEncounterServiceRequests.length}`} />
+                  <Info label="Công việc thực thi gắn lượt khám" value={`${selectedEncounterWorkflowTasks.length}`} />
                   <Info label="Chỉ số gắn lượt khám" value={`${selectedEncounterObservations.length}`} />
                   <Info label="Báo cáo kết quả gắn lượt khám" value={`${selectedEncounterDiagnosticReports.length}`} />
                   <Info label="Ảnh y khoa gắn lượt khám" value={`${selectedEncounterImagingStudies.length}`} />
@@ -4046,6 +4210,94 @@ export function App() {
             {isSubmittingServiceRequest ? "Đang tạo..." : "Tạo chỉ định dịch vụ"}
           </button>
         </form>
+      </article>
+    );
+  }
+
+  function renderWorkflowTaskPanel(): ReactNode {
+    return (
+      <article className="panel service-panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Task queue</p>
+            <h2>Luồng công việc thực thi y lệnh</h2>
+          </div>
+          <span className="pill cyan">
+            {isLoadingWorkflowTasks ? "loading" : `${workflowTasks.length} công việc`}
+          </span>
+        </div>
+
+        <div className="document-layout">
+          <div className="service-cards">
+            {workflowTasks.map((task) => (
+              <button
+                className={task.id === selectedWorkflowTaskId ? "service-card selected" : "service-card"}
+                key={task.id}
+                type="button"
+                onClick={() => setSelectedWorkflowTaskId(task.id)}
+              >
+                <span>{formatWorkflowTaskStatus(task.status)}</span>
+                <strong>{task.code.display}</strong>
+                <small>
+                  {formatServiceRequestPriority(task.priority)} · {formatDateTime(task.lastModified)}
+                </small>
+              </button>
+            ))}
+            {workflowTasks.length === 0 ? (
+              <p className="empty-state">
+                Chưa có Task cho bệnh nhân này. Task dùng để theo dõi y lệnh đang ở hàng đợi LIS/PACS, ai phụ trách và kết quả nào đã quay về EMR.
+              </p>
+            ) : null}
+          </div>
+
+          <div className="service-summary">
+            {selectedWorkflowTask ? (
+              <>
+                <div className="document-meta">
+                  <Info label="Công việc" value={selectedWorkflowTask.code.display} />
+                  <Info label="Trạng thái FHIR" value={formatWorkflowTaskStatus(selectedWorkflowTask.status)} />
+                  <Info label="Trạng thái nghiệp vụ" value={selectedWorkflowTask.businessStatus?.display ?? "Chưa gắn"} />
+                  <Info label="Y lệnh gốc" value={selectedWorkflowTask.basedOnServiceRequestId ?? "Chưa gắn"} />
+                  <Info label="Khoa/phòng phụ trách" value={selectedWorkflowTask.ownerOrganizationId ?? "Chưa gắn"} />
+                  <Info label="Người phụ trách" value={selectedWorkflowTask.ownerPractitionerId ?? "Chưa gắn"} />
+                  <Info label="Tạo lúc" value={formatDateTime(selectedWorkflowTask.authoredOn)} />
+                  <Info label="Cập nhật" value={formatDateTime(selectedWorkflowTask.lastModified)} />
+                  <Info
+                    label="Bắt đầu"
+                    value={
+                      selectedWorkflowTask.executionPeriod?.start
+                        ? formatDateTime(selectedWorkflowTask.executionPeriod.start)
+                        : "Chưa gắn"
+                    }
+                  />
+                  <Info
+                    label="Kết thúc"
+                    value={
+                      selectedWorkflowTask.executionPeriod?.end
+                        ? formatDateTime(selectedWorkflowTask.executionPeriod.end)
+                        : "Chưa gắn"
+                    }
+                  />
+                </div>
+                <div className="reference-list compact-list">
+                  <div>
+                    <strong>Input</strong>
+                    <span>{formatWorkflowTaskReferences(selectedWorkflowTask.inputReferences)}</span>
+                  </div>
+                  <div>
+                    <strong>Output</strong>
+                    <span>{formatWorkflowTaskReferences(selectedWorkflowTask.outputReferences)}</span>
+                  </div>
+                </div>
+                <p className="empty-state">
+                  FHIR Task không thay thế ServiceRequest; nó theo dõi việc thực thi ServiceRequest qua từng hàng đợi, chủ sở hữu, thời gian xử lý và kết quả đầu ra.
+                </p>
+              </>
+            ) : (
+              <p className="empty-state">Chọn một công việc để xem metadata và xuất FHIR Task.</p>
+            )}
+          </div>
+        </div>
       </article>
     );
   }
@@ -5345,7 +5597,7 @@ function LandingPage({
           <h1>Nền tảng bệnh án điện tử mở cho liên thông y tế</h1>
           <p className="lede">
             WiiiCare Nexus mô phỏng lõi EMR hiện đại: hồ sơ bệnh nhân, Provider Directory, lượt khám, dị ứng, chẩn đoán,
-            chỉ định dịch vụ, chỉ số lâm sàng, báo cáo kết quả, chỉ định thuốc, tài liệu bệnh án, audit trail và ánh xạ FHIR để chuẩn bị kết nối giữa các bệnh viện.
+            chỉ định dịch vụ, Task thực thi, chỉ số lâm sàng, báo cáo kết quả, chỉ định thuốc, tài liệu bệnh án, audit trail và ánh xạ FHIR để chuẩn bị kết nối giữa các bệnh viện.
           </p>
           <div className="landing-actions">
             <button className="primary-button" type="button" onClick={onLogin}>
@@ -5358,7 +5610,7 @@ function LandingPage({
         </div>
         <aside className="landing-card">
           <span>Product slice</span>
-          <strong>Patient → Provider Directory → Encounter → AllergyIntolerance → Condition → ServiceRequest → Observation → DiagnosticReport → ImagingStudy → MedicationRequest → Document → FHIR</strong>
+          <strong>Patient → Provider Directory → Encounter → AllergyIntolerance → Condition → ServiceRequest → Task → Observation → DiagnosticReport → ImagingStudy → MedicationRequest → Document → FHIR</strong>
           <small>Không còn là landing page đơn thuần; app có luồng vận hành sau đăng nhập.</small>
         </aside>
       </section>
@@ -5368,7 +5620,7 @@ function LandingPage({
           ["Patient Workspace", "Bàn làm việc theo bệnh nhân, giống nhịp vận hành EMR thật."],
           ["Document Center", "Quản lý CCR, CCDA, hồ sơ bệnh án, xét nghiệm và tài liệu chuyển tuyến."],
           ["Audit & RBAC", "Ghi log truy cập nhạy cảm và kiểm tra quyền theo vai trò demo."],
-          ["FHIR Interop", "Xuất Patient, Provider Directory, Encounter, AllergyIntolerance, Condition, ServiceRequest, Observation, DiagnosticReport, ImagingStudy, MedicationRequest và DocumentReference để chuẩn bị liên thông."]
+          ["FHIR Interop", "Xuất Patient, Provider Directory, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Observation, DiagnosticReport, ImagingStudy, MedicationRequest và DocumentReference để chuẩn bị liên thông."]
         ].map(([title, description]) => (
           <article className="panel" key={title}>
             <p className="eyebrow">{title}</p>
@@ -5696,6 +5948,10 @@ function formatAuditAction(action: AuditAction): string {
     "service-request.create": "Tạo chỉ định dịch vụ",
     "service-request.read": "Xem chỉ định dịch vụ",
     "service-request.fhir-export": "Xuất FHIR ServiceRequest",
+    "workflow-task.list": "Tải hàng đợi công việc",
+    "workflow-task.create": "Tạo công việc thực thi",
+    "workflow-task.read": "Xem công việc thực thi",
+    "workflow-task.fhir-export": "Xuất FHIR Task",
     "diagnostic-report.list": "Tải báo cáo kết quả",
     "diagnostic-report.create": "Tạo báo cáo kết quả",
     "diagnostic-report.read": "Xem báo cáo kết quả",
@@ -5726,6 +5982,7 @@ function formatAuditResourceType(resourceType: AuditResourceType): string {
     MedicationRequest: "Chỉ định thuốc",
     Observation: "Chỉ số lâm sàng",
     ServiceRequest: "Chỉ định dịch vụ",
+    Task: "Công việc thực thi",
     DiagnosticReport: "Báo cáo kết quả",
     ImagingStudy: "Nghiên cứu hình ảnh",
     ClinicalDocument: "Tài liệu",
@@ -5982,6 +6239,35 @@ function formatServiceRequestPriority(priority: ServiceRequestPriority): string 
   };
 
   return labels[priority];
+}
+
+function formatWorkflowTaskStatus(status: WorkflowTaskStatus): string {
+  const labels: Record<WorkflowTaskStatus, string> = {
+    accepted: "Đã nhận",
+    cancelled: "Đã hủy",
+    completed: "Hoàn tất",
+    draft: "Bản nháp",
+    "entered-in-error": "Nhập lỗi",
+    failed: "Thất bại",
+    "in-progress": "Đang thực hiện",
+    "on-hold": "Tạm giữ",
+    ready: "Sẵn sàng",
+    received: "Đã tiếp nhận",
+    rejected: "Từ chối",
+    requested: "Đã yêu cầu"
+  };
+
+  return labels[status];
+}
+
+function formatWorkflowTaskReferences(references: readonly WorkflowTaskReference[]): string {
+  if (references.length === 0) {
+    return "Chưa gắn";
+  }
+
+  return references
+    .map((reference) => `${reference.label ?? reference.resourceType}: ${reference.resourceType}/${reference.id}`)
+    .join(" · ");
 }
 
 function formatObservationCategory(category: ObservationCategory): string {

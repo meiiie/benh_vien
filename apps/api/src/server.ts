@@ -15,7 +15,8 @@ import type {
   ObservationRepository,
   PatientRepository,
   ProviderDirectoryRepository,
-  ServiceRequestRepository
+  ServiceRequestRepository,
+  WorkflowTaskRepository
 } from "@benh-vien-so/domain";
 import { createAuditEventRepository } from "./modules/audit-events/create-audit-event.repository.js";
 import { registerAuditEventRoutes } from "./modules/audit-events/audit-event-routes.js";
@@ -44,6 +45,8 @@ import { createProviderDirectoryRepository } from "./modules/provider-directory/
 import { registerProviderDirectoryRoutes } from "./modules/provider-directory/provider-directory-routes.js";
 import { createServiceRequestRepository } from "./modules/service-requests/create-service-request.repository.js";
 import { registerServiceRequestRoutes } from "./modules/service-requests/service-request-routes.js";
+import { createWorkflowTaskRepository } from "./modules/workflow-tasks/create-workflow-task.repository.js";
+import { registerWorkflowTaskRoutes } from "./modules/workflow-tasks/workflow-task-routes.js";
 
 export type ServerOptions = {
   readonly patientRepository?: PatientRepository;
@@ -56,6 +59,7 @@ export type ServerOptions = {
   readonly imagingStudyRepository?: ImagingStudyRepository;
   readonly medicationRequestRepository?: MedicationRequestRepository;
   readonly serviceRequestRepository?: ServiceRequestRepository;
+  readonly workflowTaskRepository?: WorkflowTaskRepository;
   readonly clinicalDocumentRepository?: ClinicalDocumentRepository;
   readonly consentRepository?: ConsentRepository;
   readonly auditEventRepository?: AuditEventRepository;
@@ -117,6 +121,10 @@ export async function buildServer(options: ServerOptions = {}) {
           description: "Quản lý chỉ định xét nghiệm, hình ảnh, thủ thuật và FHIR ServiceRequest"
         },
         {
+          name: "workflow-tasks",
+          description: "Quản lý hàng đợi thực thi y lệnh và FHIR Task"
+        },
+        {
           name: "diagnostic-reports",
           description: "Quản lý báo cáo xét nghiệm, hình ảnh và FHIR DiagnosticReport"
         },
@@ -163,6 +171,8 @@ export async function buildServer(options: ServerOptions = {}) {
     options.medicationRequestRepository ?? (await createMedicationRequestRepository());
   const serviceRequestRepository =
     options.serviceRequestRepository ?? (await createServiceRequestRepository());
+  const workflowTaskRepository =
+    options.workflowTaskRepository ?? (await createWorkflowTaskRepository());
   const diagnosticReportRepository =
     options.diagnosticReportRepository ?? (await createDiagnosticReportRepository());
   const imagingStudyRepository =
@@ -195,6 +205,7 @@ export async function buildServer(options: ServerOptions = {}) {
         diagnosticReportRepository,
         imagingStudyRepository,
         providerDirectoryRepository,
+        workflowTaskRepository,
         consentRepository,
         auditEventRepository
       );
@@ -250,6 +261,14 @@ export async function buildServer(options: ServerOptions = {}) {
         encounterRepository,
         conditionRepository,
         serviceRequestRepository,
+        auditEventRepository
+      );
+      await registerWorkflowTaskRoutes(
+        api,
+        patientRepository,
+        encounterRepository,
+        serviceRequestRepository,
+        workflowTaskRepository,
         auditEventRepository
       );
       await registerDiagnosticReportRoutes(

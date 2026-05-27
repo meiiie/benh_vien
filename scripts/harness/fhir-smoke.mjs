@@ -27,6 +27,7 @@ const {
   Patient,
   ProviderDirectory,
   ServiceRequest,
+  WorkflowTask,
   canAccess,
   mapAllergyIntoleranceToFhir,
   mapClinicalDocumentToFhir,
@@ -40,7 +41,8 @@ const {
   mapPatientRecordToFhirBundle,
   mapPatientToFhir,
   mapProviderDirectoryToFhirBundle,
-  mapServiceRequestToFhir
+  mapServiceRequestToFhir,
+  mapWorkflowTaskToFhir
 } = await import(pathToFileURL(domainEntry).href);
 
 const { createAccessToken, verifyAccessToken } = await import(pathToFileURL(apiAuthEntry).href);
@@ -414,6 +416,61 @@ if (fhirImagingStudy.basedOn?.[0]?.reference !== "ServiceRequest/service-request
   throw new Error(`Expected imaging study basedOn ServiceRequest/service-request-harness-001.`);
 }
 
+const workflowTask = WorkflowTask.create({
+  id: "workflow-task-harness-001",
+  patientId: patient.id,
+  encounterId: encounter.id,
+  basedOnServiceRequestId: serviceRequest.id,
+  status: "completed",
+  priority: "urgent",
+  code: {
+    system: "urn:wiiicare:nexus:task-code",
+    code: "fulfill-laboratory-order",
+    display: "Fulfill laboratory order"
+  },
+  businessStatus: {
+    code: "result-issued",
+    display: "Result issued"
+  },
+  requesterPractitionerId: "practitioner-harness-001",
+  ownerOrganizationId: "department-laboratory",
+  authoredOn: "2026-05-27T00:00:00.000Z",
+  lastModified: "2026-05-27T02:00:00.000Z",
+  executionPeriod: {
+    start: "2026-05-27T01:00:00.000Z",
+    end: "2026-05-27T02:00:00.000Z"
+  },
+  inputReferences: [
+    {
+      resourceType: "ServiceRequest",
+      id: serviceRequest.id,
+      label: "Harness order"
+    }
+  ],
+  outputReferences: [
+    {
+      resourceType: "Observation",
+      id: observation.id,
+      label: "Harness hemoglobin"
+    },
+    {
+      resourceType: "DiagnosticReport",
+      id: diagnosticReport.id,
+      label: "Harness report"
+    }
+  ]
+});
+
+const fhirWorkflowTask = mapWorkflowTaskToFhir(workflowTask);
+
+if (fhirWorkflowTask.resourceType !== "Task") {
+  throw new Error(`Expected resourceType Task, received ${fhirWorkflowTask.resourceType}`);
+}
+
+if (fhirWorkflowTask.focus?.reference !== "ServiceRequest/service-request-harness-001") {
+  throw new Error("Expected workflow task focus ServiceRequest/service-request-harness-001.");
+}
+
 const medicationRequest = MedicationRequest.prescribe({
   id: "medication-request-harness-001",
   patientId: patient.id,
@@ -493,6 +550,7 @@ const fhirBundle = mapPatientRecordToFhirBundle({
   allergyIntolerances: [allergyIntolerance],
   conditions: [condition],
   serviceRequests: [serviceRequest],
+  workflowTasks: [workflowTask],
   observations: [observation],
   diagnosticReports: [diagnosticReport],
   imagingStudies: [imagingStudy],
@@ -510,8 +568,8 @@ if (fhirBundle.type !== "collection") {
   throw new Error(`Expected bundle type collection, received ${fhirBundle.type}`);
 }
 
-if (fhirBundle.entry.length !== 16) {
-  throw new Error(`Expected bundle to contain 16 entries, received ${fhirBundle.entry.length}`);
+if (fhirBundle.entry.length !== 17) {
+  throw new Error(`Expected bundle to contain 17 entries, received ${fhirBundle.entry.length}`);
 }
 
 const fhirDocumentBundle = mapPatientRecordToFhirDocumentBundle({
@@ -520,6 +578,7 @@ const fhirDocumentBundle = mapPatientRecordToFhirDocumentBundle({
   allergyIntolerances: [allergyIntolerance],
   conditions: [condition],
   serviceRequests: [serviceRequest],
+  workflowTasks: [workflowTask],
   observations: [observation],
   diagnosticReports: [diagnosticReport],
   imagingStudies: [imagingStudy],
@@ -544,9 +603,9 @@ if (fhirDocumentBundle.entry[0]?.resource.resourceType !== "Composition") {
   throw new Error("Expected first document bundle entry to be Composition.");
 }
 
-if (fhirDocumentBundle.entry.length !== 17) {
+if (fhirDocumentBundle.entry.length !== 18) {
   throw new Error(
-    `Expected document bundle to contain 17 entries, received ${fhirDocumentBundle.entry.length}`
+    `Expected document bundle to contain 18 entries, received ${fhirDocumentBundle.entry.length}`
   );
 }
 
@@ -663,6 +722,15 @@ const clinicianCanExportServiceRequest = canAccess(
   "service-request:fhir-export"
 );
 
+const clinicianCanExportWorkflowTask = canAccess(
+  {
+    actorId: "practitioner-harness-001",
+    role: "clinician",
+    purposeOfUse: "TREATMENT"
+  },
+  "workflow-task:fhir-export"
+);
+
 const clinicianCanExportDiagnosticReport = canAccess(
   {
     actorId: "practitioner-harness-001",
@@ -733,6 +801,15 @@ const nurseCanExportServiceRequest = canAccess(
     purposeOfUse: "TREATMENT"
   },
   "service-request:fhir-export"
+);
+
+const nurseCanExportWorkflowTask = canAccess(
+  {
+    actorId: "nurse-harness-001",
+    role: "nurse",
+    purposeOfUse: "TREATMENT"
+  },
+  "workflow-task:fhir-export"
 );
 
 const nurseCanExportDiagnosticReport = canAccess(
@@ -817,6 +894,10 @@ if (!clinicianCanExportServiceRequest) {
   throw new Error("Expected clinician/TREATMENT to export service requests.");
 }
 
+if (!clinicianCanExportWorkflowTask) {
+  throw new Error("Expected clinician/TREATMENT to export workflow tasks.");
+}
+
 if (!clinicianCanExportDiagnosticReport) {
   throw new Error("Expected clinician/TREATMENT to export diagnostic reports.");
 }
@@ -847,6 +928,10 @@ if (nurseCanExportMedicationRequest) {
 
 if (nurseCanExportServiceRequest) {
   throw new Error("Expected nurse/TREATMENT to be denied service-request:fhir-export.");
+}
+
+if (nurseCanExportWorkflowTask) {
+  throw new Error("Expected nurse/TREATMENT to be denied workflow-task:fhir-export.");
 }
 
 if (nurseCanExportDiagnosticReport) {
@@ -899,6 +984,8 @@ console.log(
       medicationRequestResourceType: fhirMedicationRequest.resourceType,
       serviceRequestId: fhirServiceRequest.id,
       serviceRequestResourceType: fhirServiceRequest.resourceType,
+      workflowTaskId: fhirWorkflowTask.id,
+      workflowTaskResourceType: fhirWorkflowTask.resourceType,
       bundleId: fhirBundle.id,
       bundleResourceType: fhirBundle.resourceType,
       bundleEntryCount: fhirBundle.entry.length,
@@ -924,6 +1011,7 @@ console.log(
         clinicianCanExportObservation,
         clinicianCanExportProviderDirectory,
         clinicianCanExportServiceRequest,
+        clinicianCanExportWorkflowTask,
         nurseCanExportAllergyIntolerance,
         nurseCanExportCondition,
         nurseCanExportDiagnosticReport,
@@ -933,6 +1021,7 @@ console.log(
         nurseCanExportProviderDirectory,
         nurseCanReadProviderDirectory,
         nurseCanExportServiceRequest,
+        nurseCanExportWorkflowTask,
         clinicianCanReadAudit,
         auditorCanReadAudit
       }

@@ -14,7 +14,7 @@ Hàm ý cho dự án:
 - Cần có ký/xác nhận điện tử ở vòng đời tài liệu.
 - Cần quản lý định danh bệnh nhân đủ nghiêm túc.
 - Cần audit trail và chính sách bảo vệ dữ liệu.
-- Cần cơ sở dữ liệu có migration, phân quyền, lưu vết, sao lưu và quy trình vận hành; phiên bản hiện tại mới đặt nền `patients`, `encounters`, `allergy_intolerances`, `conditions`, `service_requests`, `observations`, `diagnostic_reports`, `medication_requests`, `clinical_documents`, `consents`, `audit_events`, chưa tuyên bố đạt điều kiện triển khai bệnh viện thật.
+- Cần cơ sở dữ liệu có migration, phân quyền, lưu vết, sao lưu và quy trình vận hành; phiên bản hiện tại mới đặt nền `patients`, `encounters`, `allergy_intolerances`, `conditions`, `service_requests`, `workflow_tasks`, `observations`, `diagnostic_reports`, `imaging_studies`, `medication_requests`, `clinical_documents`, `consents`, `provider_directory_resources`, `audit_events`, chưa tuyên bố đạt điều kiện triển khai bệnh viện thật.
 
 ## HL7 FHIR R4
 
@@ -32,6 +32,8 @@ Nguồn:
 - [FHIR AllergyIntolerance Resource](https://hl7.org/fhir/R4/allergyintolerance.html)
 - [FHIR Condition Resource](https://hl7.org/fhir/R4/condition.html)
 - [FHIR ServiceRequest Resource](https://hl7.org/fhir/R4/servicerequest.html)
+- [FHIR Task Resource](https://hl7.org/fhir/R4/task.html)
+- [FHIR Workflow Module](https://hl7.org/fhir/R4/workflow.html)
 - [FHIR Observation Resource](https://hl7.org/fhir/R4/observation.html)
 - [FHIR DiagnosticReport Resource](https://hl7.org/fhir/R4/diagnosticreport.html)
 - [FHIR ImagingStudy Resource](https://hl7.org/fhir/R4/imagingstudy.html)
@@ -48,12 +50,13 @@ Hàm ý cho dự án:
 - `AllergyIntolerance` phù hợp cho nguy cơ phản ứng bất lợi với thuốc, thực phẩm, môi trường hoặc sinh phẩm; nên xem trước khi kê thuốc và không trộn lẫn với chẩn đoán bệnh thông thường.
 - `Condition` phù hợp cho chẩn đoán, vấn đề sức khỏe và problem list; nên đi kèm ICD-10/SNOMED CT hoặc danh mục được bệnh viện phê duyệt khi có dữ liệu thật.
 - `ServiceRequest` phù hợp cho chỉ định xét nghiệm, chẩn đoán hình ảnh, thủ thuật, hội chẩn hoặc dịch vụ điều trị; đây là yêu cầu thực hiện, không phải kết quả cuối cùng. Khi xuất FHIR, nhóm chỉ định nội bộ được ánh xạ sang SNOMED CT theo value set ví dụ của HL7 để tránh dùng mã UI làm mã trao đổi. Kết quả xét nghiệm/hình ảnh về sau nên được biểu diễn bằng `Observation`, `DiagnosticReport`, `ImagingStudy` hoặc tài liệu phù hợp.
+- `Task` phù hợp để theo dõi trạng thái thực thi của một công việc chăm sóc y tế: đã yêu cầu, đã nhận, đang thực hiện, hoàn tất hoặc thất bại. Trong dự án này, `Task` không thay thế `ServiceRequest`; `Task.focus`/`basedOn` trỏ về y lệnh gốc, còn `output` trỏ tới kết quả như `Observation`, `DiagnosticReport` hoặc `ImagingStudy`.
 - `Observation` phù hợp cho sinh hiệu, kết quả xét nghiệm và chỉ số có cấu trúc; nên đi kèm mã chuẩn như LOINC khi có dữ liệu thật.
 - `DiagnosticReport` phù hợp cho báo cáo xét nghiệm/hình ảnh đã phát hành; nên dùng `basedOn` để nối y lệnh `ServiceRequest` và `result` để tham chiếu các `Observation` nguyên tử.
 - `ImagingStudy` phù hợp để biểu diễn metadata của một nghiên cứu DICOM/PACS. Resource này nên chứa DICOM Study Instance UID trong `identifier`, trạng thái, modality, bệnh nhân, lượt khám, y lệnh gốc, endpoint truy xuất ảnh, số series, số instance và series metadata; không dùng nó để lưu ảnh nhị phân trực tiếp.
 - `MedicationRequest` phù hợp cho yêu cầu/chỉ định dùng thuốc, gồm trạng thái, mục đích, thuốc, bệnh nhân, lượt khám, người kê và hướng dẫn dùng thuốc; không nên đồng nhất với cấp phát hoặc dùng thuốc thực tế vì FHIR có `MedicationDispense` và `MedicationAdministration` riêng.
 - `Composition` phù hợp để tạo mục lục lâm sàng cho một FHIR document. Khi `Bundle.type = document`, entry đầu tiên bắt buộc phải là `Composition`; các section của Composition nên tham chiếu các resource nằm trong Bundle.
-- Khi phát triển tiếp cần bổ sung `Procedure`, `MedicationDispense`, `MedicationAdministration` và ràng buộc profile cụ thể hơn.
+- Khi phát triển tiếp cần bổ sung `Procedure`, `MedicationDispense`, `MedicationAdministration`, workflow engine hoặc event queue thật và ràng buộc profile cụ thể hơn.
 - Với liên thông bệnh án, `DocumentReference` và `Composition` quan trọng hơn việc chỉ gửi một file PDF rời rạc.
 
 ## DICOM và PACS

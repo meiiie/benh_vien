@@ -25,7 +25,8 @@ import type {
   PatientRepository,
   PatientSnapshot,
   ProviderDirectoryRepository,
-  ServiceRequestRepository
+  ServiceRequestRepository,
+  WorkflowTaskRepository
 } from "@benh-vien-so/domain";
 import { requirePermission } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
@@ -43,6 +44,7 @@ export async function registerPatientRoutes(
   diagnosticReportRepository: DiagnosticReportRepository,
   imagingStudyRepository: ImagingStudyRepository,
   providerDirectoryRepository: ProviderDirectoryRepository,
+  workflowTaskRepository: WorkflowTaskRepository,
   consentRepository: ConsentRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
@@ -221,6 +223,7 @@ export async function registerPatientRoutes(
       imagingStudies,
       medicationRequests,
       serviceRequests,
+      workflowTasks,
       providerDirectory
     ] = await Promise.all([
       encounterRepository.findByPatientId(params.id),
@@ -232,6 +235,7 @@ export async function registerPatientRoutes(
       imagingStudyRepository.findByPatientId(params.id),
       medicationRequestRepository.findByPatientId(params.id),
       serviceRequestRepository.findByPatientId(params.id),
+      workflowTaskRepository.findByPatientId(params.id),
       providerDirectoryRepository.findDirectory()
     ]);
 
@@ -254,6 +258,7 @@ export async function registerPatientRoutes(
         imagingStudyCount: imagingStudies.length,
         medicationRequestCount: medicationRequests.length,
         serviceRequestCount: serviceRequests.length,
+        workflowTaskCount: workflowTasks.length,
         documentCount: documents.length,
         providerDirectoryEntryCount:
           providerDirectory.toSnapshot().organizations.length +
@@ -273,6 +278,7 @@ export async function registerPatientRoutes(
       imagingStudies,
       medicationRequests,
       serviceRequests,
+      workflowTasks,
       documents,
       providerDirectory
     });
@@ -329,6 +335,7 @@ export async function registerPatientRoutes(
       imagingStudies,
       medicationRequests,
       serviceRequests,
+      workflowTasks,
       providerDirectory
     ] = await Promise.all([
       encounterRepository.findByPatientId(params.id),
@@ -340,6 +347,7 @@ export async function registerPatientRoutes(
       imagingStudyRepository.findByPatientId(params.id),
       medicationRequestRepository.findByPatientId(params.id),
       serviceRequestRepository.findByPatientId(params.id),
+      workflowTaskRepository.findByPatientId(params.id),
       providerDirectoryRepository.findDirectory()
     ]);
 
@@ -363,6 +371,7 @@ export async function registerPatientRoutes(
         imagingStudyCount: imagingStudies.length,
         medicationRequestCount: medicationRequests.length,
         serviceRequestCount: serviceRequests.length,
+        workflowTaskCount: workflowTasks.length,
         documentCount: documents.length,
         providerDirectoryEntryCount:
           providerDirectory.toSnapshot().organizations.length +
@@ -382,6 +391,7 @@ export async function registerPatientRoutes(
       imagingStudies,
       medicationRequests,
       serviceRequests,
+      workflowTasks,
       documents,
       providerDirectory,
       authorPractitionerId: actor.actorId

@@ -32,7 +32,7 @@ Trong dự án, PACS có thể được minh họa bằng Orthanc. EMR chỉ nê
 
 ## FHIR
 
-**Fast Healthcare Interoperability Resources** là chuẩn trao đổi dữ liệu y tế của HL7. FHIR định nghĩa các resource như `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Observation`, `DiagnosticReport`, `MedicationRequest`, `DocumentReference`, `Composition`.
+**Fast Healthcare Interoperability Resources** là chuẩn trao đổi dữ liệu y tế của HL7. FHIR định nghĩa các resource như `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Observation`, `DiagnosticReport`, `MedicationRequest`, `DocumentReference`, `Composition`.
 
 Trong dự án này, FHIR là lớp liên thông. Domain model nội bộ vẫn có thể khác FHIR, sau đó được mapping sang FHIR khi cần trao đổi.
 
@@ -53,6 +53,12 @@ Trong dự án này, AllergyIntolerance là lát cắt an toàn lâm sàng tối
 **ServiceRequest** là resource FHIR dùng cho chỉ định dịch vụ như xét nghiệm, chẩn đoán hình ảnh, thủ thuật, hội chẩn hoặc điều trị hỗ trợ. Đây là phần “yêu cầu thực hiện” trước khi có kết quả trả về.
 
 Trong dự án này, ServiceRequest là cầu nối từ EMR sang LIS/PACS/RIS: bác sĩ tạo chỉ định, hệ thống lưu mã dịch vụ, mức ưu tiên, khoa thực hiện, thời điểm dự kiến, người chỉ định và chẩn đoán liên quan.
+
+## Task
+
+**Task** là resource FHIR dùng để theo dõi một công việc cần thực hiện hoặc đang được thực hiện. Task phù hợp với hàng đợi nhận mẫu xét nghiệm, lịch chụp ảnh, đọc kết quả, hoàn tất báo cáo hoặc các bước vận hành khác.
+
+Trong dự án này, Task đóng vòng `ServiceRequest -> Task -> Output`: y lệnh gốc vẫn là ServiceRequest, còn Task theo dõi trạng thái thực thi, đơn vị phụ trách, thời gian bắt đầu/kết thúc và kết quả đầu ra như Observation, DiagnosticReport hoặc ImagingStudy.
 
 ## DiagnosticReport
 
