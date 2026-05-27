@@ -1,6 +1,6 @@
 # Ví dụ API
 
-API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `Patient`, `Encounter`, `Condition`, `Observation`, `ClinicalDocument`, `Consent`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
+API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `Patient`, `Encounter`, `Condition`, `Observation`, `MedicationRequest`, `ClinicalDocument`, `Consent`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
 
 ## Kiểm tra sức khỏe API
 
@@ -125,7 +125,7 @@ curl http://localhost:7310/api/v1/patients/patient-demo-001/fhir-bundle \
   -H "x-recipient-organization-id: hospital-hai-phong-referral"
 ```
 
-Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các `Encounter`, các `Condition`, các `Observation` và các `DocumentReference` của bệnh nhân. Endpoint này không chỉ kiểm header: `x-consent-reference` phải trỏ tới một consent đang hiệu lực, đúng bệnh nhân và đúng `x-recipient-organization-id`.
+Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các `Encounter`, các `Condition`, các `Observation`, các `MedicationRequest` và các `DocumentReference` của bệnh nhân. Endpoint này không chỉ kiểm header: `x-consent-reference` phải trỏ tới một consent đang hiệu lực, đúng bệnh nhân và đúng `x-recipient-organization-id`.
 
 ## Lấy và mở lượt khám
 
@@ -241,6 +241,55 @@ curl http://localhost:7310/api/v1/observations/observation-demo-001/fhir \
 ```
 
 Kết quả mong muốn là JSON có `resourceType` bằng `Observation`, có `subject`, `encounter`, `category`, `code`, `effectiveDateTime` và `valueQuantity`. Ở prototype hiện tại, UI ưu tiên chỉ số định lượng; API vẫn hỗ trợ đúng một trong hai kiểu giá trị: `valueQuantity` hoặc `valueText`.
+
+## Lấy, tạo và xuất chỉ định thuốc sang FHIR MedicationRequest
+
+```bash
+curl http://localhost:7310/api/v1/patients/patient-demo-001/medication-requests \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+```bash
+curl -X POST http://localhost:7310/api/v1/patients/patient-demo-001/medication-requests \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "encounterId": "encounter-demo-002",
+    "reasonConditionId": "condition-demo-002",
+    "category": "outpatient",
+    "priority": "routine",
+    "medicationCode": {
+      "system": "http://www.whocc.no/atc",
+      "code": "C08CA01",
+      "display": "Amlodipine"
+    },
+    "dosageInstruction": {
+      "text": "Uống 5 mg mỗi ngày vào buổi tối",
+      "route": "Đường uống",
+      "doseQuantity": {
+        "value": 5,
+        "unit": "mg",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg"
+      },
+      "frequency": 1,
+      "period": 1,
+      "periodUnit": "d"
+    },
+    "requesterPractitionerId": "practitioner-demo-001",
+    "expectedSupplyDurationDays": 30
+  }'
+```
+
+```bash
+curl http://localhost:7310/api/v1/medication-requests/medication-request-demo-001/fhir \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+Kết quả mong muốn là JSON có `resourceType` bằng `MedicationRequest`, có `status`, `intent`, `medicationCodeableConcept`, `subject`, `encounter`, `requester`, `dosageInstruction`, và `reasonReference` nếu chỉ định thuốc được gắn với một chẩn đoán.
 
 ## Lấy, tạo, ký và xuất tài liệu bệnh án
 

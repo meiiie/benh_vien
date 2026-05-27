@@ -505,6 +505,8 @@ h2 {
 .document-card small,
 .condition-card span,
 .condition-card small,
+.medication-card span,
+.medication-card small,
 .observation-card span,
 .observation-card small {
   color: var(--muted);
@@ -542,7 +544,7 @@ h2 {
 
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -600,6 +602,7 @@ h2 {
 .timeline-item,
 .document-card,
 .condition-card,
+.medication-card,
 .observation-card {
   width: 100%;
   border: 1px solid var(--line);
@@ -619,6 +622,8 @@ h2 {
 .document-card.selected,
 .condition-card:hover,
 .condition-card.selected,
+.medication-card:hover,
+.medication-card.selected,
 .observation-card:hover,
 .observation-card.selected {
   border-color: rgba(0, 86, 210, 0.36);
@@ -639,6 +644,9 @@ h2 {
 .condition-card span,
 .condition-card strong,
 .condition-card small,
+.medication-card span,
+.medication-card strong,
+.medication-card small,
 .observation-card span,
 .observation-card strong,
 .observation-card small {
@@ -669,6 +677,7 @@ h2 {
 .timeline,
 .document-cards,
 .condition-cards,
+.medication-cards,
 .observation-cards,
 .audit-list {
   display: grid;
@@ -746,6 +755,7 @@ code {
 .patient-form,
 .encounter-form,
 .condition-form,
+.medication-form,
 .observation-form,
 .document-form {
   display: grid;
@@ -786,6 +796,7 @@ select:focus {
 .patient-form .primary-button,
 .encounter-form .primary-button,
 .condition-form .primary-button,
+.medication-form .primary-button,
 .observation-form .primary-button,
 .document-form .primary-button {
   grid-column: 1 / -1;
@@ -794,6 +805,7 @@ select:focus {
 .document-panel,
 .encounter-panel,
 .condition-panel,
+.medication-panel,
 .observation-panel,
 .audit-panel {
   grid-column: 1 / -1;
@@ -827,6 +839,7 @@ select:focus {
 .encounter-summary,
 .document-summary,
 .condition-summary,
+.medication-summary,
 .observation-summary {
   display: grid;
   align-content: start;
@@ -972,7 +985,7 @@ pre {
 
 .workflow-strip {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -1090,6 +1103,7 @@ pre {
   .encounter-layout,
   .encounter-form,
   .condition-form,
+  .medication-form,
   .observation-form,
   .document-layout,
   .document-meta,

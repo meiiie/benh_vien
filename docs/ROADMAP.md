@@ -16,7 +16,7 @@
 ## Giai đoạn 2: Liên thông FHIR
 
 - Kết nối HAPI FHIR ở chế độ thử nghiệm.
-- Mapping `Patient`, `Encounter`, `Condition`, `Observation`, `DocumentReference`, `Composition`.
+- Mapping `Patient`, `Encounter`, `Condition`, `Observation`, `MedicationRequest`, `DocumentReference`, `Composition`.
 - Tạo luồng xuất gói hồ sơ bệnh án cho một bệnh nhân.
 - Kiểm tra luồng nhận lại dữ liệu từ FHIR server.
 
@@ -42,4 +42,3 @@ Chỉ tách microservice khi có lý do thật:
 - `Imaging Service` khi dữ liệu ảnh lớn hoặc cần vận hành PACS riêng.
 - `Audit Service` khi cần lưu trữ bất biến hoặc kiểm toán độc lập.
 - `Identity Service` khi có nhiều ứng dụng cùng dùng định danh và phân quyền.
-

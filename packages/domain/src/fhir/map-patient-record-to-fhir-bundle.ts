@@ -1,6 +1,7 @@
 import type { ClinicalDocument } from "../clinical-document/clinical-document.js";
 import type { Condition } from "../condition/condition.js";
 import type { Encounter } from "../encounter/encounter.js";
+import type { MedicationRequest } from "../medication-request/medication-request.js";
 import type { Observation } from "../observation/observation.js";
 import type { Patient } from "../patient/patient.js";
 import type {
@@ -8,12 +9,14 @@ import type {
   FhirCondition,
   FhirDocumentReference,
   FhirEncounter,
+  FhirMedicationRequest,
   FhirObservation,
   FhirPatient
 } from "./fhir-types.js";
 import { mapClinicalDocumentToFhir } from "./map-clinical-document-to-fhir.js";
 import { mapConditionToFhir } from "./map-condition-to-fhir.js";
 import { mapEncounterToFhir } from "./map-encounter-to-fhir.js";
+import { mapMedicationRequestToFhir } from "./map-medication-request-to-fhir.js";
 import { mapObservationToFhir } from "./map-observation-to-fhir.js";
 import { mapPatientToFhir } from "./map-patient-to-fhir.js";
 
@@ -22,6 +25,7 @@ export type PatientRecordBundleInput = {
   readonly encounters: readonly Encounter[];
   readonly conditions?: readonly Condition[];
   readonly observations?: readonly Observation[];
+  readonly medicationRequests?: readonly MedicationRequest[];
   readonly documents: readonly ClinicalDocument[];
   readonly generatedAt?: Date;
 };
@@ -32,8 +36,16 @@ export function mapPatientRecordToFhirBundle(input: PatientRecordBundleInput): F
   const encounters = input.encounters.map(mapEncounterToFhir);
   const conditions = input.conditions?.map(mapConditionToFhir) ?? [];
   const observations = input.observations?.map(mapObservationToFhir) ?? [];
+  const medicationRequests = input.medicationRequests?.map(mapMedicationRequestToFhir) ?? [];
   const documents = input.documents.map(mapClinicalDocumentToFhir);
-  const resources = [patient, ...encounters, ...conditions, ...observations, ...documents];
+  const resources = [
+    patient,
+    ...encounters,
+    ...conditions,
+    ...observations,
+    ...medicationRequests,
+    ...documents
+  ];
 
   return {
     resourceType: "Bundle",
@@ -57,6 +69,7 @@ function toBundleEntry(
     | FhirEncounter
     | FhirCondition
     | FhirObservation
+    | FhirMedicationRequest
     | FhirDocumentReference
 ): FhirBundle["entry"][number] {
   return {

@@ -162,9 +162,16 @@ describe("API auth and RBAC boundary", () => {
       type: "collection"
     });
     expect(resourceTypes).toEqual(
-      expect.arrayContaining(["Patient", "Encounter", "Condition", "Observation", "DocumentReference"])
+      expect.arrayContaining([
+        "Patient",
+        "Encounter",
+        "Condition",
+        "Observation",
+        "MedicationRequest",
+        "DocumentReference"
+      ])
     );
-    expect(body.entry).toHaveLength(10);
+    expect(body.entry).toHaveLength(12);
   });
 
   it("lists conditions and exports them as FHIR Condition", async () => {
@@ -294,6 +301,84 @@ describe("API auth and RBAC boundary", () => {
       patientId: "patient-demo-001",
       encounterId: "encounter-demo-002",
       category: "vital-signs"
+    });
+  });
+
+  it("lists medication requests and exports them as FHIR MedicationRequest", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const listResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/medication-requests",
+      headers: treatmentHeaders(accessToken)
+    });
+    const listBody = listResponse.json();
+
+    expect(listResponse.statusCode).toBe(200);
+    expect(listBody.items).toHaveLength(2);
+
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: `/api/v1/medication-requests/${listBody.items[0].id}/fhir`,
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(fhirResponse.statusCode).toBe(200);
+    expect(fhirResponse.json()).toMatchObject({
+      resourceType: "MedicationRequest",
+      status: "active",
+      intent: "order",
+      subject: {
+        reference: "Patient/patient-demo-001"
+      }
+    });
+  });
+
+  it("creates a medication request linked to a patient condition", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/medication-requests",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: "encounter-demo-002",
+        reasonConditionId: "condition-demo-002",
+        category: "outpatient",
+        medicationCode: {
+          system: "http://www.whocc.no/atc",
+          code: "C08CA01",
+          display: "Amlodipine"
+        },
+        dosageInstruction: {
+          text: "Uống 5 mg mỗi ngày vào buổi tối",
+          route: "Đường uống",
+          doseQuantity: {
+            value: 5,
+            unit: "mg",
+            system: "http://unitsofmeasure.org",
+            code: "mg"
+          },
+          frequency: 1,
+          period: 1,
+          periodUnit: "d"
+        },
+        requesterPractitionerId: "practitioner-demo-001",
+        expectedSupplyDurationDays: 30
+      }
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({
+      patientId: "patient-demo-001",
+      encounterId: "encounter-demo-002",
+      reasonConditionId: "condition-demo-002",
+      category: "outpatient"
     });
   });
 

@@ -19,12 +19,14 @@ const {
   Condition,
   Consent,
   Encounter,
+  MedicationRequest,
   Observation,
   Patient,
   canAccess,
   mapClinicalDocumentToFhir,
   mapConditionToFhir,
   mapEncounterToFhir,
+  mapMedicationRequestToFhir,
   mapObservationToFhir,
   mapPatientRecordToFhirBundle,
   mapPatientToFhir
@@ -166,6 +168,49 @@ if (fhirObservation.subject.reference !== "Patient/patient-harness-001") {
   );
 }
 
+const medicationRequest = MedicationRequest.prescribe({
+  id: "medication-request-harness-001",
+  patientId: patient.id,
+  encounterId: encounter.id,
+  reasonConditionId: condition.id,
+  category: "outpatient",
+  medicationCode: {
+    system: "http://www.whocc.no/atc",
+    code: "J01CA04",
+    display: "Amoxicillin"
+  },
+  dosageInstruction: {
+    text: "Take 500 mg every 8 hours after meals for 5 days",
+    route: "Oral route",
+    doseQuantity: {
+      value: 500,
+      unit: "mg",
+      system: "http://unitsofmeasure.org",
+      code: "mg"
+    },
+    frequency: 1,
+    period: 8,
+    periodUnit: "h"
+  },
+  authoredOn: "2026-05-27T00:00:00.000Z",
+  requesterPractitionerId: "practitioner-harness-001",
+  expectedSupplyDurationDays: 5
+});
+
+const fhirMedicationRequest = mapMedicationRequestToFhir(medicationRequest);
+
+if (fhirMedicationRequest.resourceType !== "MedicationRequest") {
+  throw new Error(
+    `Expected resourceType MedicationRequest, received ${fhirMedicationRequest.resourceType}`
+  );
+}
+
+if (fhirMedicationRequest.subject.reference !== "Patient/patient-harness-001") {
+  throw new Error(
+    `Expected medication request subject Patient/patient-harness-001, received ${fhirMedicationRequest.subject.reference}`
+  );
+}
+
 const document = ClinicalDocument.create({
   id: "clinical-document-harness-001",
   patientId: patient.id,
@@ -201,6 +246,7 @@ const fhirBundle = mapPatientRecordToFhirBundle({
   encounters: [encounter],
   conditions: [condition],
   observations: [observation],
+  medicationRequests: [medicationRequest],
   documents: [document],
   generatedAt: new Date("2026-05-27T00:00:00.000Z")
 });
@@ -213,8 +259,8 @@ if (fhirBundle.type !== "collection") {
   throw new Error(`Expected bundle type collection, received ${fhirBundle.type}`);
 }
 
-if (fhirBundle.entry.length !== 5) {
-  throw new Error(`Expected bundle to contain 5 entries, received ${fhirBundle.entry.length}`);
+if (fhirBundle.entry.length !== 6) {
+  throw new Error(`Expected bundle to contain 6 entries, received ${fhirBundle.entry.length}`);
 }
 
 const consent = Consent.grant({
@@ -303,6 +349,15 @@ const clinicianCanExportCondition = canAccess(
   "condition:fhir-export"
 );
 
+const clinicianCanExportMedicationRequest = canAccess(
+  {
+    actorId: "practitioner-harness-001",
+    role: "clinician",
+    purposeOfUse: "TREATMENT"
+  },
+  "medication-request:fhir-export"
+);
+
 const nurseCanExportObservation = canAccess(
   {
     actorId: "nurse-harness-001",
@@ -319,6 +374,15 @@ const nurseCanExportCondition = canAccess(
     purposeOfUse: "TREATMENT"
   },
   "condition:fhir-export"
+);
+
+const nurseCanExportMedicationRequest = canAccess(
+  {
+    actorId: "nurse-harness-001",
+    role: "nurse",
+    purposeOfUse: "TREATMENT"
+  },
+  "medication-request:fhir-export"
 );
 
 const clinicianCanReadAudit = canAccess(
@@ -355,12 +419,20 @@ if (!clinicianCanExportCondition) {
   throw new Error("Expected clinician/TREATMENT to export conditions.");
 }
 
+if (!clinicianCanExportMedicationRequest) {
+  throw new Error("Expected clinician/TREATMENT to export medication requests.");
+}
+
 if (nurseCanExportObservation) {
   throw new Error("Expected nurse/TREATMENT to be denied observation:fhir-export.");
 }
 
 if (nurseCanExportCondition) {
   throw new Error("Expected nurse/TREATMENT to be denied condition:fhir-export.");
+}
+
+if (nurseCanExportMedicationRequest) {
+  throw new Error("Expected nurse/TREATMENT to be denied medication-request:fhir-export.");
 }
 
 if (clinicianCanReadAudit) {
@@ -386,6 +458,8 @@ console.log(
       conditionResourceType: fhirCondition.resourceType,
       observationId: fhirObservation.id,
       observationResourceType: fhirObservation.resourceType,
+      medicationRequestId: fhirMedicationRequest.id,
+      medicationRequestResourceType: fhirMedicationRequest.resourceType,
       bundleId: fhirBundle.id,
       bundleResourceType: fhirBundle.resourceType,
       bundleEntryCount: fhirBundle.entry.length,
@@ -400,8 +474,10 @@ console.log(
         clinicianCanCreateEncounter,
         clinicianCanCreateDocument,
         clinicianCanExportCondition,
+        clinicianCanExportMedicationRequest,
         clinicianCanExportObservation,
         nurseCanExportCondition,
+        nurseCanExportMedicationRequest,
         nurseCanExportObservation,
         clinicianCanReadAudit,
         auditorCanReadAudit

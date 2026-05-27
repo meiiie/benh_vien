@@ -16,6 +16,10 @@ export type Permission =
   | "condition:create"
   | "condition:read"
   | "condition:fhir-export"
+  | "medication-request:list"
+  | "medication-request:create"
+  | "medication-request:read"
+  | "medication-request:fhir-export"
   | "observation:list"
   | "observation:create"
   | "observation:read"
@@ -49,6 +53,10 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "condition:create",
     "condition:read",
     "condition:fhir-export",
+    "medication-request:list",
+    "medication-request:create",
+    "medication-request:read",
+    "medication-request:fhir-export",
     "observation:list",
     "observation:create",
     "observation:read",
@@ -68,6 +76,9 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "condition:list",
     "condition:create",
     "condition:read",
+    "medication-request:list",
+    "medication-request:create",
+    "medication-request:read",
     "observation:list",
     "observation:create",
     "observation:read",
@@ -90,6 +101,10 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "condition:create",
     "condition:read",
     "condition:fhir-export",
+    "medication-request:list",
+    "medication-request:create",
+    "medication-request:read",
+    "medication-request:fhir-export",
     "observation:list",
     "observation:create",
     "observation:read",

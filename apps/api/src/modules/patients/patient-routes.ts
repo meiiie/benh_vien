@@ -16,6 +16,7 @@ import type {
   ConditionRepository,
   ConsentRepository,
   EncounterRepository,
+  MedicationRequestRepository,
   ObservationRepository,
   PatientRepository,
   PatientSnapshot
@@ -30,6 +31,7 @@ export async function registerPatientRoutes(
   documentRepository: ClinicalDocumentRepository,
   conditionRepository: ConditionRepository,
   observationRepository: ObservationRepository,
+  medicationRequestRepository: MedicationRequestRepository,
   consentRepository: ConsentRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
@@ -198,11 +200,12 @@ export async function registerPatientRoutes(
       });
     }
 
-    const [encounters, documents, conditions, observations] = await Promise.all([
+    const [encounters, documents, conditions, observations, medicationRequests] = await Promise.all([
       encounterRepository.findByPatientId(params.id),
       documentRepository.findByPatientId(params.id),
       conditionRepository.findByPatientId(params.id),
-      observationRepository.findByPatientId(params.id)
+      observationRepository.findByPatientId(params.id),
+      medicationRequestRepository.findByPatientId(params.id)
     ]);
 
     await recordAuditEvent(auditRepository, request, {
@@ -219,6 +222,7 @@ export async function registerPatientRoutes(
         encounterCount: encounters.length,
         conditionCount: conditions.length,
         observationCount: observations.length,
+        medicationRequestCount: medicationRequests.length,
         documentCount: documents.length
       }
     });
@@ -228,6 +232,7 @@ export async function registerPatientRoutes(
       encounters,
       conditions,
       observations,
+      medicationRequests,
       documents
     });
   });
