@@ -15,6 +15,7 @@ Trong các hệ thống y tế, audit trail là lớp nền để truy vết tru
 Bổ sung `AuditEvent` như một bounded context tối thiểu trước khi mở rộng sang các phần nhạy cảm hơn:
 
 - Ghi audit khi tải danh sách bệnh nhân, tạo bệnh nhân, xem/xuất FHIR Patient.
+- Ghi audit khi đọc Provider Directory và xuất FHIR Provider Directory/Endpoint để truy vết danh bạ liên thông.
 - Ghi audit khi tải, tạo, xem và xuất FHIR AllergyIntolerance cho dị ứng/cảnh báo an toàn lâm sàng.
 - Ghi audit khi tải, tạo, xem và xuất FHIR Condition cho chẩn đoán/vấn đề sức khỏe.
 - Ghi audit khi tải, tạo, xem và xuất FHIR ServiceRequest cho chỉ định xét nghiệm/chẩn đoán hình ảnh/thủ thuật.

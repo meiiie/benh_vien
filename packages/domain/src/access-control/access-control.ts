@@ -7,6 +7,8 @@ export type Permission =
   | "patient:create"
   | "patient:read"
   | "patient:fhir-export"
+  | "provider-directory:read"
+  | "provider-directory:fhir-export"
   | "encounter:list"
   | "encounter:create"
   | "encounter:read"
@@ -60,6 +62,8 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "patient:create",
     "patient:read",
     "patient:fhir-export",
+    "provider-directory:read",
+    "provider-directory:fhir-export",
     "encounter:list",
     "encounter:create",
     "encounter:read",
@@ -103,6 +107,7 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
   nurse: [
     "patient:list",
     "patient:read",
+    "provider-directory:read",
     "encounter:list",
     "encounter:read",
     "allergy-intolerance:list",
@@ -130,12 +135,14 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "clinical-document:create",
     "consent:list"
   ],
-  auditor: ["patient:read", "audit-event:list"],
+  auditor: ["patient:read", "provider-directory:read", "audit-event:list"],
   admin: [
     "patient:list",
     "patient:create",
     "patient:read",
     "patient:fhir-export",
+    "provider-directory:read",
+    "provider-directory:fhir-export",
     "encounter:list",
     "encounter:create",
     "encounter:read",

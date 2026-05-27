@@ -24,6 +24,7 @@ import type {
   ObservationRepository,
   PatientRepository,
   PatientSnapshot,
+  ProviderDirectoryRepository,
   ServiceRequestRepository
 } from "@benh-vien-so/domain";
 import { requirePermission } from "../access-control/access-context.js";
@@ -41,6 +42,7 @@ export async function registerPatientRoutes(
   serviceRequestRepository: ServiceRequestRepository,
   diagnosticReportRepository: DiagnosticReportRepository,
   imagingStudyRepository: ImagingStudyRepository,
+  providerDirectoryRepository: ProviderDirectoryRepository,
   consentRepository: ConsentRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
@@ -218,7 +220,8 @@ export async function registerPatientRoutes(
       diagnosticReports,
       imagingStudies,
       medicationRequests,
-      serviceRequests
+      serviceRequests,
+      providerDirectory
     ] = await Promise.all([
       encounterRepository.findByPatientId(params.id),
       allergyIntoleranceRepository.findByPatientId(params.id),
@@ -228,7 +231,8 @@ export async function registerPatientRoutes(
       diagnosticReportRepository.findByPatientId(params.id),
       imagingStudyRepository.findByPatientId(params.id),
       medicationRequestRepository.findByPatientId(params.id),
-      serviceRequestRepository.findByPatientId(params.id)
+      serviceRequestRepository.findByPatientId(params.id),
+      providerDirectoryRepository.findDirectory()
     ]);
 
     await recordAuditEvent(auditRepository, request, {
@@ -250,7 +254,12 @@ export async function registerPatientRoutes(
         imagingStudyCount: imagingStudies.length,
         medicationRequestCount: medicationRequests.length,
         serviceRequestCount: serviceRequests.length,
-        documentCount: documents.length
+        documentCount: documents.length,
+        providerDirectoryEntryCount:
+          providerDirectory.toSnapshot().organizations.length +
+          providerDirectory.toSnapshot().practitioners.length +
+          providerDirectory.toSnapshot().practitionerRoles.length +
+          providerDirectory.toSnapshot().endpoints.length
       }
     });
 
@@ -264,7 +273,8 @@ export async function registerPatientRoutes(
       imagingStudies,
       medicationRequests,
       serviceRequests,
-      documents
+      documents,
+      providerDirectory
     });
   });
 
@@ -318,7 +328,8 @@ export async function registerPatientRoutes(
       diagnosticReports,
       imagingStudies,
       medicationRequests,
-      serviceRequests
+      serviceRequests,
+      providerDirectory
     ] = await Promise.all([
       encounterRepository.findByPatientId(params.id),
       allergyIntoleranceRepository.findByPatientId(params.id),
@@ -328,7 +339,8 @@ export async function registerPatientRoutes(
       diagnosticReportRepository.findByPatientId(params.id),
       imagingStudyRepository.findByPatientId(params.id),
       medicationRequestRepository.findByPatientId(params.id),
-      serviceRequestRepository.findByPatientId(params.id)
+      serviceRequestRepository.findByPatientId(params.id),
+      providerDirectoryRepository.findDirectory()
     ]);
 
     await recordAuditEvent(auditRepository, request, {
@@ -351,7 +363,12 @@ export async function registerPatientRoutes(
         imagingStudyCount: imagingStudies.length,
         medicationRequestCount: medicationRequests.length,
         serviceRequestCount: serviceRequests.length,
-        documentCount: documents.length
+        documentCount: documents.length,
+        providerDirectoryEntryCount:
+          providerDirectory.toSnapshot().organizations.length +
+          providerDirectory.toSnapshot().practitioners.length +
+          providerDirectory.toSnapshot().practitionerRoles.length +
+          providerDirectory.toSnapshot().endpoints.length
       }
     });
 
@@ -366,6 +383,7 @@ export async function registerPatientRoutes(
       medicationRequests,
       serviceRequests,
       documents,
+      providerDirectory,
       authorPractitionerId: actor.actorId
     });
   });

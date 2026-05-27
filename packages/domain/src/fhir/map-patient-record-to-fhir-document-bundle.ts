@@ -87,6 +87,12 @@ function buildComposition(
         }
       : undefined,
     section: [
+      buildSection("Cơ sở, nhân sự và endpoint liên thông", entries, [
+        "Organization",
+        "Practitioner",
+        "PractitionerRole",
+        "Endpoint"
+      ]),
       buildSection("Lượt khám", entries, ["Encounter"]),
       buildSection("Dị ứng và cảnh báo", entries, ["AllergyIntolerance"]),
       buildSection("Chẩn đoán và vấn đề sức khỏe", entries, ["Condition"]),

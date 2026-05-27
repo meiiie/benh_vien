@@ -32,9 +32,15 @@ Trong dự án, PACS có thể được minh họa bằng Orthanc. EMR chỉ nê
 
 ## FHIR
 
-**Fast Healthcare Interoperability Resources** là chuẩn trao đổi dữ liệu y tế của HL7. FHIR định nghĩa các resource như `Patient`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Observation`, `DiagnosticReport`, `MedicationRequest`, `DocumentReference`, `Composition`.
+**Fast Healthcare Interoperability Resources** là chuẩn trao đổi dữ liệu y tế của HL7. FHIR định nghĩa các resource như `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Observation`, `DiagnosticReport`, `MedicationRequest`, `DocumentReference`, `Composition`.
 
 Trong dự án này, FHIR là lớp liên thông. Domain model nội bộ vẫn có thể khác FHIR, sau đó được mapping sang FHIR khi cần trao đổi.
+
+## Provider Directory
+
+**Provider Directory** là danh bạ cơ sở cung cấp dịch vụ y tế, thường gồm bệnh viện, khoa/phòng, nhân sự, vai trò của nhân sự và endpoint kỹ thuật để trao đổi dữ liệu. Trong FHIR R4, phần này thường được biểu diễn bằng `Organization`, `Practitioner`, `PractitionerRole` và `Endpoint`.
+
+Trong dự án này, Provider Directory giúp các tham chiếu như cơ sở quản lý hồ sơ, khoa thực hiện xét nghiệm, bác sĩ chỉ định, bác sĩ đọc ảnh và endpoint PACS/FHIR không bị rỗng ngữ cảnh khi xuất Bundle chuyển viện/liên viện.
 
 ## AllergyIntolerance
 

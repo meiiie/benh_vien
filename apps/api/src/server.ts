@@ -14,6 +14,7 @@ import type {
   MedicationRequestRepository,
   ObservationRepository,
   PatientRepository,
+  ProviderDirectoryRepository,
   ServiceRequestRepository
 } from "@benh-vien-so/domain";
 import { createAuditEventRepository } from "./modules/audit-events/create-audit-event.repository.js";
@@ -39,6 +40,8 @@ import { createObservationRepository } from "./modules/observations/create-obser
 import { registerObservationRoutes } from "./modules/observations/observation-routes.js";
 import { createPatientRepository } from "./modules/patients/create-patient.repository.js";
 import { registerPatientRoutes } from "./modules/patients/patient-routes.js";
+import { createProviderDirectoryRepository } from "./modules/provider-directory/create-provider-directory.repository.js";
+import { registerProviderDirectoryRoutes } from "./modules/provider-directory/provider-directory-routes.js";
 import { createServiceRequestRepository } from "./modules/service-requests/create-service-request.repository.js";
 import { registerServiceRequestRoutes } from "./modules/service-requests/service-request-routes.js";
 
@@ -48,6 +51,7 @@ export type ServerOptions = {
   readonly allergyIntoleranceRepository?: AllergyIntoleranceRepository;
   readonly conditionRepository?: ConditionRepository;
   readonly observationRepository?: ObservationRepository;
+  readonly providerDirectoryRepository?: ProviderDirectoryRepository;
   readonly diagnosticReportRepository?: DiagnosticReportRepository;
   readonly imagingStudyRepository?: ImagingStudyRepository;
   readonly medicationRequestRepository?: MedicationRequestRepository;
@@ -131,6 +135,10 @@ export async function buildServer(options: ServerOptions = {}) {
         {
           name: "patients",
           description: "Quản lý định danh và hồ sơ bệnh nhân"
+        },
+        {
+          name: "provider-directory",
+          description: "Quản lý danh bạ cơ sở y tế, nhân sự và endpoint liên thông FHIR/PACS/LIS"
         }
       ]
     }
@@ -141,6 +149,8 @@ export async function buildServer(options: ServerOptions = {}) {
   });
 
   const patientRepository = options.patientRepository ?? (await createPatientRepository());
+  const providerDirectoryRepository =
+    options.providerDirectoryRepository ?? (await createProviderDirectoryRepository());
   const encounterRepository =
     options.encounterRepository ?? (await createEncounterRepository());
   const allergyIntoleranceRepository =
@@ -184,7 +194,13 @@ export async function buildServer(options: ServerOptions = {}) {
         serviceRequestRepository,
         diagnosticReportRepository,
         imagingStudyRepository,
+        providerDirectoryRepository,
         consentRepository,
+        auditEventRepository
+      );
+      await registerProviderDirectoryRoutes(
+        api,
+        providerDirectoryRepository,
         auditEventRepository
       );
       await registerConsentRoutes(

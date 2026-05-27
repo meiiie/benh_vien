@@ -9,6 +9,7 @@
 ## Giai đoạn 1: Hồ sơ bệnh nhân và tài liệu bệnh án
 
 - Patient Registry: nhiều định danh cho một bệnh nhân.
+- Provider Directory: cơ sở y tế, khoa/phòng, nhân sự, vai trò và endpoint liên thông.
 - Clinical Records: tài liệu bệnh án, trạng thái ký/xác nhận, lịch sử chỉnh sửa.
 - Audit & Compliance: nhật ký xem, sửa, ký, xuất hồ sơ.
 - Web demo: màn hình bệnh nhân, danh sách tài liệu, trạng thái ký.
@@ -16,7 +17,7 @@
 ## Giai đoạn 2: Liên thông FHIR
 
 - Kết nối HAPI FHIR ở chế độ thử nghiệm.
-- Mapping `Patient`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `DocumentReference`, `Composition`.
+- Mapping `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `DocumentReference`, `Composition`.
 - Tạo luồng xuất gói hồ sơ bệnh án cho một bệnh nhân.
 - Kiểm tra luồng nhận lại dữ liệu từ FHIR server.
 

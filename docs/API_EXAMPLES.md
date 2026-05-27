@@ -1,6 +1,6 @@
 # Ví dụ API
 
-API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `Patient`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `ClinicalDocument`, `Consent`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
+API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `Patient`, `ProviderDirectory`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `ClinicalDocument`, `Consent`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
 
 ## Kiểm tra sức khỏe API
 
@@ -87,6 +87,22 @@ curl http://localhost:7310/api/v1/patients/patient-demo-001/fhir \
 
 Kết quả mong muốn là JSON có `resourceType` bằng `Patient`, có định danh, họ tên, ngày sinh, giới tính và cơ sở quản lý.
 
+## Lấy Provider Directory và xuất FHIR Endpoint
+
+```bash
+curl http://localhost:7310/api/v1/provider-directory \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+```bash
+curl http://localhost:7310/api/v1/provider-directory/Endpoint/endpoint-pacs-hai-phong-demo/fhir \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+Kết quả mong muốn là danh bạ có `organizations`, `practitioners`, `practitionerRoles`, `endpoints`; endpoint PACS demo xuất sang FHIR `Endpoint` với `connectionType.code = dicom-wado-rs`, `managingOrganization` và `payloadType` mô tả dữ liệu hỗ trợ. Đây là phần giúp Bundle chuyển viện không có các reference treo tới cơ sở y tế, bác sĩ hoặc endpoint ảnh.
+
 ## Lấy consent chia sẻ hồ sơ của bệnh nhân
 
 ```bash
@@ -125,7 +141,7 @@ curl http://localhost:7310/api/v1/patients/patient-demo-001/fhir-bundle \
   -H "x-recipient-organization-id: hospital-hai-phong-referral"
 ```
 
-Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các `Encounter`, các `AllergyIntolerance`, các `Condition`, các `ServiceRequest`, các `Observation`, các `DiagnosticReport`, các `ImagingStudy`, các `MedicationRequest` và các `DocumentReference` của bệnh nhân. Endpoint này không chỉ kiểm header: `x-consent-reference` phải trỏ tới một consent đang hiệu lực, đúng bệnh nhân và đúng `x-recipient-organization-id`.
+Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các tài nguyên Provider Directory (`Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`), các `Encounter`, các `AllergyIntolerance`, các `Condition`, các `ServiceRequest`, các `Observation`, các `DiagnosticReport`, các `ImagingStudy`, các `MedicationRequest` và các `DocumentReference` của bệnh nhân. Endpoint này không chỉ kiểm header: `x-consent-reference` phải trỏ tới một consent đang hiệu lực, đúng bệnh nhân và đúng `x-recipient-organization-id`.
 
 ## Xuất gói tài liệu bệnh án sang FHIR document Bundle
 
@@ -137,7 +153,7 @@ curl http://localhost:7310/api/v1/patients/patient-demo-001/fhir-document-bundle
   -H "x-recipient-organization-id: hospital-hai-phong-referral"
 ```
 
-Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `document`, và `entry[0].resource.resourceType` bằng `Composition`. Các section của `Composition` tham chiếu tới nhóm lượt khám, dị ứng, chẩn đoán, y lệnh dịch vụ, chỉ số, báo cáo kết quả, nghiên cứu hình ảnh, chỉ định thuốc và tài liệu lâm sàng trong cùng Bundle.
+Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `document`, và `entry[0].resource.resourceType` bằng `Composition`. Các section của `Composition` tham chiếu tới nhóm cơ sở/nhân sự/endpoint liên thông, lượt khám, dị ứng, chẩn đoán, y lệnh dịch vụ, chỉ số, báo cáo kết quả, nghiên cứu hình ảnh, chỉ định thuốc và tài liệu lâm sàng trong cùng Bundle.
 
 ## Lấy và mở lượt khám
 

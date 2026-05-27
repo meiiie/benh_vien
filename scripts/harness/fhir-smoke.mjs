@@ -25,6 +25,7 @@ const {
   MedicationRequest,
   Observation,
   Patient,
+  ProviderDirectory,
   ServiceRequest,
   canAccess,
   mapAllergyIntoleranceToFhir,
@@ -38,6 +39,7 @@ const {
   mapPatientRecordToFhirDocumentBundle,
   mapPatientRecordToFhirBundle,
   mapPatientToFhir,
+  mapProviderDirectoryToFhirBundle,
   mapServiceRequestToFhir
 } = await import(pathToFileURL(domainEntry).href);
 
@@ -84,6 +86,85 @@ const patient = Patient.register({
   gender: "male",
   managingOrganizationId: "hospital-hai-phong-demo"
 });
+
+const providerDirectory = ProviderDirectory.assemble({
+  generatedAt: new Date("2026-05-27T00:00:00.000Z"),
+  organizations: [
+    {
+      id: "hospital-hai-phong-demo",
+      identifiers: [],
+      active: true,
+      type: "hospital",
+      name: "Hai Phong Digital Hospital"
+    },
+    {
+      id: "department-harness-001",
+      identifiers: [],
+      active: true,
+      type: "department",
+      name: "Harness Outpatient Department",
+      partOfOrganizationId: "hospital-hai-phong-demo"
+    },
+    {
+      id: "department-laboratory",
+      identifiers: [],
+      active: true,
+      type: "laboratory",
+      name: "Harness Laboratory",
+      partOfOrganizationId: "hospital-hai-phong-demo"
+    }
+  ],
+  practitioners: [
+    {
+      id: "practitioner-harness-001",
+      identifiers: [],
+      active: true,
+      fullName: "Harness Clinician"
+    }
+  ],
+  endpoints: [
+    {
+      id: "endpoint-pacs-harness-001",
+      managingOrganizationId: "hospital-hai-phong-demo",
+      status: "active",
+      connectionType: "dicom-wado-rs",
+      name: "Harness PACS DICOMweb",
+      address: "https://pacs.harness.wiiicare.vn/dicom-web",
+      payloadTypes: [
+        {
+          system: "http://hl7.org/fhir/resource-types",
+          code: "ImagingStudy",
+          display: "FHIR ImagingStudy"
+        }
+      ]
+    }
+  ],
+  practitionerRoles: [
+    {
+      id: "role-practitioner-harness-001",
+      practitionerId: "practitioner-harness-001",
+      organizationId: "department-harness-001",
+      active: true,
+      code: {
+        system: "http://terminology.hl7.org/CodeSystem/practitioner-role",
+        code: "doctor",
+        display: "Doctor"
+      },
+      endpointIds: ["endpoint-pacs-harness-001"]
+    }
+  ]
+});
+
+const fhirProviderDirectoryBundle = mapProviderDirectoryToFhirBundle(
+  providerDirectory,
+  new Date("2026-05-27T00:00:00.000Z")
+);
+
+if (fhirProviderDirectoryBundle.entry.length !== 6) {
+  throw new Error(
+    `Expected provider directory bundle to contain 6 entries, received ${fhirProviderDirectoryBundle.entry.length}`
+  );
+}
 
 const fhirPatient = mapPatientToFhir(patient);
 
@@ -417,6 +498,7 @@ const fhirBundle = mapPatientRecordToFhirBundle({
   imagingStudies: [imagingStudy],
   medicationRequests: [medicationRequest],
   documents: [document],
+  providerDirectory,
   generatedAt: new Date("2026-05-27T00:00:00.000Z")
 });
 
@@ -428,8 +510,8 @@ if (fhirBundle.type !== "collection") {
   throw new Error(`Expected bundle type collection, received ${fhirBundle.type}`);
 }
 
-if (fhirBundle.entry.length !== 10) {
-  throw new Error(`Expected bundle to contain 10 entries, received ${fhirBundle.entry.length}`);
+if (fhirBundle.entry.length !== 16) {
+  throw new Error(`Expected bundle to contain 16 entries, received ${fhirBundle.entry.length}`);
 }
 
 const fhirDocumentBundle = mapPatientRecordToFhirDocumentBundle({
@@ -443,6 +525,7 @@ const fhirDocumentBundle = mapPatientRecordToFhirDocumentBundle({
   imagingStudies: [imagingStudy],
   medicationRequests: [medicationRequest],
   documents: [document],
+  providerDirectory,
   generatedAt: new Date("2026-05-27T00:00:00.000Z"),
   authorPractitionerId: "practitioner-harness-001"
 });
@@ -461,9 +544,9 @@ if (fhirDocumentBundle.entry[0]?.resource.resourceType !== "Composition") {
   throw new Error("Expected first document bundle entry to be Composition.");
 }
 
-if (fhirDocumentBundle.entry.length !== 11) {
+if (fhirDocumentBundle.entry.length !== 17) {
   throw new Error(
-    `Expected document bundle to contain 11 entries, received ${fhirDocumentBundle.entry.length}`
+    `Expected document bundle to contain 17 entries, received ${fhirDocumentBundle.entry.length}`
   );
 }
 
@@ -598,6 +681,15 @@ const clinicianCanExportImagingStudy = canAccess(
   "imaging-study:fhir-export"
 );
 
+const clinicianCanExportProviderDirectory = canAccess(
+  {
+    actorId: "practitioner-harness-001",
+    role: "clinician",
+    purposeOfUse: "TREATMENT"
+  },
+  "provider-directory:fhir-export"
+);
+
 const nurseCanExportObservation = canAccess(
   {
     actorId: "nurse-harness-001",
@@ -661,6 +753,24 @@ const nurseCanExportImagingStudy = canAccess(
   "imaging-study:fhir-export"
 );
 
+const nurseCanExportProviderDirectory = canAccess(
+  {
+    actorId: "nurse-harness-001",
+    role: "nurse",
+    purposeOfUse: "TREATMENT"
+  },
+  "provider-directory:fhir-export"
+);
+
+const nurseCanReadProviderDirectory = canAccess(
+  {
+    actorId: "nurse-harness-001",
+    role: "nurse",
+    purposeOfUse: "TREATMENT"
+  },
+  "provider-directory:read"
+);
+
 const clinicianCanReadAudit = canAccess(
   {
     actorId: "practitioner-harness-001",
@@ -715,6 +825,10 @@ if (!clinicianCanExportImagingStudy) {
   throw new Error("Expected clinician/TREATMENT to export imaging studies.");
 }
 
+if (!clinicianCanExportProviderDirectory) {
+  throw new Error("Expected clinician/TREATMENT to export provider directory.");
+}
+
 if (nurseCanExportObservation) {
   throw new Error("Expected nurse/TREATMENT to be denied observation:fhir-export.");
 }
@@ -743,6 +857,14 @@ if (nurseCanExportImagingStudy) {
   throw new Error("Expected nurse/TREATMENT to be denied imaging-study:fhir-export.");
 }
 
+if (nurseCanExportProviderDirectory) {
+  throw new Error("Expected nurse/TREATMENT to be denied provider-directory:fhir-export.");
+}
+
+if (!nurseCanReadProviderDirectory) {
+  throw new Error("Expected nurse/TREATMENT to read provider directory.");
+}
+
 if (clinicianCanReadAudit) {
   throw new Error("Expected clinician/TREATMENT to be denied audit-event:list.");
 }
@@ -758,6 +880,7 @@ console.log(
       check: "FHIR, AuditEvent and RBAC smoke test",
       patientId: fhirPatient.id,
       patientResourceType: fhirPatient.resourceType,
+      providerDirectoryEntryCount: fhirProviderDirectoryBundle.entry.length,
       documentId: fhirDocumentReference.id,
       documentResourceType: fhirDocumentReference.resourceType,
       encounterId: fhirEncounter.id,
@@ -799,6 +922,7 @@ console.log(
         clinicianCanExportImagingStudy,
         clinicianCanExportMedicationRequest,
         clinicianCanExportObservation,
+        clinicianCanExportProviderDirectory,
         clinicianCanExportServiceRequest,
         nurseCanExportAllergyIntolerance,
         nurseCanExportCondition,
@@ -806,6 +930,8 @@ console.log(
         nurseCanExportImagingStudy,
         nurseCanExportMedicationRequest,
         nurseCanExportObservation,
+        nurseCanExportProviderDirectory,
+        nurseCanReadProviderDirectory,
         nurseCanExportServiceRequest,
         clinicianCanReadAudit,
         auditorCanReadAudit

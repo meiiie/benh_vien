@@ -164,6 +164,10 @@ describe("API auth and RBAC boundary", () => {
     expect(resourceTypes).toEqual(
       expect.arrayContaining([
         "Patient",
+        "Organization",
+        "Practitioner",
+        "PractitionerRole",
+        "Endpoint",
         "Encounter",
         "AllergyIntolerance",
         "Condition",
@@ -175,7 +179,7 @@ describe("API auth and RBAC boundary", () => {
         "DocumentReference"
       ])
     );
-    expect(body.entry).toHaveLength(19);
+    expect(body.entry).toHaveLength(35);
   });
 
   it("returns a patient-record FHIR document Bundle with Composition first", async () => {
@@ -206,7 +210,55 @@ describe("API auth and RBAC boundary", () => {
         }
       ]
     });
-    expect(body.entry).toHaveLength(20);
+    expect(body.entry).toHaveLength(36);
+    expect(body.entry[0].resource.section).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          title: "Cơ sở, nhân sự và endpoint liên thông"
+        })
+      ])
+    );
+  });
+
+  it("returns provider directory and FHIR Endpoint resources", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const directoryResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/provider-directory",
+      headers: treatmentHeaders(accessToken)
+    });
+    const directoryBody = directoryResponse.json();
+
+    expect(directoryResponse.statusCode).toBe(200);
+    expect(directoryBody.organizations).toHaveLength(5);
+    expect(directoryBody.endpoints).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "endpoint-pacs-hai-phong-demo",
+          connectionType: "dicom-wado-rs"
+        })
+      ])
+    );
+
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/provider-directory/Endpoint/endpoint-pacs-hai-phong-demo/fhir",
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(fhirResponse.statusCode).toBe(200);
+    expect(fhirResponse.json()).toMatchObject({
+      resourceType: "Endpoint",
+      id: "endpoint-pacs-hai-phong-demo",
+      connectionType: {
+        code: "dicom-wado-rs"
+      },
+      managingOrganization: {
+        reference: "Organization/department-diagnostic-imaging"
+      }
+    });
   });
 
   it("lists allergy intolerances and exports them as FHIR AllergyIntolerance", async () => {

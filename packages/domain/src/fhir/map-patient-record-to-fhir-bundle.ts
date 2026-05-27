@@ -7,6 +7,7 @@ import type { ImagingStudy } from "../imaging-study/imaging-study.js";
 import type { MedicationRequest } from "../medication-request/medication-request.js";
 import type { Observation } from "../observation/observation.js";
 import type { Patient } from "../patient/patient.js";
+import type { ProviderDirectory } from "../provider-directory/provider-directory.js";
 import type { ServiceRequest } from "../service-request/service-request.js";
 import type {
   FhirBundle,
@@ -14,11 +15,15 @@ import type {
   FhirCondition,
   FhirDiagnosticReport,
   FhirDocumentReference,
+  FhirEndpoint,
   FhirEncounter,
   FhirImagingStudy,
   FhirMedicationRequest,
   FhirObservation,
+  FhirOrganization,
   FhirPatient,
+  FhirPractitioner,
+  FhirPractitionerRole,
   FhirServiceRequest
 } from "./fhir-types.js";
 import { mapAllergyIntoleranceToFhir } from "./map-allergy-intolerance-to-fhir.js";
@@ -30,6 +35,7 @@ import { mapImagingStudyToFhir } from "./map-imaging-study-to-fhir.js";
 import { mapMedicationRequestToFhir } from "./map-medication-request-to-fhir.js";
 import { mapObservationToFhir } from "./map-observation-to-fhir.js";
 import { mapPatientToFhir } from "./map-patient-to-fhir.js";
+import { mapProviderDirectoryToFhirResources } from "./map-provider-directory-to-fhir.js";
 import { mapServiceRequestToFhir } from "./map-service-request-to-fhir.js";
 
 export type PatientRecordBundleInput = {
@@ -43,6 +49,7 @@ export type PatientRecordBundleInput = {
   readonly imagingStudies?: readonly ImagingStudy[];
   readonly medicationRequests?: readonly MedicationRequest[];
   readonly documents: readonly ClinicalDocument[];
+  readonly providerDirectory?: ProviderDirectory;
   readonly generatedAt?: Date;
 };
 
@@ -59,8 +66,12 @@ export function mapPatientRecordToFhirBundle(input: PatientRecordBundleInput): F
   const imagingStudies = input.imagingStudies?.map(mapImagingStudyToFhir) ?? [];
   const medicationRequests = input.medicationRequests?.map(mapMedicationRequestToFhir) ?? [];
   const documents = input.documents.map(mapClinicalDocumentToFhir);
+  const providerResources = input.providerDirectory
+    ? mapProviderDirectoryToFhirResources(input.providerDirectory)
+    : [];
   const resources = [
     patient,
+    ...providerResources,
     ...encounters,
     ...allergyIntolerances,
     ...conditions,
@@ -99,6 +110,10 @@ function toBundleEntry(
     | FhirImagingStudy
     | FhirMedicationRequest
     | FhirServiceRequest
+    | FhirOrganization
+    | FhirPractitioner
+    | FhirPractitionerRole
+    | FhirEndpoint
     | FhirDocumentReference
 ): FhirBundle["entry"][number] {
   return {

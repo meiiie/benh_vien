@@ -119,6 +119,100 @@ type DemoRole = "clinician" | "nurse" | "auditor" | "admin";
 type PurposeOfUse = "TREATMENT" | "AUDIT" | "OPERATIONS";
 type ConsentStatus = "active" | "revoked" | "expired";
 type ConsentCategory = "record-sharing";
+type ProviderOrganizationType =
+  | "hospital"
+  | "department"
+  | "laboratory"
+  | "imaging"
+  | "payer"
+  | "government"
+  | "other";
+type ProviderEndpointConnectionType =
+  | "hl7-fhir-rest"
+  | "dicom-wado-rs"
+  | "hl7v2-mllp"
+  | "direct-project"
+  | "ihe-xds"
+  | "other";
+
+type ProviderIdentifier = {
+  readonly system: string;
+  readonly value: string;
+  readonly type?: string;
+};
+
+type ProviderTelecom = {
+  readonly system: "phone" | "email" | "url";
+  readonly value: string;
+  readonly use?: "work" | "mobile" | "home";
+};
+
+type ProviderCoding = {
+  readonly system: string;
+  readonly code: string;
+  readonly display: string;
+};
+
+type ProviderOrganization = {
+  readonly id: string;
+  readonly identifiers: readonly ProviderIdentifier[];
+  readonly active: boolean;
+  readonly type: ProviderOrganizationType;
+  readonly name: string;
+  readonly alias?: readonly string[];
+  readonly address?: string;
+  readonly telecom?: readonly ProviderTelecom[];
+  readonly partOfOrganizationId?: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
+type ProviderPractitioner = {
+  readonly id: string;
+  readonly identifiers: readonly ProviderIdentifier[];
+  readonly active: boolean;
+  readonly fullName: string;
+  readonly telecom?: readonly ProviderTelecom[];
+  readonly qualification?: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
+type ProviderEndpoint = {
+  readonly id: string;
+  readonly managingOrganizationId: string;
+  readonly status: "active" | "suspended" | "error" | "off" | "entered-in-error" | "test";
+  readonly connectionType: ProviderEndpointConnectionType;
+  readonly name: string;
+  readonly address: string;
+  readonly payloadTypes: readonly ProviderCoding[];
+  readonly contact?: readonly ProviderTelecom[];
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
+type ProviderPractitionerRole = {
+  readonly id: string;
+  readonly practitionerId?: string;
+  readonly organizationId: string;
+  readonly active: boolean;
+  readonly code: ProviderCoding;
+  readonly specialty?: ProviderCoding;
+  readonly endpointIds?: readonly string[];
+  readonly telecom?: readonly ProviderTelecom[];
+  readonly periodStart?: string;
+  readonly periodEnd?: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
+type ProviderDirectory = {
+  readonly organizations: readonly ProviderOrganization[];
+  readonly practitioners: readonly ProviderPractitioner[];
+  readonly practitionerRoles: readonly ProviderPractitionerRole[];
+  readonly endpoints: readonly ProviderEndpoint[];
+  readonly generatedAt: string;
+};
 
 type PatientIdentifier = {
   readonly system: string;
@@ -387,6 +481,8 @@ type AuditAction =
   | "patient.fhir-export"
   | "patient.fhir-bundle-export"
   | "patient.fhir-document-bundle-export"
+  | "provider-directory.read"
+  | "provider-directory.fhir-export"
   | "encounter.list"
   | "encounter.create"
   | "encounter.read"
@@ -430,6 +526,7 @@ type AuditAction =
 
 type AuditResourceType =
   | "Patient"
+  | "ProviderDirectory"
   | "Encounter"
   | "AllergyIntolerance"
   | "Condition"
@@ -880,6 +977,7 @@ const workflowSteps = [
   "Chỉ định dịch vụ",
   "Nhận kết quả",
   "Gắn metadata PACS",
+  "Định danh cơ sở/endpoint",
   "Ghi nhận chỉ số",
   "Kê đơn/thuốc",
   "Gắn tài liệu",
@@ -916,7 +1014,7 @@ const referenceSignals = [
   },
   {
     name: "HL7 FHIR R4",
-    value: "Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Observation, DiagnosticReport, ImagingStudy, MedicationRequest và DocumentReference là lõi trao đổi dữ liệu trong lát cắt này."
+    value: "Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, DocumentReference cùng Organization/Practitioner/Endpoint là lõi trao đổi dữ liệu trong lát cắt này."
   },
   {
     name: "Bối cảnh Việt Nam",
@@ -956,9 +1054,11 @@ export function App() {
   const [selectedImagingStudyId, setSelectedImagingStudyId] = useState<string>();
   const [auditEvents, setAuditEvents] = useState<readonly AuditEvent[]>([]);
   const [consents, setConsents] = useState<readonly Consent[]>([]);
+  const [providerDirectory, setProviderDirectory] = useState<ProviderDirectory>();
   const [patientFhirPreview, setPatientFhirPreview] = useState<unknown>();
   const [patientFhirBundlePreview, setPatientFhirBundlePreview] = useState<unknown>();
   const [patientFhirDocumentBundlePreview, setPatientFhirDocumentBundlePreview] = useState<unknown>();
+  const [providerDirectoryFhirPreview, setProviderDirectoryFhirPreview] = useState<unknown>();
   const [encounterFhirPreview, setEncounterFhirPreview] = useState<unknown>();
   const [documentFhirPreview, setDocumentFhirPreview] = useState<unknown>();
   const [allergyIntoleranceFhirPreview, setAllergyIntoleranceFhirPreview] = useState<unknown>();
@@ -999,6 +1099,7 @@ export function App() {
   const [isLoadingImagingStudies, setIsLoadingImagingStudies] = useState(false);
   const [isLoadingAuditEvents, setIsLoadingAuditEvents] = useState(false);
   const [isLoadingConsents, setIsLoadingConsents] = useState(false);
+  const [isLoadingProviderDirectory, setIsLoadingProviderDirectory] = useState(false);
   const [isSubmittingPatient, setIsSubmittingPatient] = useState(false);
   const [isSubmittingEncounter, setIsSubmittingEncounter] = useState(false);
   const [isSubmittingDocument, setIsSubmittingDocument] = useState(false);
@@ -1067,6 +1168,7 @@ export function App() {
     }
 
     void loadPatients();
+    void loadProviderDirectory();
   }, [isAuthenticated]);
 
   useEffect(() => {
@@ -1245,6 +1347,42 @@ export function App() {
       );
     } finally {
       setIsLoadingPatients(false);
+    }
+  }
+
+  async function loadProviderDirectory() {
+    setIsLoadingProviderDirectory(true);
+
+    try {
+      const [directoryResponse, fhirResponse] = await Promise.all([
+        fetch(`${apiBaseUrl}/provider-directory`, {
+          headers: buildHeaders("TREATMENT")
+        }),
+        fetch(`${apiBaseUrl}/provider-directory/fhir`, {
+          headers: buildHeaders("TREATMENT")
+        })
+      ]);
+
+      if (!directoryResponse.ok) {
+        throw new Error(`Provider Directory API trả về HTTP ${directoryResponse.status}`);
+      }
+
+      if (!fhirResponse.ok) {
+        throw new Error(`Provider Directory FHIR API trả về HTTP ${fhirResponse.status}`);
+      }
+
+      setProviderDirectory((await directoryResponse.json()) as ProviderDirectory);
+      setProviderDirectoryFhirPreview(await fhirResponse.json());
+    } catch (error) {
+      setProviderDirectory(undefined);
+      setProviderDirectoryFhirPreview({
+        error:
+          error instanceof Error
+            ? `Không thể tải Provider Directory: ${error.message}`
+            : "Không thể tải Provider Directory."
+      });
+    } finally {
+      setIsLoadingProviderDirectory(false);
     }
   }
 
@@ -1921,9 +2059,11 @@ export function App() {
     setImagingStudies([]);
     setAuditEvents([]);
     setConsents([]);
+    setProviderDirectory(undefined);
     setPatientFhirPreview(undefined);
     setPatientFhirBundlePreview(undefined);
     setPatientFhirDocumentBundlePreview(undefined);
+    setProviderDirectoryFhirPreview(undefined);
     setEncounterFhirPreview(undefined);
     setDocumentFhirPreview(undefined);
     setAllergyIntoleranceFhirPreview(undefined);
@@ -2720,6 +2860,11 @@ export function App() {
 
         <section className="metric-grid">
           <MetricCard label="Bệnh nhân" value={`${patients.length}`} note="Hồ sơ trong registry demo" />
+          <MetricCard
+            label="Provider Directory"
+            value={`${providerDirectory?.organizations.length ?? 0}/${providerDirectory?.endpoints.length ?? 0}`}
+            note="Cơ sở y tế / endpoint liên thông"
+          />
           <MetricCard label="Lượt khám mở" value={`${openEncounters.length}`} note="Theo bệnh nhân đang chọn" />
           <MetricCard label="Dị ứng" value={`${allergyIntolerances.length}`} note="Cảnh báo an toàn" />
           <MetricCard label="Chẩn đoán" value={`${conditions.length}`} note="Vấn đề sức khỏe có cấu trúc" />
@@ -2866,6 +3011,8 @@ export function App() {
         </section>
 
         <section className="workspace">
+          {renderProviderDirectoryPanel()}
+          <FhirPanel title="FHIR Provider Directory Bundle JSON" badge="Organization/Endpoint" value={providerDirectoryFhirPreview} />
           <FhirPanel title="FHIR Patient JSON" badge="Patient" value={patientFhirPreview} />
           <FhirPanel title="FHIR Patient Record Bundle JSON" badge="Bundle" value={patientFhirBundlePreview} />
           <FhirPanel title="FHIR Clinical Document Bundle JSON" badge="Composition" value={patientFhirDocumentBundlePreview} />
@@ -3001,6 +3148,54 @@ export function App() {
           {consents.length === 0 ? (
             <p className="empty-state">
               Chưa có consent hợp lệ trong workspace này; FHIR Bundle liên viện sẽ bị API chặn nếu thiếu consent.
+            </p>
+          ) : null}
+        </div>
+      </article>
+    );
+  }
+
+  function renderProviderDirectoryPanel(): ReactNode {
+    return (
+      <article className="panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Provider Directory</p>
+            <h2>Cơ sở, nhân sự và endpoint liên thông</h2>
+          </div>
+          <button
+            className="ghost-button"
+            type="button"
+            onClick={() => void loadProviderDirectory()}
+            disabled={isLoadingProviderDirectory}
+          >
+            {isLoadingProviderDirectory ? "Đang tải..." : "Tải lại"}
+          </button>
+        </div>
+
+        <div className="detail-grid compact">
+          <Info label="Cơ sở/khoa phòng" value={`${providerDirectory?.organizations.length ?? 0}`} />
+          <Info label="Nhân sự" value={`${providerDirectory?.practitioners.length ?? 0}`} />
+          <Info label="Vai trò" value={`${providerDirectory?.practitionerRoles.length ?? 0}`} />
+          <Info label="Endpoint" value={`${providerDirectory?.endpoints.length ?? 0}`} />
+        </div>
+
+        <div className="reference-list">
+          {providerDirectory?.endpoints.map((endpoint) => (
+            <div key={endpoint.id}>
+              <strong>
+                {endpoint.name} · {formatProviderEndpointConnectionType(endpoint.connectionType)}
+              </strong>
+              <span>
+                {endpoint.id}; quản lý bởi {endpoint.managingOrganizationId}; payload{" "}
+                {endpoint.payloadTypes.map((payloadType) => payloadType.display).join(", ")}.
+              </span>
+            </div>
+          ))}
+          {!providerDirectory ? (
+            <p className="empty-state">
+              Provider Directory chưa tải được. Bundle liên thông vẫn nên có Organization, Practitioner,
+              PractitionerRole và Endpoint để bên nhận hiểu đúng các reference trong hồ sơ.
             </p>
           ) : null}
         </div>
@@ -5149,7 +5344,7 @@ function LandingPage({
           <p className="eyebrow">HoLiLiHu · The Wiii Lab</p>
           <h1>Nền tảng bệnh án điện tử mở cho liên thông y tế</h1>
           <p className="lede">
-            WiiiCare Nexus mô phỏng lõi EMR hiện đại: hồ sơ bệnh nhân, lượt khám, dị ứng, chẩn đoán,
+            WiiiCare Nexus mô phỏng lõi EMR hiện đại: hồ sơ bệnh nhân, Provider Directory, lượt khám, dị ứng, chẩn đoán,
             chỉ định dịch vụ, chỉ số lâm sàng, báo cáo kết quả, chỉ định thuốc, tài liệu bệnh án, audit trail và ánh xạ FHIR để chuẩn bị kết nối giữa các bệnh viện.
           </p>
           <div className="landing-actions">
@@ -5163,7 +5358,7 @@ function LandingPage({
         </div>
         <aside className="landing-card">
           <span>Product slice</span>
-          <strong>Patient → Encounter → AllergyIntolerance → Condition → ServiceRequest → Observation → DiagnosticReport → ImagingStudy → MedicationRequest → Document → FHIR</strong>
+          <strong>Patient → Provider Directory → Encounter → AllergyIntolerance → Condition → ServiceRequest → Observation → DiagnosticReport → ImagingStudy → MedicationRequest → Document → FHIR</strong>
           <small>Không còn là landing page đơn thuần; app có luồng vận hành sau đăng nhập.</small>
         </aside>
       </section>
@@ -5173,7 +5368,7 @@ function LandingPage({
           ["Patient Workspace", "Bàn làm việc theo bệnh nhân, giống nhịp vận hành EMR thật."],
           ["Document Center", "Quản lý CCR, CCDA, hồ sơ bệnh án, xét nghiệm và tài liệu chuyển tuyến."],
           ["Audit & RBAC", "Ghi log truy cập nhạy cảm và kiểm tra quyền theo vai trò demo."],
-          ["FHIR Interop", "Xuất Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Observation, DiagnosticReport, ImagingStudy, MedicationRequest và DocumentReference để chuẩn bị liên thông."]
+          ["FHIR Interop", "Xuất Patient, Provider Directory, Encounter, AllergyIntolerance, Condition, ServiceRequest, Observation, DiagnosticReport, ImagingStudy, MedicationRequest và DocumentReference để chuẩn bị liên thông."]
         ].map(([title, description]) => (
           <article className="panel" key={title}>
             <p className="eyebrow">{title}</p>
@@ -5474,6 +5669,8 @@ function formatAuditAction(action: AuditAction): string {
     "patient.fhir-export": "Xuất FHIR Patient",
     "patient.fhir-bundle-export": "Xuất FHIR Bundle hồ sơ",
     "patient.fhir-document-bundle-export": "Xuất FHIR document Bundle hồ sơ",
+    "provider-directory.read": "Xem Provider Directory",
+    "provider-directory.fhir-export": "Xuất FHIR Provider Directory",
     "encounter.list": "Tải danh sách lượt khám",
     "encounter.create": "Mở lượt khám",
     "encounter.read": "Xem lượt khám",
@@ -5522,6 +5719,7 @@ function formatAuditAction(action: AuditAction): string {
 function formatAuditResourceType(resourceType: AuditResourceType): string {
   const labels: Record<AuditResourceType, string> = {
     Patient: "Bệnh nhân",
+    ProviderDirectory: "Danh bạ cơ sở y tế",
     Encounter: "Lượt khám",
     AllergyIntolerance: "Dị ứng/cảnh báo",
     Condition: "Chẩn đoán",
@@ -5536,6 +5734,19 @@ function formatAuditResourceType(resourceType: AuditResourceType): string {
   };
 
   return labels[resourceType];
+}
+
+function formatProviderEndpointConnectionType(type: ProviderEndpointConnectionType): string {
+  const labels: Record<ProviderEndpointConnectionType, string> = {
+    "dicom-wado-rs": "DICOMweb/WADO-RS",
+    "direct-project": "Direct Project",
+    "hl7-fhir-rest": "HL7 FHIR REST",
+    "hl7v2-mllp": "HL7 v2 MLLP",
+    "ihe-xds": "IHE XDS",
+    other: "Khác"
+  };
+
+  return labels[type];
 }
 
 function formatConsentStatus(status: ConsentStatus): string {

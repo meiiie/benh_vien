@@ -7,6 +7,8 @@ export type AuditAction =
   | "patient.fhir-export"
   | "patient.fhir-bundle-export"
   | "patient.fhir-document-bundle-export"
+  | "provider-directory.read"
+  | "provider-directory.fhir-export"
   | "encounter.list"
   | "encounter.create"
   | "encounter.read"
@@ -50,6 +52,7 @@ export type AuditAction =
 
 export type AuditResourceType =
   | "Patient"
+  | "ProviderDirectory"
   | "Encounter"
   | "AllergyIntolerance"
   | "Condition"

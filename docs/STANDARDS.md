@@ -24,6 +24,10 @@ Nguồn:
 
 - [HL7 FHIR R4 Specification](https://hl7.org/fhir/R4/)
 - [FHIR Patient Resource](https://hl7.org/fhir/R4/patient.html)
+- [FHIR Organization Resource](https://hl7.org/fhir/R4/organization.html)
+- [FHIR Practitioner Resource](https://hl7.org/fhir/R4/practitioner.html)
+- [FHIR PractitionerRole Resource](https://hl7.org/fhir/R4/practitionerrole.html)
+- [FHIR Endpoint Resource](https://hl7.org/fhir/R4/endpoint.html)
 - [FHIR Encounter Resource](https://hl7.org/fhir/R4/encounter.html)
 - [FHIR AllergyIntolerance Resource](https://hl7.org/fhir/R4/allergyintolerance.html)
 - [FHIR Condition Resource](https://hl7.org/fhir/R4/condition.html)
@@ -39,6 +43,7 @@ Nguồn:
 Hàm ý cho dự án:
 
 - `Patient` là resource nền cho hồ sơ bệnh nhân.
+- `Organization`, `Practitioner`, `PractitionerRole` và `Endpoint` tạo thành Provider Directory tối thiểu: cơ sở/khoa phòng, nhân sự, vai trò của nhân sự trong cơ sở và điểm kết nối kỹ thuật. Đây là lớp cần có để các tham chiếu trong `Patient.managingOrganization`, `Encounter.participant`, `DiagnosticReport.performer`, `ImagingStudy.endpoint` không bị rỗng ngữ cảnh khi chuyển viện/liên viện.
 - `Encounter` đặt ngữ cảnh lượt khám/đợt điều trị cho chẩn đoán, tài liệu và chỉ số lâm sàng.
 - `AllergyIntolerance` phù hợp cho nguy cơ phản ứng bất lợi với thuốc, thực phẩm, môi trường hoặc sinh phẩm; nên xem trước khi kê thuốc và không trộn lẫn với chẩn đoán bệnh thông thường.
 - `Condition` phù hợp cho chẩn đoán, vấn đề sức khỏe và problem list; nên đi kèm ICD-10/SNOMED CT hoặc danh mục được bệnh viện phê duyệt khi có dữ liệu thật.
@@ -48,7 +53,7 @@ Hàm ý cho dự án:
 - `ImagingStudy` phù hợp để biểu diễn metadata của một nghiên cứu DICOM/PACS. Resource này nên chứa DICOM Study Instance UID trong `identifier`, trạng thái, modality, bệnh nhân, lượt khám, y lệnh gốc, endpoint truy xuất ảnh, số series, số instance và series metadata; không dùng nó để lưu ảnh nhị phân trực tiếp.
 - `MedicationRequest` phù hợp cho yêu cầu/chỉ định dùng thuốc, gồm trạng thái, mục đích, thuốc, bệnh nhân, lượt khám, người kê và hướng dẫn dùng thuốc; không nên đồng nhất với cấp phát hoặc dùng thuốc thực tế vì FHIR có `MedicationDispense` và `MedicationAdministration` riêng.
 - `Composition` phù hợp để tạo mục lục lâm sàng cho một FHIR document. Khi `Bundle.type = document`, entry đầu tiên bắt buộc phải là `Composition`; các section của Composition nên tham chiếu các resource nằm trong Bundle.
-- Khi phát triển tiếp cần bổ sung `Procedure`, `MedicationDispense`, `MedicationAdministration`, `Composition` và ràng buộc profile cụ thể hơn.
+- Khi phát triển tiếp cần bổ sung `Procedure`, `MedicationDispense`, `MedicationAdministration` và ràng buộc profile cụ thể hơn.
 - Với liên thông bệnh án, `DocumentReference` và `Composition` quan trọng hơn việc chỉ gửi một file PDF rời rạc.
 
 ## DICOM và PACS
