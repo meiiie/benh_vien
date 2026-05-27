@@ -162,9 +162,76 @@ describe("API auth and RBAC boundary", () => {
       type: "collection"
     });
     expect(resourceTypes).toEqual(
-      expect.arrayContaining(["Patient", "Encounter", "DocumentReference"])
+      expect.arrayContaining(["Patient", "Encounter", "Observation", "DocumentReference"])
     );
-    expect(body.entry).toHaveLength(6);
+    expect(body.entry).toHaveLength(8);
+  });
+
+  it("lists observations and exports them as FHIR Observation", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const listResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/observations",
+      headers: treatmentHeaders(accessToken)
+    });
+    const listBody = listResponse.json();
+
+    expect(listResponse.statusCode).toBe(200);
+    expect(listBody.items).toHaveLength(2);
+
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: `/api/v1/observations/${listBody.items[0].id}/fhir`,
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(fhirResponse.statusCode).toBe(200);
+    expect(fhirResponse.json()).toMatchObject({
+      resourceType: "Observation",
+      subject: {
+        reference: "Patient/patient-demo-001"
+      }
+    });
+  });
+
+  it("creates an observation attached to the selected patient encounter", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/observations",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: "encounter-demo-002",
+        category: "vital-signs",
+        code: {
+          system: "http://loinc.org",
+          code: "8867-4",
+          display: "Heart rate"
+        },
+        effectiveAt: "2026-05-27T04:00:00.000Z",
+        valueQuantity: {
+          value: 78,
+          unit: "/min",
+          system: "http://unitsofmeasure.org",
+          code: "/min"
+        },
+        performerPractitionerId: "nurse-demo-001"
+      }
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({
+      patientId: "patient-demo-001",
+      encounterId: "encounter-demo-002",
+      category: "vital-signs"
+    });
   });
 
   it("lists active patient consents for treatment users", async () => {

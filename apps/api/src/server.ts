@@ -7,6 +7,7 @@ import type {
   ClinicalDocumentRepository,
   ConsentRepository,
   EncounterRepository,
+  ObservationRepository,
   PatientRepository
 } from "@benh-vien-so/domain";
 import { createAuditEventRepository } from "./modules/audit-events/create-audit-event.repository.js";
@@ -18,12 +19,15 @@ import { createConsentRepository } from "./modules/consents/create-consent.repos
 import { registerConsentRoutes } from "./modules/consents/consent-routes.js";
 import { createEncounterRepository } from "./modules/encounters/create-encounter.repository.js";
 import { registerEncounterRoutes } from "./modules/encounters/encounter-routes.js";
+import { createObservationRepository } from "./modules/observations/create-observation.repository.js";
+import { registerObservationRoutes } from "./modules/observations/observation-routes.js";
 import { createPatientRepository } from "./modules/patients/create-patient.repository.js";
 import { registerPatientRoutes } from "./modules/patients/patient-routes.js";
 
 export type ServerOptions = {
   readonly patientRepository?: PatientRepository;
   readonly encounterRepository?: EncounterRepository;
+  readonly observationRepository?: ObservationRepository;
   readonly clinicalDocumentRepository?: ClinicalDocumentRepository;
   readonly consentRepository?: ConsentRepository;
   readonly auditEventRepository?: AuditEventRepository;
@@ -65,6 +69,10 @@ export async function buildServer(options: ServerOptions = {}) {
           description: "Quản lý lượt khám, đợt điều trị và FHIR Encounter"
         },
         {
+          name: "observations",
+          description: "Quản lý sinh hiệu, kết quả xét nghiệm có cấu trúc và FHIR Observation"
+        },
+        {
           name: "clinical-documents",
           description: "Quản lý tài liệu lâm sàng và FHIR DocumentReference"
         },
@@ -87,6 +95,8 @@ export async function buildServer(options: ServerOptions = {}) {
   const patientRepository = options.patientRepository ?? (await createPatientRepository());
   const encounterRepository =
     options.encounterRepository ?? (await createEncounterRepository());
+  const observationRepository =
+    options.observationRepository ?? (await createObservationRepository());
   const clinicalDocumentRepository =
     options.clinicalDocumentRepository ?? (await createClinicalDocumentRepository());
   const consentRepository =
@@ -107,6 +117,7 @@ export async function buildServer(options: ServerOptions = {}) {
         patientRepository,
         encounterRepository,
         clinicalDocumentRepository,
+        observationRepository,
         consentRepository,
         auditEventRepository
       );
@@ -120,6 +131,13 @@ export async function buildServer(options: ServerOptions = {}) {
         api,
         patientRepository,
         encounterRepository,
+        auditEventRepository
+      );
+      await registerObservationRoutes(
+        api,
+        patientRepository,
+        encounterRepository,
+        observationRepository,
         auditEventRepository
       );
       await registerClinicalDocumentRoutes(

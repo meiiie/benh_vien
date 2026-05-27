@@ -18,10 +18,12 @@ const {
   ClinicalDocument,
   Consent,
   Encounter,
+  Observation,
   Patient,
   canAccess,
   mapClinicalDocumentToFhir,
   mapEncounterToFhir,
+  mapObservationToFhir,
   mapPatientRecordToFhirBundle,
   mapPatientToFhir
 } = await import(pathToFileURL(domainEntry).href);
@@ -103,6 +105,38 @@ if (fhirEncounter.subject.reference !== "Patient/patient-harness-001") {
   );
 }
 
+const observation = Observation.record({
+  id: "observation-harness-001",
+  patientId: patient.id,
+  encounterId: encounter.id,
+  category: "laboratory",
+  code: {
+    system: "http://loinc.org",
+    code: "718-7",
+    display: "Hemoglobin"
+  },
+  effectiveAt: "2026-05-27T00:00:00.000Z",
+  valueQuantity: {
+    value: 13.6,
+    unit: "g/dL",
+    system: "http://unitsofmeasure.org",
+    code: "g/dL"
+  },
+  performerPractitionerId: "practitioner-harness-001"
+});
+
+const fhirObservation = mapObservationToFhir(observation);
+
+if (fhirObservation.resourceType !== "Observation") {
+  throw new Error(`Expected resourceType Observation, received ${fhirObservation.resourceType}`);
+}
+
+if (fhirObservation.subject.reference !== "Patient/patient-harness-001") {
+  throw new Error(
+    `Expected observation subject Patient/patient-harness-001, received ${fhirObservation.subject.reference}`
+  );
+}
+
 const document = ClinicalDocument.create({
   id: "clinical-document-harness-001",
   patientId: patient.id,
@@ -136,6 +170,7 @@ if (fhirDocumentReference.docStatus !== "final") {
 const fhirBundle = mapPatientRecordToFhirBundle({
   patient,
   encounters: [encounter],
+  observations: [observation],
   documents: [document],
   generatedAt: new Date("2026-05-27T00:00:00.000Z")
 });
@@ -148,8 +183,8 @@ if (fhirBundle.type !== "collection") {
   throw new Error(`Expected bundle type collection, received ${fhirBundle.type}`);
 }
 
-if (fhirBundle.entry.length !== 3) {
-  throw new Error(`Expected bundle to contain 3 entries, received ${fhirBundle.entry.length}`);
+if (fhirBundle.entry.length !== 4) {
+  throw new Error(`Expected bundle to contain 4 entries, received ${fhirBundle.entry.length}`);
 }
 
 const consent = Consent.grant({
@@ -220,6 +255,24 @@ const clinicianCanCreateEncounter = canAccess(
   "encounter:create"
 );
 
+const clinicianCanExportObservation = canAccess(
+  {
+    actorId: "practitioner-harness-001",
+    role: "clinician",
+    purposeOfUse: "TREATMENT"
+  },
+  "observation:fhir-export"
+);
+
+const nurseCanExportObservation = canAccess(
+  {
+    actorId: "nurse-harness-001",
+    role: "nurse",
+    purposeOfUse: "TREATMENT"
+  },
+  "observation:fhir-export"
+);
+
 const clinicianCanReadAudit = canAccess(
   {
     actorId: "practitioner-harness-001",
@@ -246,6 +299,14 @@ if (!clinicianCanCreateEncounter) {
   throw new Error("Expected clinician/TREATMENT to create encounters.");
 }
 
+if (!clinicianCanExportObservation) {
+  throw new Error("Expected clinician/TREATMENT to export observations.");
+}
+
+if (nurseCanExportObservation) {
+  throw new Error("Expected nurse/TREATMENT to be denied observation:fhir-export.");
+}
+
 if (clinicianCanReadAudit) {
   throw new Error("Expected clinician/TREATMENT to be denied audit-event:list.");
 }
@@ -265,6 +326,8 @@ console.log(
       documentResourceType: fhirDocumentReference.resourceType,
       encounterId: fhirEncounter.id,
       encounterResourceType: fhirEncounter.resourceType,
+      observationId: fhirObservation.id,
+      observationResourceType: fhirObservation.resourceType,
       bundleId: fhirBundle.id,
       bundleResourceType: fhirBundle.resourceType,
       bundleEntryCount: fhirBundle.entry.length,
@@ -278,6 +341,8 @@ console.log(
       rbac: {
         clinicianCanCreateEncounter,
         clinicianCanCreateDocument,
+        clinicianCanExportObservation,
+        nurseCanExportObservation,
         clinicianCanReadAudit,
         auditorCanReadAudit
       }

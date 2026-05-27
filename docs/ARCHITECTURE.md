@@ -66,11 +66,11 @@ sequenceDiagram
   participant Partner as Hệ thống nhận liên thông
 
   User->>App: Tạo/cập nhật nội dung bệnh án
-  App->>EMR: Ghi tài liệu lâm sàng
+  App->>EMR: Ghi lượt khám, chỉ số lâm sàng và tài liệu
   EMR->>Audit: Ghi nhật ký thao tác
   User->>App: Ký hoặc xác nhận điện tử
   App->>EMR: Chuyển trạng thái tài liệu sang signed
-  EMR->>FHIR: Chuyển đổi sang FHIR Patient/Encounter/DocumentReference/Composition
+  EMR->>FHIR: Chuyển đổi sang FHIR Patient/Encounter/Observation/DocumentReference/Composition
   FHIR->>Partner: Chia sẻ theo API hoặc hồ sơ IHE phù hợp
 ```
 
@@ -80,6 +80,7 @@ sequenceDiagram
 - **PostgreSQL là hệ quản trị dữ liệu nghiệp vụ chính.** Dữ liệu lõi như bệnh nhân, tài liệu lâm sàng và audit trail được quản lý bằng migration SQL, không phụ thuộc vào dữ liệu demo trong bộ nhớ.
 - **Không coi một mã bệnh nhân là đủ.** Cần quản lý nhiều định danh: mã bệnh viện, số định danh cá nhân, mã bảo hiểm y tế, mã hệ thống cũ.
 - **Tài liệu phải đi qua ngữ cảnh lượt khám/đợt điều trị khi có thể.** OpenEMR cho thấy tài liệu rời rạc khó sử dụng nếu không bám vào patient chart và encounter timeline.
+- **Chỉ số lâm sàng cần có cấu trúc máy đọc được.** Sinh hiệu và xét nghiệm không nên chỉ nằm trong PDF; tối thiểu cần mã chuẩn, giá trị, đơn vị, thời điểm, người ghi nhận và liên kết bệnh nhân/lượt khám.
 - **Tài liệu bệnh án cần có vòng đời.** Tối thiểu gồm nháp, đã ký, bị thay thế, nhập sai.
 - **Chia sẻ hồ sơ cần consent có trạng thái và thời hạn.** FHIR Bundle liên viện không được xuất chỉ vì người dùng có role điều trị; phải có consent khớp bệnh nhân, đơn vị nhận và thời điểm truy cập.
 - **Ảnh y khoa đi theo chuẩn riêng.** Ảnh X-quang, CT, MRI, siêu âm nên đi qua PACS/DICOM, không nhồi trực tiếp vào bảng bệnh án.
@@ -91,6 +92,7 @@ Phiên bản hiện tại tạo các bảng tối thiểu:
 
 - `patients`: hồ sơ hành chính và định danh bệnh nhân, dùng `jsonb` cho nhiều định danh.
 - `encounters`: lượt khám hoặc đợt điều trị, là cầu nối giữa bệnh nhân, tài liệu, người phụ trách và FHIR Encounter.
+- `observations`: sinh hiệu/xét nghiệm có cấu trúc, gồm mã chuẩn, giá trị định lượng hoặc văn bản, thời điểm và người ghi nhận.
 - `clinical_documents`: tài liệu lâm sàng có vòng đời nháp, đã ký, bị thay thế hoặc nhập sai.
 - `consents`: consent chia sẻ hồ sơ theo bệnh nhân, đơn vị nhận, trạng thái và thời hạn hiệu lực.
 - `audit_events`: nhật ký thao tác theo thời gian, tài nguyên, bệnh nhân và mục đích sử dụng.

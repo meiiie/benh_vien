@@ -502,7 +502,9 @@ h2 {
 .timeline-item span,
 .timeline-item small,
 .document-card span,
-.document-card small {
+.document-card small,
+.observation-card span,
+.observation-card small {
   color: var(--muted);
 }
 
@@ -594,7 +596,8 @@ h2 {
 .queue-list button,
 .patient-card,
 .timeline-item,
-.document-card {
+.document-card,
+.observation-card {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -610,7 +613,9 @@ h2 {
 .timeline-item:hover,
 .timeline-item.selected,
 .document-card:hover,
-.document-card.selected {
+.document-card.selected,
+.observation-card:hover,
+.observation-card.selected {
   border-color: rgba(0, 86, 210, 0.36);
   background: var(--primary-soft);
 }
@@ -625,7 +630,10 @@ h2 {
 .timeline-item small,
 .document-card span,
 .document-card strong,
-.document-card small {
+.document-card small,
+.observation-card span,
+.observation-card strong,
+.observation-card small {
   display: block;
 }
 
@@ -652,6 +660,7 @@ h2 {
 .patient-cards,
 .timeline,
 .document-cards,
+.observation-cards,
 .audit-list {
   display: grid;
   gap: 10px;
@@ -727,6 +736,7 @@ code {
 
 .patient-form,
 .encounter-form,
+.observation-form,
 .document-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -765,12 +775,14 @@ select:focus {
 .wide-field,
 .patient-form .primary-button,
 .encounter-form .primary-button,
+.observation-form .primary-button,
 .document-form .primary-button {
   grid-column: 1 / -1;
 }
 
 .document-panel,
 .encounter-panel,
+.observation-panel,
 .audit-panel {
   grid-column: 1 / -1;
 }
@@ -801,7 +813,8 @@ select:focus {
 }
 
 .encounter-summary,
-.document-summary {
+.document-summary,
+.observation-summary {
   display: grid;
   align-content: start;
   gap: 14px;
@@ -946,7 +959,7 @@ pre {
 
 .workflow-strip {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -1063,6 +1076,7 @@ pre {
   .patient-form,
   .encounter-layout,
   .encounter-form,
+  .observation-form,
   .document-layout,
   .document-meta,
   .document-form,

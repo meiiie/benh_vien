@@ -26,6 +26,14 @@ type ClinicalDocumentType =
   | "medical-record"
   | "patient-information";
 type ClinicalDocumentStatus = "draft" | "signed" | "superseded" | "entered-in-error";
+type ObservationStatus =
+  | "registered"
+  | "preliminary"
+  | "final"
+  | "amended"
+  | "cancelled"
+  | "entered-in-error";
+type ObservationCategory = "vital-signs" | "laboratory";
 type DemoRole = "clinician" | "nurse" | "auditor" | "admin";
 type PurposeOfUse = "TREATMENT" | "AUDIT" | "OPERATIONS";
 type ConsentStatus = "active" | "revoked" | "expired";
@@ -80,6 +88,34 @@ type ClinicalDocument = {
   readonly updatedAt: string;
 };
 
+type ObservationCode = {
+  readonly system: string;
+  readonly code: string;
+  readonly display: string;
+};
+
+type ObservationQuantity = {
+  readonly value: number;
+  readonly unit: string;
+  readonly system?: string;
+  readonly code?: string;
+};
+
+type Observation = {
+  readonly id: string;
+  readonly patientId: string;
+  readonly encounterId?: string;
+  readonly status: ObservationStatus;
+  readonly category: ObservationCategory;
+  readonly code: ObservationCode;
+  readonly effectiveAt: string;
+  readonly valueQuantity?: ObservationQuantity;
+  readonly valueText?: string;
+  readonly performerPractitionerId?: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
 type AuditAction =
   | "patient.list"
   | "patient.create"
@@ -91,6 +127,10 @@ type AuditAction =
   | "encounter.read"
   | "encounter.finish"
   | "encounter.fhir-export"
+  | "observation.list"
+  | "observation.create"
+  | "observation.read"
+  | "observation.fhir-export"
   | "clinical-document.list"
   | "clinical-document.create"
   | "clinical-document.sign"
@@ -99,7 +139,13 @@ type AuditAction =
   | "consent.create"
   | "audit-event.list";
 
-type AuditResourceType = "Patient" | "Encounter" | "ClinicalDocument" | "Consent" | "AuditEvent";
+type AuditResourceType =
+  | "Patient"
+  | "Encounter"
+  | "Observation"
+  | "ClinicalDocument"
+  | "Consent"
+  | "AuditEvent";
 
 type AuditEvent = {
   readonly id?: string;
@@ -141,6 +187,10 @@ type ClinicalDocumentsResponse = {
   readonly items: readonly ClinicalDocument[];
 };
 
+type ObservationsResponse = {
+  readonly items: readonly Observation[];
+};
+
 type AuditEventsResponse = {
   readonly items: readonly AuditEvent[];
 };
@@ -175,6 +225,20 @@ type NewClinicalDocumentForm = {
   title: string;
   storageUri: string;
   authorPractitionerId: string;
+};
+
+type NewObservationForm = {
+  encounterId: string;
+  category: ObservationCategory;
+  codeSystem: string;
+  code: string;
+  codeDisplay: string;
+  value: string;
+  unit: string;
+  unitSystem: string;
+  unitCode: string;
+  effectiveAt: string;
+  performerPractitionerId: string;
 };
 
 type LoginForm = {
@@ -221,6 +285,20 @@ const defaultClinicalDocumentForm: NewClinicalDocumentForm = {
   authorPractitionerId: "practitioner-demo-003"
 };
 
+const defaultObservationForm: NewObservationForm = {
+  encounterId: "",
+  category: "laboratory",
+  codeSystem: "http://loinc.org",
+  code: "718-7",
+  codeDisplay: "Hemoglobin",
+  value: "13.8",
+  unit: "g/dL",
+  unitSystem: "http://unitsofmeasure.org",
+  unitCode: "g/dL",
+  effectiveAt: "2026-05-27T10:15",
+  performerPractitionerId: "practitioner-demo-002"
+};
+
 const apiBaseUrl =
   import.meta.env.VITE_API_BASE_URL ??
   (window.location.port === "7311" ? "http://localhost:7310/api/v1" : "/api/v1");
@@ -256,6 +334,7 @@ const loginPresets: Record<DemoRole, LoginForm> = {
 const workflowSteps = [
   "Tiếp nhận bệnh nhân",
   "Mở lượt khám",
+  "Ghi nhận chỉ số",
   "Gắn tài liệu",
   "Ký/xác thực",
   "Xuất FHIR"
@@ -290,7 +369,7 @@ const referenceSignals = [
   },
   {
     name: "HL7 FHIR R4",
-    value: "Patient, Encounter và DocumentReference là lõi trao đổi dữ liệu trong lát cắt này."
+    value: "Patient, Encounter, Observation và DocumentReference là lõi trao đổi dữ liệu trong lát cắt này."
   },
   {
     name: "Bối cảnh Việt Nam",
@@ -314,33 +393,44 @@ export function App() {
   const [selectedEncounterId, setSelectedEncounterId] = useState<string>();
   const [clinicalDocuments, setClinicalDocuments] = useState<readonly ClinicalDocument[]>([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string>();
+  const [observations, setObservations] = useState<readonly Observation[]>([]);
+  const [selectedObservationId, setSelectedObservationId] = useState<string>();
   const [auditEvents, setAuditEvents] = useState<readonly AuditEvent[]>([]);
   const [consents, setConsents] = useState<readonly Consent[]>([]);
   const [patientFhirPreview, setPatientFhirPreview] = useState<unknown>();
   const [patientFhirBundlePreview, setPatientFhirBundlePreview] = useState<unknown>();
   const [encounterFhirPreview, setEncounterFhirPreview] = useState<unknown>();
   const [documentFhirPreview, setDocumentFhirPreview] = useState<unknown>();
+  const [observationFhirPreview, setObservationFhirPreview] = useState<unknown>();
   const [patientForm, setPatientForm] = useState<NewPatientForm>(defaultPatientForm);
   const [encounterForm, setEncounterForm] = useState<NewEncounterForm>(defaultEncounterForm);
   const [documentForm, setDocumentForm] =
     useState<NewClinicalDocumentForm>(defaultClinicalDocumentForm);
+  const [observationForm, setObservationForm] =
+    useState<NewObservationForm>(defaultObservationForm);
   const [statusMessage, setStatusMessage] = useState("Chưa đăng nhập.");
   const [isLoadingPatients, setIsLoadingPatients] = useState(false);
   const [isLoadingEncounters, setIsLoadingEncounters] = useState(false);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const [isLoadingObservations, setIsLoadingObservations] = useState(false);
   const [isLoadingAuditEvents, setIsLoadingAuditEvents] = useState(false);
   const [isLoadingConsents, setIsLoadingConsents] = useState(false);
   const [isSubmittingPatient, setIsSubmittingPatient] = useState(false);
   const [isSubmittingEncounter, setIsSubmittingEncounter] = useState(false);
   const [isSubmittingDocument, setIsSubmittingDocument] = useState(false);
+  const [isSubmittingObservation, setIsSubmittingObservation] = useState(false);
   const [isSigningDocument, setIsSigningDocument] = useState(false);
   const [isFinishingEncounter, setIsFinishingEncounter] = useState(false);
 
   const selectedPatient = patients.find((patient) => patient.id === selectedPatientId);
   const selectedEncounter = encounters.find((encounter) => encounter.id === selectedEncounterId);
   const selectedDocument = clinicalDocuments.find((document) => document.id === selectedDocumentId);
+  const selectedObservation = observations.find((observation) => observation.id === selectedObservationId);
   const selectedEncounterDocuments = selectedEncounter
     ? clinicalDocuments.filter((document) => document.encounterId === selectedEncounter.id)
+    : [];
+  const selectedEncounterObservations = selectedEncounter
+    ? observations.filter((observation) => observation.encounterId === selectedEncounter.id)
     : [];
   const openEncounters = encounters.filter((encounter) => encounter.status === "in-progress");
   const signedDocuments = clinicalDocuments.filter((document) => document.status === "signed");
@@ -361,12 +451,15 @@ export function App() {
       setPatientFhirBundlePreview(undefined);
       setEncounterFhirPreview(undefined);
       setDocumentFhirPreview(undefined);
+      setObservationFhirPreview(undefined);
       setEncounters([]);
       setClinicalDocuments([]);
+      setObservations([]);
       setAuditEvents([]);
       setConsents([]);
       setSelectedEncounterId(undefined);
       setSelectedDocumentId(undefined);
+      setSelectedObservationId(undefined);
       return;
     }
 
@@ -377,10 +470,12 @@ export function App() {
     if (!selectedEncounterId) {
       setEncounterFhirPreview(undefined);
       setDocumentForm((current) => ({ ...current, encounterId: "" }));
+      setObservationForm((current) => ({ ...current, encounterId: "" }));
       return;
     }
 
     setDocumentForm((current) => ({ ...current, encounterId: selectedEncounterId }));
+    setObservationForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     void loadEncounterFhirPreview(selectedEncounterId);
   }, [selectedEncounterId]);
 
@@ -392,6 +487,15 @@ export function App() {
 
     void loadDocumentFhirPreview(selectedDocumentId);
   }, [selectedDocumentId]);
+
+  useEffect(() => {
+    if (!selectedObservationId) {
+      setObservationFhirPreview(undefined);
+      return;
+    }
+
+    void loadObservationFhirPreview(selectedObservationId);
+  }, [selectedObservationId]);
 
   function buildHeaders(
     purposeOfUse: PurposeOfUse,
@@ -440,6 +544,7 @@ export function App() {
       loadPatientFhirPreview(patientId),
       loadPatientFhirBundlePreview(patientId),
       loadEncounters(patientId),
+      loadObservations(patientId),
       loadClinicalDocuments(patientId),
       loadConsents(patientId)
     ];
@@ -506,6 +611,34 @@ export function App() {
       );
     } finally {
       setIsLoadingDocuments(false);
+    }
+  }
+
+  async function loadObservations(patientId: string, nextSelectedObservationId?: string) {
+    setIsLoadingObservations(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/observations`, {
+        headers: buildHeaders("TREATMENT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      const data = (await response.json()) as ObservationsResponse;
+      setObservations(data.items);
+      setSelectedObservationId(nextSelectedObservationId ?? data.items[0]?.id);
+    } catch (error) {
+      setObservations([]);
+      setSelectedObservationId(undefined);
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể tải chỉ số lâm sàng: ${error.message}`
+          : "Không thể tải chỉ số lâm sàng."
+      );
+    } finally {
+      setIsLoadingObservations(false);
     }
   }
 
@@ -658,6 +791,27 @@ export function App() {
     }
   }
 
+  async function loadObservationFhirPreview(observationId: string) {
+    try {
+      const response = await fetch(`${apiBaseUrl}/observations/${observationId}/fhir`, {
+        headers: buildHeaders("TREATMENT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      setObservationFhirPreview(await response.json());
+    } catch (error) {
+      setObservationFhirPreview({
+        error:
+          error instanceof Error
+            ? `Không thể xuất FHIR Observation: ${error.message}`
+            : "Không thể xuất FHIR Observation."
+      });
+    }
+  }
+
   async function handleLogin(event?: FormEvent<HTMLFormElement>) {
     const shouldOpenLoginOnFailure = !event;
 
@@ -712,15 +866,18 @@ export function App() {
     setPatients([]);
     setEncounters([]);
     setClinicalDocuments([]);
+    setObservations([]);
     setAuditEvents([]);
     setConsents([]);
     setPatientFhirPreview(undefined);
     setPatientFhirBundlePreview(undefined);
     setEncounterFhirPreview(undefined);
     setDocumentFhirPreview(undefined);
+    setObservationFhirPreview(undefined);
     setSelectedPatientId(undefined);
     setSelectedEncounterId(undefined);
     setSelectedDocumentId(undefined);
+    setSelectedObservationId(undefined);
   }
 
   async function handleCreatePatient(event: FormEvent<HTMLFormElement>) {
@@ -855,6 +1012,70 @@ export function App() {
       );
     } finally {
       setIsFinishingEncounter(false);
+    }
+  }
+
+  async function handleCreateObservation(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedPatient) {
+      setStatusMessage("Cần chọn bệnh nhân trước khi ghi nhận chỉ số lâm sàng.");
+      return;
+    }
+
+    const numericValue = Number(observationForm.value);
+
+    if (!Number.isFinite(numericValue)) {
+      setStatusMessage("Giá trị chỉ số phải là số hợp lệ.");
+      return;
+    }
+
+    setIsSubmittingObservation(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/observations`, {
+        method: "POST",
+        headers: buildHeaders("TREATMENT", {
+          "Content-Type": "application/json"
+        }),
+        body: JSON.stringify({
+          encounterId: observationForm.encounterId || undefined,
+          category: observationForm.category,
+          code: {
+            system: observationForm.codeSystem,
+            code: observationForm.code,
+            display: observationForm.codeDisplay
+          },
+          effectiveAt: toApiDateTime(observationForm.effectiveAt),
+          valueQuantity: {
+            value: numericValue,
+            unit: observationForm.unit,
+            system: observationForm.unitSystem || undefined,
+            code: observationForm.unitCode || undefined
+          },
+          performerPractitionerId: observationForm.performerPractitionerId || undefined
+        })
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => undefined);
+        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
+      }
+
+      const createdObservation = (await response.json()) as Observation;
+      await loadObservations(selectedPatient.id, createdObservation.id);
+      await loadPatientFhirBundlePreview(selectedPatient.id);
+      await loadAuditEvents(selectedPatient.id, { silent: true });
+      setAppRoute("workspace");
+      setStatusMessage(`Đã ghi nhận "${createdObservation.code.display}" cho ${selectedPatient.fullName}.`);
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể ghi nhận chỉ số lâm sàng: ${error.message}`
+          : "Không thể ghi nhận chỉ số lâm sàng."
+      );
+    } finally {
+      setIsSubmittingObservation(false);
     }
   }
 
@@ -1000,8 +1221,8 @@ export function App() {
         <section className="metric-grid">
           <MetricCard label="Bệnh nhân" value={`${patients.length}`} note="Hồ sơ trong registry demo" />
           <MetricCard label="Lượt khám mở" value={`${openEncounters.length}`} note="Theo bệnh nhân đang chọn" />
+          <MetricCard label="Chỉ số lâm sàng" value={`${observations.length}`} note="Sinh hiệu/xét nghiệm đang có cấu trúc" />
           <MetricCard label="Tài liệu nháp" value={`${draftDocuments.length}`} note="Cần ký/xác thực" />
-          <MetricCard label="Audit events" value={`${auditEvents.length}`} note="Theo hồ sơ đang chọn" />
         </section>
 
         <section className="dashboard-grid">
@@ -1021,7 +1242,7 @@ export function App() {
               </button>
               <button type="button" onClick={() => setAppRoute("interop")}>
                 <strong>Xem gói FHIR</strong>
-                <span>Patient, Encounter và DocumentReference đã có preview.</span>
+                <span>Patient, Encounter, Observation và DocumentReference đã có preview.</span>
               </button>
             </div>
           </article>
@@ -1033,6 +1254,7 @@ export function App() {
               <div className="detail-grid compact">
                 <Info label="MRN" value={selectedPatient.identifiers[0]?.value ?? selectedPatient.id} />
                 <Info label="Lượt khám gần nhất" value={encounters[0]?.serviceType ?? "Chưa có"} />
+                <Info label="Chỉ số lâm sàng" value={`${observations.length}`} />
                 <Info label="Tài liệu" value={`${clinicalDocuments.length}`} />
                 <Info label="Cập nhật" value={formatDateTime(selectedPatient.updatedAt)} />
               </div>
@@ -1058,6 +1280,7 @@ export function App() {
           {renderPatientListPanel()}
           {renderPatientDetailPanel()}
           {renderEncounterPanel()}
+          {renderObservationPanel()}
           {renderCreatePatientPanel()}
         </section>
       </div>
@@ -1129,6 +1352,7 @@ export function App() {
           <FhirPanel title="FHIR Patient JSON" badge="Patient" value={patientFhirPreview} />
           <FhirPanel title="FHIR Patient Record Bundle JSON" badge="Bundle" value={patientFhirBundlePreview} />
           <FhirPanel title="FHIR Encounter JSON" badge="Encounter" value={encounterFhirPreview} />
+          <FhirPanel title="FHIR Observation JSON" badge="Observation" value={observationFhirPreview} />
           <FhirPanel title="FHIR DocumentReference JSON" badge="DocumentReference" value={documentFhirPreview} />
           {renderConsentInteropPanel()}
           <article className="panel dark-panel">
@@ -1334,6 +1558,7 @@ export function App() {
                   <Info label="Lý do khám" value={selectedEncounter.reasonText} />
                   <Info label="Khoa/phòng" value={selectedEncounter.departmentId ?? "Chưa gắn"} />
                   <Info label="Nhân sự phụ trách" value={selectedEncounter.attendingPractitionerId} />
+                  <Info label="Chỉ số gắn lượt khám" value={`${selectedEncounterObservations.length}`} />
                   <Info label="Tài liệu gắn lượt khám" value={`${selectedEncounterDocuments.length}`} />
                 </div>
                 <div className="action-row">
@@ -1408,6 +1633,165 @@ export function App() {
           </label>
           <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingEncounter}>
             {isSubmittingEncounter ? "Đang mở..." : "Mở lượt khám"}
+          </button>
+        </form>
+      </article>
+    );
+  }
+
+  function renderObservationPanel(): ReactNode {
+    return (
+      <article className="panel observation-panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Clinical observations</p>
+            <h2>Chỉ số lâm sàng và xét nghiệm</h2>
+          </div>
+          <span className="pill cyan">{isLoadingObservations ? "loading" : `${observations.length} chỉ số`}</span>
+        </div>
+
+        <div className="document-layout">
+          <div className="observation-cards">
+            {observations.map((observation) => (
+              <button
+                className={observation.id === selectedObservationId ? "observation-card selected" : "observation-card"}
+                key={observation.id}
+                type="button"
+                onClick={() => setSelectedObservationId(observation.id)}
+              >
+                <span>{formatObservationCategory(observation.category)}</span>
+                <strong>{observation.code.display}</strong>
+                <small>
+                  {formatObservationValue(observation)} · {formatDateTime(observation.effectiveAt)}
+                </small>
+              </button>
+            ))}
+            {observations.length === 0 ? (
+              <p className="empty-state">
+                Bệnh nhân này chưa có chỉ số có cấu trúc. Hãy ghi nhận sinh hiệu hoặc kết quả xét nghiệm đầu tiên.
+              </p>
+            ) : null}
+          </div>
+
+          <div className="observation-summary">
+            {selectedObservation ? (
+              <>
+                <div className="document-meta">
+                  <Info label="Nhóm" value={formatObservationCategory(selectedObservation.category)} />
+                  <Info label="Trạng thái" value={formatObservationStatus(selectedObservation.status)} />
+                  <Info label="Mã chuẩn" value={`${selectedObservation.code.system} · ${selectedObservation.code.code}`} />
+                  <Info label="Giá trị" value={formatObservationValue(selectedObservation)} />
+                  <Info label="Encounter" value={selectedObservation.encounterId ?? "Chưa gắn"} />
+                  <Info label="Người ghi nhận" value={selectedObservation.performerPractitionerId ?? "Chưa gắn"} />
+                </div>
+                <p className="empty-state">
+                  Observation là dữ liệu lâm sàng có cấu trúc; khi xuất Bundle sẽ đi cùng Patient, Encounter và
+                  DocumentReference để bên nhận có thể xử lý máy đọc được.
+                </p>
+              </>
+            ) : (
+              <p className="empty-state">Chọn một chỉ số để xem metadata và xuất FHIR Observation.</p>
+            )}
+          </div>
+        </div>
+
+        <form className="observation-form" onSubmit={(event) => void handleCreateObservation(event)}>
+          <label>
+            Gắn với lượt khám
+            <select
+              value={observationForm.encounterId}
+              onChange={(event) => setObservationForm({ ...observationForm, encounterId: event.target.value })}
+            >
+              <option value="">Không gắn</option>
+              {encounters.map((encounter) => (
+                <option key={encounter.id} value={encounter.id}>
+                  {encounter.serviceType} · {formatDateTime(encounter.startedAt)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Nhóm chỉ số
+            <select
+              value={observationForm.category}
+              onChange={(event) =>
+                setObservationForm({ ...observationForm, category: event.target.value as ObservationCategory })
+              }
+            >
+              <option value="laboratory">Xét nghiệm</option>
+              <option value="vital-signs">Sinh hiệu</option>
+            </select>
+          </label>
+          <label>
+            Hệ mã
+            <input
+              value={observationForm.codeSystem}
+              onChange={(event) => setObservationForm({ ...observationForm, codeSystem: event.target.value })}
+            />
+          </label>
+          <label>
+            Mã chỉ số
+            <input
+              value={observationForm.code}
+              onChange={(event) => setObservationForm({ ...observationForm, code: event.target.value })}
+            />
+          </label>
+          <label className="wide-field">
+            Tên chỉ số
+            <input
+              value={observationForm.codeDisplay}
+              onChange={(event) => setObservationForm({ ...observationForm, codeDisplay: event.target.value })}
+            />
+          </label>
+          <label>
+            Giá trị
+            <input
+              type="number"
+              step="any"
+              value={observationForm.value}
+              onChange={(event) => setObservationForm({ ...observationForm, value: event.target.value })}
+            />
+          </label>
+          <label>
+            Đơn vị
+            <input
+              value={observationForm.unit}
+              onChange={(event) => setObservationForm({ ...observationForm, unit: event.target.value })}
+            />
+          </label>
+          <label>
+            Hệ đơn vị
+            <input
+              value={observationForm.unitSystem}
+              onChange={(event) => setObservationForm({ ...observationForm, unitSystem: event.target.value })}
+            />
+          </label>
+          <label>
+            Mã đơn vị
+            <input
+              value={observationForm.unitCode}
+              onChange={(event) => setObservationForm({ ...observationForm, unitCode: event.target.value })}
+            />
+          </label>
+          <label>
+            Thời điểm ghi nhận
+            <input
+              type="datetime-local"
+              value={observationForm.effectiveAt}
+              onChange={(event) => setObservationForm({ ...observationForm, effectiveAt: event.target.value })}
+            />
+          </label>
+          <label>
+            Nhân sự ghi nhận
+            <input
+              value={observationForm.performerPractitionerId}
+              onChange={(event) =>
+                setObservationForm({ ...observationForm, performerPractitionerId: event.target.value })
+              }
+            />
+          </label>
+          <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingObservation}>
+            {isSubmittingObservation ? "Đang ghi nhận..." : "Ghi nhận chỉ số"}
           </button>
         </form>
       </article>
@@ -1712,7 +2096,7 @@ function LandingPage({
           <h1>Nền tảng bệnh án điện tử mở cho liên thông y tế</h1>
           <p className="lede">
             WiiiCare Nexus mô phỏng lõi EMR hiện đại: hồ sơ bệnh nhân, lượt khám, tài liệu bệnh án,
-            audit trail và ánh xạ FHIR để chuẩn bị kết nối giữa các bệnh viện.
+            chỉ số lâm sàng, audit trail và ánh xạ FHIR để chuẩn bị kết nối giữa các bệnh viện.
           </p>
           <div className="landing-actions">
             <button className="primary-button" type="button" onClick={onLogin}>
@@ -1725,7 +2109,7 @@ function LandingPage({
         </div>
         <aside className="landing-card">
           <span>Product slice</span>
-          <strong>Patient → Encounter → Document → FHIR</strong>
+          <strong>Patient → Encounter → Observation → Document → FHIR</strong>
           <small>Không còn là landing page đơn thuần; app có luồng vận hành sau đăng nhập.</small>
         </aside>
       </section>
@@ -1735,7 +2119,7 @@ function LandingPage({
           ["Patient Workspace", "Bàn làm việc theo bệnh nhân, giống nhịp vận hành EMR thật."],
           ["Document Center", "Quản lý CCR, CCDA, hồ sơ bệnh án, xét nghiệm và tài liệu chuyển tuyến."],
           ["Audit & RBAC", "Ghi log truy cập nhạy cảm và kiểm tra quyền theo vai trò demo."],
-          ["FHIR Interop", "Xuất Patient, Encounter và DocumentReference để chuẩn bị liên thông."]
+          ["FHIR Interop", "Xuất Patient, Encounter, Observation và DocumentReference để chuẩn bị liên thông."]
         ].map(([title, description]) => (
           <article className="panel" key={title}>
             <p className="eyebrow">{title}</p>
@@ -2040,6 +2424,10 @@ function formatAuditAction(action: AuditAction): string {
     "encounter.read": "Xem lượt khám",
     "encounter.finish": "Kết thúc lượt khám",
     "encounter.fhir-export": "Xuất FHIR Encounter",
+    "observation.list": "Tải chỉ số lâm sàng",
+    "observation.create": "Ghi nhận chỉ số lâm sàng",
+    "observation.read": "Xem chỉ số lâm sàng",
+    "observation.fhir-export": "Xuất FHIR Observation",
     "clinical-document.list": "Tải tài liệu bệnh án",
     "clinical-document.create": "Tạo tài liệu bệnh án",
     "clinical-document.sign": "Ký tài liệu bệnh án",
@@ -2056,6 +2444,7 @@ function formatAuditResourceType(resourceType: AuditResourceType): string {
   const labels: Record<AuditResourceType, string> = {
     Patient: "Bệnh nhân",
     Encounter: "Lượt khám",
+    Observation: "Chỉ số lâm sàng",
     ClinicalDocument: "Tài liệu",
     Consent: "Consent",
     AuditEvent: "Audit"
@@ -2080,6 +2469,36 @@ function formatConsentCategory(category: ConsentCategory): string {
   };
 
   return labels[category];
+}
+
+function formatObservationCategory(category: ObservationCategory): string {
+  const labels: Record<ObservationCategory, string> = {
+    laboratory: "Xét nghiệm",
+    "vital-signs": "Sinh hiệu"
+  };
+
+  return labels[category];
+}
+
+function formatObservationStatus(status: ObservationStatus): string {
+  const labels: Record<ObservationStatus, string> = {
+    registered: "Đã đăng ký",
+    preliminary: "Sơ bộ",
+    final: "Chính thức",
+    amended: "Đã hiệu chỉnh",
+    cancelled: "Đã hủy",
+    "entered-in-error": "Nhập lỗi"
+  };
+
+  return labels[status];
+}
+
+function formatObservationValue(observation: Observation): string {
+  if (observation.valueQuantity) {
+    return `${observation.valueQuantity.value} ${observation.valueQuantity.unit}`;
+  }
+
+  return observation.valueText ?? "Chưa có giá trị";
 }
 
 function formatDateTime(value: string): string {

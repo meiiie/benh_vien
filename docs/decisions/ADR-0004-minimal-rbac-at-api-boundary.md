@@ -12,8 +12,8 @@ Sau khi đã có audit trail, hệ thống vẫn chưa đủ an toàn nếu mọ
 
 Thêm access-control domain với các vai trò demo:
 
-- `clinician`: thực hiện nghiệp vụ điều trị, tạo bệnh nhân, tạo/ký tài liệu và xuất FHIR phục vụ điều trị.
-- `nurse`: đọc bệnh nhân, đọc/tạo tài liệu, nhưng không ký và không xuất FHIR.
+- `clinician`: thực hiện nghiệp vụ điều trị, tạo bệnh nhân, mở lượt khám, ghi nhận chỉ số, tạo/ký tài liệu và xuất FHIR phục vụ điều trị.
+- `nurse`: đọc bệnh nhân, đọc/tạo tài liệu, ghi nhận chỉ số, nhưng không ký và không xuất FHIR.
 - `auditor`: đọc hồ sơ tối thiểu và đọc audit trail khi `purposeOfUse` là `AUDIT`.
 - `admin`: có toàn quyền trong prototype.
 
@@ -40,10 +40,10 @@ Giới hạn còn lại:
 
 - Phiên demo chưa phải IAM/SSO thật, chưa có MFA, rotation, revoke-list hoặc refresh token.
 - Tài khoản demo chưa dùng password hashing/database user store.
-- Chưa có phân quyền theo từng bệnh nhân hoặc consent.
+- Chưa có phân quyền theo từng bệnh nhân, khoa/phòng hoặc quan hệ điều trị; consent chia sẻ liên viện mới là lát cắt tối thiểu.
 
 ## Bước Tiếp Theo
 
 1. Thay token nội bộ bằng JWT/session do IAM phát hành.
 2. Thêm policy theo organization, khoa/phòng và quan hệ điều trị.
-3. Thêm consent trước khi chia sẻ hồ sơ sang bệnh viện khác.
+3. Mở rộng consent sang thu hồi, người đại diện hợp pháp và ràng buộc theo loại dữ liệu được chia sẻ.

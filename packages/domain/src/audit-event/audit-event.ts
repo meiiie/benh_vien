@@ -11,6 +11,10 @@ export type AuditAction =
   | "encounter.read"
   | "encounter.finish"
   | "encounter.fhir-export"
+  | "observation.list"
+  | "observation.create"
+  | "observation.read"
+  | "observation.fhir-export"
   | "clinical-document.list"
   | "clinical-document.create"
   | "clinical-document.sign"
@@ -22,6 +26,7 @@ export type AuditAction =
 export type AuditResourceType =
   | "Patient"
   | "Encounter"
+  | "Observation"
   | "ClinicalDocument"
   | "Consent"
   | "AuditEvent";

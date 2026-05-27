@@ -79,6 +79,54 @@ export type FhirEncounter = {
   };
 };
 
+export type FhirObservation = {
+  readonly resourceType: "Observation";
+  readonly id: string;
+  readonly meta?: {
+    readonly profile?: readonly string[];
+  };
+  readonly status:
+    | "registered"
+    | "preliminary"
+    | "final"
+    | "amended"
+    | "cancelled"
+    | "entered-in-error";
+  readonly category: readonly {
+    readonly coding: readonly {
+      readonly system: string;
+      readonly code: string;
+      readonly display: string;
+    }[];
+    readonly text: string;
+  }[];
+  readonly code: {
+    readonly coding: readonly {
+      readonly system: string;
+      readonly code: string;
+      readonly display: string;
+    }[];
+    readonly text: string;
+  };
+  readonly subject: {
+    readonly reference: string;
+  };
+  readonly encounter?: {
+    readonly reference: string;
+  };
+  readonly effectiveDateTime: string;
+  readonly valueQuantity?: {
+    readonly value: number;
+    readonly unit: string;
+    readonly system?: string;
+    readonly code?: string;
+  };
+  readonly valueString?: string;
+  readonly performer?: readonly {
+    readonly reference: string;
+  }[];
+};
+
 export type FhirPatient = {
   readonly resourceType: "Patient";
   readonly id: string;
@@ -107,7 +155,7 @@ export type FhirPatient = {
 
 export type FhirBundleEntry = {
   readonly fullUrl: string;
-  readonly resource: FhirPatient | FhirEncounter | FhirDocumentReference;
+  readonly resource: FhirPatient | FhirEncounter | FhirObservation | FhirDocumentReference;
 };
 
 export type FhirBundle = {

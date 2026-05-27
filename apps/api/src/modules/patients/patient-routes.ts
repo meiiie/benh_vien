@@ -15,6 +15,7 @@ import type {
   ClinicalDocumentRepository,
   ConsentRepository,
   EncounterRepository,
+  ObservationRepository,
   PatientRepository,
   PatientSnapshot
 } from "@benh-vien-so/domain";
@@ -26,6 +27,7 @@ export async function registerPatientRoutes(
   repository: PatientRepository,
   encounterRepository: EncounterRepository,
   documentRepository: ClinicalDocumentRepository,
+  observationRepository: ObservationRepository,
   consentRepository: ConsentRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
@@ -194,9 +196,10 @@ export async function registerPatientRoutes(
       });
     }
 
-    const [encounters, documents] = await Promise.all([
+    const [encounters, documents, observations] = await Promise.all([
       encounterRepository.findByPatientId(params.id),
-      documentRepository.findByPatientId(params.id)
+      documentRepository.findByPatientId(params.id),
+      observationRepository.findByPatientId(params.id)
     ]);
 
     await recordAuditEvent(auditRepository, request, {
@@ -211,6 +214,7 @@ export async function registerPatientRoutes(
         consentReference: transferContext.consentReference,
         recipientOrganizationId: transferContext.recipientOrganizationId,
         encounterCount: encounters.length,
+        observationCount: observations.length,
         documentCount: documents.length
       }
     });
@@ -218,6 +222,7 @@ export async function registerPatientRoutes(
     return mapPatientRecordToFhirBundle({
       patient,
       encounters,
+      observations,
       documents
     });
   });
