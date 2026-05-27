@@ -23,6 +23,7 @@ const {
   MedicationRequest,
   Observation,
   Patient,
+  ServiceRequest,
   canAccess,
   mapAllergyIntoleranceToFhir,
   mapClinicalDocumentToFhir,
@@ -31,7 +32,8 @@ const {
   mapMedicationRequestToFhir,
   mapObservationToFhir,
   mapPatientRecordToFhirBundle,
-  mapPatientToFhir
+  mapPatientToFhir,
+  mapServiceRequestToFhir
 } = await import(pathToFileURL(domainEntry).href);
 
 const { createAccessToken, verifyAccessToken } = await import(pathToFileURL(apiAuthEntry).href);
@@ -176,6 +178,38 @@ if (fhirCondition.subject.reference !== "Patient/patient-harness-001") {
   );
 }
 
+const serviceRequest = ServiceRequest.order({
+  id: "service-request-harness-001",
+  patientId: patient.id,
+  encounterId: encounter.id,
+  reasonConditionId: condition.id,
+  category: "laboratory",
+  priority: "urgent",
+  code: {
+    system: "http://loinc.org",
+    code: "58410-2",
+    display: "Complete blood count panel"
+  },
+  occurrenceAt: "2026-05-27T01:00:00.000Z",
+  authoredOn: "2026-05-27T00:00:00.000Z",
+  requesterPractitionerId: "practitioner-harness-001",
+  performerOrganizationId: "department-laboratory"
+});
+
+const fhirServiceRequest = mapServiceRequestToFhir(serviceRequest);
+
+if (fhirServiceRequest.resourceType !== "ServiceRequest") {
+  throw new Error(
+    `Expected resourceType ServiceRequest, received ${fhirServiceRequest.resourceType}`
+  );
+}
+
+if (fhirServiceRequest.subject.reference !== "Patient/patient-harness-001") {
+  throw new Error(
+    `Expected service request subject Patient/patient-harness-001, received ${fhirServiceRequest.subject.reference}`
+  );
+}
+
 const observation = Observation.record({
   id: "observation-harness-001",
   patientId: patient.id,
@@ -286,6 +320,7 @@ const fhirBundle = mapPatientRecordToFhirBundle({
   encounters: [encounter],
   allergyIntolerances: [allergyIntolerance],
   conditions: [condition],
+  serviceRequests: [serviceRequest],
   observations: [observation],
   medicationRequests: [medicationRequest],
   documents: [document],
@@ -300,8 +335,8 @@ if (fhirBundle.type !== "collection") {
   throw new Error(`Expected bundle type collection, received ${fhirBundle.type}`);
 }
 
-if (fhirBundle.entry.length !== 7) {
-  throw new Error(`Expected bundle to contain 7 entries, received ${fhirBundle.entry.length}`);
+if (fhirBundle.entry.length !== 8) {
+  throw new Error(`Expected bundle to contain 8 entries, received ${fhirBundle.entry.length}`);
 }
 
 const consent = Consent.grant({
@@ -408,6 +443,15 @@ const clinicianCanExportMedicationRequest = canAccess(
   "medication-request:fhir-export"
 );
 
+const clinicianCanExportServiceRequest = canAccess(
+  {
+    actorId: "practitioner-harness-001",
+    role: "clinician",
+    purposeOfUse: "TREATMENT"
+  },
+  "service-request:fhir-export"
+);
+
 const nurseCanExportObservation = canAccess(
   {
     actorId: "nurse-harness-001",
@@ -442,6 +486,15 @@ const nurseCanExportMedicationRequest = canAccess(
     purposeOfUse: "TREATMENT"
   },
   "medication-request:fhir-export"
+);
+
+const nurseCanExportServiceRequest = canAccess(
+  {
+    actorId: "nurse-harness-001",
+    role: "nurse",
+    purposeOfUse: "TREATMENT"
+  },
+  "service-request:fhir-export"
 );
 
 const clinicianCanReadAudit = canAccess(
@@ -486,6 +539,10 @@ if (!clinicianCanExportMedicationRequest) {
   throw new Error("Expected clinician/TREATMENT to export medication requests.");
 }
 
+if (!clinicianCanExportServiceRequest) {
+  throw new Error("Expected clinician/TREATMENT to export service requests.");
+}
+
 if (nurseCanExportObservation) {
   throw new Error("Expected nurse/TREATMENT to be denied observation:fhir-export.");
 }
@@ -500,6 +557,10 @@ if (nurseCanExportAllergyIntolerance) {
 
 if (nurseCanExportMedicationRequest) {
   throw new Error("Expected nurse/TREATMENT to be denied medication-request:fhir-export.");
+}
+
+if (nurseCanExportServiceRequest) {
+  throw new Error("Expected nurse/TREATMENT to be denied service-request:fhir-export.");
 }
 
 if (clinicianCanReadAudit) {
@@ -529,6 +590,8 @@ console.log(
       observationResourceType: fhirObservation.resourceType,
       medicationRequestId: fhirMedicationRequest.id,
       medicationRequestResourceType: fhirMedicationRequest.resourceType,
+      serviceRequestId: fhirServiceRequest.id,
+      serviceRequestResourceType: fhirServiceRequest.resourceType,
       bundleId: fhirBundle.id,
       bundleResourceType: fhirBundle.resourceType,
       bundleEntryCount: fhirBundle.entry.length,
@@ -546,10 +609,12 @@ console.log(
         clinicianCanExportCondition,
         clinicianCanExportMedicationRequest,
         clinicianCanExportObservation,
+        clinicianCanExportServiceRequest,
         nurseCanExportAllergyIntolerance,
         nurseCanExportCondition,
         nurseCanExportMedicationRequest,
         nurseCanExportObservation,
+        nurseCanExportServiceRequest,
         clinicianCanReadAudit,
         auditorCanReadAudit
       }

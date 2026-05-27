@@ -20,7 +20,8 @@ import type {
   MedicationRequestRepository,
   ObservationRepository,
   PatientRepository,
-  PatientSnapshot
+  PatientSnapshot,
+  ServiceRequestRepository
 } from "@benh-vien-so/domain";
 import { requirePermission } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
@@ -34,6 +35,7 @@ export async function registerPatientRoutes(
   conditionRepository: ConditionRepository,
   observationRepository: ObservationRepository,
   medicationRequestRepository: MedicationRequestRepository,
+  serviceRequestRepository: ServiceRequestRepository,
   consentRepository: ConsentRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
@@ -208,14 +210,16 @@ export async function registerPatientRoutes(
       documents,
       conditions,
       observations,
-      medicationRequests
+      medicationRequests,
+      serviceRequests
     ] = await Promise.all([
       encounterRepository.findByPatientId(params.id),
       allergyIntoleranceRepository.findByPatientId(params.id),
       documentRepository.findByPatientId(params.id),
       conditionRepository.findByPatientId(params.id),
       observationRepository.findByPatientId(params.id),
-      medicationRequestRepository.findByPatientId(params.id)
+      medicationRequestRepository.findByPatientId(params.id),
+      serviceRequestRepository.findByPatientId(params.id)
     ]);
 
     await recordAuditEvent(auditRepository, request, {
@@ -234,6 +238,7 @@ export async function registerPatientRoutes(
         conditionCount: conditions.length,
         observationCount: observations.length,
         medicationRequestCount: medicationRequests.length,
+        serviceRequestCount: serviceRequests.length,
         documentCount: documents.length
       }
     });
@@ -245,6 +250,7 @@ export async function registerPatientRoutes(
       conditions,
       observations,
       medicationRequests,
+      serviceRequests,
       documents
     });
   });

@@ -510,7 +510,9 @@ h2 {
 .medication-card span,
 .medication-card small,
 .observation-card span,
-.observation-card small {
+.observation-card small,
+.service-card span,
+.service-card small {
   color: var(--muted);
 }
 
@@ -546,7 +548,7 @@ h2 {
 
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 0;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -606,7 +608,8 @@ h2 {
 .allergy-card,
 .condition-card,
 .medication-card,
-.observation-card {
+.observation-card,
+.service-card {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -630,7 +633,9 @@ h2 {
 .medication-card:hover,
 .medication-card.selected,
 .observation-card:hover,
-.observation-card.selected {
+.observation-card.selected,
+.service-card:hover,
+.service-card.selected {
   border-color: rgba(0, 86, 210, 0.36);
   background: var(--primary-soft);
 }
@@ -657,7 +662,10 @@ h2 {
 .medication-card small,
 .observation-card span,
 .observation-card strong,
-.observation-card small {
+.observation-card small,
+.service-card span,
+.service-card strong,
+.service-card small {
   display: block;
 }
 
@@ -688,6 +696,7 @@ h2 {
 .condition-cards,
 .medication-cards,
 .observation-cards,
+.service-cards,
 .audit-list {
   display: grid;
   gap: 10px;
@@ -767,6 +776,7 @@ code {
 .condition-form,
 .medication-form,
 .observation-form,
+.service-form,
 .document-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -809,6 +819,7 @@ select:focus {
 .condition-form .primary-button,
 .medication-form .primary-button,
 .observation-form .primary-button,
+.service-form .primary-button,
 .document-form .primary-button {
   grid-column: 1 / -1;
 }
@@ -819,6 +830,7 @@ select:focus {
 .condition-panel,
 .medication-panel,
 .observation-panel,
+.service-panel,
 .audit-panel {
   grid-column: 1 / -1;
 }
@@ -998,7 +1010,7 @@ pre {
 
 .workflow-strip {
   display: grid;
-  grid-template-columns: repeat(9, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 12px;
 }
 
@@ -1119,6 +1131,7 @@ pre {
   .condition-form,
   .medication-form,
   .observation-form,
+  .service-form,
   .document-layout,
   .document-meta,
   .document-form,

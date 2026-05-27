@@ -66,11 +66,11 @@ sequenceDiagram
   participant Partner as Hệ thống nhận liên thông
 
   User->>App: Tạo/cập nhật nội dung bệnh án
-  App->>EMR: Ghi lượt khám, dị ứng/cảnh báo, chẩn đoán, chỉ số lâm sàng, chỉ định thuốc và tài liệu
+  App->>EMR: Ghi lượt khám, dị ứng/cảnh báo, chẩn đoán, chỉ định dịch vụ, chỉ số lâm sàng, chỉ định thuốc và tài liệu
   EMR->>Audit: Ghi nhật ký thao tác
   User->>App: Ký hoặc xác nhận điện tử
   App->>EMR: Chuyển trạng thái tài liệu sang signed
-  EMR->>FHIR: Chuyển đổi sang FHIR Patient/Encounter/AllergyIntolerance/Condition/Observation/MedicationRequest/DocumentReference/Composition
+  EMR->>FHIR: Chuyển đổi sang FHIR Patient/Encounter/AllergyIntolerance/Condition/ServiceRequest/Observation/MedicationRequest/DocumentReference/Composition
   FHIR->>Partner: Chia sẻ theo API hoặc hồ sơ IHE phù hợp
 ```
 
@@ -82,6 +82,7 @@ sequenceDiagram
 - **Tài liệu phải đi qua ngữ cảnh lượt khám/đợt điều trị khi có thể.** OpenEMR cho thấy tài liệu rời rạc khó sử dụng nếu không bám vào patient chart và encounter timeline.
 - **Dị ứng/cảnh báo an toàn phải nổi bật trước luồng thuốc.** Tối thiểu cần tác nhân, nhóm, mức cảnh báo, trạng thái xác minh, biểu hiện phản ứng và người ghi nhận.
 - **Chẩn đoán/vấn đề sức khỏe cần tách khỏi ghi chú tự do.** Tối thiểu cần mã chuẩn, trạng thái lâm sàng, trạng thái xác minh, mức độ, người ghi nhận và liên kết bệnh nhân/lượt khám khi có thể.
+- **Chỉ định dịch vụ là cầu nối tới LIS/PACS/RIS.** Xét nghiệm, chẩn đoán hình ảnh, thủ thuật và hội chẩn cần có y lệnh riêng trước khi kết quả về; tối thiểu cần mã dịch vụ, nhóm dịch vụ, ưu tiên, người chỉ định, khoa thực hiện, thời điểm dự kiến và chẩn đoán liên quan khi có.
 - **Chỉ số lâm sàng cần có cấu trúc máy đọc được.** Sinh hiệu và xét nghiệm không nên chỉ nằm trong PDF; tối thiểu cần mã chuẩn, giá trị, đơn vị, thời điểm, người ghi nhận và liên kết bệnh nhân/lượt khám.
 - **Chỉ định thuốc cần tách khỏi văn bản tự do trong tài liệu.** Tối thiểu cần mã thuốc, hướng dẫn dùng, người kê, trạng thái, mục đích, liên kết bệnh nhân/lượt khám và chẩn đoán liên quan khi có thể.
 - **Tài liệu bệnh án cần có vòng đời.** Tối thiểu gồm nháp, đã ký, bị thay thế, nhập sai.
@@ -97,6 +98,7 @@ Phiên bản hiện tại tạo các bảng tối thiểu:
 - `encounters`: lượt khám hoặc đợt điều trị, là cầu nối giữa bệnh nhân, tài liệu, người phụ trách và FHIR Encounter.
 - `allergy_intolerances`: dị ứng/cảnh báo an toàn có cấu trúc, gồm tác nhân, nhóm, mức cảnh báo, phản ứng, thời điểm và người ghi nhận.
 - `conditions`: chẩn đoán/vấn đề sức khỏe có cấu trúc, gồm trạng thái, mã chẩn đoán, mức độ, thời điểm ghi nhận và người ghi nhận.
+- `service_requests`: chỉ định dịch vụ có cấu trúc, gồm nhóm dịch vụ, mã dịch vụ, ưu tiên, khoa thực hiện, thời điểm dự kiến và người chỉ định.
 - `observations`: sinh hiệu/xét nghiệm có cấu trúc, gồm mã chuẩn, giá trị định lượng hoặc văn bản, thời điểm và người ghi nhận.
 - `medication_requests`: chỉ định thuốc/đơn thuốc có cấu trúc, gồm mã thuốc, liều dùng, người kê, thời điểm, trạng thái và liên kết chẩn đoán khi có.
 - `clinical_documents`: tài liệu lâm sàng có vòng đời nháp, đã ký, bị thay thế hoặc nhập sai.
@@ -107,7 +109,7 @@ Phiên bản hiện tại tạo các bảng tối thiểu:
 ## Luồng mở rộng dự kiến
 
 1. Hoàn thiện registry bệnh nhân và tài liệu lâm sàng tối thiểu.
-2. Kết nối HAPI FHIR để xuất/nhập `Patient`, `Encounter`, `AllergyIntolerance`, `Observation`, `Condition`, `MedicationRequest`, `DocumentReference`, `Composition`.
+2. Kết nối HAPI FHIR để xuất/nhập `Patient`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Observation`, `MedicationRequest`, `DocumentReference`, `Composition`.
 3. Kết nối Orthanc để minh họa PACS/DICOM và DICOMweb.
 4. Bổ sung xác thực, phân quyền, nhật ký kiểm toán và chính sách lưu trữ.
 5. Nếu cần mở rộng lớn, tách `Interoperability`, `Imaging`, `Audit` thành service riêng.

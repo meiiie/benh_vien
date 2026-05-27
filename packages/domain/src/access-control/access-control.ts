@@ -28,6 +28,10 @@ export type Permission =
   | "observation:create"
   | "observation:read"
   | "observation:fhir-export"
+  | "service-request:list"
+  | "service-request:create"
+  | "service-request:read"
+  | "service-request:fhir-export"
   | "clinical-document:list"
   | "clinical-document:create"
   | "clinical-document:sign"
@@ -69,6 +73,10 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "observation:create",
     "observation:read",
     "observation:fhir-export",
+    "service-request:list",
+    "service-request:create",
+    "service-request:read",
+    "service-request:fhir-export",
     "clinical-document:list",
     "clinical-document:create",
     "clinical-document:sign",
@@ -93,6 +101,9 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "observation:list",
     "observation:create",
     "observation:read",
+    "service-request:list",
+    "service-request:create",
+    "service-request:read",
     "clinical-document:list",
     "clinical-document:create",
     "consent:list"
@@ -124,6 +135,10 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "observation:create",
     "observation:read",
     "observation:fhir-export",
+    "service-request:list",
+    "service-request:create",
+    "service-request:read",
+    "service-request:fhir-export",
     "clinical-document:list",
     "clinical-document:create",
     "clinical-document:sign",

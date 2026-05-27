@@ -167,12 +167,13 @@ describe("API auth and RBAC boundary", () => {
         "Encounter",
         "AllergyIntolerance",
         "Condition",
+        "ServiceRequest",
         "Observation",
         "MedicationRequest",
         "DocumentReference"
       ])
     );
-    expect(body.entry).toHaveLength(14);
+    expect(body.entry).toHaveLength(16);
   });
 
   it("lists allergy intolerances and exports them as FHIR AllergyIntolerance", async () => {
@@ -452,6 +453,74 @@ describe("API auth and RBAC boundary", () => {
       encounterId: "encounter-demo-002",
       reasonConditionId: "condition-demo-002",
       category: "outpatient"
+    });
+  });
+
+  it("lists service requests and exports them as FHIR ServiceRequest", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const listResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/service-requests",
+      headers: treatmentHeaders(accessToken)
+    });
+    const listBody = listResponse.json();
+
+    expect(listResponse.statusCode).toBe(200);
+    expect(listBody.items).toHaveLength(2);
+
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: `/api/v1/service-requests/${listBody.items[0].id}/fhir`,
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(fhirResponse.statusCode).toBe(200);
+    expect(fhirResponse.json()).toMatchObject({
+      resourceType: "ServiceRequest",
+      status: "active",
+      intent: "order",
+      subject: {
+        reference: "Patient/patient-demo-001"
+      }
+    });
+  });
+
+  it("creates a service request linked to a patient condition", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/service-requests",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: "encounter-demo-002",
+        reasonConditionId: "condition-demo-002",
+        category: "laboratory",
+        priority: "urgent",
+        code: {
+          system: "http://loinc.org",
+          code: "24323-8",
+          display: "Comprehensive metabolic panel"
+        },
+        occurrenceAt: "2026-05-27T05:00:00.000Z",
+        requesterPractitionerId: "practitioner-demo-001",
+        performerOrganizationId: "department-laboratory",
+        patientInstruction: "Nhịn ăn nếu khoa xét nghiệm yêu cầu."
+      }
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({
+      patientId: "patient-demo-001",
+      encounterId: "encounter-demo-002",
+      reasonConditionId: "condition-demo-002",
+      category: "laboratory"
     });
   });
 

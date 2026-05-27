@@ -77,6 +77,26 @@ type MedicationRequestIntent =
 type MedicationRequestCategory = "inpatient" | "outpatient" | "community" | "discharge";
 type MedicationRequestPriority = "routine" | "urgent" | "asap" | "stat";
 type MedicationTimingUnit = "h" | "d" | "wk";
+type ServiceRequestStatus =
+  | "draft"
+  | "active"
+  | "on-hold"
+  | "revoked"
+  | "completed"
+  | "entered-in-error"
+  | "unknown";
+type ServiceRequestIntent =
+  | "proposal"
+  | "plan"
+  | "directive"
+  | "order"
+  | "original-order"
+  | "reflex-order"
+  | "filler-order"
+  | "instance-order"
+  | "option";
+type ServiceRequestCategory = "laboratory" | "imaging" | "procedure" | "consultation" | "therapy";
+type ServiceRequestPriority = "routine" | "urgent" | "asap" | "stat";
 type DemoRole = "clinician" | "nurse" | "auditor" | "admin";
 type PurposeOfUse = "TREATMENT" | "AUDIT" | "OPERATIONS";
 type ConsentStatus = "active" | "revoked" | "expired";
@@ -253,6 +273,32 @@ type MedicationRequest = {
   readonly updatedAt: string;
 };
 
+type ServiceRequestCode = {
+  readonly system: string;
+  readonly code: string;
+  readonly display: string;
+};
+
+type ServiceRequest = {
+  readonly id: string;
+  readonly patientId: string;
+  readonly encounterId?: string;
+  readonly reasonConditionId?: string;
+  readonly status: ServiceRequestStatus;
+  readonly intent: ServiceRequestIntent;
+  readonly category: ServiceRequestCategory;
+  readonly priority: ServiceRequestPriority;
+  readonly code: ServiceRequestCode;
+  readonly occurrenceAt?: string;
+  readonly authoredOn: string;
+  readonly requesterPractitionerId: string;
+  readonly performerOrganizationId?: string;
+  readonly patientInstruction?: string;
+  readonly note?: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
 type AuditAction =
   | "patient.list"
   | "patient.create"
@@ -280,6 +326,10 @@ type AuditAction =
   | "observation.create"
   | "observation.read"
   | "observation.fhir-export"
+  | "service-request.list"
+  | "service-request.create"
+  | "service-request.read"
+  | "service-request.fhir-export"
   | "clinical-document.list"
   | "clinical-document.create"
   | "clinical-document.sign"
@@ -295,6 +345,7 @@ type AuditResourceType =
   | "Condition"
   | "MedicationRequest"
   | "Observation"
+  | "ServiceRequest"
   | "ClinicalDocument"
   | "Consent"
   | "AuditEvent";
@@ -353,6 +404,10 @@ type ObservationsResponse = {
 
 type MedicationRequestsResponse = {
   readonly items: readonly MedicationRequest[];
+};
+
+type ServiceRequestsResponse = {
+  readonly items: readonly ServiceRequest[];
 };
 
 type AuditEventsResponse = {
@@ -457,6 +512,22 @@ type NewMedicationRequestForm = {
   authoredOn: string;
   requesterPractitionerId: string;
   expectedSupplyDurationDays: string;
+  note: string;
+};
+
+type NewServiceRequestForm = {
+  encounterId: string;
+  reasonConditionId: string;
+  category: ServiceRequestCategory;
+  priority: ServiceRequestPriority;
+  codeSystem: string;
+  code: string;
+  codeDisplay: string;
+  occurrenceAt: string;
+  authoredOn: string;
+  requesterPractitionerId: string;
+  performerOrganizationId: string;
+  patientInstruction: string;
   note: string;
 };
 
@@ -573,6 +644,22 @@ const defaultMedicationRequestForm: NewMedicationRequestForm = {
   note: "Chỉ định thuốc dùng cho quản lý điều trị ngoại trú."
 };
 
+const defaultServiceRequestForm: NewServiceRequestForm = {
+  encounterId: "",
+  reasonConditionId: "",
+  category: "laboratory",
+  priority: "urgent",
+  codeSystem: "http://loinc.org",
+  code: "58410-2",
+  codeDisplay: "Complete blood count panel",
+  occurrenceAt: "2026-05-27T11:00",
+  authoredOn: "2026-05-27T10:40",
+  requesterPractitionerId: "practitioner-demo-001",
+  performerOrganizationId: "department-laboratory",
+  patientInstruction: "Lấy mẫu theo hướng dẫn của khoa xét nghiệm.",
+  note: "Chỉ định xét nghiệm/hình ảnh dùng để nối EMR với LIS/PACS."
+};
+
 const apiBaseUrl =
   import.meta.env.VITE_API_BASE_URL ??
   (window.location.port === "7311" ? "http://localhost:7310/api/v1" : "/api/v1");
@@ -610,6 +697,7 @@ const workflowSteps = [
   "Mở lượt khám",
   "Kiểm tra dị ứng",
   "Ghi nhận chẩn đoán",
+  "Chỉ định dịch vụ",
   "Ghi nhận chỉ số",
   "Kê đơn/thuốc",
   "Gắn tài liệu",
@@ -646,7 +734,7 @@ const referenceSignals = [
   },
   {
     name: "HL7 FHIR R4",
-    value: "Patient, Encounter, AllergyIntolerance, Condition, Observation, MedicationRequest và DocumentReference là lõi trao đổi dữ liệu trong lát cắt này."
+    value: "Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Observation, MedicationRequest và DocumentReference là lõi trao đổi dữ liệu trong lát cắt này."
   },
   {
     name: "Bối cảnh Việt Nam",
@@ -678,6 +766,8 @@ export function App() {
   const [selectedObservationId, setSelectedObservationId] = useState<string>();
   const [medicationRequests, setMedicationRequests] = useState<readonly MedicationRequest[]>([]);
   const [selectedMedicationRequestId, setSelectedMedicationRequestId] = useState<string>();
+  const [serviceRequests, setServiceRequests] = useState<readonly ServiceRequest[]>([]);
+  const [selectedServiceRequestId, setSelectedServiceRequestId] = useState<string>();
   const [auditEvents, setAuditEvents] = useState<readonly AuditEvent[]>([]);
   const [consents, setConsents] = useState<readonly Consent[]>([]);
   const [patientFhirPreview, setPatientFhirPreview] = useState<unknown>();
@@ -688,6 +778,7 @@ export function App() {
   const [conditionFhirPreview, setConditionFhirPreview] = useState<unknown>();
   const [observationFhirPreview, setObservationFhirPreview] = useState<unknown>();
   const [medicationRequestFhirPreview, setMedicationRequestFhirPreview] = useState<unknown>();
+  const [serviceRequestFhirPreview, setServiceRequestFhirPreview] = useState<unknown>();
   const [patientForm, setPatientForm] = useState<NewPatientForm>(defaultPatientForm);
   const [encounterForm, setEncounterForm] = useState<NewEncounterForm>(defaultEncounterForm);
   const [documentForm, setDocumentForm] =
@@ -700,6 +791,8 @@ export function App() {
     useState<NewObservationForm>(defaultObservationForm);
   const [medicationRequestForm, setMedicationRequestForm] =
     useState<NewMedicationRequestForm>(defaultMedicationRequestForm);
+  const [serviceRequestForm, setServiceRequestForm] =
+    useState<NewServiceRequestForm>(defaultServiceRequestForm);
   const [statusMessage, setStatusMessage] = useState("Chưa đăng nhập.");
   const [isLoadingPatients, setIsLoadingPatients] = useState(false);
   const [isLoadingEncounters, setIsLoadingEncounters] = useState(false);
@@ -708,6 +801,7 @@ export function App() {
   const [isLoadingConditions, setIsLoadingConditions] = useState(false);
   const [isLoadingObservations, setIsLoadingObservations] = useState(false);
   const [isLoadingMedicationRequests, setIsLoadingMedicationRequests] = useState(false);
+  const [isLoadingServiceRequests, setIsLoadingServiceRequests] = useState(false);
   const [isLoadingAuditEvents, setIsLoadingAuditEvents] = useState(false);
   const [isLoadingConsents, setIsLoadingConsents] = useState(false);
   const [isSubmittingPatient, setIsSubmittingPatient] = useState(false);
@@ -717,6 +811,7 @@ export function App() {
   const [isSubmittingCondition, setIsSubmittingCondition] = useState(false);
   const [isSubmittingObservation, setIsSubmittingObservation] = useState(false);
   const [isSubmittingMedicationRequest, setIsSubmittingMedicationRequest] = useState(false);
+  const [isSubmittingServiceRequest, setIsSubmittingServiceRequest] = useState(false);
   const [isSigningDocument, setIsSigningDocument] = useState(false);
   const [isFinishingEncounter, setIsFinishingEncounter] = useState(false);
 
@@ -730,6 +825,9 @@ export function App() {
   const selectedObservation = observations.find((observation) => observation.id === selectedObservationId);
   const selectedMedicationRequest = medicationRequests.find(
     (medicationRequest) => medicationRequest.id === selectedMedicationRequestId
+  );
+  const selectedServiceRequest = serviceRequests.find(
+    (serviceRequest) => serviceRequest.id === selectedServiceRequestId
   );
   const selectedEncounterDocuments = selectedEncounter
     ? clinicalDocuments.filter((document) => document.encounterId === selectedEncounter.id)
@@ -745,6 +843,9 @@ export function App() {
     : [];
   const selectedEncounterMedicationRequests = selectedEncounter
     ? medicationRequests.filter((medicationRequest) => medicationRequest.encounterId === selectedEncounter.id)
+    : [];
+  const selectedEncounterServiceRequests = selectedEncounter
+    ? serviceRequests.filter((serviceRequest) => serviceRequest.encounterId === selectedEncounter.id)
     : [];
   const openEncounters = encounters.filter((encounter) => encounter.status === "in-progress");
   const signedDocuments = clinicalDocuments.filter((document) => document.status === "signed");
@@ -769,12 +870,14 @@ export function App() {
       setConditionFhirPreview(undefined);
       setObservationFhirPreview(undefined);
       setMedicationRequestFhirPreview(undefined);
+      setServiceRequestFhirPreview(undefined);
       setEncounters([]);
       setClinicalDocuments([]);
       setAllergyIntolerances([]);
       setConditions([]);
       setObservations([]);
       setMedicationRequests([]);
+      setServiceRequests([]);
       setAuditEvents([]);
       setConsents([]);
       setSelectedEncounterId(undefined);
@@ -783,6 +886,7 @@ export function App() {
       setSelectedConditionId(undefined);
       setSelectedObservationId(undefined);
       setSelectedMedicationRequestId(undefined);
+      setSelectedServiceRequestId(undefined);
       return;
     }
 
@@ -797,6 +901,7 @@ export function App() {
       setConditionForm((current) => ({ ...current, encounterId: "" }));
       setObservationForm((current) => ({ ...current, encounterId: "" }));
       setMedicationRequestForm((current) => ({ ...current, encounterId: "" }));
+      setServiceRequestForm((current) => ({ ...current, encounterId: "" }));
       return;
     }
 
@@ -805,6 +910,7 @@ export function App() {
     setConditionForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     setObservationForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     setMedicationRequestForm((current) => ({ ...current, encounterId: selectedEncounterId }));
+    setServiceRequestForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     void loadEncounterFhirPreview(selectedEncounterId);
   }, [selectedEncounterId]);
 
@@ -852,6 +958,15 @@ export function App() {
 
     void loadMedicationRequestFhirPreview(selectedMedicationRequestId);
   }, [selectedMedicationRequestId]);
+
+  useEffect(() => {
+    if (!selectedServiceRequestId) {
+      setServiceRequestFhirPreview(undefined);
+      return;
+    }
+
+    void loadServiceRequestFhirPreview(selectedServiceRequestId);
+  }, [selectedServiceRequestId]);
 
   function buildHeaders(
     purposeOfUse: PurposeOfUse,
@@ -904,6 +1019,7 @@ export function App() {
       loadConditions(patientId),
       loadObservations(patientId),
       loadMedicationRequests(patientId),
+      loadServiceRequests(patientId),
       loadClinicalDocuments(patientId),
       loadConsents(patientId)
     ];
@@ -1088,6 +1204,37 @@ export function App() {
       );
     } finally {
       setIsLoadingMedicationRequests(false);
+    }
+  }
+
+  async function loadServiceRequests(
+    patientId: string,
+    nextSelectedServiceRequestId?: string
+  ) {
+    setIsLoadingServiceRequests(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/service-requests`, {
+        headers: buildHeaders("TREATMENT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      const data = (await response.json()) as ServiceRequestsResponse;
+      setServiceRequests(data.items);
+      setSelectedServiceRequestId(nextSelectedServiceRequestId ?? data.items[0]?.id);
+    } catch (error) {
+      setServiceRequests([]);
+      setSelectedServiceRequestId(undefined);
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể tải chỉ định dịch vụ: ${error.message}`
+          : "Không thể tải chỉ định dịch vụ."
+      );
+    } finally {
+      setIsLoadingServiceRequests(false);
     }
   }
 
@@ -1324,6 +1471,27 @@ export function App() {
     }
   }
 
+  async function loadServiceRequestFhirPreview(serviceRequestId: string) {
+    try {
+      const response = await fetch(`${apiBaseUrl}/service-requests/${serviceRequestId}/fhir`, {
+        headers: buildHeaders("TREATMENT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      setServiceRequestFhirPreview(await response.json());
+    } catch (error) {
+      setServiceRequestFhirPreview({
+        error:
+          error instanceof Error
+            ? `Không thể xuất FHIR ServiceRequest: ${error.message}`
+            : "Không thể xuất FHIR ServiceRequest."
+      });
+    }
+  }
+
   async function handleLogin(event?: FormEvent<HTMLFormElement>) {
     const shouldOpenLoginOnFailure = !event;
 
@@ -1382,6 +1550,7 @@ export function App() {
     setConditions([]);
     setObservations([]);
     setMedicationRequests([]);
+    setServiceRequests([]);
     setAuditEvents([]);
     setConsents([]);
     setPatientFhirPreview(undefined);
@@ -1392,6 +1561,7 @@ export function App() {
     setConditionFhirPreview(undefined);
     setObservationFhirPreview(undefined);
     setMedicationRequestFhirPreview(undefined);
+    setServiceRequestFhirPreview(undefined);
     setSelectedPatientId(undefined);
     setSelectedEncounterId(undefined);
     setSelectedDocumentId(undefined);
@@ -1399,6 +1569,7 @@ export function App() {
     setSelectedConditionId(undefined);
     setSelectedObservationId(undefined);
     setSelectedMedicationRequestId(undefined);
+    setSelectedServiceRequestId(undefined);
   }
 
   async function handleCreatePatient(event: FormEvent<HTMLFormElement>) {
@@ -1830,6 +2001,69 @@ export function App() {
     }
   }
 
+  async function handleCreateServiceRequest(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedPatient) {
+      setStatusMessage("Cần chọn bệnh nhân trước khi tạo chỉ định dịch vụ.");
+      return;
+    }
+
+    setIsSubmittingServiceRequest(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/service-requests`, {
+        method: "POST",
+        headers: buildHeaders("TREATMENT", {
+          "Content-Type": "application/json"
+        }),
+        body: JSON.stringify({
+          encounterId: serviceRequestForm.encounterId || undefined,
+          reasonConditionId: serviceRequestForm.reasonConditionId || undefined,
+          category: serviceRequestForm.category,
+          priority: serviceRequestForm.priority,
+          code: {
+            system: serviceRequestForm.codeSystem,
+            code: serviceRequestForm.code,
+            display: serviceRequestForm.codeDisplay
+          },
+          occurrenceAt: serviceRequestForm.occurrenceAt
+            ? toApiDateTime(serviceRequestForm.occurrenceAt)
+            : undefined,
+          authoredOn: serviceRequestForm.authoredOn
+            ? toApiDateTime(serviceRequestForm.authoredOn)
+            : undefined,
+          requesterPractitionerId: serviceRequestForm.requesterPractitionerId,
+          performerOrganizationId: serviceRequestForm.performerOrganizationId || undefined,
+          patientInstruction: serviceRequestForm.patientInstruction || undefined,
+          note: serviceRequestForm.note || undefined
+        })
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => undefined);
+        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
+      }
+
+      const createdServiceRequest = (await response.json()) as ServiceRequest;
+      await loadServiceRequests(selectedPatient.id, createdServiceRequest.id);
+      await loadPatientFhirBundlePreview(selectedPatient.id);
+      await loadAuditEvents(selectedPatient.id, { silent: true });
+      setAppRoute("workspace");
+      setStatusMessage(
+        `Đã tạo chỉ định dịch vụ "${createdServiceRequest.code.display}" cho ${selectedPatient.fullName}.`
+      );
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể tạo chỉ định dịch vụ: ${error.message}`
+          : "Không thể tạo chỉ định dịch vụ."
+      );
+    } finally {
+      setIsSubmittingServiceRequest(false);
+    }
+  }
+
   async function handleCreateClinicalDocument(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -1974,6 +2208,7 @@ export function App() {
           <MetricCard label="Lượt khám mở" value={`${openEncounters.length}`} note="Theo bệnh nhân đang chọn" />
           <MetricCard label="Dị ứng" value={`${allergyIntolerances.length}`} note="Cảnh báo an toàn" />
           <MetricCard label="Chẩn đoán" value={`${conditions.length}`} note="Vấn đề sức khỏe có cấu trúc" />
+          <MetricCard label="Chỉ định DV" value={`${serviceRequests.length}`} note="FHIR ServiceRequest" />
           <MetricCard label="Chỉ định thuốc" value={`${medicationRequests.length}`} note="FHIR MedicationRequest" />
           <MetricCard label="Tài liệu nháp" value={`${draftDocuments.length}`} note="Cần ký/xác thực" />
         </section>
@@ -1995,7 +2230,7 @@ export function App() {
               </button>
               <button type="button" onClick={() => setAppRoute("interop")}>
                 <strong>Xem gói FHIR</strong>
-                <span>Patient, Encounter, AllergyIntolerance, Condition, Observation, MedicationRequest và DocumentReference đã có preview.</span>
+                <span>Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Observation, MedicationRequest và DocumentReference đã có preview.</span>
               </button>
             </div>
           </article>
@@ -2009,6 +2244,7 @@ export function App() {
                 <Info label="Lượt khám gần nhất" value={encounters[0]?.serviceType ?? "Chưa có"} />
                 <Info label="Dị ứng/cảnh báo" value={`${allergyIntolerances.length}`} />
                 <Info label="Chẩn đoán/vấn đề" value={`${conditions.length}`} />
+                <Info label="Chỉ định dịch vụ" value={`${serviceRequests.length}`} />
                 <Info label="Chỉ số lâm sàng" value={`${observations.length}`} />
                 <Info label="Chỉ định thuốc" value={`${medicationRequests.length}`} />
                 <Info label="Tài liệu" value={`${clinicalDocuments.length}`} />
@@ -2038,6 +2274,7 @@ export function App() {
           {renderEncounterPanel()}
           {renderAllergyIntolerancePanel()}
           {renderConditionPanel()}
+          {renderServiceRequestPanel()}
           {renderObservationPanel()}
           {renderMedicationRequestPanel()}
           {renderCreatePatientPanel()}
@@ -2113,6 +2350,7 @@ export function App() {
           <FhirPanel title="FHIR Encounter JSON" badge="Encounter" value={encounterFhirPreview} />
           <FhirPanel title="FHIR AllergyIntolerance JSON" badge="AllergyIntolerance" value={allergyIntoleranceFhirPreview} />
           <FhirPanel title="FHIR Condition JSON" badge="Condition" value={conditionFhirPreview} />
+          <FhirPanel title="FHIR ServiceRequest JSON" badge="ServiceRequest" value={serviceRequestFhirPreview} />
           <FhirPanel title="FHIR Observation JSON" badge="Observation" value={observationFhirPreview} />
           <FhirPanel title="FHIR MedicationRequest JSON" badge="MedicationRequest" value={medicationRequestFhirPreview} />
           <FhirPanel title="FHIR DocumentReference JSON" badge="DocumentReference" value={documentFhirPreview} />
@@ -2322,6 +2560,7 @@ export function App() {
                   <Info label="Nhân sự phụ trách" value={selectedEncounter.attendingPractitionerId} />
                   <Info label="Dị ứng gắn lượt khám" value={`${selectedEncounterAllergyIntolerances.length}`} />
                   <Info label="Chẩn đoán gắn lượt khám" value={`${selectedEncounterConditions.length}`} />
+                  <Info label="Chỉ định dịch vụ gắn lượt khám" value={`${selectedEncounterServiceRequests.length}`} />
                   <Info label="Chỉ số gắn lượt khám" value={`${selectedEncounterObservations.length}`} />
                   <Info label="Thuốc gắn lượt khám" value={`${selectedEncounterMedicationRequests.length}`} />
                   <Info label="Tài liệu gắn lượt khám" value={`${selectedEncounterDocuments.length}`} />
@@ -2866,6 +3105,224 @@ export function App() {
           </label>
           <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingCondition}>
             {isSubmittingCondition ? "Đang ghi nhận..." : "Ghi nhận chẩn đoán"}
+          </button>
+        </form>
+      </article>
+    );
+  }
+
+  function renderServiceRequestPanel(): ReactNode {
+    return (
+      <article className="panel service-panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Service requests</p>
+            <h2>Chỉ định xét nghiệm, hình ảnh và dịch vụ</h2>
+          </div>
+          <span className="pill cyan">
+            {isLoadingServiceRequests ? "loading" : `${serviceRequests.length} chỉ định`}
+          </span>
+        </div>
+
+        <div className="document-layout">
+          <div className="service-cards">
+            {serviceRequests.map((serviceRequest) => (
+              <button
+                className={serviceRequest.id === selectedServiceRequestId ? "service-card selected" : "service-card"}
+                key={serviceRequest.id}
+                type="button"
+                onClick={() => setSelectedServiceRequestId(serviceRequest.id)}
+              >
+                <span>{formatServiceRequestCategory(serviceRequest.category)}</span>
+                <strong>{serviceRequest.code.display}</strong>
+                <small>
+                  {formatServiceRequestPriority(serviceRequest.priority)} ·{" "}
+                  {formatDateTime(serviceRequest.authoredOn)}
+                </small>
+              </button>
+            ))}
+            {serviceRequests.length === 0 ? (
+              <p className="empty-state">
+                Bệnh nhân này chưa có chỉ định dịch vụ. Hãy tạo ServiceRequest để nối luồng EMR với LIS/PACS.
+              </p>
+            ) : null}
+          </div>
+
+          <div className="service-summary">
+            {selectedServiceRequest ? (
+              <>
+                <div className="document-meta">
+                  <Info label="Dịch vụ" value={selectedServiceRequest.code.display} />
+                  <Info label="Mã dịch vụ" value={`${selectedServiceRequest.code.system} · ${selectedServiceRequest.code.code}`} />
+                  <Info label="Nhóm" value={formatServiceRequestCategory(selectedServiceRequest.category)} />
+                  <Info label="Trạng thái" value={formatServiceRequestStatus(selectedServiceRequest.status)} />
+                  <Info label="Mục đích" value={formatServiceRequestIntent(selectedServiceRequest.intent)} />
+                  <Info label="Ưu tiên" value={formatServiceRequestPriority(selectedServiceRequest.priority)} />
+                  <Info label="Khoa thực hiện" value={selectedServiceRequest.performerOrganizationId ?? "Chưa gắn"} />
+                  <Info label="Dự kiến thực hiện" value={selectedServiceRequest.occurrenceAt ? formatDateTime(selectedServiceRequest.occurrenceAt) : "Chưa gắn"} />
+                  <Info label="Chẩn đoán liên quan" value={selectedServiceRequest.reasonConditionId ?? "Chưa gắn"} />
+                  <Info label="Người chỉ định" value={selectedServiceRequest.requesterPractitionerId} />
+                </div>
+                <p className="empty-state">
+                  ServiceRequest là y lệnh dịch vụ máy đọc được: xét nghiệm đi sang LIS, chẩn đoán hình ảnh đi sang PACS/RIS, còn kết quả về sau có thể gom bằng Observation hoặc DiagnosticReport.
+                </p>
+              </>
+            ) : (
+              <p className="empty-state">Chọn một chỉ định dịch vụ để xem metadata và xuất FHIR ServiceRequest.</p>
+            )}
+          </div>
+        </div>
+
+        <form className="service-form" onSubmit={(event) => void handleCreateServiceRequest(event)}>
+          <label>
+            Gắn với lượt khám
+            <select
+              value={serviceRequestForm.encounterId}
+              onChange={(event) =>
+                setServiceRequestForm({ ...serviceRequestForm, encounterId: event.target.value })
+              }
+            >
+              <option value="">Không gắn</option>
+              {encounters.map((encounter) => (
+                <option key={encounter.id} value={encounter.id}>
+                  {encounter.serviceType} · {formatDateTime(encounter.startedAt)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Chẩn đoán liên quan
+            <select
+              value={serviceRequestForm.reasonConditionId}
+              onChange={(event) =>
+                setServiceRequestForm({ ...serviceRequestForm, reasonConditionId: event.target.value })
+              }
+            >
+              <option value="">Không gắn</option>
+              {conditions.map((condition) => (
+                <option key={condition.id} value={condition.id}>
+                  {condition.code.display}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Nhóm dịch vụ
+            <select
+              value={serviceRequestForm.category}
+              onChange={(event) =>
+                setServiceRequestForm({
+                  ...serviceRequestForm,
+                  category: event.target.value as ServiceRequestCategory
+                })
+              }
+            >
+              <option value="laboratory">Xét nghiệm</option>
+              <option value="imaging">Chẩn đoán hình ảnh</option>
+              <option value="procedure">Thủ thuật</option>
+              <option value="consultation">Hội chẩn/tư vấn</option>
+              <option value="therapy">Điều trị/phục hồi</option>
+            </select>
+          </label>
+          <label>
+            Ưu tiên
+            <select
+              value={serviceRequestForm.priority}
+              onChange={(event) =>
+                setServiceRequestForm({
+                  ...serviceRequestForm,
+                  priority: event.target.value as ServiceRequestPriority
+                })
+              }
+            >
+              <option value="routine">Thông thường</option>
+              <option value="urgent">Khẩn</option>
+              <option value="asap">Càng sớm càng tốt</option>
+              <option value="stat">Cấp cứu ngay</option>
+            </select>
+          </label>
+          <label>
+            Hệ mã
+            <input
+              value={serviceRequestForm.codeSystem}
+              onChange={(event) => setServiceRequestForm({ ...serviceRequestForm, codeSystem: event.target.value })}
+            />
+          </label>
+          <label>
+            Mã dịch vụ
+            <input
+              value={serviceRequestForm.code}
+              onChange={(event) => setServiceRequestForm({ ...serviceRequestForm, code: event.target.value })}
+            />
+          </label>
+          <label className="wide-field">
+            Tên dịch vụ
+            <input
+              value={serviceRequestForm.codeDisplay}
+              onChange={(event) => setServiceRequestForm({ ...serviceRequestForm, codeDisplay: event.target.value })}
+            />
+          </label>
+          <label>
+            Thời điểm chỉ định
+            <input
+              type="datetime-local"
+              value={serviceRequestForm.authoredOn}
+              onChange={(event) => setServiceRequestForm({ ...serviceRequestForm, authoredOn: event.target.value })}
+            />
+          </label>
+          <label>
+            Dự kiến thực hiện
+            <input
+              type="datetime-local"
+              value={serviceRequestForm.occurrenceAt}
+              onChange={(event) => setServiceRequestForm({ ...serviceRequestForm, occurrenceAt: event.target.value })}
+            />
+          </label>
+          <label className="wide-field">
+            Người chỉ định
+            <input
+              value={serviceRequestForm.requesterPractitionerId}
+              onChange={(event) =>
+                setServiceRequestForm({
+                  ...serviceRequestForm,
+                  requesterPractitionerId: event.target.value
+                })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Khoa/phòng thực hiện
+            <input
+              value={serviceRequestForm.performerOrganizationId}
+              onChange={(event) =>
+                setServiceRequestForm({
+                  ...serviceRequestForm,
+                  performerOrganizationId: event.target.value
+                })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Hướng dẫn cho người bệnh
+            <input
+              value={serviceRequestForm.patientInstruction}
+              onChange={(event) =>
+                setServiceRequestForm({
+                  ...serviceRequestForm,
+                  patientInstruction: event.target.value
+                })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Ghi chú
+            <input
+              value={serviceRequestForm.note}
+              onChange={(event) => setServiceRequestForm({ ...serviceRequestForm, note: event.target.value })}
+            />
+          </label>
+          <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingServiceRequest}>
+            {isSubmittingServiceRequest ? "Đang tạo..." : "Tạo chỉ định dịch vụ"}
           </button>
         </form>
       </article>
@@ -3618,7 +4075,7 @@ function LandingPage({
           <h1>Nền tảng bệnh án điện tử mở cho liên thông y tế</h1>
           <p className="lede">
             WiiiCare Nexus mô phỏng lõi EMR hiện đại: hồ sơ bệnh nhân, lượt khám, dị ứng, chẩn đoán,
-            chỉ số lâm sàng, chỉ định thuốc, tài liệu bệnh án, audit trail và ánh xạ FHIR để chuẩn bị kết nối giữa các bệnh viện.
+            chỉ định dịch vụ, chỉ số lâm sàng, chỉ định thuốc, tài liệu bệnh án, audit trail và ánh xạ FHIR để chuẩn bị kết nối giữa các bệnh viện.
           </p>
           <div className="landing-actions">
             <button className="primary-button" type="button" onClick={onLogin}>
@@ -3631,7 +4088,7 @@ function LandingPage({
         </div>
         <aside className="landing-card">
           <span>Product slice</span>
-          <strong>Patient → Encounter → AllergyIntolerance → Condition → Observation → MedicationRequest → Document → FHIR</strong>
+          <strong>Patient → Encounter → AllergyIntolerance → Condition → ServiceRequest → Observation → MedicationRequest → Document → FHIR</strong>
           <small>Không còn là landing page đơn thuần; app có luồng vận hành sau đăng nhập.</small>
         </aside>
       </section>
@@ -3641,7 +4098,7 @@ function LandingPage({
           ["Patient Workspace", "Bàn làm việc theo bệnh nhân, giống nhịp vận hành EMR thật."],
           ["Document Center", "Quản lý CCR, CCDA, hồ sơ bệnh án, xét nghiệm và tài liệu chuyển tuyến."],
           ["Audit & RBAC", "Ghi log truy cập nhạy cảm và kiểm tra quyền theo vai trò demo."],
-          ["FHIR Interop", "Xuất Patient, Encounter, AllergyIntolerance, Condition, Observation, MedicationRequest và DocumentReference để chuẩn bị liên thông."]
+          ["FHIR Interop", "Xuất Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Observation, MedicationRequest và DocumentReference để chuẩn bị liên thông."]
         ].map(([title, description]) => (
           <article className="panel" key={title}>
             <p className="eyebrow">{title}</p>
@@ -3962,6 +4419,10 @@ function formatAuditAction(action: AuditAction): string {
     "observation.create": "Ghi nhận chỉ số lâm sàng",
     "observation.read": "Xem chỉ số lâm sàng",
     "observation.fhir-export": "Xuất FHIR Observation",
+    "service-request.list": "Tải chỉ định dịch vụ",
+    "service-request.create": "Tạo chỉ định dịch vụ",
+    "service-request.read": "Xem chỉ định dịch vụ",
+    "service-request.fhir-export": "Xuất FHIR ServiceRequest",
     "clinical-document.list": "Tải tài liệu bệnh án",
     "clinical-document.create": "Tạo tài liệu bệnh án",
     "clinical-document.sign": "Ký tài liệu bệnh án",
@@ -3982,6 +4443,7 @@ function formatAuditResourceType(resourceType: AuditResourceType): string {
     Condition: "Chẩn đoán",
     MedicationRequest: "Chỉ định thuốc",
     Observation: "Chỉ số lâm sàng",
+    ServiceRequest: "Chỉ định dịch vụ",
     ClinicalDocument: "Tài liệu",
     Consent: "Consent",
     AuditEvent: "Audit"
@@ -4170,6 +4632,59 @@ function formatDosageInstruction(dosageInstruction: DosageInstruction): string {
       : undefined;
 
   return [dosageInstruction.text, dose, timing].filter(Boolean).join(" · ");
+}
+
+function formatServiceRequestCategory(category: ServiceRequestCategory): string {
+  const labels: Record<ServiceRequestCategory, string> = {
+    consultation: "Hội chẩn/tư vấn",
+    imaging: "Chẩn đoán hình ảnh",
+    laboratory: "Xét nghiệm",
+    procedure: "Thủ thuật",
+    therapy: "Điều trị/phục hồi"
+  };
+
+  return labels[category];
+}
+
+function formatServiceRequestStatus(status: ServiceRequestStatus): string {
+  const labels: Record<ServiceRequestStatus, string> = {
+    active: "Đang hiệu lực",
+    completed: "Đã hoàn tất",
+    draft: "Bản nháp",
+    "entered-in-error": "Nhập lỗi",
+    "on-hold": "Tạm giữ",
+    revoked: "Đã hủy",
+    unknown: "Chưa rõ"
+  };
+
+  return labels[status];
+}
+
+function formatServiceRequestIntent(intent: ServiceRequestIntent): string {
+  const labels: Record<ServiceRequestIntent, string> = {
+    directive: "Chỉ thị",
+    "filler-order": "Lệnh thực hiện",
+    "instance-order": "Lệnh dùng cụ thể",
+    option: "Tùy chọn",
+    order: "Chỉ định",
+    "original-order": "Chỉ định gốc",
+    plan: "Kế hoạch",
+    proposal: "Đề xuất",
+    "reflex-order": "Chỉ định phản xạ"
+  };
+
+  return labels[intent];
+}
+
+function formatServiceRequestPriority(priority: ServiceRequestPriority): string {
+  const labels: Record<ServiceRequestPriority, string> = {
+    asap: "Càng sớm càng tốt",
+    routine: "Thường quy",
+    stat: "Ngay lập tức",
+    urgent: "Khẩn"
+  };
+
+  return labels[priority];
 }
 
 function formatObservationCategory(category: ObservationCategory): string {

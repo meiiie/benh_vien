@@ -32,7 +32,7 @@ Trong dự án, PACS có thể được minh họa bằng Orthanc. EMR chỉ nê
 
 ## FHIR
 
-**Fast Healthcare Interoperability Resources** là chuẩn trao đổi dữ liệu y tế của HL7. FHIR định nghĩa các resource như `Patient`, `Encounter`, `AllergyIntolerance`, `Observation`, `Condition`, `MedicationRequest`, `DocumentReference`, `Composition`.
+**Fast Healthcare Interoperability Resources** là chuẩn trao đổi dữ liệu y tế của HL7. FHIR định nghĩa các resource như `Patient`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Observation`, `MedicationRequest`, `DocumentReference`, `Composition`.
 
 Trong dự án này, FHIR là lớp liên thông. Domain model nội bộ vẫn có thể khác FHIR, sau đó được mapping sang FHIR khi cần trao đổi.
 
@@ -41,6 +41,12 @@ Trong dự án này, FHIR là lớp liên thông. Domain model nội bộ vẫn 
 **AllergyIntolerance** là resource FHIR dùng để ghi nhận nguy cơ dị ứng, không dung nạp hoặc phản ứng bất lợi với thuốc, thực phẩm, môi trường hoặc sinh phẩm. Trong EMR, phần này nên được đặt nổi bật trước luồng kê thuốc để bác sĩ nhìn thấy cảnh báo an toàn trước khi ra y lệnh.
 
 Trong dự án này, AllergyIntolerance là lát cắt an toàn lâm sàng tối thiểu: ghi tác nhân, nhóm dị ứng, mức cảnh báo, trạng thái xác minh, biểu hiện phản ứng và người ghi nhận.
+
+## ServiceRequest
+
+**ServiceRequest** là resource FHIR dùng cho chỉ định dịch vụ như xét nghiệm, chẩn đoán hình ảnh, thủ thuật, hội chẩn hoặc điều trị hỗ trợ. Đây là phần “yêu cầu thực hiện” trước khi có kết quả trả về.
+
+Trong dự án này, ServiceRequest là cầu nối từ EMR sang LIS/PACS/RIS: bác sĩ tạo chỉ định, hệ thống lưu mã dịch vụ, mức ưu tiên, khoa thực hiện, thời điểm dự kiến, người chỉ định và chẩn đoán liên quan.
 
 ## DICOM
 
