@@ -24,20 +24,21 @@ Hồ sơ bệnh án là dữ liệu đặc biệt nhạy cảm. Dự án chưa t
 - API đã yêu cầu `Authorization: Bearer <token>` cho endpoint nghiệp vụ.
 - Token demo do `POST /api/v1/auth/login` phát hành, ký bằng `BVS_AUTH_SECRET`.
 - `x-purpose-of-use` vẫn được dùng để khai báo mục đích truy cập như `TREATMENT` hoặc `AUDIT`; đây là ngữ cảnh sử dụng dữ liệu, không phải định danh người dùng.
-- Các endpoint lâm sàng như bệnh nhân, Provider Directory, lượt khám, dị ứng/cảnh báo `AllergyIntolerance`, chẩn đoán `Condition`, chỉ định dịch vụ `ServiceRequest`, công việc thực thi `Task`, thủ thuật/hoạt động `Procedure`, chỉ số `Observation`, báo cáo kết quả `DiagnosticReport`, nghiên cứu hình ảnh `ImagingStudy`, chỉ định thuốc `MedicationRequest`, cấp phát thuốc `MedicationDispense`, dùng thuốc thực tế `MedicationAdministration`, tài liệu và Bundle đều đi qua kiểm tra quyền ở API.
+- Các endpoint lâm sàng như bệnh nhân, Provider Directory, lượt khám, dị ứng/cảnh báo `AllergyIntolerance`, chẩn đoán `Condition`, chỉ định dịch vụ `ServiceRequest`, công việc thực thi `Task`, thủ thuật/hoạt động `Procedure`, chỉ số `Observation`, báo cáo kết quả `DiagnosticReport`, nghiên cứu hình ảnh `ImagingStudy`, chỉ định thuốc `MedicationRequest`, cấp phát thuốc `MedicationDispense`, dùng thuốc thực tế `MedicationAdministration`, tài liệu, gói chuyển hồ sơ liên viện và Bundle đều đi qua kiểm tra quyền ở API.
 - `Task` có quyền đọc/tạo/xuất riêng để tránh trộn quyền y lệnh với quyền thao tác hàng đợi vận hành. Điều dưỡng có thể tạo/đọc công việc nhưng không xuất FHIR; bác sĩ/quản trị có thể xuất khi mục đích sử dụng là điều trị.
 - `Procedure` có quyền đọc/tạo/xuất riêng để tách bản ghi hành động đã thực hiện khỏi y lệnh và hàng đợi vận hành. Điều dưỡng có thể ghi nhận/đọc trong phạm vi điều trị nhưng không xuất FHIR; bác sĩ/quản trị có thể xuất khi mục đích sử dụng là điều trị.
 - `MedicationDispense` và `MedicationAdministration` có quyền đọc/tạo/xuất riêng để tách “đã cấp thuốc” và “đã dùng thuốc” khỏi “đã kê thuốc”. Điều dưỡng có thể ghi nhận/đọc trong phạm vi điều trị nhưng không xuất FHIR; bác sĩ/quản trị có thể xuất khi mục đích sử dụng là điều trị.
 - Provider Directory được cho phép đọc rộng hơn dữ liệu bệnh án để điều dưỡng/bác sĩ thấy mã cơ sở, khoa phòng và endpoint; xuất Provider Directory sang FHIR vẫn bị giới hạn theo quyền `provider-directory:fhir-export`.
 - FHIR Bundle chia sẻ liên viện yêu cầu consent tồn tại trong store, còn hiệu lực, đúng bệnh nhân và đúng đơn vị nhận.
 - FHIR document Bundle có `Composition` cũng dùng cùng rào consent và audit như Bundle collection; không có đường xuất tài liệu liên viện “bỏ qua consent”.
+- `RecordTransfer` kiểm consent trước khi tạo, ghi audit khi liệt kê/tạo/xem/xuất FHIR `Task`, và không lưu bản sao đầy đủ của Bundle trong bảng vận hành.
 - Cơ chế này chỉ là lớp phiên nội bộ cho prototype, chưa thay thế IAM/SSO, MFA, quản lý thiết bị hoặc chính sách truy cập theo cơ sở y tế.
 
 ## Hướng triển khai sau
 
 - Thêm IAM/SSO bằng Keycloak hoặc nhà cung cấp định danh tương đương.
 - Thiết kế RBAC kết hợp ABAC: vai trò, khoa phòng, ca trực, quan hệ điều trị và mục đích truy cập.
-- Bổ sung workflow thu hồi consent, ký/xác nhận consent và consent cho người giám hộ/đại diện hợp pháp.
+- Bổ sung workflow thu hồi consent, ký/xác nhận consent, consent cho người giám hộ/đại diện hợp pháp và trạng thái gửi/nhận thực tế của `RecordTransfer`.
 - Tạo bảng audit append-only.
 - Tách secret khỏi mã nguồn.
 - Bổ sung kiểm thử phân quyền và kiểm thử API contract.

@@ -22,7 +22,7 @@ Kiến trúc khởi đầu là **modular monolith theo DDD**. Lý do:
 | Provider Directory | Danh bạ cơ sở y tế, khoa/phòng, nhân sự, vai trò và endpoint FHIR/LIS/PACS | Khi cần đồng bộ danh mục cơ sở, nhiều bệnh viện/khoa phòng hoặc tích hợp HIE quốc gia/khu vực |
 | Clinical Records | Bệnh án, chẩn đoán, y lệnh, diễn biến, tài liệu lâm sàng | Khi khối lượng tài liệu và quy trình ký/xác nhận tăng |
 | Workflow | Hàng đợi thực thi y lệnh, trạng thái nhận mẫu/chụp ảnh/trả kết quả, chủ sở hữu công việc | Khi cần orchestration thật, worker LIS/PACS/RIS hoặc engine BPMN/event queue |
-| Consent & Sharing | Consent chia sẻ hồ sơ, đơn vị nhận, thời hạn hiệu lực và căn cứ xuất dữ liệu | Khi có nhiều chính sách chia sẻ, nhiều bệnh viện nhận hoặc cần đồng bộ consent từ hệ thống ngoài |
+| Consent & Sharing | Consent chia sẻ hồ sơ, gói chuyển hồ sơ liên viện, đơn vị nhận, thời hạn hiệu lực và căn cứ xuất dữ liệu | Khi có nhiều chính sách chia sẻ, nhiều bệnh viện nhận hoặc cần đồng bộ consent từ hệ thống ngoài |
 | Interoperability | FHIR facade, mapping dữ liệu, luồng gửi/nhận tài liệu | Khi kết nối nhiều chuẩn và nhiều đối tác |
 | Imaging | Tích hợp PACS, DICOM/DICOMweb, báo cáo hình ảnh | Khi dữ liệu ảnh lớn hoặc cần quản trị riêng |
 | Audit & Compliance | Nhật ký truy cập, nhật ký chỉnh sửa, báo cáo tuân thủ | Khi có yêu cầu kiểm toán độc lập |
@@ -68,11 +68,11 @@ sequenceDiagram
   participant Partner as Hệ thống nhận liên thông
 
   User->>App: Tạo/cập nhật nội dung bệnh án
-  App->>EMR: Ghi lượt khám, dị ứng/cảnh báo, chẩn đoán, chỉ định dịch vụ, Task thực thi, Procedure đã thực hiện, chỉ số lâm sàng, chỉ định thuốc, cấp phát thuốc, dùng thuốc thực tế và tài liệu
+  App->>EMR: Ghi lượt khám, dị ứng/cảnh báo, chẩn đoán, chỉ định dịch vụ, Task thực thi, Procedure đã thực hiện, chỉ số lâm sàng, chỉ định thuốc, cấp phát thuốc, dùng thuốc thực tế, tài liệu và gói chuyển hồ sơ
   EMR->>Audit: Ghi nhật ký thao tác
   User->>App: Ký hoặc xác nhận điện tử
   App->>EMR: Chuyển trạng thái tài liệu sang signed
-  EMR->>FHIR: Chuyển đổi sang FHIR Patient/Organization/Practitioner/PractitionerRole/Endpoint/Encounter/AllergyIntolerance/Condition/ServiceRequest/Task/Procedure/Observation/DiagnosticReport/ImagingStudy/MedicationRequest/MedicationDispense/MedicationAdministration/DocumentReference/Composition
+  EMR->>FHIR: Chuyển đổi sang FHIR Patient/Organization/Practitioner/PractitionerRole/Endpoint/Encounter/AllergyIntolerance/Condition/ServiceRequest/Task/Procedure/Observation/DiagnosticReport/ImagingStudy/MedicationRequest/MedicationDispense/MedicationAdministration/DocumentReference/Composition/Task chuyển hồ sơ
   FHIR->>Partner: Chia sẻ theo API hoặc hồ sơ IHE phù hợp
 ```
 
@@ -92,6 +92,7 @@ sequenceDiagram
 - **Chỉ định thuốc cần tách khỏi văn bản tự do trong tài liệu.** Tối thiểu cần mã thuốc, hướng dẫn dùng, người kê, trạng thái, mục đích, liên kết bệnh nhân/lượt khám và chẩn đoán liên quan khi có thể.
 - **Tài liệu bệnh án cần có vòng đời.** Tối thiểu gồm nháp, đã ký, bị thay thế, nhập sai.
 - **Chia sẻ hồ sơ cần consent có trạng thái và thời hạn.** FHIR Bundle liên viện không được xuất chỉ vì người dùng có role điều trị; phải có consent khớp bệnh nhân, đơn vị nhận và thời điểm truy cập.
+- **Gói chuyển hồ sơ là workflow, không phải bản sao dữ liệu lâm sàng.** `RecordTransfer` giữ trạng thái gửi/nhận, cơ sở gửi/nhận, consent, lý do chuyển và `bundleId`; khi xuất chuẩn, nó thành FHIR `Task` trỏ tới `Bundle`, không nhân đôi toàn bộ hồ sơ bệnh án.
 - **Gói bệnh án chuyển viện cần Composition.** `Bundle.type = collection` phù hợp để gom dữ liệu thô; khi cần biểu diễn một tài liệu bệnh án có cấu trúc, dùng `Bundle.type = document` và đặt `Composition` làm entry đầu tiên để mô tả mục lục lâm sàng.
 - **Không để reference FHIR bị treo.** Khi `Patient`, `Encounter`, `DiagnosticReport` hoặc `ImagingStudy` tham chiếu `Organization`, `Practitioner`, `PractitionerRole` hoặc `Endpoint`, gói liên thông cần có Provider Directory tối thiểu để bên nhận hiểu cơ sở quản lý, khoa thực hiện, người phụ trách và endpoint PACS/FHIR/LIS.
 - **Ảnh y khoa đi theo chuẩn riêng.** Ảnh X-quang, CT, MRI, siêu âm nên đi qua PACS/DICOM, không nhồi trực tiếp vào bảng bệnh án. EMR chỉ lưu metadata `ImagingStudy` như DICOM Study Instance UID, Accession Number, modality, series, số ảnh, vùng chụp và endpoint PACS/DICOMweb.
@@ -116,6 +117,7 @@ Phiên bản hiện tại tạo các bảng tối thiểu:
 - `medication_administrations`: lần dùng thuốc thực tế, gồm trạng thái, thuốc, liều thực tế, thời điểm, người/thiết bị xác nhận và liên kết tới `medication_requests` khi có.
 - `clinical_documents`: tài liệu lâm sàng có vòng đời nháp, đã ký, bị thay thế hoặc nhập sai.
 - `consents`: consent chia sẻ hồ sơ theo bệnh nhân, đơn vị nhận, trạng thái và thời hạn hiệu lực.
+- `record_transfers`: gói chuyển hồ sơ liên viện, gồm trạng thái vận hành, FHIR Bundle đích, cơ sở gửi/nhận, consent, lý do chuyển và người tạo yêu cầu.
 - `provider_directory_resources`: danh bạ cơ sở y tế/khoa phòng, nhân sự, vai trò nhân sự và endpoint liên thông; lưu snapshot JSONB để prototype có thể đồng bộ nhanh nhiều loại FHIR resource.
 - `audit_events`: nhật ký thao tác theo thời gian, tài nguyên, bệnh nhân và mục đích sử dụng.
 - `schema_migrations`: quản lý migration đã áp dụng.
@@ -123,7 +125,7 @@ Phiên bản hiện tại tạo các bảng tối thiểu:
 ## Luồng mở rộng dự kiến
 
 1. Hoàn thiện registry bệnh nhân và tài liệu lâm sàng tối thiểu.
-2. Kết nối HAPI FHIR để xuất/nhập `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `DocumentReference`, `Composition`.
+2. Kết nối HAPI FHIR để xuất/nhập `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `DocumentReference`, `Composition` và `Task` điều phối chuyển hồ sơ.
 3. Kết nối Orthanc để minh họa PACS/DICOM và DICOMweb.
 4. Bổ sung xác thực, phân quyền, nhật ký kiểm toán và chính sách lưu trữ.
 5. Nếu cần mở rộng lớn, tách `Interoperability`, `Imaging`, `Audit` thành service riêng.

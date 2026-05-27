@@ -9,6 +9,10 @@ export type Permission =
   | "patient:fhir-export"
   | "provider-directory:read"
   | "provider-directory:fhir-export"
+  | "record-transfer:list"
+  | "record-transfer:create"
+  | "record-transfer:read"
+  | "record-transfer:fhir-export"
   | "encounter:list"
   | "encounter:create"
   | "encounter:read"
@@ -80,6 +84,10 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "patient:fhir-export",
     "provider-directory:read",
     "provider-directory:fhir-export",
+    "record-transfer:list",
+    "record-transfer:create",
+    "record-transfer:read",
+    "record-transfer:fhir-export",
     "encounter:list",
     "encounter:create",
     "encounter:read",
@@ -140,6 +148,8 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "patient:list",
     "patient:read",
     "provider-directory:read",
+    "record-transfer:list",
+    "record-transfer:read",
     "encounter:list",
     "encounter:read",
     "allergy-intolerance:list",
@@ -182,6 +192,8 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
   auditor: [
     "patient:read",
     "provider-directory:read",
+    "record-transfer:list",
+    "record-transfer:read",
     "workflow-task:list",
     "workflow-task:read",
     "procedure:list",
@@ -199,6 +211,10 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "patient:fhir-export",
     "provider-directory:read",
     "provider-directory:fhir-export",
+    "record-transfer:list",
+    "record-transfer:create",
+    "record-transfer:read",
+    "record-transfer:fhir-export",
     "encounter:list",
     "encounter:create",
     "encounter:read",

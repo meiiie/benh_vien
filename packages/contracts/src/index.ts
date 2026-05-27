@@ -4,6 +4,7 @@ export * from "./audit-event.contract.js";
 export * from "./patient.contract.js";
 export * from "./procedure.contract.js";
 export * from "./provider-directory.contract.js";
+export * from "./record-transfer.contract.js";
 export * from "./service-request.contract.js";
 export * from "./workflow-task.contract.js";
 export * from "./encounter.contract.js";

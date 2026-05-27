@@ -1219,6 +1219,108 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("lists record transfer packages for a patient", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/record-transfers",
+      headers: treatmentHeaders(accessToken)
+    });
+    const body = response.json();
+
+    expect(response.statusCode).toBe(200);
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0]).toMatchObject({
+      id: "record-transfer-demo-001",
+      patientId: "patient-demo-001",
+      status: "ready",
+      bundleType: "document",
+      bundleId: "patient-document-patient-demo-001",
+      recipientOrganizationId: "hospital-hai-phong-referral",
+      consentReference: "consent-demo-transfer-001"
+    });
+  });
+
+  it("creates a record transfer package and exports it as FHIR Task", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const createResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/record-transfers",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        priority: "urgent",
+        bundleType: "document",
+        sourceOrganizationId: "hospital-hai-phong-demo",
+        recipientOrganizationId: "hospital-hai-phong-referral",
+        consentReference: "consent-demo-transfer-001",
+        reason: "Chuyển tuyến theo dõi chuyên khoa tim mạch.",
+        requestedAt: "2026-05-28T03:00:00.000Z"
+      }
+    });
+    const createdTransfer = createResponse.json();
+
+    expect(createResponse.statusCode).toBe(201);
+    expect(createdTransfer.id).toEqual(expect.stringMatching(/^record-transfer-/));
+    expect(createdTransfer).toMatchObject({
+      bundleId: "patient-document-patient-demo-001",
+      requestedByActorId: "practitioner-demo-001"
+    });
+
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: `/api/v1/record-transfers/${createdTransfer.id}/fhir-task`,
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(fhirResponse.statusCode).toBe(200);
+    expect(fhirResponse.json()).toMatchObject({
+      resourceType: "Task",
+      status: "requested",
+      focus: {
+        reference: "Bundle/patient-document-patient-demo-001"
+      },
+      for: {
+        reference: "Patient/patient-demo-001"
+      },
+      owner: {
+        reference: "Organization/hospital-hai-phong-referral"
+      }
+    });
+  });
+
+  it("denies record transfer creation when consent does not cover the recipient", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/record-transfers",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        bundleType: "document",
+        sourceOrganizationId: "hospital-hai-phong-demo",
+        recipientOrganizationId: "hospital-not-covered",
+        consentReference: "consent-demo-transfer-001",
+        reason: "Thử gửi sai đơn vị nhận."
+      }
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({
+      error: "CONSENT_DOES_NOT_ALLOW_RECORD_TRANSFER"
+    });
+  });
+
   it("requires transfer context before exporting a patient-record FHIR Bundle", async () => {
     app = await readyServer();
     const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");

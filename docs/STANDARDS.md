@@ -14,7 +14,7 @@ Hàm ý cho dự án:
 - Cần có ký/xác nhận điện tử ở vòng đời tài liệu.
 - Cần quản lý định danh bệnh nhân đủ nghiêm túc.
 - Cần audit trail và chính sách bảo vệ dữ liệu.
-- Cần cơ sở dữ liệu có migration, phân quyền, lưu vết, sao lưu và quy trình vận hành; phiên bản hiện tại mới đặt nền `patients`, `encounters`, `allergy_intolerances`, `conditions`, `service_requests`, `workflow_tasks`, `procedures`, `observations`, `diagnostic_reports`, `imaging_studies`, `medication_requests`, `medication_dispenses`, `medication_administrations`, `clinical_documents`, `consents`, `provider_directory_resources`, `audit_events`, chưa tuyên bố đạt điều kiện triển khai bệnh viện thật.
+- Cần cơ sở dữ liệu có migration, phân quyền, lưu vết, sao lưu và quy trình vận hành; phiên bản hiện tại mới đặt nền `patients`, `encounters`, `allergy_intolerances`, `conditions`, `service_requests`, `workflow_tasks`, `procedures`, `observations`, `diagnostic_reports`, `imaging_studies`, `medication_requests`, `medication_dispenses`, `medication_administrations`, `clinical_documents`, `consents`, `record_transfers`, `provider_directory_resources`, `audit_events`, chưa tuyên bố đạt điều kiện triển khai bệnh viện thật.
 
 ## HL7 FHIR R4
 
@@ -53,7 +53,7 @@ Hàm ý cho dự án:
 - `AllergyIntolerance` phù hợp cho nguy cơ phản ứng bất lợi với thuốc, thực phẩm, môi trường hoặc sinh phẩm; nên xem trước khi kê thuốc và không trộn lẫn với chẩn đoán bệnh thông thường.
 - `Condition` phù hợp cho chẩn đoán, vấn đề sức khỏe và problem list; nên đi kèm ICD-10/SNOMED CT hoặc danh mục được bệnh viện phê duyệt khi có dữ liệu thật.
 - `ServiceRequest` phù hợp cho chỉ định xét nghiệm, chẩn đoán hình ảnh, thủ thuật, hội chẩn hoặc dịch vụ điều trị; đây là yêu cầu thực hiện, không phải kết quả cuối cùng. Khi xuất FHIR, nhóm chỉ định nội bộ được ánh xạ sang SNOMED CT theo value set ví dụ của HL7 để tránh dùng mã UI làm mã trao đổi. Kết quả xét nghiệm/hình ảnh về sau nên được biểu diễn bằng `Observation`, `DiagnosticReport`, `ImagingStudy` hoặc tài liệu phù hợp.
-- `Task` phù hợp để theo dõi trạng thái thực thi của một công việc chăm sóc y tế: đã yêu cầu, đã nhận, đang thực hiện, hoàn tất hoặc thất bại. Trong dự án này, `Task` không thay thế `ServiceRequest`; `Task.focus`/`basedOn` trỏ về y lệnh gốc, còn `output` trỏ tới kết quả như `Observation`, `DiagnosticReport` hoặc `ImagingStudy`.
+- `Task` phù hợp để theo dõi trạng thái thực thi của một công việc chăm sóc y tế: đã yêu cầu, đã nhận, đang thực hiện, hoàn tất hoặc thất bại. Trong dự án này, `Task` không thay thế `ServiceRequest`; `Task.focus`/`basedOn` trỏ về y lệnh gốc, còn `output` trỏ tới kết quả như `Observation`, `DiagnosticReport` hoặc `ImagingStudy`. Với chuyển hồ sơ liên viện, `RecordTransfer` cũng xuất thành FHIR `Task`, nhưng `focus` trỏ tới FHIR `Bundle` đích và `owner` là cơ sở nhận.
 - `Procedure` phù hợp để ghi nhận hành động y tế đã thực hiện cho người bệnh: thủ thuật, chẩn đoán hình ảnh đã thực hiện, tư vấn, phục hồi chức năng hoặc can thiệp điều trị. Trong dự án này, `Procedure` không thay thế `ServiceRequest` hay `Task`; nó là bằng chứng lâm sàng “đã làm gì”, có thể nối `basedOn` về y lệnh, `performer` về người/khoa thực hiện, `performedPeriod` về thời gian, `bodySite` về vị trí cơ thể và `report` về báo cáo liên quan.
 - `Observation` phù hợp cho sinh hiệu, kết quả xét nghiệm và chỉ số có cấu trúc; nên đi kèm mã chuẩn như LOINC khi có dữ liệu thật.
 - `DiagnosticReport` phù hợp cho báo cáo xét nghiệm/hình ảnh đã phát hành; nên dùng `basedOn` để nối y lệnh `ServiceRequest` và `result` để tham chiếu các `Observation` nguyên tử.
@@ -92,6 +92,7 @@ Hàm ý cho dự án:
 - Luồng “chuyển bệnh án giữa bệnh viện” nên hiểu là chia sẻ dữ liệu/tài liệu có metadata và định danh rõ ràng, không đơn thuần gửi file.
 - Cần Patient Registry hoặc Master Patient Index khi liên thông nhiều bệnh viện.
 - MHD là hướng phù hợp để nghiên cứu API chia sẻ tài liệu bệnh án theo FHIR.
+- `RecordTransfer` là lớp vận hành nội bộ để chuẩn bị cho MHD/XDS trong tương lai; nó không thay thế `DocumentReference`, `Composition` hoặc `Bundle`, mà chỉ theo dõi việc gửi gói hồ sơ tới bên nhận.
 
 ## SMART App Launch
 

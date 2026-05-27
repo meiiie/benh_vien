@@ -18,6 +18,7 @@ import type {
   PatientRepository,
   ProcedureRepository,
   ProviderDirectoryRepository,
+  RecordTransferRepository,
   ServiceRequestRepository,
   WorkflowTaskRepository
 } from "@benh-vien-so/domain";
@@ -52,6 +53,8 @@ import { createProcedureRepository } from "./modules/procedures/create-procedure
 import { registerProcedureRoutes } from "./modules/procedures/procedure-routes.js";
 import { createProviderDirectoryRepository } from "./modules/provider-directory/create-provider-directory.repository.js";
 import { registerProviderDirectoryRoutes } from "./modules/provider-directory/provider-directory-routes.js";
+import { createRecordTransferRepository } from "./modules/record-transfers/create-record-transfer.repository.js";
+import { registerRecordTransferRoutes } from "./modules/record-transfers/record-transfer-routes.js";
 import { createServiceRequestRepository } from "./modules/service-requests/create-service-request.repository.js";
 import { registerServiceRequestRoutes } from "./modules/service-requests/service-request-routes.js";
 import { createWorkflowTaskRepository } from "./modules/workflow-tasks/create-workflow-task.repository.js";
@@ -64,6 +67,7 @@ export type ServerOptions = {
   readonly conditionRepository?: ConditionRepository;
   readonly observationRepository?: ObservationRepository;
   readonly providerDirectoryRepository?: ProviderDirectoryRepository;
+  readonly recordTransferRepository?: RecordTransferRepository;
   readonly diagnosticReportRepository?: DiagnosticReportRepository;
   readonly imagingStudyRepository?: ImagingStudyRepository;
   readonly medicationAdministrationRepository?: MedicationAdministrationRepository;
@@ -212,6 +216,8 @@ export async function buildServer(options: ServerOptions = {}) {
     options.clinicalDocumentRepository ?? (await createClinicalDocumentRepository());
   const consentRepository =
     options.consentRepository ?? (await createConsentRepository());
+  const recordTransferRepository =
+    options.recordTransferRepository ?? (await createRecordTransferRepository());
   const auditEventRepository =
     options.auditEventRepository ?? (await createAuditEventRepository());
 
@@ -252,6 +258,13 @@ export async function buildServer(options: ServerOptions = {}) {
         api,
         patientRepository,
         consentRepository,
+        auditEventRepository
+      );
+      await registerRecordTransferRoutes(
+        api,
+        patientRepository,
+        consentRepository,
+        recordTransferRepository,
         auditEventRepository
       );
       await registerEncounterRoutes(

@@ -197,6 +197,16 @@ type DemoRole = "clinician" | "nurse" | "auditor" | "admin";
 type PurposeOfUse = "TREATMENT" | "AUDIT" | "OPERATIONS";
 type ConsentStatus = "active" | "revoked" | "expired";
 type ConsentCategory = "record-sharing";
+type RecordTransferStatus =
+  | "draft"
+  | "requested"
+  | "ready"
+  | "in-progress"
+  | "completed"
+  | "cancelled"
+  | "failed";
+type RecordTransferPriority = "routine" | "urgent" | "asap" | "stat";
+type RecordTransferBundleType = "collection" | "document";
 type ProviderOrganizationType =
   | "hospital"
   | "department"
@@ -710,6 +720,10 @@ type AuditAction =
   | "patient.fhir-document-bundle-export"
   | "provider-directory.read"
   | "provider-directory.fhir-export"
+  | "record-transfer.list"
+  | "record-transfer.create"
+  | "record-transfer.read"
+  | "record-transfer.fhir-export"
   | "encounter.list"
   | "encounter.create"
   | "encounter.read"
@@ -770,6 +784,7 @@ type AuditAction =
 type AuditResourceType =
   | "Patient"
   | "ProviderDirectory"
+  | "RecordTransfer"
   | "Encounter"
   | "AllergyIntolerance"
   | "Condition"
@@ -810,6 +825,26 @@ type Consent = {
   readonly evidenceDocumentId?: string;
   readonly validFrom: string;
   readonly validUntil?: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
+type RecordTransfer = {
+  readonly id: string;
+  readonly patientId: string;
+  readonly status: RecordTransferStatus;
+  readonly priority: RecordTransferPriority;
+  readonly bundleType: RecordTransferBundleType;
+  readonly bundleId: string;
+  readonly sourceOrganizationId: string;
+  readonly recipientOrganizationId: string;
+  readonly consentReference: string;
+  readonly requestedByActorId: string;
+  readonly reason: string;
+  readonly requestedAt: string;
+  readonly sentAt?: string;
+  readonly receivedAt?: string;
+  readonly note?: string;
   readonly createdAt: string;
   readonly updatedAt: string;
 };
@@ -878,6 +913,10 @@ type ConsentsResponse = {
   readonly items: readonly Consent[];
 };
 
+type RecordTransfersResponse = {
+  readonly items: readonly RecordTransfer[];
+};
+
 type NewPatientForm = {
   fullName: string;
   birthDate: string;
@@ -887,6 +926,16 @@ type NewPatientForm = {
   phone: string;
   address: string;
   managingOrganizationId: string;
+};
+
+type NewRecordTransferForm = {
+  priority: RecordTransferPriority;
+  bundleType: RecordTransferBundleType;
+  sourceOrganizationId: string;
+  recipientOrganizationId: string;
+  consentReference: string;
+  reason: string;
+  note: string;
 };
 
 type NewEncounterForm = {
@@ -1359,6 +1408,16 @@ const defaultTransferContext = {
   recipientOrganizationId: "hospital-hai-phong-referral"
 };
 
+const defaultRecordTransferForm: NewRecordTransferForm = {
+  priority: "urgent",
+  bundleType: "document",
+  sourceOrganizationId: "hospital-hai-phong-demo",
+  recipientOrganizationId: defaultTransferContext.recipientOrganizationId,
+  consentReference: defaultTransferContext.consentReference,
+  reason: "Chuyển hồ sơ sang bệnh viện tiếp nhận để theo dõi sau cấp cứu.",
+  note: "Dùng FHIR document Bundle có Composition làm mục lục lâm sàng."
+};
+
 const loginPresets: Record<DemoRole, LoginForm> = {
   clinician: {
     username: "practitioner-demo-001",
@@ -1431,7 +1490,7 @@ const referenceSignals = [
   },
   {
     name: "HL7 FHIR R4",
-    value: "Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, MedicationDispense, MedicationAdministration, DocumentReference cùng Organization/Practitioner/Endpoint là lõi trao đổi dữ liệu trong lát cắt này."
+    value: "Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, MedicationDispense, MedicationAdministration, DocumentReference cùng Organization/Practitioner/Endpoint là lõi trao đổi dữ liệu; RecordTransfer xuất thành Task để điều phối chuyển hồ sơ."
   },
   {
     name: "Bối cảnh Việt Nam",
@@ -1483,11 +1542,15 @@ export function App() {
   const [selectedImagingStudyId, setSelectedImagingStudyId] = useState<string>();
   const [auditEvents, setAuditEvents] = useState<readonly AuditEvent[]>([]);
   const [consents, setConsents] = useState<readonly Consent[]>([]);
+  const [recordTransfers, setRecordTransfers] = useState<readonly RecordTransfer[]>([]);
+  const [selectedRecordTransferId, setSelectedRecordTransferId] = useState<string>();
   const [providerDirectory, setProviderDirectory] = useState<ProviderDirectory>();
   const [patientFhirPreview, setPatientFhirPreview] = useState<unknown>();
   const [patientFhirBundlePreview, setPatientFhirBundlePreview] = useState<unknown>();
   const [patientFhirDocumentBundlePreview, setPatientFhirDocumentBundlePreview] = useState<unknown>();
   const [providerDirectoryFhirPreview, setProviderDirectoryFhirPreview] = useState<unknown>();
+  const [recordTransferFhirTaskPreview, setRecordTransferFhirTaskPreview] =
+    useState<unknown>();
   const [encounterFhirPreview, setEncounterFhirPreview] = useState<unknown>();
   const [documentFhirPreview, setDocumentFhirPreview] = useState<unknown>();
   const [allergyIntoleranceFhirPreview, setAllergyIntoleranceFhirPreview] = useState<unknown>();
@@ -1504,6 +1567,8 @@ export function App() {
   const [diagnosticReportFhirPreview, setDiagnosticReportFhirPreview] = useState<unknown>();
   const [imagingStudyFhirPreview, setImagingStudyFhirPreview] = useState<unknown>();
   const [patientForm, setPatientForm] = useState<NewPatientForm>(defaultPatientForm);
+  const [recordTransferForm, setRecordTransferForm] =
+    useState<NewRecordTransferForm>(defaultRecordTransferForm);
   const [encounterForm, setEncounterForm] = useState<NewEncounterForm>(defaultEncounterForm);
   const [documentForm, setDocumentForm] =
     useState<NewClinicalDocumentForm>(defaultClinicalDocumentForm);
@@ -1546,6 +1611,7 @@ export function App() {
   const [isLoadingImagingStudies, setIsLoadingImagingStudies] = useState(false);
   const [isLoadingAuditEvents, setIsLoadingAuditEvents] = useState(false);
   const [isLoadingConsents, setIsLoadingConsents] = useState(false);
+  const [isLoadingRecordTransfers, setIsLoadingRecordTransfers] = useState(false);
   const [isLoadingProviderDirectory, setIsLoadingProviderDirectory] = useState(false);
   const [isSubmittingPatient, setIsSubmittingPatient] = useState(false);
   const [isSubmittingEncounter, setIsSubmittingEncounter] = useState(false);
@@ -1562,6 +1628,7 @@ export function App() {
   const [isSubmittingProcedure, setIsSubmittingProcedure] = useState(false);
   const [isSubmittingDiagnosticReport, setIsSubmittingDiagnosticReport] = useState(false);
   const [isSubmittingImagingStudy, setIsSubmittingImagingStudy] = useState(false);
+  const [isSubmittingRecordTransfer, setIsSubmittingRecordTransfer] = useState(false);
   const [isSigningDocument, setIsSigningDocument] = useState(false);
   const [isFinishingEncounter, setIsFinishingEncounter] = useState(false);
 
@@ -1593,6 +1660,9 @@ export function App() {
   );
   const selectedImagingStudy = imagingStudies.find(
     (imagingStudy) => imagingStudy.id === selectedImagingStudyId
+  );
+  const selectedRecordTransfer = recordTransfers.find(
+    (recordTransfer) => recordTransfer.id === selectedRecordTransferId
   );
   const selectedEncounterDocuments = selectedEncounter
     ? clinicalDocuments.filter((document) => document.encounterId === selectedEncounter.id)
@@ -1655,6 +1725,7 @@ export function App() {
       setPatientFhirBundlePreview(undefined);
       setPatientFhirDocumentBundlePreview(undefined);
       setEncounterFhirPreview(undefined);
+      setRecordTransferFhirTaskPreview(undefined);
       setDocumentFhirPreview(undefined);
       setAllergyIntoleranceFhirPreview(undefined);
       setConditionFhirPreview(undefined);
@@ -1682,6 +1753,7 @@ export function App() {
       setImagingStudies([]);
       setAuditEvents([]);
       setConsents([]);
+      setRecordTransfers([]);
       setSelectedEncounterId(undefined);
       setSelectedDocumentId(undefined);
       setSelectedAllergyIntoleranceId(undefined);
@@ -1695,6 +1767,7 @@ export function App() {
       setSelectedProcedureId(undefined);
       setSelectedDiagnosticReportId(undefined);
       setSelectedImagingStudyId(undefined);
+      setSelectedRecordTransferId(undefined);
       return;
     }
 
@@ -1840,6 +1913,15 @@ export function App() {
     void loadImagingStudyFhirPreview(selectedImagingStudyId);
   }, [selectedImagingStudyId]);
 
+  useEffect(() => {
+    if (!selectedRecordTransferId) {
+      setRecordTransferFhirTaskPreview(undefined);
+      return;
+    }
+
+    void loadRecordTransferFhirTaskPreview(selectedRecordTransferId);
+  }, [selectedRecordTransferId]);
+
   function buildHeaders(
     purposeOfUse: PurposeOfUse,
     headers: Record<string, string> = {}
@@ -1936,7 +2018,8 @@ export function App() {
       loadDiagnosticReports(patientId),
       loadImagingStudies(patientId),
       loadClinicalDocuments(patientId),
-      loadConsents(patientId)
+      loadConsents(patientId),
+      loadRecordTransfers(patientId)
     ];
 
     if (canReadAudit) {
@@ -2399,6 +2482,60 @@ export function App() {
       );
     } finally {
       setIsLoadingConsents(false);
+    }
+  }
+
+  async function loadRecordTransfers(
+    patientId: string,
+    nextSelectedRecordTransferId?: string
+  ) {
+    setIsLoadingRecordTransfers(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/record-transfers`, {
+        headers: buildHeaders("TREATMENT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      const data = (await response.json()) as RecordTransfersResponse;
+      setRecordTransfers(data.items);
+      setSelectedRecordTransferId(
+        nextSelectedRecordTransferId ?? selectedRecordTransferId ?? data.items[0]?.id
+      );
+    } catch (error) {
+      setRecordTransfers([]);
+      setSelectedRecordTransferId(undefined);
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể tải gói chuyển hồ sơ: ${error.message}`
+          : "Không thể tải gói chuyển hồ sơ."
+      );
+    } finally {
+      setIsLoadingRecordTransfers(false);
+    }
+  }
+
+  async function loadRecordTransferFhirTaskPreview(recordTransferId: string) {
+    try {
+      const response = await fetch(`${apiBaseUrl}/record-transfers/${recordTransferId}/fhir-task`, {
+        headers: buildHeaders("TREATMENT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      setRecordTransferFhirTaskPreview(await response.json());
+    } catch (error) {
+      setRecordTransferFhirTaskPreview({
+        error:
+          error instanceof Error
+            ? `Không thể xuất FHIR Task chuyển hồ sơ: ${error.message}`
+            : "Không thể xuất FHIR Task chuyển hồ sơ."
+      });
     }
   }
 
@@ -2904,6 +3041,54 @@ export function App() {
       );
     } finally {
       setIsSubmittingPatient(false);
+    }
+  }
+
+  async function handleCreateRecordTransfer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedPatient) {
+      setStatusMessage("Cần chọn bệnh nhân trước khi tạo gói chuyển hồ sơ.");
+      return;
+    }
+
+    setIsSubmittingRecordTransfer(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/record-transfers`, {
+        method: "POST",
+        headers: buildHeaders("TREATMENT", {
+          "Content-Type": "application/json"
+        }),
+        body: JSON.stringify({
+          priority: recordTransferForm.priority,
+          bundleType: recordTransferForm.bundleType,
+          sourceOrganizationId: recordTransferForm.sourceOrganizationId,
+          recipientOrganizationId: recordTransferForm.recipientOrganizationId,
+          consentReference: recordTransferForm.consentReference,
+          reason: recordTransferForm.reason,
+          note: recordTransferForm.note || undefined
+        })
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => undefined);
+        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
+      }
+
+      const createdTransfer = (await response.json()) as RecordTransfer;
+      await loadRecordTransfers(selectedPatient.id, createdTransfer.id);
+      setStatusMessage(
+        `Đã tạo gói chuyển hồ sơ ${createdTransfer.id} cho ${selectedPatient.fullName}.`
+      );
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể tạo gói chuyển hồ sơ: ${error.message}`
+          : "Không thể tạo gói chuyển hồ sơ."
+      );
+    } finally {
+      setIsSubmittingRecordTransfer(false);
     }
   }
 
@@ -3993,6 +4178,7 @@ export function App() {
           <MetricCard label="Chỉ định thuốc" value={`${medicationRequests.length}`} note="FHIR MedicationRequest" />
           <MetricCard label="Cấp phát thuốc" value={`${medicationDispenses.length}`} note="FHIR MedicationDispense" />
           <MetricCard label="Dùng thuốc" value={`${medicationAdministrations.length}`} note="FHIR MedicationAdministration" />
+          <MetricCard label="Chuyển hồ sơ" value={`${recordTransfers.length}`} note="FHIR Task liên viện" />
           <MetricCard label="Tài liệu nháp" value={`${draftDocuments.length}`} note="Cần ký/xác thực" />
         </section>
 
@@ -4013,7 +4199,7 @@ export function App() {
               </button>
               <button type="button" onClick={() => setAppRoute("interop")}>
                 <strong>Xem gói FHIR</strong>
-                <span>Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, MedicationDispense, MedicationAdministration và DocumentReference đã có preview.</span>
+                <span>Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, MedicationDispense, MedicationAdministration, DocumentReference và gói chuyển hồ sơ đã có preview.</span>
               </button>
             </div>
           </article>
@@ -4036,6 +4222,7 @@ export function App() {
                 <Info label="Chỉ định thuốc" value={`${medicationRequests.length}`} />
                 <Info label="Cấp phát thuốc" value={`${medicationDispenses.length}`} />
                 <Info label="Dùng thuốc thực tế" value={`${medicationAdministrations.length}`} />
+                <Info label="Gói chuyển hồ sơ" value={`${recordTransfers.length}`} />
                 <Info label="Tài liệu" value={`${clinicalDocuments.length}`} />
                 <Info label="Cập nhật" value={formatDateTime(selectedPatient.updatedAt)} />
               </div>
@@ -4159,6 +4346,8 @@ export function App() {
           <FhirPanel title="FHIR MedicationAdministration JSON" badge="MedicationAdministration" value={medicationAdministrationFhirPreview} />
           <FhirPanel title="FHIR DocumentReference JSON" badge="DocumentReference" value={documentFhirPreview} />
           {renderConsentInteropPanel()}
+          {renderRecordTransferInteropPanel()}
+          <FhirPanel title="FHIR Record Transfer Task JSON" badge="Task" value={recordTransferFhirTaskPreview} />
           <article className="panel dark-panel">
             <p className="eyebrow">Reference map</p>
             <h2>Chuẩn đang bám theo</h2>
@@ -4284,6 +4473,177 @@ export function App() {
             </p>
           ) : null}
         </div>
+      </article>
+    );
+  }
+
+  function renderRecordTransferInteropPanel(): ReactNode {
+    return (
+      <article className="panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Chuyển hồ sơ liên viện</p>
+            <h2>Gói chuyển hồ sơ</h2>
+          </div>
+          <span className="pill cyan">
+            {isLoadingRecordTransfers
+              ? "đang tải"
+              : `${recordTransfers.length} gói`}
+          </span>
+        </div>
+
+        <div className="document-layout">
+          <div className="medication-cards">
+            {recordTransfers.map((recordTransfer) => (
+              <button
+                className={
+                  recordTransfer.id === selectedRecordTransferId
+                    ? "medication-card selected"
+                    : "medication-card"
+                }
+                key={recordTransfer.id}
+                type="button"
+                onClick={() => setSelectedRecordTransferId(recordTransfer.id)}
+              >
+                <span>{formatRecordTransferStatus(recordTransfer.status)}</span>
+                <strong>{formatRecordTransferBundleType(recordTransfer.bundleType)}</strong>
+                <small>
+                  {recordTransfer.recipientOrganizationId} · {formatDateTime(recordTransfer.requestedAt)}
+                </small>
+              </button>
+            ))}
+            {recordTransfers.length === 0 ? (
+              <p className="empty-state">
+                Chưa có gói chuyển hồ sơ. API sẽ kiểm consent trước khi cho tạo yêu cầu chuyển.
+              </p>
+            ) : null}
+          </div>
+
+          <div className="medication-summary">
+            {selectedRecordTransfer ? (
+              <>
+                <div className="document-meta">
+                  <Info label="Trạng thái" value={formatRecordTransferStatus(selectedRecordTransfer.status)} />
+                  <Info label="Độ ưu tiên" value={formatRecordTransferPriority(selectedRecordTransfer.priority)} />
+                  <Info label="Bundle" value={selectedRecordTransfer.bundleId} />
+                  <Info label="Loại gói" value={formatRecordTransferBundleType(selectedRecordTransfer.bundleType)} />
+                  <Info label="Cơ sở gửi" value={selectedRecordTransfer.sourceOrganizationId} />
+                  <Info label="Cơ sở nhận" value={selectedRecordTransfer.recipientOrganizationId} />
+                  <Info label="Consent" value={selectedRecordTransfer.consentReference} />
+                  <Info label="Người tạo" value={selectedRecordTransfer.requestedByActorId} />
+                </div>
+                <p className="empty-state">
+                  RecordTransfer là lớp điều phối nội bộ: sản phẩm dùng nó để theo dõi gửi/nhận,
+                  còn khi liên thông chuẩn sẽ xuất thành FHIR Task trỏ tới Bundle và consent tương ứng.
+                </p>
+              </>
+            ) : (
+              <p className="empty-state">Chọn một gói chuyển để xem siêu dữ liệu và xuất FHIR Task.</p>
+            )}
+          </div>
+        </div>
+
+        <form className="medication-form" onSubmit={(event) => void handleCreateRecordTransfer(event)}>
+          <label>
+            Độ ưu tiên
+            <select
+              value={recordTransferForm.priority}
+              onChange={(event) =>
+                setRecordTransferForm({
+                  ...recordTransferForm,
+                  priority: event.target.value as RecordTransferPriority
+                })
+              }
+            >
+              <option value="routine">Thường quy</option>
+              <option value="urgent">Khẩn</option>
+              <option value="asap">Càng sớm càng tốt</option>
+              <option value="stat">Cấp cứu</option>
+            </select>
+          </label>
+          <label>
+            Loại Bundle
+            <select
+              value={recordTransferForm.bundleType}
+              onChange={(event) =>
+                setRecordTransferForm({
+                  ...recordTransferForm,
+                  bundleType: event.target.value as RecordTransferBundleType
+                })
+              }
+            >
+              <option value="document">Document Bundle</option>
+              <option value="collection">Collection Bundle</option>
+            </select>
+          </label>
+          <label>
+            Cơ sở gửi
+            <input
+              value={recordTransferForm.sourceOrganizationId}
+              onChange={(event) =>
+                setRecordTransferForm({
+                  ...recordTransferForm,
+                  sourceOrganizationId: event.target.value
+                })
+              }
+            />
+          </label>
+          <label>
+            Cơ sở nhận
+            <input
+              value={recordTransferForm.recipientOrganizationId}
+              onChange={(event) =>
+                setRecordTransferForm({
+                  ...recordTransferForm,
+                  recipientOrganizationId: event.target.value
+                })
+              }
+            />
+          </label>
+          <label>
+            Consent
+            <input
+              value={recordTransferForm.consentReference}
+              onChange={(event) =>
+                setRecordTransferForm({
+                  ...recordTransferForm,
+                  consentReference: event.target.value
+                })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Lý do chuyển hồ sơ
+            <input
+              value={recordTransferForm.reason}
+              onChange={(event) =>
+                setRecordTransferForm({
+                  ...recordTransferForm,
+                  reason: event.target.value
+                })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Ghi chú vận hành
+            <input
+              value={recordTransferForm.note}
+              onChange={(event) =>
+                setRecordTransferForm({
+                  ...recordTransferForm,
+                  note: event.target.value
+                })
+              }
+            />
+          </label>
+          <button
+            className="primary-button"
+            type="submit"
+            disabled={!selectedPatient || isSubmittingRecordTransfer}
+          >
+            {isSubmittingRecordTransfer ? "Đang tạo..." : "Tạo gói chuyển hồ sơ"}
+          </button>
+        </form>
       </article>
     );
   }
@@ -7572,7 +7932,7 @@ function LandingPage({
           <h1>Nền tảng bệnh án điện tử mở cho liên thông y tế</h1>
           <p className="lede">
             WiiiCare Nexus mô phỏng lõi EMR hiện đại: hồ sơ bệnh nhân, Provider Directory, lượt khám, dị ứng, chẩn đoán,
-            chỉ định dịch vụ, Task thực thi, Procedure đã thực hiện, chỉ số lâm sàng, báo cáo kết quả, chỉ định thuốc, cấp phát thuốc, dùng thuốc thực tế, tài liệu bệnh án, audit trail và ánh xạ FHIR để chuẩn bị kết nối giữa các bệnh viện.
+            chỉ định dịch vụ, Task thực thi, Procedure đã thực hiện, chỉ số lâm sàng, báo cáo kết quả, chỉ định thuốc, cấp phát thuốc, dùng thuốc thực tế, tài liệu bệnh án, gói chuyển hồ sơ, audit trail và ánh xạ FHIR để chuẩn bị kết nối giữa các bệnh viện.
           </p>
           <div className="landing-actions">
             <button className="primary-button" type="button" onClick={onLogin}>
@@ -7585,7 +7945,7 @@ function LandingPage({
         </div>
         <aside className="landing-card">
           <span>Product slice</span>
-          <strong>Patient → Provider Directory → Encounter → AllergyIntolerance → Condition → ServiceRequest → Task → Procedure → Observation → DiagnosticReport → ImagingStudy → MedicationRequest → MedicationDispense → MedicationAdministration → Document → FHIR</strong>
+          <strong>Patient → Provider Directory → Encounter → AllergyIntolerance → Condition → ServiceRequest → Task → Procedure → Observation → DiagnosticReport → ImagingStudy → MedicationRequest → MedicationDispense → MedicationAdministration → Document → RecordTransfer → FHIR</strong>
           <small>Không còn là landing page đơn thuần; app có luồng vận hành sau đăng nhập.</small>
         </aside>
       </section>
@@ -7595,7 +7955,7 @@ function LandingPage({
           ["Patient Workspace", "Bàn làm việc theo bệnh nhân, giống nhịp vận hành EMR thật."],
           ["Document Center", "Quản lý CCR, CCDA, hồ sơ bệnh án, xét nghiệm và tài liệu chuyển tuyến."],
           ["Audit & RBAC", "Ghi log truy cập nhạy cảm và kiểm tra quyền theo vai trò demo."],
-          ["Liên thông FHIR", "Xuất Patient, Provider Directory, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, MedicationDispense, MedicationAdministration và DocumentReference để chuẩn bị liên thông."]
+          ["Liên thông FHIR", "Xuất Patient, Provider Directory, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, MedicationDispense, MedicationAdministration, DocumentReference và Task chuyển hồ sơ để chuẩn bị liên thông."]
         ].map(([title, description]) => (
           <article className="panel" key={title}>
             <p className="eyebrow">{title}</p>
@@ -7898,6 +8258,10 @@ function formatAuditAction(action: AuditAction): string {
     "patient.fhir-document-bundle-export": "Xuất FHIR document Bundle hồ sơ",
     "provider-directory.read": "Xem Provider Directory",
     "provider-directory.fhir-export": "Xuất FHIR Provider Directory",
+    "record-transfer.list": "Tải gói chuyển hồ sơ",
+    "record-transfer.create": "Tạo gói chuyển hồ sơ",
+    "record-transfer.read": "Xem gói chuyển hồ sơ",
+    "record-transfer.fhir-export": "Xuất FHIR Task chuyển hồ sơ",
     "encounter.list": "Tải danh sách lượt khám",
     "encounter.create": "Mở lượt khám",
     "encounter.read": "Xem lượt khám",
@@ -7963,6 +8327,7 @@ function formatAuditResourceType(resourceType: AuditResourceType): string {
   const labels: Record<AuditResourceType, string> = {
     Patient: "Bệnh nhân",
     ProviderDirectory: "Danh bạ cơ sở y tế",
+    RecordTransfer: "Gói chuyển hồ sơ",
     Encounter: "Lượt khám",
     AllergyIntolerance: "Dị ứng/cảnh báo",
     Condition: "Chẩn đoán",
@@ -8004,6 +8369,40 @@ function formatConsentStatus(status: ConsentStatus): string {
   };
 
   return labels[status];
+}
+
+function formatRecordTransferStatus(status: RecordTransferStatus): string {
+  const labels: Record<RecordTransferStatus, string> = {
+    cancelled: "Đã hủy",
+    completed: "Đã hoàn tất",
+    draft: "Bản nháp",
+    failed: "Lỗi chuyển",
+    "in-progress": "Đang xử lý",
+    ready: "Sẵn sàng gửi",
+    requested: "Đã yêu cầu"
+  };
+
+  return labels[status];
+}
+
+function formatRecordTransferPriority(priority: RecordTransferPriority): string {
+  const labels: Record<RecordTransferPriority, string> = {
+    asap: "Càng sớm càng tốt",
+    routine: "Thường quy",
+    stat: "Cấp cứu",
+    urgent: "Khẩn"
+  };
+
+  return labels[priority];
+}
+
+function formatRecordTransferBundleType(bundleType: RecordTransferBundleType): string {
+  const labels: Record<RecordTransferBundleType, string> = {
+    collection: "FHIR collection Bundle",
+    document: "FHIR document Bundle"
+  };
+
+  return labels[bundleType];
 }
 
 function formatConsentCategory(category: ConsentCategory): string {

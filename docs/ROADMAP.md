@@ -15,13 +15,14 @@
 - Medication dispense core: bản ghi cấp phát thuốc bằng FHIR `MedicationDispense`, nối `MedicationRequest` với số lượng cấp, số ngày cấp, thời điểm chuẩn bị/bàn giao, người cấp phát và người nhận.
 - Medication administration core: bản ghi dùng thuốc thực tế bằng FHIR `MedicationAdministration`, nối `MedicationRequest` với thời điểm dùng, liều thực tế và người/thiết bị xác nhận.
 - Clinical Records: tài liệu bệnh án, trạng thái ký/xác nhận, lịch sử chỉnh sửa.
+- Record Transfer core: gói chuyển hồ sơ liên viện, trạng thái vận hành, cơ sở gửi/nhận, consent và FHIR `Task` điều phối.
 - Audit & Compliance: nhật ký xem, sửa, ký, xuất hồ sơ.
 - Web demo: màn hình bệnh nhân, danh sách tài liệu, trạng thái ký.
 
 ## Giai đoạn 2: Liên thông FHIR
 
 - Kết nối HAPI FHIR ở chế độ thử nghiệm.
-- Mapping `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `DocumentReference`, `Composition`.
+- Mapping `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `DocumentReference`, `Composition` và `Task` điều phối chuyển hồ sơ.
 - Tạo luồng xuất gói hồ sơ bệnh án cho một bệnh nhân.
 - Kiểm tra luồng nhận lại dữ liệu từ FHIR server.
 

@@ -1,6 +1,6 @@
 # Ví dụ API
 
-API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `Patient`, `ProviderDirectory`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `ClinicalDocument`, `Consent`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
+API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `Patient`, `ProviderDirectory`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `ClinicalDocument`, `Consent`, `RecordTransfer`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
 
 ## Kiểm tra sức khỏe API
 
@@ -154,6 +154,38 @@ curl http://localhost:7310/api/v1/patients/patient-demo-001/fhir-document-bundle
 ```
 
 Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `document`, và `entry[0].resource.resourceType` bằng `Composition`. Các section của `Composition` tham chiếu tới nhóm cơ sở/nhân sự/endpoint liên thông, lượt khám, dị ứng, chẩn đoán, y lệnh dịch vụ, công việc thực thi y lệnh, thủ thuật/hoạt động đã thực hiện, chỉ số, báo cáo kết quả, nghiên cứu hình ảnh, chỉ định thuốc, cấp phát thuốc, dùng thuốc thực tế và tài liệu lâm sàng trong cùng Bundle.
+
+## Tạo gói chuyển hồ sơ liên viện và xuất FHIR Task
+
+```bash
+curl http://localhost:7310/api/v1/patients/patient-demo-001/record-transfers \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+```bash
+TRANSFER_ID=$(curl -s -X POST http://localhost:7310/api/v1/patients/patient-demo-001/record-transfers \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "priority": "urgent",
+    "bundleType": "document",
+    "sourceOrganizationId": "hospital-hai-phong-demo",
+    "recipientOrganizationId": "hospital-hai-phong-referral",
+    "consentReference": "consent-demo-transfer-001",
+    "reason": "Chuyển hồ sơ sang bệnh viện tiếp nhận để theo dõi sau cấp cứu.",
+    "note": "Dùng FHIR document Bundle có Composition làm mục lục lâm sàng."
+  }' | jq -r .id)
+```
+
+```bash
+curl http://localhost:7310/api/v1/record-transfers/$TRANSFER_ID/fhir-task \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+API sẽ kiểm `consentReference` trước khi tạo `RecordTransfer`. Kết quả FHIR mong muốn là `Task` có `focus` trỏ tới `Bundle/patient-document-patient-demo-001`, `for` trỏ tới `Patient/patient-demo-001`, `requester` là cơ sở gửi và `owner` là cơ sở nhận.
 
 ## Lấy và mở lượt khám
 

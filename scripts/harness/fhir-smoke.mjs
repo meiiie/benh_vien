@@ -29,6 +29,7 @@ const {
   Patient,
   Procedure,
   ProviderDirectory,
+  RecordTransfer,
   ServiceRequest,
   WorkflowTask,
   canAccess,
@@ -47,6 +48,7 @@ const {
   mapPatientToFhir,
   mapProcedureToFhir,
   mapProviderDirectoryToFhirBundle,
+  mapRecordTransferToFhirTask,
   mapServiceRequestToFhir,
   mapWorkflowTaskToFhir
 } = await import(pathToFileURL(domainEntry).href);
@@ -796,6 +798,36 @@ if (
   throw new Error("Expected consent to deny record sharing for uncovered recipient.");
 }
 
+const recordTransfer = RecordTransfer.create({
+  id: "record-transfer-harness-001",
+  patientId: patient.id,
+  status: "ready",
+  priority: "urgent",
+  bundleType: "document",
+  bundleId: fhirDocumentBundle.id,
+  sourceOrganizationId: "hospital-hai-phong-demo",
+  recipientOrganizationId: "hospital-harness-recipient",
+  consentReference: consent.id,
+  requestedByActorId: "practitioner-harness-001",
+  reason: "Chuyển hồ sơ sang cơ sở tiếp nhận để theo dõi sau cấp cứu.",
+  requestedAt: "2026-05-27T12:05:00.000Z"
+});
+const fhirRecordTransferTask = mapRecordTransferToFhirTask(recordTransfer);
+
+if (fhirRecordTransferTask.resourceType !== "Task") {
+  throw new Error(
+    `Expected record transfer FHIR resourceType Task, received ${fhirRecordTransferTask.resourceType}`
+  );
+}
+
+if (fhirRecordTransferTask.focus?.reference !== `Bundle/${fhirDocumentBundle.id}`) {
+  throw new Error("Expected record transfer Task to focus on the FHIR document Bundle.");
+}
+
+if (fhirRecordTransferTask.owner?.reference !== "Organization/hospital-harness-recipient") {
+  throw new Error("Expected record transfer Task owner to be the recipient organization.");
+}
+
 const auditEvent = AuditEvent.record({
   actorId: "practitioner-harness-001",
   action: "clinical-document.fhir-export",
@@ -942,6 +974,15 @@ const clinicianCanExportProviderDirectory = canAccess(
   "provider-directory:fhir-export"
 );
 
+const clinicianCanExportRecordTransfer = canAccess(
+  {
+    actorId: "practitioner-harness-001",
+    role: "clinician",
+    purposeOfUse: "TREATMENT"
+  },
+  "record-transfer:fhir-export"
+);
+
 const nurseCanExportObservation = canAccess(
   {
     actorId: "nurse-harness-001",
@@ -1050,6 +1091,15 @@ const nurseCanExportProviderDirectory = canAccess(
   "provider-directory:fhir-export"
 );
 
+const nurseCanExportRecordTransfer = canAccess(
+  {
+    actorId: "nurse-harness-001",
+    role: "nurse",
+    purposeOfUse: "TREATMENT"
+  },
+  "record-transfer:fhir-export"
+);
+
 const nurseCanReadProviderDirectory = canAccess(
   {
     actorId: "nurse-harness-001",
@@ -1133,6 +1183,10 @@ if (!clinicianCanExportProviderDirectory) {
   throw new Error("Expected clinician/TREATMENT to export provider directory.");
 }
 
+if (!clinicianCanExportRecordTransfer) {
+  throw new Error("Expected clinician/TREATMENT to export record transfer tasks.");
+}
+
 if (nurseCanExportObservation) {
   throw new Error("Expected nurse/TREATMENT to be denied observation:fhir-export.");
 }
@@ -1181,6 +1235,10 @@ if (nurseCanExportImagingStudy) {
 
 if (nurseCanExportProviderDirectory) {
   throw new Error("Expected nurse/TREATMENT to be denied provider-directory:fhir-export.");
+}
+
+if (nurseCanExportRecordTransfer) {
+  throw new Error("Expected nurse/TREATMENT to be denied record-transfer:fhir-export.");
 }
 
 if (!nurseCanReadProviderDirectory) {
@@ -1237,6 +1295,9 @@ console.log(
       documentBundleFirstResourceType: fhirDocumentBundle.entry[0]?.resource.resourceType,
       documentBundleEntryCount: fhirDocumentBundle.entry.length,
       consentId: consent.id,
+      recordTransferId: fhirRecordTransferTask.id,
+      recordTransferResourceType: fhirRecordTransferTask.resourceType,
+      recordTransferFocus: fhirRecordTransferTask.focus?.reference,
       auditAction: auditEvent.toSnapshot().action,
       auth: {
         actorId: verifiedSession.actor.actorId,
@@ -1255,6 +1316,7 @@ console.log(
         clinicianCanExportMedicationAdministration,
         clinicianCanExportObservation,
         clinicianCanExportProviderDirectory,
+        clinicianCanExportRecordTransfer,
         clinicianCanExportServiceRequest,
         clinicianCanExportWorkflowTask,
         clinicianCanExportProcedure,
@@ -1267,6 +1329,7 @@ console.log(
         nurseCanExportMedicationAdministration,
         nurseCanExportObservation,
         nurseCanExportProviderDirectory,
+        nurseCanExportRecordTransfer,
         nurseCanReadProviderDirectory,
         nurseCanExportServiceRequest,
         nurseCanExportWorkflowTask,
