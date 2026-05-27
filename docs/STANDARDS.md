@@ -44,6 +44,7 @@ Nguồn:
 - [FHIR Composition Resource](https://hl7.org/fhir/R4/composition.html)
 - [FHIR Bundle Resource](https://hl7.org/fhir/R4/bundle.html)
 - [FHIR DocumentReference Resource](https://hl7.org/fhir/R4/documentreference.html)
+- [FHIR Consent Resource](https://hl7.org/fhir/R4/consent.html)
 
 Hàm ý cho dự án:
 
@@ -62,6 +63,7 @@ Hàm ý cho dự án:
 - `MedicationDispense` phù hợp cho sự kiện thuốc đã được cấp phát cho người bệnh hoặc khoa/phòng, thường là kết quả của hệ thống dược/kho đáp ứng một `MedicationRequest`. Trong dự án này, resource này giữ các thông tin “đã cấp bao nhiêu, cấp cho bao nhiêu ngày, chuẩn bị/bàn giao lúc nào, ai cấp và ai nhận”.
 - `MedicationAdministration` phù hợp cho sự kiện thuốc đã được dùng hoặc được xác nhận dùng cho người bệnh. Trong dự án này, resource này đóng vòng `MedicationRequest -> MedicationDispense -> MedicationAdministration`: chỉ định thuốc là “cần dùng thuốc gì”, cấp phát thuốc là “đã bàn giao thuốc gì, bao nhiêu”, còn dùng thuốc thực tế là “đã dùng lúc nào, liều bao nhiêu, ai/thiết bị nào xác nhận”.
 - `Composition` phù hợp để tạo mục lục lâm sàng cho một FHIR document. Khi `Bundle.type = document`, entry đầu tiên bắt buộc phải là `Composition`; các section của Composition nên tham chiếu các resource nằm trong Bundle.
+- `Consent` là hướng chuẩn FHIR để biểu diễn đồng ý, chính sách chia sẻ và trạng thái hiệu lực của đồng ý. Domain hiện dùng trạng thái nội bộ `active`, `revoked`, `expired`; khi ánh xạ sang FHIR cần quy đổi rõ, ví dụ consent bị thu hồi có thể tương ứng trạng thái FHIR không còn hoạt động và phải được giải thích trong profile triển khai.
 - Khi phát triển tiếp cần bổ sung Medication Administration Record (MAR), kiểm tra barcode/5 đúng dùng thuốc, workflow duyệt đơn thuốc và ràng buộc profile cụ thể hơn.
 - Với liên thông bệnh án, `DocumentReference` và `Composition` quan trọng hơn việc chỉ gửi một file PDF rời rạc.
 

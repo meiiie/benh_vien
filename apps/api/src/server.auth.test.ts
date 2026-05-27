@@ -1241,6 +1241,108 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("revokes a patient consent and blocks later record sharing", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const createResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/consents",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        category: "record-sharing",
+        granteeOrganizationId: "hospital-revoked-recipient",
+        validFrom: "2026-05-27T00:00:00.000Z",
+        validUntil: "2026-12-31T23:59:59.000Z"
+      }
+    });
+    const createdConsent = createResponse.json();
+
+    expect(createResponse.statusCode).toBe(201);
+
+    const revokeResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/patient-demo-001/consents/${createdConsent.id}/revoke`,
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        reason: "Người bệnh rút lại đồng ý chia sẻ hồ sơ."
+      }
+    });
+    const revokedConsent = revokeResponse.json();
+
+    expect(revokeResponse.statusCode).toBe(200);
+    expect(revokedConsent).toMatchObject({
+      id: createdConsent.id,
+      status: "revoked",
+      revokedByActorId: "practitioner-demo-001",
+      revocationReason: "Người bệnh rút lại đồng ý chia sẻ hồ sơ."
+    });
+    expect(revokedConsent.revokedAt).toEqual(expect.any(String));
+
+    const bundleResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/fhir-bundle",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "x-consent-reference": createdConsent.id,
+        "x-recipient-organization-id": "hospital-revoked-recipient"
+      }
+    });
+
+    expect(bundleResponse.statusCode).toBe(403);
+    expect(bundleResponse.json()).toMatchObject({
+      error: "CONSENT_NOT_VALID_FOR_TRANSFER"
+    });
+  });
+
+  it("denies consent revocation for nurse role", async () => {
+    app = await readyServer();
+    const clinicianToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const nurseToken = await loginForToken(app, "nurse-demo-001", "nurse");
+
+    const createResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/consents",
+      headers: {
+        ...treatmentHeaders(clinicianToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        category: "record-sharing",
+        granteeOrganizationId: "hospital-nurse-denied-recipient",
+        validFrom: "2026-05-27T00:00:00.000Z",
+        validUntil: "2026-12-31T23:59:59.000Z"
+      }
+    });
+    const createdConsent = createResponse.json();
+
+    expect(createResponse.statusCode).toBe(201);
+
+    const revokeResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/patient-demo-001/consents/${createdConsent.id}/revoke`,
+      headers: {
+        ...treatmentHeaders(nurseToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        reason: "Điều dưỡng không có quyền thu hồi consent."
+      }
+    });
+
+    expect(revokeResponse.statusCode).toBe(403);
+    expect(revokeResponse.json()).toMatchObject({
+      error: "FORBIDDEN",
+      permission: "consent:revoke"
+    });
+  });
+
   it("lists record transfer packages for a patient", async () => {
     app = await readyServer();
     const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");

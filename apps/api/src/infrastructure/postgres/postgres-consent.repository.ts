@@ -17,6 +17,9 @@ type ConsentRow = {
   grantee_organization_id: string;
   grantor_actor_id: string;
   evidence_document_id: string | null;
+  revoked_by_actor_id: string | null;
+  revoked_at: Date | string | null;
+  revocation_reason: string | null;
   valid_from: Date | string;
   valid_until: Date | string | null;
   created_at: Date | string;
@@ -43,6 +46,9 @@ export class PostgresConsentRepository implements ConsentRepository {
         grantee_organization_id,
         grantor_actor_id,
         evidence_document_id,
+        revoked_by_actor_id,
+        revoked_at,
+        revocation_reason,
         valid_from,
         valid_until,
         created_at,
@@ -66,6 +72,9 @@ export class PostgresConsentRepository implements ConsentRepository {
         grantee_organization_id,
         grantor_actor_id,
         evidence_document_id,
+        revoked_by_actor_id,
+        revoked_at,
+        revocation_reason,
         valid_from,
         valid_until,
         created_at,
@@ -91,12 +100,15 @@ export class PostgresConsentRepository implements ConsentRepository {
         grantee_organization_id,
         grantor_actor_id,
         evidence_document_id,
+        revoked_by_actor_id,
+        revoked_at,
+        revocation_reason,
         valid_from,
         valid_until,
         created_at,
         updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       ON CONFLICT (id) DO UPDATE SET
         patient_id = EXCLUDED.patient_id,
         status = EXCLUDED.status,
@@ -104,6 +116,9 @@ export class PostgresConsentRepository implements ConsentRepository {
         grantee_organization_id = EXCLUDED.grantee_organization_id,
         grantor_actor_id = EXCLUDED.grantor_actor_id,
         evidence_document_id = EXCLUDED.evidence_document_id,
+        revoked_by_actor_id = EXCLUDED.revoked_by_actor_id,
+        revoked_at = EXCLUDED.revoked_at,
+        revocation_reason = EXCLUDED.revocation_reason,
         valid_from = EXCLUDED.valid_from,
         valid_until = EXCLUDED.valid_until,
         updated_at = EXCLUDED.updated_at`,
@@ -115,6 +130,9 @@ export class PostgresConsentRepository implements ConsentRepository {
         snapshot.granteeOrganizationId,
         snapshot.grantorActorId,
         snapshot.evidenceDocumentId ?? null,
+        snapshot.revokedByActorId ?? null,
+        snapshot.revokedAt ?? null,
+        snapshot.revocationReason ?? null,
         snapshot.validFrom,
         snapshot.validUntil ?? null,
         snapshot.createdAt,
@@ -158,6 +176,9 @@ function rowToConsent(row: ConsentRow): Consent {
     granteeOrganizationId: row.grantee_organization_id,
     grantorActorId: row.grantor_actor_id,
     evidenceDocumentId: row.evidence_document_id ?? undefined,
+    revokedByActorId: row.revoked_by_actor_id ?? undefined,
+    revokedAt: row.revoked_at ? toIsoString(row.revoked_at) : undefined,
+    revocationReason: row.revocation_reason ?? undefined,
     validFrom: toIsoString(row.valid_from),
     validUntil: row.valid_until ? toIsoString(row.valid_until) : undefined,
     createdAt: toIsoString(row.created_at),

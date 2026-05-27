@@ -69,6 +69,7 @@ export type AuditAction =
   | "clinical-document.fhir-export"
   | "consent.list"
   | "consent.create"
+  | "consent.revoke"
   | "audit-event.list"
   | "audit-event.integrity-verify";
 

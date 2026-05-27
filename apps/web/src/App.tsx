@@ -779,6 +779,7 @@ type AuditAction =
   | "clinical-document.fhir-export"
   | "consent.list"
   | "consent.create"
+  | "consent.revoke"
   | "audit-event.list"
   | "audit-event.integrity-verify";
 
@@ -842,6 +843,9 @@ type Consent = {
   readonly granteeOrganizationId: string;
   readonly grantorActorId: string;
   readonly evidenceDocumentId?: string;
+  readonly revokedByActorId?: string;
+  readonly revokedAt?: string;
+  readonly revocationReason?: string;
   readonly validFrom: string;
   readonly validUntil?: string;
   readonly createdAt: string;
@@ -1653,6 +1657,7 @@ export function App() {
   const [isSubmittingDiagnosticReport, setIsSubmittingDiagnosticReport] = useState(false);
   const [isSubmittingImagingStudy, setIsSubmittingImagingStudy] = useState(false);
   const [isSubmittingRecordTransfer, setIsSubmittingRecordTransfer] = useState(false);
+  const [revokingConsentId, setRevokingConsentId] = useState<string>();
   const [isSigningDocument, setIsSigningDocument] = useState(false);
   const [isFinishingEncounter, setIsFinishingEncounter] = useState(false);
 
@@ -2556,6 +2561,45 @@ export function App() {
       );
     } finally {
       setIsLoadingConsents(false);
+    }
+  }
+
+  async function handleRevokeConsent(consent: Consent) {
+    if (!selectedPatient) {
+      return;
+    }
+
+    setRevokingConsentId(consent.id);
+
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/patients/${selectedPatient.id}/consents/${consent.id}/revoke`,
+        {
+          method: "POST",
+          headers: buildHeaders("TREATMENT", {
+            "Content-Type": "application/json"
+          }),
+          body: JSON.stringify({
+            reason: "Thu hồi theo yêu cầu người bệnh trong phiên demo."
+          })
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      const revokedConsent = (await response.json()) as Consent;
+      await loadConsents(selectedPatient.id);
+      setStatusMessage(`Đã thu hồi consent ${revokedConsent.id}; các lần xuất/chuyển hồ sơ mới sẽ bị chặn nếu dùng consent này.`);
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể thu hồi consent: ${error.message}`
+          : "Không thể thu hồi consent."
+      );
+    } finally {
+      setRevokingConsentId(undefined);
     }
   }
 
@@ -4532,14 +4576,34 @@ export function App() {
         <div className="reference-list">
           {consents.map((consent) => (
             <div key={consent.id}>
-              <strong>
-                {consent.id} · {formatConsentStatus(consent.status)}
-              </strong>
+              <div className="reference-header">
+                <strong>
+                  {consent.id} · {formatConsentStatus(consent.status)}
+                </strong>
+                <button
+                  className="ghost-button compact-button"
+                  type="button"
+                  disabled={
+                    consent.status !== "active" ||
+                    revokingConsentId === consent.id ||
+                    !selectedPatient
+                  }
+                  onClick={() => void handleRevokeConsent(consent)}
+                >
+                  {revokingConsentId === consent.id ? "Đang thu hồi..." : "Thu hồi"}
+                </button>
+              </div>
               <span>
                 {formatConsentCategory(consent.category)} cho {consent.granteeOrganizationId}, hiệu lực từ{" "}
                 {formatDateTime(consent.validFrom)}
                 {consent.validUntil ? ` đến ${formatDateTime(consent.validUntil)}` : ""}
               </span>
+              {consent.revokedAt ? (
+                <span>
+                  Thu hồi lúc {formatDateTime(consent.revokedAt)} bởi {consent.revokedByActorId ?? "không rõ"}
+                  {consent.revocationReason ? ` · ${consent.revocationReason}` : ""}
+                </span>
+              ) : null}
             </div>
           ))}
           {consents.length === 0 ? (
@@ -8435,6 +8499,7 @@ function formatAuditAction(action: AuditAction): string {
     "clinical-document.fhir-export": "Xuất FHIR DocumentReference",
     "consent.list": "Tải đồng ý chia sẻ hồ sơ",
     "consent.create": "Tạo đồng ý chia sẻ hồ sơ",
+    "consent.revoke": "Thu hồi đồng ý chia sẻ hồ sơ",
     "audit-event.list": "Xem nhật ký kiểm toán",
     "audit-event.integrity-verify": "Kiểm tra toàn vẹn audit"
   };

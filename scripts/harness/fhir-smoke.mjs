@@ -800,6 +800,32 @@ if (
   throw new Error("Expected consent to deny record sharing for uncovered recipient.");
 }
 
+const revokedConsent = Consent.grant({
+  id: "consent-harness-revoked-001",
+  patientId: patient.id,
+  category: "record-sharing",
+  granteeOrganizationId: "hospital-revoked-recipient",
+  grantorActorId: "practitioner-harness-001",
+  validFrom: "2026-05-27T00:00:00.000Z",
+  validUntil: "2026-05-28T00:00:00.000Z"
+});
+
+revokedConsent.revoke({
+  revokedByActorId: "practitioner-harness-001",
+  revokedAt: new Date("2026-05-27T12:10:00.000Z"),
+  reason: "Harness consent revocation"
+});
+
+if (
+  revokedConsent.allowsRecordSharing({
+    patientId: patient.id,
+    granteeOrganizationId: "hospital-revoked-recipient",
+    at: new Date("2026-05-27T12:15:00.000Z")
+  })
+) {
+  throw new Error("Expected revoked consent to deny record sharing.");
+}
+
 const recordTransfer = RecordTransfer.create({
   id: "record-transfer-harness-001",
   patientId: patient.id,
@@ -993,6 +1019,15 @@ const clinicianCanExportRecordTransfer = canAccess(
   "record-transfer:fhir-export"
 );
 
+const clinicianCanRevokeConsent = canAccess(
+  {
+    actorId: "practitioner-harness-001",
+    role: "clinician",
+    purposeOfUse: "TREATMENT"
+  },
+  "consent:revoke"
+);
+
 const nurseCanExportObservation = canAccess(
   {
     actorId: "nurse-harness-001",
@@ -1110,6 +1145,15 @@ const nurseCanExportRecordTransfer = canAccess(
   "record-transfer:fhir-export"
 );
 
+const nurseCanRevokeConsent = canAccess(
+  {
+    actorId: "nurse-harness-001",
+    role: "nurse",
+    purposeOfUse: "TREATMENT"
+  },
+  "consent:revoke"
+);
+
 const nurseCanReadProviderDirectory = canAccess(
   {
     actorId: "nurse-harness-001",
@@ -1197,6 +1241,10 @@ if (!clinicianCanExportRecordTransfer) {
   throw new Error("Expected clinician/TREATMENT to export record transfer tasks.");
 }
 
+if (!clinicianCanRevokeConsent) {
+  throw new Error("Expected clinician/TREATMENT to revoke record-sharing consent.");
+}
+
 if (nurseCanExportObservation) {
   throw new Error("Expected nurse/TREATMENT to be denied observation:fhir-export.");
 }
@@ -1249,6 +1297,10 @@ if (nurseCanExportProviderDirectory) {
 
 if (nurseCanExportRecordTransfer) {
   throw new Error("Expected nurse/TREATMENT to be denied record-transfer:fhir-export.");
+}
+
+if (nurseCanRevokeConsent) {
+  throw new Error("Expected nurse/TREATMENT to be denied consent:revoke.");
 }
 
 if (!nurseCanReadProviderDirectory) {
@@ -1305,6 +1357,7 @@ console.log(
       documentBundleFirstResourceType: fhirDocumentBundle.entry[0]?.resource.resourceType,
       documentBundleEntryCount: fhirDocumentBundle.entry.length,
       consentId: consent.id,
+      revokedConsentStatus: revokedConsent.toSnapshot().status,
       recordTransferId: fhirRecordTransferTask.id,
       recordTransferResourceType: fhirRecordTransferTask.resourceType,
       recordTransferFocus: fhirRecordTransferTask.focus?.reference,
@@ -1329,6 +1382,7 @@ console.log(
         clinicianCanExportObservation,
         clinicianCanExportProviderDirectory,
         clinicianCanExportRecordTransfer,
+        clinicianCanRevokeConsent,
         clinicianCanExportServiceRequest,
         clinicianCanExportWorkflowTask,
         clinicianCanExportProcedure,
@@ -1342,6 +1396,7 @@ console.log(
         nurseCanExportObservation,
         nurseCanExportProviderDirectory,
         nurseCanExportRecordTransfer,
+        nurseCanRevokeConsent,
         nurseCanReadProviderDirectory,
         nurseCanExportServiceRequest,
         nurseCanExportWorkflowTask,

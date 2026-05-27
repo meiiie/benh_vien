@@ -11,6 +11,9 @@ export type ConsentSnapshot = {
   readonly granteeOrganizationId: string;
   readonly grantorActorId: string;
   readonly evidenceDocumentId?: string;
+  readonly revokedByActorId?: string;
+  readonly revokedAt?: string;
+  readonly revocationReason?: string;
   readonly validFrom: string;
   readonly validUntil?: string;
   readonly createdAt: string;
@@ -19,13 +22,21 @@ export type ConsentSnapshot = {
 
 export type CreateConsentInput = Omit<
   ConsentSnapshot,
-  "status" | "createdAt" | "updatedAt"
-> & {
-  readonly status?: ConsentStatus;
+  "status" | "revokedByActorId" | "revokedAt" | "revocationReason" | "createdAt" | "updatedAt"
+>;
+
+export type RevokeConsentInput = {
+  readonly revokedByActorId: string;
+  readonly revokedAt?: Date;
+  readonly reason?: string;
+};
+
+type ConsentProps = {
+  -readonly [Key in keyof ConsentSnapshot]: ConsentSnapshot[Key];
 };
 
 export class Consent {
-  private constructor(private readonly props: ConsentSnapshot) {}
+  private constructor(private readonly props: ConsentProps) {}
 
   static grant(input: CreateConsentInput): Consent {
     const now = new Date();
@@ -41,7 +52,7 @@ export class Consent {
     return new Consent({
       id: normalizeRequired(input.id, "Mã consent không được để trống."),
       patientId: normalizeRequired(input.patientId, "Consent phải gắn với một bệnh nhân."),
-      status: input.status ?? "active",
+      status: "active",
       category: input.category,
       granteeOrganizationId: normalizeRequired(
         input.granteeOrganizationId,
@@ -57,9 +68,26 @@ export class Consent {
   }
 
   static rehydrate(snapshot: ConsentSnapshot): Consent {
+    const revokedByActorId = normalizeOptional(snapshot.revokedByActorId);
+    const revokedAt = snapshot.revokedAt
+      ? parseDate(snapshot.revokedAt, "Thời điểm thu hồi consent không hợp lệ.").toISOString()
+      : undefined;
+    const revocationReason = normalizeOptional(snapshot.revocationReason);
+
+    if (snapshot.status === "revoked" && (!revokedByActorId || !revokedAt)) {
+      throw new DomainError("Consent đã thu hồi phải có người thu hồi và thời điểm thu hồi.");
+    }
+
+    if (snapshot.status !== "revoked" && (revokedByActorId || revokedAt || revocationReason)) {
+      throw new DomainError("Consent chưa thu hồi không được có metadata thu hồi.");
+    }
+
     return new Consent({
       ...snapshot,
-      evidenceDocumentId: normalizeOptional(snapshot.evidenceDocumentId)
+      evidenceDocumentId: normalizeOptional(snapshot.evidenceDocumentId),
+      revokedByActorId,
+      revokedAt,
+      revocationReason
     });
   }
 
@@ -69,6 +97,27 @@ export class Consent {
 
   get patientId(): string {
     return this.props.patientId;
+  }
+
+  get status(): ConsentStatus {
+    return this.props.status;
+  }
+
+  revoke(input: RevokeConsentInput): void {
+    if (this.props.status !== "active") {
+      throw new DomainError("Chỉ consent đang hiệu lực mới được thu hồi.");
+    }
+
+    const revokedAt = input.revokedAt ?? new Date();
+
+    this.props.status = "revoked";
+    this.props.revokedByActorId = normalizeRequired(
+      input.revokedByActorId,
+      "Consent thu hồi phải có người hoặc cơ chế thực hiện."
+    );
+    this.props.revokedAt = revokedAt.toISOString();
+    this.props.revocationReason = normalizeOptional(input.reason);
+    this.props.updatedAt = revokedAt.toISOString();
   }
 
   allowsRecordSharing(input: {

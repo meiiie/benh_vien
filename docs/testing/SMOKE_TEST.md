@@ -35,6 +35,18 @@ curl -fsS http://localhost:7310/api/v1/patients/patient-demo-001/consents \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-purpose-of-use: TREATMENT"
 
+REVOKE_CONSENT_ID=$(curl -fsS -X POST http://localhost:7310/api/v1/patients/patient-demo-001/consents \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT" \
+  -H "Content-Type: application/json" \
+  -d '{"category":"record-sharing","granteeOrganizationId":"hospital-smoke-revoked-recipient","validFrom":"2026-05-27T00:00:00.000Z","validUntil":"2026-12-31T23:59:59.000Z"}' | jq -r .id)
+
+curl -fsS -X POST "http://localhost:7310/api/v1/patients/patient-demo-001/consents/$REVOKE_CONSENT_ID/revoke" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT" \
+  -H "Content-Type: application/json" \
+  -d '{"reason":"Smoke test thu hồi consent."}'
+
 curl -fsS http://localhost:7310/api/v1/patients/patient-demo-001/record-transfers \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-purpose-of-use: TREATMENT"

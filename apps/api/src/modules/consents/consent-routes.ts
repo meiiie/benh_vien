@@ -2,7 +2,9 @@ import type { FastifyInstance } from "fastify";
 import { nanoid } from "nanoid";
 import {
   CreateConsentRequestSchema,
-  PatientConsentsParamsSchema
+  PatientConsentParamsSchema,
+  PatientConsentsParamsSchema,
+  RevokeConsentRequestSchema
 } from "@benh-vien-so/contracts";
 import { Consent, DomainError } from "@benh-vien-so/domain";
 import type {
@@ -99,6 +101,73 @@ export async function registerConsentRoutes(
       });
 
       return reply.status(201).send(toConsentResponse(consent));
+    } catch (error) {
+      if (error instanceof DomainError) {
+        return reply.status(422).send({
+          error: "CONSENT_DOMAIN_ERROR",
+          message: error.message
+        });
+      }
+
+      throw error;
+    }
+  });
+
+  app.post("/patients/:patientId/consents/:consentId/revoke", async (request, reply) => {
+    const actor = requirePermission(request, reply, "consent:revoke");
+
+    if (!actor) {
+      return;
+    }
+
+    const params = PatientConsentParamsSchema.parse(request.params);
+    const patient = await patientRepository.findById(params.patientId);
+
+    if (!patient) {
+      return reply.status(404).send({
+        error: "PATIENT_NOT_FOUND"
+      });
+    }
+
+    const consent = await consentRepository.findById(params.consentId);
+
+    if (!consent || consent.patientId !== params.patientId) {
+      return reply.status(404).send({
+        error: "CONSENT_NOT_FOUND"
+      });
+    }
+
+    const parsed = RevokeConsentRequestSchema.safeParse(request.body ?? {});
+
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: "INVALID_CONSENT_REVOKE_PAYLOAD",
+        issues: parsed.error.issues
+      });
+    }
+
+    try {
+      consent.revoke({
+        revokedByActorId: actor.actorId,
+        reason: parsed.data.reason
+      });
+
+      await consentRepository.save(consent);
+      const revokedSnapshot = consent.toSnapshot();
+
+      await recordAuditEvent(auditRepository, request, {
+        action: "consent.revoke",
+        resourceType: "Consent",
+        resourceId: consent.id,
+        patientId: consent.patientId,
+        metadata: {
+          granteeOrganizationId: revokedSnapshot.granteeOrganizationId,
+          revokedAt: revokedSnapshot.revokedAt,
+          revocationReason: revokedSnapshot.revocationReason
+        }
+      });
+
+      return toConsentResponse(consent);
     } catch (error) {
       if (error instanceof DomainError) {
         return reply.status(422).send({

@@ -1081,27 +1081,56 @@ pre {
 
 .reference-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   gap: 12px;
   margin-top: 16px;
 }
 
-.reference-list div {
+.reference-list > div {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
   border: 1px solid rgba(255, 255, 255, 0.13);
   border-radius: 8px;
   padding: 14px;
   background: rgba(255, 255, 255, 0.04);
 }
 
+.reference-header {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
 .reference-list strong {
   display: block;
-  margin-bottom: 6px;
-  color: white;
+  min-width: 0;
+  margin-bottom: 0;
+  color: var(--harbor-ink);
+  overflow-wrap: anywhere;
 }
 
 .reference-list span {
-  color: #cbd5e1;
+  display: block;
+  color: var(--slate);
   line-height: 1.5;
+}
+
+.dark-panel .reference-list strong {
+  color: white;
+}
+
+.dark-panel .reference-list span {
+  color: #cbd5e1;
+}
+
+.compact-button {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  white-space: nowrap;
 }
 
 .milestone-list {

@@ -131,6 +131,33 @@ curl -X POST http://localhost:7310/api/v1/patients/patient-demo-001/consents \
 
 API sẽ ghi audit action `consent.create`. Ở prototype, `grantorActorId` lấy từ Bearer token hiện tại; khi lên thật cần thay bằng workflow ký/xác nhận consent.
 
+## Thu hồi consent chia sẻ hồ sơ
+
+```bash
+REVOKE_CONSENT_ID=$(curl -s -X POST http://localhost:7310/api/v1/patients/patient-demo-001/consents \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "category": "record-sharing",
+    "granteeOrganizationId": "hospital-revoked-recipient",
+    "validFrom": "2026-05-27T00:00:00.000Z",
+    "validUntil": "2026-12-31T23:59:59.000Z"
+  }' | jq -r .id)
+```
+
+```bash
+curl -X POST "http://localhost:7310/api/v1/patients/patient-demo-001/consents/$REVOKE_CONSENT_ID/revoke" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reason": "Người bệnh rút lại đồng ý chia sẻ hồ sơ."
+  }'
+```
+
+API sẽ chuyển consent sang `revoked`, lưu `revokedByActorId`, `revokedAt`, `revocationReason` và ghi audit action `consent.revoke`. Từ thời điểm đó, các API xuất `FHIR Bundle`, `FHIR document Bundle` hoặc tạo `RecordTransfer` bằng consent này phải bị chặn.
+
 ## Xuất gói hồ sơ bệnh nhân sang FHIR Bundle
 
 ```bash
@@ -141,7 +168,7 @@ curl http://localhost:7310/api/v1/patients/patient-demo-001/fhir-bundle \
   -H "x-recipient-organization-id: hospital-hai-phong-referral"
 ```
 
-Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các tài nguyên Provider Directory (`Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`), các `Encounter`, các `AllergyIntolerance`, các `Condition`, các `ServiceRequest`, các `Task`, các `Procedure`, các `Observation`, các `DiagnosticReport`, các `ImagingStudy`, các `MedicationRequest`, các `MedicationDispense`, các `MedicationAdministration` và các `DocumentReference` của bệnh nhân. Endpoint này không chỉ kiểm header: `x-consent-reference` phải trỏ tới một consent đang hiệu lực, đúng bệnh nhân và đúng `x-recipient-organization-id`.
+Kết quả mong muốn là JSON có `resourceType` bằng `Bundle`, `type` bằng `collection`, và `entry` gồm `Patient`, các tài nguyên Provider Directory (`Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`), các `Encounter`, các `AllergyIntolerance`, các `Condition`, các `ServiceRequest`, các `Task`, các `Procedure`, các `Observation`, các `DiagnosticReport`, các `ImagingStudy`, các `MedicationRequest`, các `MedicationDispense`, các `MedicationAdministration` và các `DocumentReference` của bệnh nhân. Endpoint này không chỉ kiểm header: `x-consent-reference` phải trỏ tới một consent đang hiệu lực, chưa bị thu hồi, đúng bệnh nhân và đúng `x-recipient-organization-id`.
 
 ## Xuất gói tài liệu bệnh án sang FHIR document Bundle
 

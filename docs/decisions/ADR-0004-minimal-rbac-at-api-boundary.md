@@ -12,7 +12,7 @@ Sau khi đã có audit trail, hệ thống vẫn chưa đủ an toàn nếu mọ
 
 Thêm access-control domain với các vai trò demo:
 
-- `clinician`: thực hiện nghiệp vụ điều trị, đọc/xuất Provider Directory, tạo bệnh nhân, mở lượt khám, ghi nhận dị ứng/cảnh báo, chẩn đoán/chỉ định dịch vụ/công việc thực thi/thủ thuật-hoạt động/chỉ số/báo cáo kết quả/nghiên cứu hình ảnh/chỉ định thuốc/cấp phát thuốc/dùng thuốc thực tế, tạo/ký tài liệu và xuất FHIR phục vụ điều trị.
+- `clinician`: thực hiện nghiệp vụ điều trị, đọc/xuất Provider Directory, tạo bệnh nhân, mở lượt khám, ghi nhận dị ứng/cảnh báo, chẩn đoán/chỉ định dịch vụ/công việc thực thi/thủ thuật-hoạt động/chỉ số/báo cáo kết quả/nghiên cứu hình ảnh/chỉ định thuốc/cấp phát thuốc/dùng thuốc thực tế, tạo/ký tài liệu, tạo/thu hồi consent chia sẻ hồ sơ và xuất FHIR phục vụ điều trị.
 - `nurse`: đọc Provider Directory, đọc bệnh nhân, đọc/tạo tài liệu, ghi nhận dị ứng/cảnh báo, chẩn đoán/chỉ định dịch vụ/công việc thực thi/thủ thuật-hoạt động/chỉ số/báo cáo kết quả/nghiên cứu hình ảnh/chỉ định thuốc/cấp phát thuốc/dùng thuốc thực tế, nhưng không ký và không xuất FHIR.
 - `auditor`: đọc hồ sơ tối thiểu và đọc audit trail khi `purposeOfUse` là `AUDIT`.
 - `admin`: có toàn quyền trong prototype.
@@ -34,16 +34,16 @@ Tích cực:
 - Quyền được chặn ở backend, không phụ thuộc vào UI.
 - Audit event ghi thêm `actorRole` trong metadata.
 - UI trình bày rõ policy demo: `clinician/TREATMENT` cho nghiệp vụ và `auditor/AUDIT` cho kiểm toán.
-- Harness smoke test kiểm cả phiên token, FHIR, audit event và trường hợp RBAC được phép/bị chặn.
+- Harness smoke test kiểm cả phiên token, FHIR, audit event, quyền thu hồi consent và trường hợp RBAC được phép/bị chặn.
 
 Giới hạn còn lại:
 
 - Phiên demo chưa phải IAM/SSO thật, chưa có MFA, rotation, revoke-list hoặc refresh token.
 - Tài khoản demo chưa dùng password hashing/database user store.
-- Chưa có phân quyền theo từng bệnh nhân, khoa/phòng hoặc quan hệ điều trị; consent chia sẻ liên viện mới là lát cắt tối thiểu.
+- Chưa có phân quyền theo từng bệnh nhân, khoa/phòng hoặc quan hệ điều trị; consent chia sẻ liên viện và thu hồi consent mới là lát cắt tối thiểu.
 
 ## Bước Tiếp Theo
 
 1. Thay token nội bộ bằng JWT/session do IAM phát hành.
 2. Thêm policy theo organization, khoa/phòng và quan hệ điều trị.
-3. Mở rộng consent sang thu hồi, người đại diện hợp pháp và ràng buộc theo loại dữ liệu được chia sẻ.
+3. Mở rộng consent sang người đại diện hợp pháp, ký/xác nhận điện tử và ràng buộc theo loại dữ liệu được chia sẻ.

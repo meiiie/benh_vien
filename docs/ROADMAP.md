@@ -15,8 +15,9 @@
 - Medication dispense core: bản ghi cấp phát thuốc bằng FHIR `MedicationDispense`, nối `MedicationRequest` với số lượng cấp, số ngày cấp, thời điểm chuẩn bị/bàn giao, người cấp phát và người nhận.
 - Medication administration core: bản ghi dùng thuốc thực tế bằng FHIR `MedicationAdministration`, nối `MedicationRequest` với thời điểm dùng, liều thực tế và người/thiết bị xác nhận.
 - Clinical Records: tài liệu bệnh án, trạng thái ký/xác nhận, lịch sử chỉnh sửa.
+- Consent core: đồng ý chia sẻ hồ sơ, hiệu lực theo thời gian, thu hồi consent và audit các thao tác chia sẻ.
 - Record Transfer core: gói chuyển hồ sơ liên viện, trạng thái vận hành, cơ sở gửi/nhận, consent và FHIR `Task` điều phối.
-- Audit & Compliance: nhật ký xem, sửa, ký, xuất hồ sơ.
+- Audit & Compliance: nhật ký xem, sửa, ký, xuất hồ sơ và kiểm tra toàn vẹn chuỗi băm ở mức prototype.
 - Web demo: màn hình bệnh nhân, danh sách tài liệu, trạng thái ký.
 
 ## Giai đoạn 2: Liên thông FHIR
