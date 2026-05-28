@@ -169,7 +169,7 @@ export async function registerPatientRoutes(
         return reply.status(409).send({
           error: "PATIENT_IDENTIFIER_CONFLICT",
           message:
-            "Äá»‹nh danh bá»‡nh nhÃ¢n Ä‘Ã£ thuá»™c vá» má»™t há»“ sÆ¡ khÃ¡c. Cáº§n Ä‘á»‘i soÃ¡t/MPI thay vÃ¬ táº¡o há»“ sÆ¡ má»›i."
+            "Định danh bệnh nhân đã thuộc về một hồ sơ khác. Cần đối soát/MPI thay vì tạo hồ sơ mới."
         });
       }
 
@@ -724,7 +724,7 @@ async function sendPatientIdentifierConflict(
   return reply.status(409).send({
     error: "PATIENT_IDENTIFIER_CONFLICT",
     message:
-      "Äá»‹nh danh bá»‡nh nhÃ¢n Ä‘Ã£ thuá»™c vá» má»™t há»“ sÆ¡ khÃ¡c. Cáº§n Ä‘á»‘i soÃ¡t/MPI thay vÃ¬ táº¡o há»“ sÆ¡ má»›i.",
+      "Định danh bệnh nhân đã thuộc về một hồ sơ khác. Cần đối soát/MPI thay vì tạo hồ sơ mới.",
     identifier: {
       system: conflict.identifier.system,
       type: conflict.identifier.type

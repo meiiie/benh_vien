@@ -1918,6 +1918,7 @@ export function App() {
   const signedDocuments = clinicalDocuments.filter((document) => document.status === "signed");
   const draftDocuments = clinicalDocuments.filter((document) => document.status === "draft");
   const canReadAudit = authSession?.actor.role === "auditor" || authSession?.actor.role === "admin";
+  const canViewRuntimeInfo = canReadAudit;
   const isAuditOnlySession = authSession?.actor.role === "auditor";
 
   useEffect(() => {
@@ -1927,9 +1928,14 @@ export function App() {
 
     void loadPatients();
     void loadCapabilityStatement();
-    void loadApiRuntimeInfo();
+    if (canViewRuntimeInfo) {
+      void loadApiRuntimeInfo();
+    } else {
+      setApiRuntimeInfo(undefined);
+      setApiRuntimeWarning(undefined);
+    }
     void loadProviderDirectory();
-  }, [isAuthenticated]);
+  }, [canViewRuntimeInfo, isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated || !canReadAudit) {
@@ -5320,64 +5326,66 @@ export function App() {
               <Info label="Mục đích" value="Bearer token + PurposeOfUse" />
             </div>
           </article>
-          <article className="panel">
-            <div className="panel-heading">
-              <div>
-                <p className="eyebrow">Runtime</p>
-                <h2>Backend đang kết nối</h2>
+          {canViewRuntimeInfo ? (
+            <article className="panel">
+              <div className="panel-heading">
+                <div>
+                  <p className="eyebrow">Runtime</p>
+                  <h2>Backend đang kết nối</h2>
+                </div>
+                <button
+                  className="ghost-button compact-button"
+                  type="button"
+                  onClick={() => void loadApiRuntimeInfo()}
+                >
+                  Kiểm tra lại
+                </button>
               </div>
-              <button
-                className="ghost-button compact-button"
-                type="button"
-                onClick={() => void loadApiRuntimeInfo()}
-              >
-                Kiểm tra lại
-              </button>
-            </div>
-            {apiRuntimeWarning ? (
-              <p className="transfer-alert">{apiRuntimeWarning}</p>
-            ) : null}
-            <div className="detail-grid compact">
-              <Info label="Sản phẩm" value={apiRuntimeInfo?.product ?? "Chưa xác định"} />
-              <Info label="Service" value={apiRuntimeInfo?.service ?? "Chưa xác định"} />
-              <Info label="Phiên bản API" value={apiRuntimeInfo?.version ?? "Chưa xác định"} />
-              <Info label="Repository" value={apiRuntimeInfo?.repository ?? "Chưa xác định"} />
-              <Info label="Môi trường" value={apiRuntimeInfo?.nodeEnv ?? "Chưa xác định"} />
-              <Info label="Public API" value={apiRuntimeInfo?.publicApiBaseUrl ?? apiBaseUrl} />
-              <Info
-                label="Delivery attempts"
-                value={
-                  apiRuntimeInfo?.features.recordTransferDeliveryAttempts
-                    ? "Có route outbox"
-                    : "Chưa xác định"
-                }
-              />
-              <Info
-                label="Delivery worker"
-                value={
-                  apiRuntimeInfo?.features.recordTransferDeliveryWorkerEnabled
-                    ? "Đang bật"
-                    : "Đang tắt hoặc chưa xác định"
-                }
-              />
-              <Info
-                label="Retry worker"
-                value={
-                  apiRuntimeInfo?.features.recordTransferRetryWorkerEnabled
-                    ? "Đang bật"
-                    : "Đang tắt hoặc chưa xác định"
-                }
-              />
-              <Info
-                label="Kiểm tra lúc"
-                value={
-                  apiRuntimeInfo?.checkedAt
-                    ? formatDateTime(apiRuntimeInfo.checkedAt)
-                    : "Chưa có"
-                }
-              />
-            </div>
-          </article>
+              {apiRuntimeWarning ? (
+                <p className="transfer-alert">{apiRuntimeWarning}</p>
+              ) : null}
+              <div className="detail-grid compact">
+                <Info label="Sản phẩm" value={apiRuntimeInfo?.product ?? "Chưa xác định"} />
+                <Info label="Service" value={apiRuntimeInfo?.service ?? "Chưa xác định"} />
+                <Info label="Phiên bản API" value={apiRuntimeInfo?.version ?? "Chưa xác định"} />
+                <Info label="Repository" value={apiRuntimeInfo?.repository ?? "Chưa xác định"} />
+                <Info label="Môi trường" value={apiRuntimeInfo?.nodeEnv ?? "Chưa xác định"} />
+                <Info label="Public API" value={apiRuntimeInfo?.publicApiBaseUrl ?? apiBaseUrl} />
+                <Info
+                  label="Delivery attempts"
+                  value={
+                    apiRuntimeInfo?.features.recordTransferDeliveryAttempts
+                      ? "Có route outbox"
+                      : "Chưa xác định"
+                  }
+                />
+                <Info
+                  label="Delivery worker"
+                  value={
+                    apiRuntimeInfo?.features.recordTransferDeliveryWorkerEnabled
+                      ? "Đang bật"
+                      : "Đang tắt hoặc chưa xác định"
+                  }
+                />
+                <Info
+                  label="Retry worker"
+                  value={
+                    apiRuntimeInfo?.features.recordTransferRetryWorkerEnabled
+                      ? "Đang bật"
+                      : "Đang tắt hoặc chưa xác định"
+                  }
+                />
+                <Info
+                  label="Kiểm tra lúc"
+                  value={
+                    apiRuntimeInfo?.checkedAt
+                      ? formatDateTime(apiRuntimeInfo.checkedAt)
+                      : "Chưa có"
+                  }
+                />
+              </div>
+            </article>
+          ) : null}
           <article className="panel">
             <p className="eyebrow">Roadmap</p>
             <h2>Cần làm thật sau skeleton</h2>
@@ -9628,6 +9636,7 @@ function LoginPage({
             >
               <option value="clinician">Bác sĩ / điều trị</option>
               <option value="nurse">Điều dưỡng / tiếp nhận</option>
+              <option value="integration">Gateway liên thông</option>
               <option value="auditor">Kiểm toán</option>
               <option value="admin">Quản trị</option>
             </select>

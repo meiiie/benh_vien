@@ -187,23 +187,23 @@ export class Patient {
   }): void {
     const targetPatientId = normalizeRequiredText(
       input.targetPatientId,
-      "Há»“ sÆ¡ Ä‘Ã­ch khi merge khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng."
+      "Hồ sơ đích khi merge không được để trống."
     );
     const mergedByActorId = normalizeRequiredText(
       input.mergedByActorId,
-      "NgÆ°á»i thá»±c hiá»‡n merge há»“ sÆ¡ khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng."
+      "Người thực hiện merge hồ sơ không được để trống."
     );
     const reason = normalizeRequiredText(
       input.reason,
-      "LÃ½ do merge há»“ sÆ¡ khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng."
+      "Lý do merge hồ sơ không được để trống."
     );
 
     if (targetPatientId === this.props.id) {
-      throw new DomainError("Há»“ sÆ¡ bá»‡nh nhÃ¢n khÃ´ng thá»ƒ merge vÃ o chÃ­nh nÃ³.");
+      throw new DomainError("Hồ sơ bệnh nhân không thể merge vào chính nó.");
     }
 
     if (this.props.status === "merged") {
-      throw new DomainError("Há»“ sÆ¡ bá»‡nh nhÃ¢n Ä‘Ã£ Ä‘Æ°á»£c merge trÆ°á»›c Ä‘Ã³.");
+      throw new DomainError("Hồ sơ bệnh nhân đã được merge trước đó.");
     }
 
     this.props.status = "merged";
@@ -236,7 +236,7 @@ export class Patient {
 
   private ensureMutable(): void {
     if (this.props.status === "merged") {
-      throw new DomainError("Há»“ sÆ¡ bá»‡nh nhÃ¢n Ä‘Ã£ merge khÃ´ng Ä‘Æ°á»£c cáº­p nháº­t trá»±c tiáº¿p.");
+      throw new DomainError("Hồ sơ bệnh nhân đã merge không được cập nhật trực tiếp.");
     }
   }
 
@@ -267,7 +267,7 @@ function assertUniqueIdentifiers(identifiers: readonly PatientIdentifier[]): voi
     const key = `${identifier.system}\u0000${identifier.value}`;
 
     if (seen.has(key)) {
-      throw new DomainError("Äá»‹nh danh bá»‡nh nhÃ¢n bá»‹ trÃ¹ng trong cÃ¹ng má»™t há»“ sÆ¡.");
+      throw new DomainError("Định danh bệnh nhân bị trùng trong cùng một hồ sơ.");
     }
 
     seen.add(key);
