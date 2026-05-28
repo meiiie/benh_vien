@@ -136,6 +136,34 @@ describe("patient record access control", () => {
     ).toBe(false);
   });
 
+  it("limits record transfer acknowledgement callbacks to gateway and admin roles", () => {
+    const clinicianActor: ActorContext = {
+      actorId: "practitioner-001",
+      role: "clinician",
+      purposeOfUse: "OPERATIONS"
+    };
+    const nurseActor: ActorContext = {
+      actorId: "nurse-001",
+      role: "nurse",
+      purposeOfUse: "OPERATIONS"
+    };
+    const adminActor: ActorContext = {
+      actorId: "admin-001",
+      role: "admin",
+      purposeOfUse: "OPERATIONS"
+    };
+    const integrationActor: ActorContext = {
+      actorId: "system-hai-phong-referral-gateway",
+      role: "integration",
+      purposeOfUse: "OPERATIONS"
+    };
+
+    expect(canAccess(integrationActor, "record-transfer:acknowledge")).toBe(true);
+    expect(canAccess(adminActor, "record-transfer:acknowledge")).toBe(true);
+    expect(canAccess(clinicianActor, "record-transfer:acknowledge")).toBe(false);
+    expect(canAccess(nurseActor, "record-transfer:acknowledge")).toBe(false);
+  });
+
   it("filters patient registries by the actor treatment organization", () => {
     const actor: ActorContext = {
       actorId: "practitioner-001",

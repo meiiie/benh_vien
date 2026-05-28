@@ -895,6 +895,10 @@ function canAcknowledgeForRecipient(
     return true;
   }
 
+  if (actor.role !== "integration") {
+    return false;
+  }
+
   const snapshot = providerDirectory.toSnapshot();
   return snapshot.practitionerRoles.some(
     (role) =>

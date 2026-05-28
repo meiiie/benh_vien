@@ -1241,6 +1241,15 @@ const clinicianCanUpdateRecordTransfer = canAccess(
   "record-transfer:update"
 );
 
+const clinicianCanAcknowledgeRecordTransfer = canAccess(
+  {
+    actorId: "practitioner-harness-001",
+    role: "clinician",
+    purposeOfUse: "OPERATIONS"
+  },
+  "record-transfer:acknowledge"
+);
+
 const clinicianCanRevokeConsent = canAccess(
   {
     actorId: "practitioner-harness-001",
@@ -1385,6 +1394,15 @@ const nurseCanUpdateRecordTransfer = canAccess(
   "record-transfer:update"
 );
 
+const nurseCanAcknowledgeRecordTransfer = canAccess(
+  {
+    actorId: "nurse-harness-001",
+    role: "nurse",
+    purposeOfUse: "OPERATIONS"
+  },
+  "record-transfer:acknowledge"
+);
+
 const nurseCanRevokeConsent = canAccess(
   {
     actorId: "nurse-harness-001",
@@ -1410,6 +1428,24 @@ const nurseCanReadProviderDirectory = canAccess(
     purposeOfUse: "TREATMENT"
   },
   "provider-directory:read"
+);
+
+const integrationCanAcknowledgeRecordTransfer = canAccess(
+  {
+    actorId: "system-hai-phong-referral-gateway",
+    role: "integration",
+    purposeOfUse: "OPERATIONS"
+  },
+  "record-transfer:acknowledge"
+);
+
+const adminCanAcknowledgeRecordTransfer = canAccess(
+  {
+    actorId: "admin-harness-001",
+    role: "admin",
+    purposeOfUse: "OPERATIONS"
+  },
+  "record-transfer:acknowledge"
 );
 
 const clinicianCanReadAudit = canAccess(
@@ -1539,6 +1575,10 @@ if (!clinicianCanUpdateRecordTransfer) {
   throw new Error("Expected clinician/TREATMENT to update record transfer milestones.");
 }
 
+if (clinicianCanAcknowledgeRecordTransfer) {
+  throw new Error("Expected clinician/OPERATIONS to be denied record-transfer:acknowledge.");
+}
+
 if (!clinicianCanRevokeConsent) {
   throw new Error("Expected clinician/TREATMENT to revoke record-sharing consent.");
 }
@@ -1605,6 +1645,10 @@ if (nurseCanUpdateRecordTransfer) {
   throw new Error("Expected nurse/TREATMENT to be denied record-transfer:update.");
 }
 
+if (nurseCanAcknowledgeRecordTransfer) {
+  throw new Error("Expected nurse/OPERATIONS to be denied record-transfer:acknowledge.");
+}
+
 if (nurseCanRevokeConsent) {
   throw new Error("Expected nurse/TREATMENT to be denied consent:revoke.");
 }
@@ -1615,6 +1659,14 @@ if (nurseCanExportConsent) {
 
 if (!nurseCanReadProviderDirectory) {
   throw new Error("Expected nurse/TREATMENT to read provider directory.");
+}
+
+if (!integrationCanAcknowledgeRecordTransfer) {
+  throw new Error("Expected integration/OPERATIONS to acknowledge record transfer callbacks.");
+}
+
+if (!adminCanAcknowledgeRecordTransfer) {
+  throw new Error("Expected admin/OPERATIONS to acknowledge record transfer callbacks.");
 }
 
 if (clinicianCanReadAudit) {
@@ -1727,6 +1779,7 @@ console.log(
         clinicianCanExportProviderDirectory,
         clinicianCanExportRecordTransfer,
         clinicianCanUpdateRecordTransfer,
+        clinicianCanAcknowledgeRecordTransfer,
         clinicianCanRevokeConsent,
         clinicianCanExportConsent,
         clinicianCanExportServiceRequest,
@@ -1743,6 +1796,7 @@ console.log(
         nurseCanExportProviderDirectory,
         nurseCanExportRecordTransfer,
         nurseCanUpdateRecordTransfer,
+        nurseCanAcknowledgeRecordTransfer,
         nurseCanRevokeConsent,
         nurseCanExportConsent,
         nurseCanReadProviderDirectory,
@@ -1751,6 +1805,8 @@ console.log(
         nurseCanExportProcedure,
         clinicianCanReadAudit,
         clinicianCanExportAuditFhir,
+        integrationCanAcknowledgeRecordTransfer,
+        adminCanAcknowledgeRecordTransfer,
         auditorCanListPatientContext,
         auditorCanReadPatientContext,
         auditorCanListPatientForTreatment,
