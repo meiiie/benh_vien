@@ -59,7 +59,7 @@ TOKEN=$(curl -s -X POST http://localhost:7310/api/v1/auth/login \
   }' | jq -r .accessToken)
 ```
 
-Endpoint đăng nhập áp dụng rate limit theo IP + username đã băm SHA-256, mặc định `20` lần trong `60` giây. Docker/dev-prod dùng Valkey để chia sẻ bộ đếm giữa nhiều replica. Khi vượt ngưỡng, API trả `429 AUTH_RATE_LIMITED`, header `Retry-After`, `requestId` và `retryAfterSeconds` để client biết thời gian cần chờ trước khi thử lại.
+Endpoint đăng nhập áp dụng rate limit theo IP + username đã băm SHA-256, mặc định `20` lần trong `60` giây. Docker/dev-prod dùng Valkey để chia sẻ bộ đếm giữa nhiều replica; production từ chối `BVS_RATE_LIMIT_STORE=memory`. Khi vượt ngưỡng, API trả `429 AUTH_RATE_LIMITED`, header `Retry-After`, `requestId` và `retryAfterSeconds` để client biết thời gian cần chờ trước khi thử lại.
 
 Trong `NODE_ENV=production`, đăng nhập demo mặc định bị tắt. Chỉ đặt `BVS_DEMO_AUTH_ENABLED=true` khi cần phiên smoke/demo có kiểm soát; triển khai thật phải thay bằng IAM/SSO, MFA và chính sách truy cập của cơ sở y tế.
 

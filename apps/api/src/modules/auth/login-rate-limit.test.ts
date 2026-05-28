@@ -1,12 +1,21 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
+  createLoginRateLimiterFromEnv,
   createLoginRateLimitKey,
   createMemoryLoginRateLimiter,
   createValkeyLoginRateLimiter,
   type ValkeyLoginRateLimitClient
 } from "./login-rate-limit.js";
 
+const originalNodeEnv = process.env.NODE_ENV;
+const originalRateLimitStore = process.env.BVS_RATE_LIMIT_STORE;
+
 describe("login rate limiting", () => {
+  afterEach(() => {
+    restoreEnv("NODE_ENV", originalNodeEnv);
+    restoreEnv("BVS_RATE_LIMIT_STORE", originalRateLimitStore);
+  });
+
   it("limits memory attempts after the configured threshold", async () => {
     const limiter = createMemoryLoginRateLimiter({
       maxAttempts: 2,
@@ -66,7 +75,25 @@ describe("login rate limiting", () => {
 
     expect(client.quitCount).toBe(1);
   });
+
+  it("rejects memory store in production", () => {
+    process.env.NODE_ENV = "production";
+    process.env.BVS_RATE_LIMIT_STORE = "memory";
+
+    expect(() => createLoginRateLimiterFromEnv()).toThrow(
+      "BVS_RATE_LIMIT_STORE must be 'valkey' in production."
+    );
+  });
 });
+
+function restoreEnv(name: string, value: string | undefined): void {
+  if (value === undefined) {
+    delete process.env[name];
+    return;
+  }
+
+  process.env[name] = value;
+}
 
 class FakeValkeyRateLimitClient implements ValkeyLoginRateLimitClient {
   isOpen = false;

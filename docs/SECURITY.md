@@ -32,7 +32,7 @@ Hồ sơ bệnh án là dữ liệu đặc biệt nhạy cảm. Dự án chưa t
 - Khi xác minh token, API kiểm tra định dạng base64url/kích thước segment trước khi xử lý sâu, sau đó kiểm tra `iat`, `exp`, không chấp nhận token phát hành trong tương lai quá xa, token hết hạn, token có `exp <= iat` hoặc thời lượng vượt trần `28800` giây dù chữ ký HMAC hợp lệ.
 - Lỗi auth trả `requestId` để nối phản hồi client với log kỹ thuật mà không lộ stack trace hoặc chi tiết nội bộ.
 - Lỗi phân quyền chung trả `requestId`; lỗi `401 UNAUTHENTICATED` có thêm `WWW-Authenticate: Bearer` để client/proxy nhận biết yêu cầu Bearer token.
-- `POST /api/v1/auth/login` có rate limit theo IP + username đã băm SHA-256, cấu hình bằng `BVS_RATE_LIMIT_STORE`, `BVS_VALKEY_URL`, `BVS_AUTH_LOGIN_RATE_LIMIT_MAX` và `BVS_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS`. Dev đơn lẻ có thể dùng memory store; Docker/dev-prod dùng Valkey để chia sẻ bộ đếm giữa nhiều replica.
+- `POST /api/v1/auth/login` có rate limit theo IP + username đã băm SHA-256, cấu hình bằng `BVS_RATE_LIMIT_STORE`, `BVS_VALKEY_URL`, `BVS_AUTH_LOGIN_RATE_LIMIT_MAX` và `BVS_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS`. Dev đơn lẻ có thể dùng memory store; production bắt buộc Valkey để chia sẻ bộ đếm giữa nhiều replica.
 - `/ready` kiểm tra kho rate limit đăng nhập để tránh đưa API vào rotation khi Valkey không sẵn sàng trong cấu hình dev-prod/production.
 - Ở production, `BVS_CORS_ORIGINS` chỉ chấp nhận Origin HTTPS canonical, không chấp nhận wildcard, HTTP hoặc URL có path để tránh mở rộng nhầm phạm vi truy cập từ trình duyệt.
 - API và web container đặt security headers nền tảng gồm `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` và `Cross-Origin-Resource-Policy`.

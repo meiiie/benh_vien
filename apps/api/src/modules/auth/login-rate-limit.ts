@@ -263,6 +263,10 @@ function readLoginRateLimitStore(): "memory" | "valkey" {
     return process.env.NODE_ENV === "production" ? "valkey" : "memory";
   }
 
+  if (process.env.NODE_ENV === "production" && rawValue === "memory") {
+    throw new Error("BVS_RATE_LIMIT_STORE must be 'valkey' in production.");
+  }
+
   if (rawValue === "memory" || rawValue === "valkey") {
     return rawValue;
   }
