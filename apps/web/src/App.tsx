@@ -1777,6 +1777,11 @@ export function App() {
   const [isFinishingEncounter, setIsFinishingEncounter] = useState(false);
 
   const selectedPatient = patients.find((patient) => patient.id === selectedPatientId);
+  const selectedPatientMergeTarget = selectedPatient?.mergedIntoPatientId
+    ? patients.find((patient) => patient.id === selectedPatient.mergedIntoPatientId)
+    : undefined;
+  const isSelectedPatientMerged = selectedPatient?.status === "merged";
+  const selectedPatientWriteDisabled = !selectedPatient || isSelectedPatientMerged;
   const selectedEncounter = encounters.find((encounter) => encounter.id === selectedEncounterId);
   const selectedDocument = clinicalDocuments.find((document) => document.id === selectedDocumentId);
   const selectedAllergyIntolerance = allergyIntolerances.find(
@@ -2862,6 +2867,10 @@ export function App() {
       return;
     }
 
+    if (!ensureSelectedPatientWritable()) {
+      return;
+    }
+
     setRevokingConsentId(consent.id);
 
     try {
@@ -3020,6 +3029,27 @@ export function App() {
             : "Không thể xuất FHIR Consent."
       });
     }
+  }
+
+  function buildSelectedPatientMergedReadOnlyMessage(): string {
+    if (!selectedPatient) {
+      return "Cần chọn bệnh nhân trước khi ghi dữ liệu.";
+    }
+
+    const targetLabel = selectedPatientMergeTarget
+      ? `${selectedPatientMergeTarget.fullName} (${selectedPatient.mergedIntoPatientId})`
+      : selectedPatient.mergedIntoPatientId ?? "chưa ghi nhận hồ sơ đích";
+
+    return `Hồ sơ ${selectedPatient.fullName} đã được merge và đang ở chế độ chỉ đọc. Vui lòng ghi dữ liệu mới vào hồ sơ đích ${targetLabel}.`;
+  }
+
+  function ensureSelectedPatientWritable(): boolean {
+    if (!isSelectedPatientMerged) {
+      return true;
+    }
+
+    setStatusMessage(buildSelectedPatientMergedReadOnlyMessage());
+    return false;
   }
 
   async function loadPatientFhirPreview(patientId: string) {
@@ -3570,6 +3600,10 @@ export function App() {
       return;
     }
 
+    if (!ensureSelectedPatientWritable()) {
+      return;
+    }
+
     setIsSubmittingRecordTransfer(true);
 
     try {
@@ -3616,6 +3650,10 @@ export function App() {
       return;
     }
 
+    if (!ensureSelectedPatientWritable()) {
+      return;
+    }
+
     setTransitioningRecordTransferId(recordTransfer.id);
 
     try {
@@ -3656,6 +3694,10 @@ export function App() {
       return;
     }
 
+    if (!ensureSelectedPatientWritable()) {
+      return;
+    }
+
     setTransitioningRecordTransferId(recordTransfer.id);
 
     try {
@@ -3693,6 +3735,10 @@ export function App() {
   async function handleFailRecordTransfer(recordTransfer: RecordTransfer) {
     if (!selectedPatient) {
       setStatusMessage("Cần chọn bệnh nhân trước khi ghi nhận lỗi chuyển hồ sơ.");
+      return;
+    }
+
+    if (!ensureSelectedPatientWritable()) {
       return;
     }
 
@@ -3737,6 +3783,10 @@ export function App() {
       return;
     }
 
+    if (!ensureSelectedPatientWritable()) {
+      return;
+    }
+
     setTransitioningRecordTransferId(recordTransfer.id);
 
     try {
@@ -3776,6 +3826,10 @@ export function App() {
 
     if (!selectedPatient) {
       setStatusMessage("Cần chọn bệnh nhân trước khi mở lượt khám.");
+      return;
+    }
+
+    if (!ensureSelectedPatientWritable()) {
       return;
     }
 
@@ -3823,6 +3877,10 @@ export function App() {
       return;
     }
 
+    if (!ensureSelectedPatientWritable()) {
+      return;
+    }
+
     setIsFinishingEncounter(true);
 
     try {
@@ -3857,6 +3915,10 @@ export function App() {
 
     if (!selectedPatient) {
       setStatusMessage("Cần chọn bệnh nhân trước khi ghi nhận dị ứng/cảnh báo.");
+      return;
+    }
+
+    if (!ensureSelectedPatientWritable()) {
       return;
     }
 
@@ -3936,6 +3998,10 @@ export function App() {
       return;
     }
 
+    if (!ensureSelectedPatientWritable()) {
+      return;
+    }
+
     setIsSubmittingCondition(true);
 
     try {
@@ -3988,6 +4054,10 @@ export function App() {
 
     if (!selectedPatient) {
       setStatusMessage("Cần chọn bệnh nhân trước khi ghi nhận chỉ số lâm sàng.");
+      return;
+    }
+
+    if (!ensureSelectedPatientWritable()) {
       return;
     }
 
@@ -4052,6 +4122,10 @@ export function App() {
 
     if (!selectedPatient) {
       setStatusMessage("Cần chọn bệnh nhân trước khi kê/chỉ định thuốc.");
+      return;
+    }
+
+    if (!ensureSelectedPatientWritable()) {
       return;
     }
 
@@ -4151,6 +4225,10 @@ export function App() {
 
     if (!selectedPatient) {
       setStatusMessage("Cần chọn bệnh nhân trước khi ghi nhận cấp phát thuốc.");
+      return;
+    }
+
+    if (!ensureSelectedPatientWritable()) {
       return;
     }
 
@@ -4276,6 +4354,10 @@ export function App() {
       return;
     }
 
+    if (!ensureSelectedPatientWritable()) {
+      return;
+    }
+
     const doseValue = Number(medicationAdministrationForm.doseValue);
 
     if (!Number.isFinite(doseValue) || doseValue <= 0) {
@@ -4390,6 +4472,10 @@ export function App() {
       return;
     }
 
+    if (!ensureSelectedPatientWritable()) {
+      return;
+    }
+
     setIsSubmittingServiceRequest(true);
 
     try {
@@ -4450,6 +4536,10 @@ export function App() {
 
     if (!selectedPatient) {
       setStatusMessage("Cần chọn bệnh nhân trước khi ghi nhận thủ thuật/hoạt động đã thực hiện.");
+      return;
+    }
+
+    if (!ensureSelectedPatientWritable()) {
       return;
     }
 
@@ -4566,6 +4656,10 @@ export function App() {
       return;
     }
 
+    if (!ensureSelectedPatientWritable()) {
+      return;
+    }
+
     setIsSubmittingDiagnosticReport(true);
 
     try {
@@ -4626,6 +4720,10 @@ export function App() {
 
     if (!selectedPatient) {
       setStatusMessage("Cần chọn bệnh nhân trước khi tạo nghiên cứu hình ảnh.");
+      return;
+    }
+
+    if (!ensureSelectedPatientWritable()) {
       return;
     }
 
@@ -4708,6 +4806,10 @@ export function App() {
       return;
     }
 
+    if (!ensureSelectedPatientWritable()) {
+      return;
+    }
+
     setIsSubmittingDocument(true);
 
     try {
@@ -4755,6 +4857,10 @@ export function App() {
   }
 
   async function handleSignClinicalDocument(documentId: string) {
+    if (!ensureSelectedPatientWritable()) {
+      return;
+    }
+
     setIsSigningDocument(true);
 
     try {
@@ -5174,12 +5280,20 @@ export function App() {
         <div className="patient-cards">
           {patients.map((patient) => (
             <button
-              className={patient.id === selectedPatientId ? "patient-card selected" : "patient-card"}
+              className={[
+                "patient-card",
+                patient.id === selectedPatientId ? "selected" : "",
+                patient.status === "merged" ? "merged" : ""
+              ]
+                .filter(Boolean)
+                .join(" ")}
               key={patient.id}
               type="button"
               onClick={() => setSelectedPatientId(patient.id)}
             >
-              <span>{patient.identifiers[0]?.value ?? patient.id}</span>
+              <span>
+                {patient.identifiers[0]?.value ?? patient.id} · {formatPatientRecordStatus(patient.status)}
+              </span>
               <strong>{patient.fullName}</strong>
               <small>{patient.address ?? "Chưa có địa chỉ"}</small>
             </button>
@@ -5226,7 +5340,7 @@ export function App() {
                     disabled={
                       consent.status !== "active" ||
                       revokingConsentId === consent.id ||
-                      !selectedPatient
+                      selectedPatientWriteDisabled
                     }
                     onClick={() => void handleRevokeConsent(consent)}
                   >
@@ -5329,6 +5443,7 @@ export function App() {
                     className="ghost-button compact-button"
                     type="button"
                     disabled={
+                      isSelectedPatientMerged ||
                       Boolean(selectedRecordTransfer.sentAt) ||
                       ["completed", "cancelled", "failed", "dead-lettered"].includes(selectedRecordTransfer.status) ||
                       transitioningRecordTransferId === selectedRecordTransfer.id
@@ -5343,6 +5458,7 @@ export function App() {
                     className="ghost-button compact-button"
                     type="button"
                     disabled={
+                      isSelectedPatientMerged ||
                       !selectedRecordTransfer.sentAt ||
                       selectedRecordTransfer.status !== "in-progress" ||
                       transitioningRecordTransferId === selectedRecordTransfer.id
@@ -5357,6 +5473,7 @@ export function App() {
                     className="ghost-button compact-button"
                     type="button"
                     disabled={
+                      isSelectedPatientMerged ||
                       selectedRecordTransfer.status === "completed" ||
                       selectedRecordTransfer.status === "cancelled" ||
                       selectedRecordTransfer.status === "failed" ||
@@ -5373,6 +5490,7 @@ export function App() {
                     className="ghost-button compact-button"
                     type="button"
                     disabled={
+                      isSelectedPatientMerged ||
                       selectedRecordTransfer.status !== "failed" ||
                       transitioningRecordTransferId === selectedRecordTransfer.id
                     }
@@ -5497,7 +5615,7 @@ export function App() {
           <button
             className="primary-button"
             type="submit"
-            disabled={!selectedPatient || isSubmittingRecordTransfer}
+            disabled={selectedPatientWriteDisabled || isSubmittingRecordTransfer}
           >
             {isSubmittingRecordTransfer ? "Đang tạo..." : "Tạo gói chuyển hồ sơ"}
           </button>
@@ -5664,8 +5782,40 @@ export function App() {
             <p className="eyebrow">Patient chart</p>
             <h2>Hồ sơ đang chọn</h2>
           </div>
-          {selectedPatient ? <span className="pill">{selectedPatient.status}</span> : null}
+          {selectedPatient ? (
+            <span className={`pill ${isSelectedPatientMerged ? "gold" : ""}`}>
+              {formatPatientRecordStatus(selectedPatient.status)}
+            </span>
+          ) : null}
         </div>
+
+        {selectedPatient && isSelectedPatientMerged ? (
+          <div className="merged-patient-banner" role="status">
+            <p className="eyebrow">Master Patient Index</p>
+            <h3>Hồ sơ đã được merge và chuyển sang chế độ chỉ đọc</h3>
+            <p>
+              Không ghi thêm dữ liệu lâm sàng vào hồ sơ nguồn này. Các lượt khám, chỉ định,
+              kết quả, thuốc và tài liệu mới cần được tạo trên hồ sơ đích để tránh phân mảnh
+              bệnh án điện tử.
+            </p>
+            <div className="detail-grid compact">
+              <Info
+                label="Hồ sơ đích"
+                value={
+                  selectedPatientMergeTarget
+                    ? `${selectedPatientMergeTarget.fullName} (${selectedPatient.mergedIntoPatientId})`
+                    : selectedPatient.mergedIntoPatientId ?? "Chưa ghi nhận"
+                }
+              />
+              <Info
+                label="Thời điểm merge"
+                value={selectedPatient.mergedAt ? formatDateTime(selectedPatient.mergedAt) : "Chưa ghi nhận"}
+              />
+              <Info label="Người thực hiện" value={selectedPatient.mergedByActorId ?? "Chưa ghi nhận"} />
+              <Info label="Lý do" value={selectedPatient.mergeReason ?? "Chưa ghi nhận"} />
+            </div>
+          </div>
+        ) : null}
 
         {selectedPatient ? (
           <div className="detail-grid">
@@ -5747,7 +5897,11 @@ export function App() {
                   <button
                     className="primary-button"
                     type="button"
-                    disabled={selectedEncounter.status !== "in-progress" || isFinishingEncounter}
+                    disabled={
+                      isSelectedPatientMerged ||
+                      selectedEncounter.status !== "in-progress" ||
+                      isFinishingEncounter
+                    }
                     onClick={() => void handleFinishEncounter(selectedEncounter.id)}
                   >
                     {isFinishingEncounter ? "Đang kết thúc..." : "Kết thúc lượt khám"}
@@ -5813,7 +5967,7 @@ export function App() {
               onChange={(event) => setEncounterForm({ ...encounterForm, startedAt: event.target.value })}
             />
           </label>
-          <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingEncounter}>
+          <button className="primary-button" type="submit" disabled={selectedPatientWriteDisabled || isSubmittingEncounter}>
             {isSubmittingEncounter ? "Đang mở..." : "Mở lượt khám"}
           </button>
         </form>
@@ -6095,7 +6249,7 @@ export function App() {
           <button
             className="primary-button"
             type="submit"
-            disabled={!selectedPatient || isSubmittingAllergyIntolerance}
+            disabled={selectedPatientWriteDisabled || isSubmittingAllergyIntolerance}
           >
             {isSubmittingAllergyIntolerance ? "Đang ghi nhận..." : "Ghi nhận dị ứng/cảnh báo"}
           </button>
@@ -6281,7 +6435,7 @@ export function App() {
               onChange={(event) => setConditionForm({ ...conditionForm, note: event.target.value })}
             />
           </label>
-          <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingCondition}>
+          <button className="primary-button" type="submit" disabled={selectedPatientWriteDisabled || isSubmittingCondition}>
             {isSubmittingCondition ? "Đang ghi nhận..." : "Ghi nhận chẩn đoán"}
           </button>
         </form>
@@ -6499,7 +6653,7 @@ export function App() {
               onChange={(event) => setServiceRequestForm({ ...serviceRequestForm, note: event.target.value })}
             />
           </label>
-          <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingServiceRequest}>
+          <button className="primary-button" type="submit" disabled={selectedPatientWriteDisabled || isSubmittingServiceRequest}>
             {isSubmittingServiceRequest ? "Đang tạo..." : "Tạo chỉ định dịch vụ"}
           </button>
         </form>
@@ -6869,7 +7023,7 @@ export function App() {
               onChange={(event) => setProcedureForm({ ...procedureForm, note: event.target.value })}
             />
           </label>
-          <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingProcedure}>
+          <button className="primary-button" type="submit" disabled={selectedPatientWriteDisabled || isSubmittingProcedure}>
             {isSubmittingProcedure ? "Đang ghi nhận..." : "Ghi nhận Procedure"}
           </button>
         </form>
@@ -7028,7 +7182,7 @@ export function App() {
               }
             />
           </label>
-          <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingObservation}>
+          <button className="primary-button" type="submit" disabled={selectedPatientWriteDisabled || isSubmittingObservation}>
             {isSubmittingObservation ? "Đang ghi nhận..." : "Ghi nhận chỉ số"}
           </button>
         </form>
@@ -7280,7 +7434,7 @@ export function App() {
               }
             />
           </label>
-          <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingDiagnosticReport}>
+          <button className="primary-button" type="submit" disabled={selectedPatientWriteDisabled || isSubmittingDiagnosticReport}>
             {isSubmittingDiagnosticReport ? "Đang tạo..." : "Tạo báo cáo kết quả"}
           </button>
         </form>
@@ -7577,7 +7731,7 @@ export function App() {
               }
             />
           </label>
-          <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingImagingStudy}>
+          <button className="primary-button" type="submit" disabled={selectedPatientWriteDisabled || isSubmittingImagingStudy}>
             {isSubmittingImagingStudy ? "Đang tạo..." : "Tạo ImagingStudy"}
           </button>
         </form>
@@ -7865,7 +8019,7 @@ export function App() {
           <button
             className="primary-button"
             type="submit"
-            disabled={!selectedPatient || isSubmittingMedicationRequest}
+            disabled={selectedPatientWriteDisabled || isSubmittingMedicationRequest}
           >
             {isSubmittingMedicationRequest ? "Đang ghi nhận..." : "Ghi nhận chỉ định thuốc"}
           </button>
@@ -8274,7 +8428,7 @@ export function App() {
           <button
             className="primary-button"
             type="submit"
-            disabled={!selectedPatient || isSubmittingMedicationDispense}
+            disabled={selectedPatientWriteDisabled || isSubmittingMedicationDispense}
           >
             {isSubmittingMedicationDispense
               ? "Đang ghi nhận..."
@@ -8583,7 +8737,7 @@ export function App() {
           <button
             className="primary-button"
             type="submit"
-            disabled={!selectedPatient || isSubmittingMedicationAdministration}
+            disabled={selectedPatientWriteDisabled || isSubmittingMedicationAdministration}
           >
             {isSubmittingMedicationAdministration
               ? "Đang ghi nhận..."
@@ -8660,7 +8814,7 @@ export function App() {
                   <button
                     className="primary-button"
                     type="button"
-                    disabled={selectedDocument.status !== "draft" || isSigningDocument}
+                    disabled={isSelectedPatientMerged || selectedDocument.status !== "draft" || isSigningDocument}
                     onClick={() => void handleSignClinicalDocument(selectedDocument.id)}
                   >
                     {isSigningDocument ? "Đang ký..." : "Ký tài liệu nháp"}
@@ -8772,7 +8926,7 @@ export function App() {
               }
             />
           </label>
-          <button className="primary-button" type="submit" disabled={!selectedPatient || isSubmittingDocument}>
+          <button className="primary-button" type="submit" disabled={selectedPatientWriteDisabled || isSubmittingDocument}>
             {isSubmittingDocument ? "Đang tạo..." : "Tạo tài liệu bệnh án"}
           </button>
         </form>
@@ -9345,6 +9499,16 @@ function formatGender(gender: PatientGender): string {
   };
 
   return labels[gender];
+}
+
+function formatPatientRecordStatus(status: Patient["status"]): string {
+  const labels: Record<Patient["status"], string> = {
+    active: "Đang hoạt động",
+    inactive: "Ngừng hoạt động",
+    merged: "Đã merge"
+  };
+
+  return labels[status];
 }
 
 function formatIdentifierType(type: PatientIdentifierType): string {

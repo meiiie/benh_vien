@@ -690,6 +690,18 @@ h2 {
   background: var(--primary-soft);
 }
 
+.patient-card.merged {
+  border-left: 4px solid var(--audit-gold);
+}
+
+.patient-card.merged:not(.selected) {
+  background: #fffaf0;
+}
+
+.patient-card.merged span {
+  color: #92400e;
+}
+
 .queue-list button span,
 .queue-list button strong,
 .patient-card span,
@@ -774,6 +786,31 @@ h2 {
 
 .detail-grid.compact {
   margin-top: 16px;
+}
+
+.merged-patient-banner {
+  margin-bottom: 14px;
+  border: 1px solid #fed7aa;
+  border-left: 4px solid var(--audit-gold);
+  border-radius: 10px;
+  padding: 14px;
+  color: #7c2d12;
+  background: linear-gradient(135deg, #fff7ed 0%, #fffaf0 46%, #ffffff 100%);
+}
+
+.merged-patient-banner h3 {
+  margin: 4px 0 8px;
+  color: var(--harbor-ink);
+  font-size: 1rem;
+}
+
+.merged-patient-banner p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.merged-patient-banner .detail-grid {
+  color: var(--harbor-ink);
 }
 
 .info-item,
