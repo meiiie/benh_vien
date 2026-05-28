@@ -58,6 +58,7 @@ Khi đó có thêm:
 ```bash
 cp .env.prod.example .env.prod.local
 sed -i 's|^BVS_AUTH_SECRET=.*|BVS_AUTH_SECRET=local-wiiicare-auth-secret-0123456789abcdef|g' .env.prod.local
+sed -i 's|^BVS_RECORD_TRANSFER_CALLBACK_SECRET=.*|BVS_RECORD_TRANSFER_CALLBACK_SECRET=local-wiiicare-callback-secret-0123456789abcdef|g' .env.prod.local
 sed -i 's|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=local_bvs_postgres_password|g' .env.prod.local
 sed -i 's|^DATABASE_URL=.*|DATABASE_URL=postgresql://bvs:local_bvs_postgres_password@postgres:5432/benh_vien_so|g' .env.prod.local
 sed -i 's|^MINIO_ROOT_PASSWORD=.*|MINIO_ROOT_PASSWORD=local_bvs_minio_password|g' .env.prod.local
@@ -116,6 +117,7 @@ for attempt in $(seq 1 30); do
   fi
   sleep 2
 done
+BVS_RECORD_TRANSFER_CALLBACK_SECRET=local-wiiicare-callback-secret-0123456789abcdef \
 WIIICARE_SMOKE_BASE_URL=http://localhost:8080/api/v1 node scripts/harness/authenticated-api-smoke.mjs
 
 docker compose --env-file .env.prod.local -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -c "select version, left(checksum_sha256, 12) as checksum_prefix from schema_migrations order by version;"
