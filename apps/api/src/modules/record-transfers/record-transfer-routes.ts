@@ -2,10 +2,12 @@ import type { FastifyInstance } from "fastify";
 import { nanoid } from "nanoid";
 import {
   CreateRecordTransferRequestSchema,
+  MarkRecordTransferFailedRequestSchema,
   MarkRecordTransferReceivedRequestSchema,
   MarkRecordTransferSentRequestSchema,
   PatientRecordTransfersParamsSchema,
-  RecordTransferIdParamsSchema
+  RecordTransferIdParamsSchema,
+  RetryRecordTransferRequestSchema
 } from "@benh-vien-so/contracts";
 import {
   DomainError,
@@ -301,6 +303,137 @@ export async function registerRecordTransferRoutes(
           status: recordTransfer.toSnapshot().status,
           sentAt: recordTransfer.toSnapshot().sentAt,
           receivedAt: recordTransfer.toSnapshot().receivedAt,
+          recipientOrganizationId: recordTransfer.toSnapshot().recipientOrganizationId
+        }
+      });
+
+      return toRecordTransferResponse(recordTransfer);
+    } catch (error) {
+      if (error instanceof DomainError) {
+        return reply.status(422).send({
+          error: "RECORD_TRANSFER_DOMAIN_ERROR",
+          message: error.message
+        });
+      }
+
+      throw error;
+    }
+  });
+
+  app.post("/record-transfers/:id/fail", async (request, reply) => {
+    const actor = requirePermission(request, reply, "record-transfer:update");
+
+    if (!actor) {
+      return;
+    }
+
+    const params = RecordTransferIdParamsSchema.parse(request.params);
+    const parsed = MarkRecordTransferFailedRequestSchema.safeParse(request.body ?? {});
+
+    if (!parsed.success) {
+      throw parsed.error;
+    }
+
+    const recordTransfer = await recordTransferRepository.findById(params.id);
+
+    if (!recordTransfer) {
+      return reply.status(404).send({
+        error: "RECORD_TRANSFER_NOT_FOUND"
+      });
+    }
+
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        recordTransfer.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
+    }
+
+    try {
+      recordTransfer.markFailed(parsed.data);
+      await recordTransferRepository.save(recordTransfer);
+      await recordAuditEvent(auditRepository, request, {
+        action: "record-transfer.fail",
+        resourceType: "RecordTransfer",
+        resourceId: recordTransfer.id,
+        patientId: recordTransfer.patientId,
+        metadata: {
+          status: recordTransfer.toSnapshot().status,
+          failedAt: recordTransfer.toSnapshot().failedAt,
+          failureReason: recordTransfer.toSnapshot().failureReason,
+          nextRetryAt: recordTransfer.toSnapshot().nextRetryAt,
+          retryCount: recordTransfer.toSnapshot().retryCount,
+          recipientOrganizationId: recordTransfer.toSnapshot().recipientOrganizationId
+        }
+      });
+
+      return toRecordTransferResponse(recordTransfer);
+    } catch (error) {
+      if (error instanceof DomainError) {
+        return reply.status(422).send({
+          error: "RECORD_TRANSFER_DOMAIN_ERROR",
+          message: error.message
+        });
+      }
+
+      throw error;
+    }
+  });
+
+  app.post("/record-transfers/:id/retry", async (request, reply) => {
+    const actor = requirePermission(request, reply, "record-transfer:update");
+
+    if (!actor) {
+      return;
+    }
+
+    const params = RecordTransferIdParamsSchema.parse(request.params);
+    const parsed = RetryRecordTransferRequestSchema.safeParse(request.body ?? {});
+
+    if (!parsed.success) {
+      throw parsed.error;
+    }
+
+    const recordTransfer = await recordTransferRepository.findById(params.id);
+
+    if (!recordTransfer) {
+      return reply.status(404).send({
+        error: "RECORD_TRANSFER_NOT_FOUND"
+      });
+    }
+
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        recordTransfer.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
+    }
+
+    try {
+      const previousFailureReason = recordTransfer.toSnapshot().failureReason;
+      recordTransfer.retry(parsed.data);
+      await recordTransferRepository.save(recordTransfer);
+      await recordAuditEvent(auditRepository, request, {
+        action: "record-transfer.retry",
+        resourceType: "RecordTransfer",
+        resourceId: recordTransfer.id,
+        patientId: recordTransfer.patientId,
+        metadata: {
+          status: recordTransfer.toSnapshot().status,
+          retryCount: recordTransfer.toSnapshot().retryCount,
+          previousFailureReason,
           recipientOrganizationId: recordTransfer.toSnapshot().recipientOrganizationId
         }
       });

@@ -239,6 +239,70 @@ if (
   throw new Error("Expected missing FHIR record transfer Task to return OperationOutcome not-found.");
 }
 
+const smokeTransfer = await requestJson("/patients/patient-demo-001/record-transfers", {
+  method: "POST",
+  token: clinicianSession.accessToken,
+  headers: treatmentHeaders(),
+  expectedStatus: 201,
+  body: {
+    priority: "urgent",
+    bundleType: "document",
+    sourceOrganizationId: "hospital-hai-phong-demo",
+    recipientOrganizationId: "hospital-hai-phong-referral",
+    consentReference: "consent-demo-transfer-001",
+    reason: `Authenticated smoke transfer retry ${requestTag}`
+  }
+});
+const smokeTransferSentAt = new Date(Date.now() + 60_000).toISOString();
+const smokeTransferFailedAt = new Date(Date.now() + 120_000).toISOString();
+const smokeTransferNextRetryAt = new Date(Date.now() + 180_000).toISOString();
+const smokeTransferRetryAt = smokeTransferNextRetryAt;
+
+await requestJson(`/record-transfers/${smokeTransfer.id}/send`, {
+  method: "POST",
+  token: clinicianSession.accessToken,
+  headers: treatmentHeaders(),
+  body: {
+    sentAt: smokeTransferSentAt
+  }
+});
+
+const failedTransfer = await requestJson(`/record-transfers/${smokeTransfer.id}/fail`, {
+  method: "POST",
+  token: clinicianSession.accessToken,
+  headers: treatmentHeaders(),
+  body: {
+    failedAt: smokeTransferFailedAt,
+    failureReason: "Authenticated smoke recipient gateway unavailable.",
+    nextRetryAt: smokeTransferNextRetryAt
+  }
+});
+
+if (
+  failedTransfer.status !== "failed" ||
+  failedTransfer.failureReason !== "Authenticated smoke recipient gateway unavailable."
+) {
+  throw new Error("Expected record transfer fail endpoint to store failed delivery metadata.");
+}
+
+const retriedTransfer = await requestJson(`/record-transfers/${smokeTransfer.id}/retry`, {
+  method: "POST",
+  token: clinicianSession.accessToken,
+  headers: treatmentHeaders(),
+  body: {
+    retryAt: smokeTransferRetryAt
+  }
+});
+
+if (
+  retriedTransfer.status !== "ready" ||
+  retriedTransfer.retryCount !== 1 ||
+  "sentAt" in retriedTransfer ||
+  "failedAt" in retriedTransfer
+) {
+  throw new Error("Expected record transfer retry endpoint to return ready state and clear failed attempt timestamps.");
+}
+
 const globalAuditTrail = await waitForAuditTrail(
   "/audit-events?limit=100",
   {
@@ -346,6 +410,8 @@ console.log(
       deniedMedicationError: deniedMedicationExport.error,
       fhirValidationIssueCode: fhirValidationOutcome.issue[0]?.code,
       missingRecordTransferFhirIssueCode: missingTransferFhir.issue[0]?.code,
+      retriedRecordTransferId: retriedTransfer.id,
+      retriedRecordTransferRetryCount: retriedTransfer.retryCount,
       globalAuditEventCount: globalAuditTrail.items.length,
       authAuditEventCount: authAuditEvents.length,
       deniedAuditEventCount: deniedAuditEvents.length,

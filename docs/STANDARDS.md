@@ -103,7 +103,7 @@ Hàm ý cho dự án:
 - Luồng “chuyển bệnh án giữa bệnh viện” nên hiểu là chia sẻ dữ liệu/tài liệu có metadata và định danh rõ ràng, không đơn thuần gửi file.
 - Cần Patient Registry hoặc Master Patient Index khi liên thông nhiều bệnh viện.
 - MHD là hướng phù hợp để nghiên cứu API chia sẻ tài liệu bệnh án theo FHIR.
-- `RecordTransfer` là lớp vận hành nội bộ để chuẩn bị cho MHD/XDS trong tương lai; nó không thay thế `DocumentReference`, `Composition` hoặc `Bundle`, mà chỉ theo dõi việc gửi gói hồ sơ tới bên nhận.
+- `RecordTransfer` là lớp vận hành nội bộ để chuẩn bị cho MHD/XDS trong tương lai; nó không thay thế `DocumentReference`, `Composition` hoặc `Bundle`, mà theo dõi việc gửi gói hồ sơ tới bên nhận, gồm cả lỗi gửi tạm thời, lịch thử lại và số lần retry.
 
 ## SMART App Launch
 

@@ -27,6 +27,10 @@ export type RecordTransferSnapshot = {
   readonly requestedAt: string;
   readonly sentAt?: string;
   readonly receivedAt?: string;
+  readonly failedAt?: string;
+  readonly failureReason?: string;
+  readonly nextRetryAt?: string;
+  readonly retryCount: number;
   readonly note?: string;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -34,13 +38,27 @@ export type RecordTransferSnapshot = {
 
 export type CreateRecordTransferInput = Omit<
   RecordTransferSnapshot,
-  "status" | "priority" | "requestedAt" | "sentAt" | "receivedAt" | "createdAt" | "updatedAt"
+  | "status"
+  | "priority"
+  | "requestedAt"
+  | "sentAt"
+  | "receivedAt"
+  | "failedAt"
+  | "failureReason"
+  | "nextRetryAt"
+  | "retryCount"
+  | "createdAt"
+  | "updatedAt"
 > & {
   readonly status?: RecordTransferStatus;
   readonly priority?: RecordTransferPriority;
   readonly requestedAt?: string;
   readonly sentAt?: string;
   readonly receivedAt?: string;
+  readonly failedAt?: string;
+  readonly failureReason?: string;
+  readonly nextRetryAt?: string;
+  readonly retryCount?: number;
 };
 
 export type MarkRecordTransferSentInput = {
@@ -50,6 +68,18 @@ export type MarkRecordTransferSentInput = {
 
 export type MarkRecordTransferReceivedInput = {
   readonly receivedAt?: string;
+  readonly note?: string;
+};
+
+export type MarkRecordTransferFailedInput = {
+  readonly failedAt?: string;
+  readonly failureReason: string;
+  readonly nextRetryAt?: string;
+  readonly note?: string;
+};
+
+export type RetryRecordTransferInput = {
+  readonly retryAt?: string;
   readonly note?: string;
 };
 
@@ -67,6 +97,13 @@ export class RecordTransfer {
     const receivedAt = input.receivedAt
       ? parseDate(input.receivedAt, "Thời điểm tiếp nhận hồ sơ không hợp lệ.")
       : undefined;
+    const failedAt = input.failedAt
+      ? parseDate(input.failedAt, "Thời điểm lỗi chuyển hồ sơ không hợp lệ.")
+      : undefined;
+    const nextRetryAt = input.nextRetryAt
+      ? parseDate(input.nextRetryAt, "Thời điểm thử gửi lại hồ sơ không hợp lệ.")
+      : undefined;
+    const retryCount = normalizeRetryCount(input.retryCount ?? 0);
 
     const sourceOrganizationId = normalizeRequired(
       input.sourceOrganizationId,
@@ -93,6 +130,28 @@ export class RecordTransfer {
       throw new DomainError("Thời điểm tiếp nhận hồ sơ không được trước thời điểm gửi.");
     }
 
+    if (failedAt && failedAt < requestedAt) {
+      throw new DomainError("Thời điểm lỗi chuyển hồ sơ không được trước thời điểm yêu cầu.");
+    }
+
+    if (sentAt && failedAt && failedAt < sentAt) {
+      throw new DomainError("Thời điểm lỗi chuyển hồ sơ không được trước thời điểm gửi.");
+    }
+
+    if (nextRetryAt && !failedAt) {
+      throw new DomainError("Chỉ được hẹn thử gửi lại sau khi đã ghi nhận lỗi chuyển hồ sơ.");
+    }
+
+    if (failedAt && nextRetryAt && nextRetryAt < failedAt) {
+      throw new DomainError("Thời điểm thử gửi lại không được trước thời điểm lỗi chuyển hồ sơ.");
+    }
+
+    const failureReason = normalizeOptional(input.failureReason);
+
+    if (input.status === "failed" && (!failedAt || !failureReason)) {
+      throw new DomainError("Hồ sơ lỗi cần có thời điểm lỗi và lý do lỗi.");
+    }
+
     return new RecordTransfer({
       id: normalizeRequired(input.id, "Mã chuyển hồ sơ không được để trống."),
       patientId: normalizeRequired(input.patientId, "Chuyển hồ sơ phải gắn với một bệnh nhân."),
@@ -114,6 +173,10 @@ export class RecordTransfer {
       requestedAt: requestedAt.toISOString(),
       sentAt: sentAt?.toISOString(),
       receivedAt: receivedAt?.toISOString(),
+      failedAt: failedAt?.toISOString(),
+      failureReason,
+      nextRetryAt: nextRetryAt?.toISOString(),
+      retryCount,
       note: normalizeOptional(input.note),
       createdAt: now.toISOString(),
       updatedAt: now.toISOString()
@@ -133,6 +196,14 @@ export class RecordTransfer {
       receivedAt: snapshot.receivedAt
         ? parseDate(snapshot.receivedAt, "Thời điểm tiếp nhận hồ sơ không hợp lệ.").toISOString()
         : undefined,
+      failedAt: snapshot.failedAt
+        ? parseDate(snapshot.failedAt, "Thời điểm lỗi chuyển hồ sơ không hợp lệ.").toISOString()
+        : undefined,
+      failureReason: normalizeOptional(snapshot.failureReason),
+      nextRetryAt: snapshot.nextRetryAt
+        ? parseDate(snapshot.nextRetryAt, "Thời điểm thử gửi lại hồ sơ không hợp lệ.").toISOString()
+        : undefined,
+      retryCount: normalizeRetryCount(snapshot.retryCount),
       note: normalizeOptional(snapshot.note)
     });
   }
@@ -210,6 +281,85 @@ export class RecordTransfer {
     };
   }
 
+  markFailed(input: MarkRecordTransferFailedInput): void {
+    if (this.props.status === "completed") {
+      throw new DomainError("Hồ sơ đã được tiếp nhận, không thể đánh dấu lỗi gửi.");
+    }
+
+    if (this.props.status === "cancelled") {
+      throw new DomainError("Không thể đánh dấu lỗi cho yêu cầu chuyển hồ sơ đã hủy.");
+    }
+
+    const failedAt = input.failedAt
+      ? parseDate(input.failedAt, "Thời điểm lỗi chuyển hồ sơ không hợp lệ.")
+      : new Date();
+    const requestedAt = parseDate(
+      this.props.requestedAt,
+      "Thời điểm yêu cầu chuyển hồ sơ không hợp lệ."
+    );
+
+    if (failedAt < requestedAt) {
+      throw new DomainError("Thời điểm lỗi chuyển hồ sơ không được trước thời điểm yêu cầu.");
+    }
+
+    if (this.props.sentAt) {
+      const sentAt = parseDate(this.props.sentAt, "Thời điểm gửi hồ sơ không hợp lệ.");
+
+      if (failedAt < sentAt) {
+        throw new DomainError("Thời điểm lỗi chuyển hồ sơ không được trước thời điểm gửi.");
+      }
+    }
+
+    const nextRetryAt = input.nextRetryAt
+      ? parseDate(input.nextRetryAt, "Thời điểm thử gửi lại hồ sơ không hợp lệ.")
+      : undefined;
+
+    if (nextRetryAt && nextRetryAt < failedAt) {
+      throw new DomainError("Thời điểm thử gửi lại không được trước thời điểm lỗi chuyển hồ sơ.");
+    }
+
+    this.props = {
+      ...this.props,
+      status: "failed",
+      failedAt: failedAt.toISOString(),
+      failureReason: normalizeRequired(input.failureReason, "Cần có lý do lỗi chuyển hồ sơ."),
+      nextRetryAt: nextRetryAt?.toISOString(),
+      note: normalizeOptional(input.note) ?? this.props.note,
+      updatedAt: failedAt.toISOString()
+    };
+  }
+
+  retry(input: RetryRecordTransferInput = {}): void {
+    if (this.props.status !== "failed") {
+      throw new DomainError("Chỉ có thể thử gửi lại khi yêu cầu chuyển hồ sơ đang ở trạng thái lỗi.");
+    }
+
+    const retryAt = input.retryAt
+      ? parseDate(input.retryAt, "Thời điểm thử gửi lại hồ sơ không hợp lệ.")
+      : new Date();
+
+    if (this.props.failedAt) {
+      const failedAt = parseDate(this.props.failedAt, "Thời điểm lỗi chuyển hồ sơ không hợp lệ.");
+
+      if (retryAt < failedAt) {
+        throw new DomainError("Thời điểm thử gửi lại không được trước thời điểm lỗi chuyển hồ sơ.");
+      }
+    }
+
+    this.props = {
+      ...this.props,
+      status: "ready",
+      sentAt: undefined,
+      receivedAt: undefined,
+      failedAt: undefined,
+      failureReason: undefined,
+      nextRetryAt: undefined,
+      retryCount: this.props.retryCount + 1,
+      note: normalizeOptional(input.note) ?? this.props.note,
+      updatedAt: retryAt.toISOString()
+    };
+  }
+
   toSnapshot(): RecordTransferSnapshot {
     return {
       ...this.props
@@ -240,4 +390,12 @@ function parseDate(value: string, message: string): Date {
   }
 
   return date;
+}
+
+function normalizeRetryCount(value: number): number {
+  if (!Number.isInteger(value) || value < 0) {
+    throw new DomainError("Số lần thử gửi lại hồ sơ không hợp lệ.");
+  }
+
+  return value;
 }

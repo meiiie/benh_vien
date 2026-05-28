@@ -967,6 +967,33 @@ completedRecordTransfer.markReceived({
   receivedAt: "2026-05-27T12:30:00.000Z"
 });
 const fhirCompletedRecordTransferTask = mapRecordTransferToFhirTask(completedRecordTransfer);
+const failedRecordTransfer = RecordTransfer.create({
+  id: "record-transfer-harness-failed-001",
+  patientId: patient.id,
+  status: "ready",
+  priority: "urgent",
+  bundleType: "document",
+  bundleId: fhirDocumentBundle.id,
+  sourceOrganizationId: "hospital-hai-phong-demo",
+  recipientOrganizationId: "hospital-harness-recipient",
+  consentReference: consent.id,
+  requestedByActorId: "practitioner-harness-001",
+  reason: "Validate record transfer failure and retry metadata.",
+  requestedAt: "2026-05-27T12:05:00.000Z"
+});
+failedRecordTransfer.markSent({
+  sentAt: "2026-05-27T12:15:00.000Z"
+});
+failedRecordTransfer.markFailed({
+  failedAt: "2026-05-27T12:20:00.000Z",
+  failureReason: "Recipient gateway unavailable.",
+  nextRetryAt: "2026-05-27T12:35:00.000Z"
+});
+const fhirFailedRecordTransferTask = mapRecordTransferToFhirTask(failedRecordTransfer);
+failedRecordTransfer.retry({
+  retryAt: "2026-05-27T12:35:00.000Z"
+});
+const retriedRecordTransferSnapshot = failedRecordTransfer.toSnapshot();
 
 if (fhirRecordTransferTask.resourceType !== "Task") {
   throw new Error(
@@ -988,6 +1015,26 @@ if (fhirCompletedRecordTransferTask.status !== "completed") {
 
 if (fhirCompletedRecordTransferTask.executionPeriod?.end !== "2026-05-27T12:30:00.000Z") {
   throw new Error("Expected completed record transfer Task to include executionPeriod end.");
+}
+
+if (fhirFailedRecordTransferTask.status !== "failed") {
+  throw new Error("Expected failed record transfer Task status to be failed.");
+}
+
+if (
+  !fhirFailedRecordTransferTask.note?.some((note) =>
+    note.text.includes("Recipient gateway unavailable.")
+  )
+) {
+  throw new Error("Expected failed record transfer Task to include failure reason note.");
+}
+
+if (retriedRecordTransferSnapshot.status !== "ready" || retriedRecordTransferSnapshot.retryCount !== 1) {
+  throw new Error("Expected retried record transfer to return to ready with retryCount 1.");
+}
+
+if (retriedRecordTransferSnapshot.sentAt || retriedRecordTransferSnapshot.failedAt) {
+  throw new Error("Expected retried record transfer to clear previous sent and failed timestamps.");
 }
 
 const auditEvent = AuditEvent.record({
@@ -1644,6 +1691,8 @@ console.log(
       recordTransferResourceType: fhirRecordTransferTask.resourceType,
       recordTransferFocus: fhirRecordTransferTask.focus?.reference,
       completedRecordTransferStatus: fhirCompletedRecordTransferTask.status,
+      failedRecordTransferStatus: fhirFailedRecordTransferTask.status,
+      retriedRecordTransferRetryCount: retriedRecordTransferSnapshot.retryCount,
       auditAction: auditEvent.toSnapshot().action,
       auditResourceType: fhirAuditEvent.resourceType,
       auditBundleEntryCount: fhirAuditBundle.entry.length,

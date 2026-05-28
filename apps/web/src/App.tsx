@@ -879,6 +879,10 @@ type RecordTransfer = {
   readonly requestedAt: string;
   readonly sentAt?: string;
   readonly receivedAt?: string;
+  readonly failedAt?: string;
+  readonly failureReason?: string;
+  readonly nextRetryAt?: string;
+  readonly retryCount: number;
   readonly note?: string;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -3505,6 +3509,85 @@ export function App() {
     }
   }
 
+  async function handleFailRecordTransfer(recordTransfer: RecordTransfer) {
+    if (!selectedPatient) {
+      setStatusMessage("Cần chọn bệnh nhân trước khi ghi nhận lỗi chuyển hồ sơ.");
+      return;
+    }
+
+    setTransitioningRecordTransferId(recordTransfer.id);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/record-transfers/${recordTransfer.id}/fail`, {
+        method: "POST",
+        headers: buildHeaders("TREATMENT", {
+          "Content-Type": "application/json"
+        }),
+        body: JSON.stringify({
+          failureReason: "Gateway liên thông demo tạm thời không phản hồi.",
+          note: "Đã ghi nhận lỗi gửi để thử lại sau."
+        })
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => undefined);
+        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
+      }
+
+      const updatedTransfer = (await response.json()) as RecordTransfer;
+      await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
+      await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
+      setStatusMessage(`Đã ghi nhận lỗi gửi gói chuyển hồ sơ ${updatedTransfer.id}.`);
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể ghi nhận lỗi chuyển hồ sơ: ${error.message}`
+          : "Không thể ghi nhận lỗi chuyển hồ sơ."
+      );
+    } finally {
+      setTransitioningRecordTransferId(undefined);
+    }
+  }
+
+  async function handleRetryRecordTransfer(recordTransfer: RecordTransfer) {
+    if (!selectedPatient) {
+      setStatusMessage("Cần chọn bệnh nhân trước khi thử gửi lại hồ sơ.");
+      return;
+    }
+
+    setTransitioningRecordTransferId(recordTransfer.id);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/record-transfers/${recordTransfer.id}/retry`, {
+        method: "POST",
+        headers: buildHeaders("TREATMENT", {
+          "Content-Type": "application/json"
+        }),
+        body: JSON.stringify({
+          note: "Đưa lại gói hồ sơ vào hàng đợi gửi."
+        })
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => undefined);
+        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
+      }
+
+      const updatedTransfer = (await response.json()) as RecordTransfer;
+      await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
+      await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
+      setStatusMessage(`Đã đưa gói chuyển hồ sơ ${updatedTransfer.id} về hàng đợi gửi lại.`);
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể thử gửi lại hồ sơ: ${error.message}`
+          : "Không thể thử gửi lại hồ sơ."
+      );
+    } finally {
+      setTransitioningRecordTransferId(undefined);
+    }
+  }
+
   async function handleCreateEncounter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -4989,6 +5072,9 @@ export function App() {
                   <Info label="Người tạo" value={selectedRecordTransfer.requestedByActorId} />
                   <Info label="Thời điểm gửi" value={selectedRecordTransfer.sentAt ? formatDateTime(selectedRecordTransfer.sentAt) : "Chưa gửi"} />
                   <Info label="Thời điểm nhận" value={selectedRecordTransfer.receivedAt ? formatDateTime(selectedRecordTransfer.receivedAt) : "Chưa xác nhận"} />
+                  <Info label="Lỗi gửi" value={selectedRecordTransfer.failureReason ?? "Chưa ghi nhận"} />
+                  <Info label="Thử lại" value={`${selectedRecordTransfer.retryCount} lần`} />
+                  <Info label="Hẹn gửi lại" value={selectedRecordTransfer.nextRetryAt ? formatDateTime(selectedRecordTransfer.nextRetryAt) : "Chưa hẹn"} />
                 </div>
                 <div className="panel-actions">
                   <button
@@ -5018,6 +5104,34 @@ export function App() {
                     {transitioningRecordTransferId === selectedRecordTransfer.id
                       ? "Đang cập nhật..."
                       : "Xác nhận đã nhận"}
+                  </button>
+                  <button
+                    className="ghost-button compact-button"
+                    type="button"
+                    disabled={
+                      selectedRecordTransfer.status === "completed" ||
+                      selectedRecordTransfer.status === "cancelled" ||
+                      selectedRecordTransfer.status === "failed" ||
+                      transitioningRecordTransferId === selectedRecordTransfer.id
+                    }
+                    onClick={() => void handleFailRecordTransfer(selectedRecordTransfer)}
+                  >
+                    {transitioningRecordTransferId === selectedRecordTransfer.id
+                      ? "Đang cập nhật..."
+                      : "Ghi nhận lỗi gửi"}
+                  </button>
+                  <button
+                    className="ghost-button compact-button"
+                    type="button"
+                    disabled={
+                      selectedRecordTransfer.status !== "failed" ||
+                      transitioningRecordTransferId === selectedRecordTransfer.id
+                    }
+                    onClick={() => void handleRetryRecordTransfer(selectedRecordTransfer)}
+                  >
+                    {transitioningRecordTransferId === selectedRecordTransfer.id
+                      ? "Đang cập nhật..."
+                      : "Đưa vào hàng đợi gửi lại"}
                   </button>
                 </div>
                 <p className="empty-state">

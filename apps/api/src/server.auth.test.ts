@@ -3588,6 +3588,114 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("records failed record transfer delivery and prepares a retry", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const sendResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/send",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        sentAt: "2026-05-28T05:00:00.000Z",
+        note: "Đã gửi gói hồ sơ qua gateway liên thông."
+      }
+    });
+
+    expect(sendResponse.statusCode).toBe(200);
+
+    const failResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/fail",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        failedAt: "2026-05-28T05:05:00.000Z",
+        failureReason: "Recipient gateway unavailable.",
+        nextRetryAt: "2026-05-28T05:20:00.000Z"
+      }
+    });
+
+    expect(failResponse.statusCode, failResponse.body).toBe(200);
+    expect(failResponse.json()).toMatchObject({
+      id: "record-transfer-demo-001",
+      status: "failed",
+      failedAt: "2026-05-28T05:05:00.000Z",
+      failureReason: "Recipient gateway unavailable.",
+      nextRetryAt: "2026-05-28T05:20:00.000Z",
+      retryCount: 0
+    });
+
+    const failedFhirResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/fhir-task",
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(failedFhirResponse.statusCode).toBe(200);
+    expect(failedFhirResponse.json()).toMatchObject({
+      resourceType: "Task",
+      status: "failed",
+      note: expect.arrayContaining([
+        expect.objectContaining({
+          text: "Lý do lỗi chuyển hồ sơ: Recipient gateway unavailable."
+        }),
+        expect.objectContaining({
+          text: "Hẹn thử gửi lại: 2026-05-28T05:20:00.000Z"
+        })
+      ])
+    });
+
+    const retryResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/retry",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        retryAt: "2026-05-28T05:20:00.000Z",
+        note: "Đưa lại vào hàng đợi gửi khi gateway sẵn sàng."
+      }
+    });
+
+    expect(retryResponse.statusCode).toBe(200);
+    expect(retryResponse.json()).toMatchObject({
+      id: "record-transfer-demo-001",
+      status: "ready",
+      retryCount: 1,
+      note: "Đưa lại vào hàng đợi gửi khi gateway sẵn sàng."
+    });
+    expect(retryResponse.json()).not.toHaveProperty("sentAt");
+    expect(retryResponse.json()).not.toHaveProperty("failedAt");
+    expect(retryResponse.json()).not.toHaveProperty("failureReason");
+    expect(retryResponse.json()).not.toHaveProperty("nextRetryAt");
+
+    const resendResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/send",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        sentAt: "2026-05-28T05:25:00.000Z"
+      }
+    });
+
+    expect(resendResponse.statusCode).toBe(200);
+    expect(resendResponse.json()).toMatchObject({
+      status: "in-progress",
+      sentAt: "2026-05-28T05:25:00.000Z",
+      retryCount: 1
+    });
+  });
+
   it("denies record transfer creation when consent does not cover the recipient", async () => {
     app = await readyServer();
     const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");

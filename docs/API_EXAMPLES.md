@@ -282,7 +282,26 @@ curl -X POST http://localhost:7310/api/v1/record-transfers/$TRANSFER_ID/receive 
   -d '{"note":"Bệnh viện nhận đã xác nhận tiếp nhận."}'
 ```
 
-API sẽ kiểm `consentReference` trước khi tạo `RecordTransfer`. Vòng đời vận hành gồm `requested/ready`, `in-progress` sau khi gửi và `completed` sau khi cơ sở nhận xác nhận. Kết quả FHIR mong muốn là `Task` có `focus` trỏ tới `Bundle/patient-document-patient-demo-001`, `for` trỏ tới `Patient/patient-demo-001`, `requester` là cơ sở gửi, `owner` là cơ sở nhận và `executionPeriod` khi đã có mốc gửi/nhận. Route JSON `/record-transfers/:id` trả lỗi nội bộ `RECORD_TRANSFER_NOT_FOUND` khi không tìm thấy; riêng facade FHIR `/record-transfers/:id/fhir-task` trả lỗi `OperationOutcome` mã `not-found` để client liên thông không phải đọc envelope JSON nội bộ.
+Nếu gateway liên thông hoặc cơ sở nhận tạm thời không phản hồi, ghi nhận lỗi và đưa gói về hàng đợi gửi lại:
+
+```bash
+curl -X POST http://localhost:7310/api/v1/record-transfers/$TRANSFER_ID/fail \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "failureReason": "Gateway bệnh viện nhận tạm thời không phản hồi.",
+    "nextRetryAt": "2026-05-28T06:15:00.000Z"
+  }'
+
+curl -X POST http://localhost:7310/api/v1/record-transfers/$TRANSFER_ID/retry \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT" \
+  -H "Content-Type: application/json" \
+  -d '{"note":"Đưa lại gói hồ sơ vào hàng đợi gửi."}'
+```
+
+API sẽ kiểm `consentReference` trước khi tạo `RecordTransfer`. Vòng đời vận hành gồm `requested/ready`, `in-progress` sau khi gửi, `failed` khi gửi lỗi, `ready` khi được đưa vào hàng đợi thử lại và `completed` sau khi cơ sở nhận xác nhận. Kết quả FHIR mong muốn là `Task` có `focus` trỏ tới `Bundle/patient-document-patient-demo-001`, `for` trỏ tới `Patient/patient-demo-001`, `requester` là cơ sở gửi, `owner` là cơ sở nhận, `executionPeriod` khi đã có mốc gửi/nhận và `note` chứa lý do lỗi/hẹn thử lại nếu từng gửi thất bại. Route JSON `/record-transfers/:id` trả lỗi nội bộ `RECORD_TRANSFER_NOT_FOUND` khi không tìm thấy; riêng facade FHIR `/record-transfers/:id/fhir-task` trả lỗi `OperationOutcome` mã `not-found` để client liên thông không phải đọc envelope JSON nội bộ.
 
 ## Lấy và mở lượt khám
 

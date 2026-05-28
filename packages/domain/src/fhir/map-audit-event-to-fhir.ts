@@ -26,6 +26,8 @@ const auditActionLabels: Record<AuditAction, string> = {
   "record-transfer.create": "Tạo gói chuyển hồ sơ",
   "record-transfer.read": "Đọc gói chuyển hồ sơ",
   "record-transfer.send": "Gửi gói chuyển hồ sơ",
+  "record-transfer.fail": "Ghi nhận lỗi chuyển hồ sơ",
+  "record-transfer.retry": "Thử gửi lại gói chuyển hồ sơ",
   "record-transfer.receive": "Xác nhận nhận gói chuyển hồ sơ",
   "record-transfer.fhir-export": "Xuất gói chuyển hồ sơ FHIR",
   "encounter.list": "Tải lượt khám",

@@ -86,8 +86,24 @@ export function mapRecordTransferToFhirTask(recordTransfer: RecordTransfer): Fhi
         }
       }
     ],
-    note: snapshot.note ? [{ text: snapshot.note }] : undefined
+    note: buildRecordTransferNotes(snapshot)
   };
+}
+
+function buildRecordTransferNotes(
+  snapshot: ReturnType<RecordTransfer["toSnapshot"]>
+): FhirTask["note"] {
+  const notes = [
+    snapshot.note,
+    snapshot.failureReason
+      ? `Lý do lỗi chuyển hồ sơ: ${snapshot.failureReason}`
+      : undefined,
+    snapshot.failedAt ? `Thời điểm lỗi: ${snapshot.failedAt}` : undefined,
+    snapshot.nextRetryAt ? `Hẹn thử gửi lại: ${snapshot.nextRetryAt}` : undefined,
+    snapshot.retryCount > 0 ? `Số lần thử gửi lại: ${snapshot.retryCount}` : undefined
+  ].filter((note): note is string => Boolean(note));
+
+  return notes.length > 0 ? notes.map((text) => ({ text })) : undefined;
 }
 
 function mapRecordTransferStatus(

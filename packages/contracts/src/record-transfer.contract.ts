@@ -45,6 +45,18 @@ export const MarkRecordTransferReceivedRequestSchema = z.object({
   note: z.string().min(1).optional()
 });
 
+export const MarkRecordTransferFailedRequestSchema = z.object({
+  failedAt: z.string().datetime().optional(),
+  failureReason: z.string().min(1),
+  nextRetryAt: z.string().datetime().optional(),
+  note: z.string().min(1).optional()
+});
+
+export const RetryRecordTransferRequestSchema = z.object({
+  retryAt: z.string().datetime().optional(),
+  note: z.string().min(1).optional()
+});
+
 export type RecordTransferStatus = z.infer<typeof RecordTransferStatusSchema>;
 export type RecordTransferPriority = z.infer<typeof RecordTransferPrioritySchema>;
 export type RecordTransferBundleType = z.infer<typeof RecordTransferBundleTypeSchema>;
@@ -59,3 +71,7 @@ export type MarkRecordTransferSentRequest = z.infer<
 export type MarkRecordTransferReceivedRequest = z.infer<
   typeof MarkRecordTransferReceivedRequestSchema
 >;
+export type MarkRecordTransferFailedRequest = z.infer<
+  typeof MarkRecordTransferFailedRequestSchema
+>;
+export type RetryRecordTransferRequest = z.infer<typeof RetryRecordTransferRequestSchema>;

@@ -24,6 +24,10 @@ type RecordTransferRow = {
   requested_at: Date | string;
   sent_at: Date | string | null;
   received_at: Date | string | null;
+  failed_at: Date | string | null;
+  failure_reason: string | null;
+  next_retry_at: Date | string | null;
+  retry_count: number;
   note: string | null;
   created_at: Date | string;
   updated_at: Date | string;
@@ -77,11 +81,15 @@ export class PostgresRecordTransferRepository implements RecordTransferRepositor
         requested_at,
         sent_at,
         received_at,
+        failed_at,
+        failure_reason,
+        next_retry_at,
+        retry_count,
         note,
         created_at,
         updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
       ON CONFLICT (id) DO UPDATE SET
         patient_id = EXCLUDED.patient_id,
         status = EXCLUDED.status,
@@ -96,6 +104,10 @@ export class PostgresRecordTransferRepository implements RecordTransferRepositor
         requested_at = EXCLUDED.requested_at,
         sent_at = EXCLUDED.sent_at,
         received_at = EXCLUDED.received_at,
+        failed_at = EXCLUDED.failed_at,
+        failure_reason = EXCLUDED.failure_reason,
+        next_retry_at = EXCLUDED.next_retry_at,
+        retry_count = EXCLUDED.retry_count,
         note = EXCLUDED.note,
         updated_at = EXCLUDED.updated_at`,
       [
@@ -113,6 +125,10 @@ export class PostgresRecordTransferRepository implements RecordTransferRepositor
         snapshot.requestedAt,
         snapshot.sentAt ?? null,
         snapshot.receivedAt ?? null,
+        snapshot.failedAt ?? null,
+        snapshot.failureReason ?? null,
+        snapshot.nextRetryAt ?? null,
+        snapshot.retryCount,
         snapshot.note ?? null,
         snapshot.createdAt,
         snapshot.updatedAt
@@ -161,6 +177,10 @@ const selectRecordTransferSql = `SELECT
   requested_at,
   sent_at,
   received_at,
+  failed_at,
+  failure_reason,
+  next_retry_at,
+  retry_count,
   note,
   created_at,
   updated_at
@@ -182,6 +202,10 @@ function rowToRecordTransfer(row: RecordTransferRow): RecordTransfer {
     requestedAt: toIsoString(row.requested_at),
     sentAt: row.sent_at ? toIsoString(row.sent_at) : undefined,
     receivedAt: row.received_at ? toIsoString(row.received_at) : undefined,
+    failedAt: row.failed_at ? toIsoString(row.failed_at) : undefined,
+    failureReason: row.failure_reason ?? undefined,
+    nextRetryAt: row.next_retry_at ? toIsoString(row.next_retry_at) : undefined,
+    retryCount: row.retry_count,
     note: row.note ?? undefined,
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at)

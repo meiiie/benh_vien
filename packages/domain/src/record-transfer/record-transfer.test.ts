@@ -92,6 +92,64 @@ describe("RecordTransfer", () => {
     });
   });
 
+  it("records a failed delivery and prepares a retry", () => {
+    const transfer = RecordTransfer.create({
+      id: "record-transfer-test-006",
+      patientId: "patient-test-001",
+      bundleType: "document",
+      bundleId: "patient-document-patient-test-001",
+      sourceOrganizationId: "hospital-source",
+      recipientOrganizationId: "hospital-recipient",
+      consentReference: "consent-test-001",
+      requestedByActorId: "practitioner-test-001",
+      reason: "Chuyển hồ sơ để hội chẩn chuyên khoa.",
+      requestedAt: "2026-05-28T02:00:00.000Z"
+    });
+
+    transfer.markSent({
+      sentAt: "2026-05-28T02:30:00.000Z"
+    });
+    transfer.markFailed({
+      failedAt: "2026-05-28T02:35:00.000Z",
+      failureReason: "Gateway bệnh viện nhận tạm thời không phản hồi.",
+      nextRetryAt: "2026-05-28T02:50:00.000Z"
+    });
+
+    expect(transfer.toSnapshot()).toMatchObject({
+      status: "failed",
+      failedAt: "2026-05-28T02:35:00.000Z",
+      failureReason: "Gateway bệnh viện nhận tạm thời không phản hồi.",
+      nextRetryAt: "2026-05-28T02:50:00.000Z",
+      retryCount: 0
+    });
+
+    transfer.retry({
+      retryAt: "2026-05-28T02:50:00.000Z",
+      note: "Đưa lại vào hàng đợi gửi sau khi gateway sẵn sàng."
+    });
+
+    expect(transfer.toSnapshot()).toMatchObject({
+      status: "ready",
+      retryCount: 1,
+      note: "Đưa lại vào hàng đợi gửi sau khi gateway sẵn sàng.",
+      updatedAt: "2026-05-28T02:50:00.000Z"
+    });
+    expect(transfer.toSnapshot().sentAt).toBeUndefined();
+    expect(transfer.toSnapshot().failedAt).toBeUndefined();
+    expect(transfer.toSnapshot().failureReason).toBeUndefined();
+    expect(transfer.toSnapshot().nextRetryAt).toBeUndefined();
+
+    transfer.markSent({
+      sentAt: "2026-05-28T03:00:00.000Z"
+    });
+
+    expect(transfer.toSnapshot()).toMatchObject({
+      status: "in-progress",
+      sentAt: "2026-05-28T03:00:00.000Z",
+      retryCount: 1
+    });
+  });
+
   it("rejects receiving a transfer before it has been sent", () => {
     const transfer = RecordTransfer.create({
       id: "record-transfer-test-005",
@@ -109,6 +167,27 @@ describe("RecordTransfer", () => {
     expect(() =>
       transfer.markReceived({
         receivedAt: "2026-05-28T02:45:00.000Z"
+      })
+    ).toThrow(DomainError);
+  });
+
+  it("rejects retrying a transfer before it has failed", () => {
+    const transfer = RecordTransfer.create({
+      id: "record-transfer-test-007",
+      patientId: "patient-test-001",
+      bundleType: "document",
+      bundleId: "patient-document-patient-test-001",
+      sourceOrganizationId: "hospital-source",
+      recipientOrganizationId: "hospital-recipient",
+      consentReference: "consent-test-001",
+      requestedByActorId: "practitioner-test-001",
+      reason: "Chuyển hồ sơ để hội chẩn chuyên khoa.",
+      requestedAt: "2026-05-28T02:00:00.000Z"
+    });
+
+    expect(() =>
+      transfer.retry({
+        retryAt: "2026-05-28T02:45:00.000Z"
       })
     ).toThrow(DomainError);
   });
