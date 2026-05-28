@@ -1132,6 +1132,12 @@ function assertProductionCorsOrigins(origins: readonly string[]): void {
         "BVS_CORS_ORIGINS must contain canonical HTTPS origins in production."
       );
     }
+
+    if (isLocalOnlyHostname(parsedOrigin.hostname)) {
+      throw new Error(
+        "BVS_CORS_ORIGINS must not contain localhost, loopback, private or link-local origins in production."
+      );
+    }
   }
 }
 

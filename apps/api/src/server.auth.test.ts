@@ -814,6 +814,26 @@ describe("API auth and RBAC boundary", () => {
       [
         "https://wiiicare.example.vn/app",
         "BVS_CORS_ORIGINS must contain canonical HTTPS origins in production."
+      ],
+      [
+        "https://localhost",
+        "BVS_CORS_ORIGINS must not contain localhost, loopback, private or link-local origins in production."
+      ],
+      [
+        "https://127.0.0.1",
+        "BVS_CORS_ORIGINS must not contain localhost, loopback, private or link-local origins in production."
+      ],
+      [
+        "https://10.0.0.5",
+        "BVS_CORS_ORIGINS must not contain localhost, loopback, private or link-local origins in production."
+      ],
+      [
+        "https://192.168.1.25",
+        "BVS_CORS_ORIGINS must not contain localhost, loopback, private or link-local origins in production."
+      ],
+      [
+        "https://[fd12:3456::1]",
+        "BVS_CORS_ORIGINS must not contain localhost, loopback, private or link-local origins in production."
       ]
     ] as const) {
       process.env.BVS_CORS_ORIGINS = origin;

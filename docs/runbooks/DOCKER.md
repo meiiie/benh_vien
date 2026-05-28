@@ -26,7 +26,7 @@ API giới hạn tần suất `POST /api/v1/auth/login` bằng `BVS_AUTH_LOGIN_R
 
 `BVS_RECORD_TRANSFER_RETRY_WORKER_MAX_RETRY_COUNT` cũng là ngưỡng vận hành quan trọng. Khi một `RecordTransfer` ở trạng thái `failed`, đã đến `nextRetryAt` và `retryCount` còn dưới ngưỡng này, retry worker đưa gói về `ready` để delivery worker gửi lại. Khi `retryCount` đã chạm ngưỡng, worker chuyển gói sang `dead-lettered`, xóa lịch thử lại và ghi audit `record-transfer.dead-letter`; đội vận hành cần kiểm tra endpoint, consent, mạng hoặc cấu hình bên nhận trước khi tạo luồng xử lý tiếp theo.
 
-Ở `NODE_ENV=production`, API yêu cầu `BVS_CORS_ORIGINS` là danh sách Origin HTTPS canonical được phép, phân tách bằng dấu phẩy, ví dụ `https://wiiicare.example.vn`. Không dùng wildcard, URL có path hoặc Origin HTTP cho production vì API xử lý dữ liệu bệnh án nhạy cảm.
+Ở `NODE_ENV=production`, API yêu cầu `BVS_CORS_ORIGINS` là danh sách Origin HTTPS canonical public được phép, phân tách bằng dấu phẩy, ví dụ `https://wiiicare.example.vn`. Không dùng wildcard, URL có path, Origin HTTP, `localhost`, loopback, private IP hoặc link-local IP cho production vì API xử lý dữ liệu bệnh án nhạy cảm.
 
 Ở `NODE_ENV=production`, API yêu cầu `BVS_PUBLIC_API_BASE_URL` là URL HTTPS public của API, ví dụ `https://api.wiiicare.example.vn/api/v1`. Giá trị này được công bố trong FHIR `CapabilityStatement.implementation.url`, nên không được để mặc định `localhost`, loopback, private IP hoặc link-local IP.
 
