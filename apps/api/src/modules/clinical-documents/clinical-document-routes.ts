@@ -20,6 +20,7 @@ import type {
 } from "@benh-vien-so/domain";
 import { requirePermission } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
+import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
 
 export async function registerClinicalDocumentRoutes(
   app: FastifyInstance,
@@ -139,8 +140,16 @@ export async function registerClinicalDocumentRoutes(
     const document = await documentRepository.findById(params.id);
 
     if (!document) {
-      return reply.status(404).send({
-        error: "CLINICAL_DOCUMENT_NOT_FOUND"
+      return sendFhirOperationOutcome(reply, {
+        statusCode: 404,
+        code: "not-found",
+        diagnostics: `ClinicalDocument/${params.id} không tồn tại để xuất DocumentReference.`,
+        expression: ["DocumentReference.id"],
+        details: {
+          code: "CLINICAL_DOCUMENT_NOT_FOUND",
+          display: "Clinical document not found",
+          text: "Không tìm thấy tài liệu bệnh án cần xuất FHIR."
+        }
       });
     }
 
@@ -181,8 +190,16 @@ export async function registerClinicalDocumentRoutes(
     const document = await documentRepository.findById(params.id);
 
     if (!document) {
-      return reply.status(404).send({
-        error: "CLINICAL_DOCUMENT_NOT_FOUND"
+      return sendFhirOperationOutcome(reply, {
+        statusCode: 404,
+        code: "not-found",
+        diagnostics: `ClinicalDocument/${params.id} không tồn tại để xuất Provenance.`,
+        expression: ["Provenance.target.reference"],
+        details: {
+          code: "CLINICAL_DOCUMENT_NOT_FOUND",
+          display: "Clinical document not found",
+          text: "Không tìm thấy tài liệu bệnh án cần xuất Provenance."
+        }
       });
     }
 
@@ -234,9 +251,16 @@ export async function registerClinicalDocumentRoutes(
       return provenance;
     } catch (error) {
       if (error instanceof DomainError) {
-        return reply.status(422).send({
-          error: "CLINICAL_DOCUMENT_PROVENANCE_ERROR",
-          message: error.message
+        return sendFhirOperationOutcome(reply, {
+          statusCode: 422,
+          code: "business-rule",
+          diagnostics: error.message,
+          expression: ["Provenance.recorded", "Provenance.agent"],
+          details: {
+            code: "CLINICAL_DOCUMENT_PROVENANCE_ERROR",
+            display: "Clinical document provenance error",
+            text: "Không thể xuất Provenance cho tài liệu chưa đủ điều kiện."
+          }
         });
       }
 

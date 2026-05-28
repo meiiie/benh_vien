@@ -19,6 +19,18 @@ Endpoint này dùng cho discovery kỹ thuật của facade FHIR R4 và không y
 curl http://localhost:7310/api/v1/fhir/metadata
 ```
 
+## Lỗi FHIR OperationOutcome
+
+Các endpoint xuất FHIR trọng tâm trả lỗi theo `OperationOutcome` khi lỗi nằm ở lớp FHIR facade, ví dụ không tìm thấy resource, thiếu context chuyển hồ sơ, consent không hợp lệ hoặc không đủ điều kiện xuất `Provenance`.
+
+```bash
+curl http://localhost:7310/api/v1/clinical-documents/clinical-document-missing/fhir \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+Kết quả lỗi có `Content-Type: application/fhir+json`, `resourceType = "OperationOutcome"`, `issue[0].severity = "error"`, `issue[0].code` dùng mã FHIR R4 như `not-found`, `required`, `suppressed`, `business-rule`; còn mã lỗi nội bộ nằm trong `issue[0].details.coding[0].code` để frontend, log và test vẫn đọc được nguyên nhân cụ thể.
+
 Kết quả mong muốn là resource `CapabilityStatement` có `fhirVersion = "4.0.1"`, `rest.mode = "server"`, `format = ["json"]` và danh sách resource đang hỗ trợ như `Patient`, `DocumentReference`, `Provenance`, `Bundle`, `Consent`, `AuditEvent`.
 
 ## Đăng nhập và lấy token

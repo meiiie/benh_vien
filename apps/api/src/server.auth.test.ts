@@ -509,9 +509,27 @@ describe("API auth and RBAC boundary", () => {
       headers: treatmentHeaders(accessToken)
     });
 
-    expect(response.statusCode).toBe(422);
-    expect(response.json()).toMatchObject({
-      error: "CLINICAL_DOCUMENT_PROVENANCE_ERROR"
+    expectOperationOutcome(response, {
+      statusCode: 422,
+      code: "business-rule",
+      detailsCode: "CLINICAL_DOCUMENT_PROVENANCE_ERROR"
+    });
+  });
+
+  it("returns FHIR OperationOutcome when a FHIR DocumentReference target is missing", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/clinical-documents/clinical-document-missing/fhir",
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expectOperationOutcome(response, {
+      statusCode: 404,
+      code: "not-found",
+      detailsCode: "CLINICAL_DOCUMENT_NOT_FOUND"
     });
   });
 
@@ -1630,9 +1648,10 @@ describe("API auth and RBAC boundary", () => {
       }
     });
 
-    expect(bundleResponse.statusCode).toBe(403);
-    expect(bundleResponse.json()).toMatchObject({
-      error: "CONSENT_NOT_VALID_FOR_TRANSFER"
+    expectOperationOutcome(bundleResponse, {
+      statusCode: 403,
+      code: "suppressed",
+      detailsCode: "CONSENT_NOT_VALID_FOR_TRANSFER"
     });
   });
 
@@ -1852,9 +1871,10 @@ describe("API auth and RBAC boundary", () => {
       headers: treatmentHeaders(accessToken)
     });
 
-    expect(response.statusCode).toBe(400);
-    expect(response.json()).toMatchObject({
-      error: "MISSING_BUNDLE_TRANSFER_CONTEXT"
+    expectOperationOutcome(response, {
+      statusCode: 400,
+      code: "required",
+      detailsCode: "MISSING_BUNDLE_TRANSFER_CONTEXT"
     });
   });
 
@@ -1872,9 +1892,10 @@ describe("API auth and RBAC boundary", () => {
       }
     });
 
-    expect(response.statusCode).toBe(403);
-    expect(response.json()).toMatchObject({
-      error: "CONSENT_NOT_VALID_FOR_TRANSFER"
+    expectOperationOutcome(response, {
+      statusCode: 403,
+      code: "suppressed",
+      detailsCode: "CONSENT_NOT_VALID_FOR_TRANSFER"
     });
   });
 });
@@ -1941,6 +1962,39 @@ function auditHeaders(accessToken: string): Record<string, string> {
     authorization: `Bearer ${accessToken}`,
     "x-purpose-of-use": "AUDIT"
   };
+}
+
+function expectOperationOutcome(
+  response: {
+    readonly statusCode: number;
+    readonly headers: Record<string, unknown>;
+    json(): unknown;
+  },
+  expected: {
+    readonly statusCode: number;
+    readonly code: string;
+    readonly detailsCode: string;
+  }
+): void {
+  expect(response.statusCode).toBe(expected.statusCode);
+  expect(String(response.headers["content-type"])).toContain("application/fhir+json");
+  expect(response.json()).toMatchObject({
+    resourceType: "OperationOutcome",
+    issue: [
+      {
+        severity: "error",
+        code: expected.code,
+        details: {
+          coding: [
+            {
+              system: "urn:wiiicare:nexus:operation-outcome",
+              code: expected.detailsCode
+            }
+          ]
+        }
+      }
+    ]
+  });
 }
 
 function restoreEnv(name: string, value: string | undefined): void {

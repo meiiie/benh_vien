@@ -10,6 +10,7 @@ import {
 import type { AuditEventRepository, ProviderDirectoryRepository } from "@benh-vien-so/domain";
 import { requirePermission } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
+import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
 
 export async function registerProviderDirectoryRoutes(
   app: FastifyInstance,
@@ -86,8 +87,16 @@ export async function registerProviderDirectoryRoutes(
             : snapshot.endpoints.find((endpoint) => endpoint.id === params.id);
 
     if (!resource) {
-      return reply.status(404).send({
-        error: "PROVIDER_DIRECTORY_RESOURCE_NOT_FOUND"
+      return sendFhirOperationOutcome(reply, {
+        statusCode: 404,
+        code: "not-found",
+        diagnostics: `${params.resourceType}/${params.id} không tồn tại trong Provider Directory.`,
+        expression: [`${params.resourceType}.id`],
+        details: {
+          code: "PROVIDER_DIRECTORY_RESOURCE_NOT_FOUND",
+          display: "Provider directory resource not found",
+          text: "Không tìm thấy tài nguyên danh bạ cơ sở y tế cần xuất FHIR."
+        }
       });
     }
 

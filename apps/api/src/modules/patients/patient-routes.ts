@@ -33,6 +33,7 @@ import type {
 } from "@benh-vien-so/domain";
 import { requirePermission } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
+import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
 
 export async function registerPatientRoutes(
   app: FastifyInstance,
@@ -133,8 +134,16 @@ export async function registerPatientRoutes(
     const patient = await repository.findById(params.id);
 
     if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
+      return sendFhirOperationOutcome(reply, {
+        statusCode: 404,
+        code: "not-found",
+        diagnostics: `Patient/${params.id} không tồn tại để xuất FHIR Patient.`,
+        expression: ["Patient.id"],
+        details: {
+          code: "PATIENT_NOT_FOUND",
+          display: "Patient not found",
+          text: "Không tìm thấy hồ sơ bệnh nhân cần xuất FHIR."
+        }
       });
     }
 
@@ -159,8 +168,16 @@ export async function registerPatientRoutes(
     const patient = await repository.findById(params.id);
 
     if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
+      return sendFhirOperationOutcome(reply, {
+        statusCode: 404,
+        code: "not-found",
+        diagnostics: `Patient/${params.id} không tồn tại để xuất FHIR Bundle.`,
+        expression: ["Bundle.entry.resource.ofType(Patient).id"],
+        details: {
+          code: "PATIENT_NOT_FOUND",
+          display: "Patient not found",
+          text: "Không tìm thấy hồ sơ bệnh nhân cần đóng gói FHIR."
+        }
       });
     }
 
@@ -197,10 +214,17 @@ export async function registerPatientRoutes(
     const transferContext = readBundleTransferContext(request.headers);
 
     if (!transferContext) {
-      return reply.status(400).send({
-        error: "MISSING_BUNDLE_TRANSFER_CONTEXT",
-        message:
-          "Cần khai báo x-consent-reference và x-recipient-organization-id khi xuất FHIR Bundle hồ sơ bệnh nhân."
+      return sendFhirOperationOutcome(reply, {
+        statusCode: 400,
+        code: "required",
+        diagnostics:
+          "Thiếu x-consent-reference hoặc x-recipient-organization-id khi xuất FHIR Bundle hồ sơ bệnh nhân.",
+        details: {
+          code: "MISSING_BUNDLE_TRANSFER_CONTEXT",
+          display: "Missing transfer context",
+          text:
+            "Cần khai báo consent và đơn vị nhận trước khi xuất Bundle phục vụ liên thông."
+        }
       });
     }
 
@@ -212,10 +236,17 @@ export async function registerPatientRoutes(
         granteeOrganizationId: transferContext.recipientOrganizationId
       })
     ) {
-      return reply.status(403).send({
-        error: "CONSENT_NOT_VALID_FOR_TRANSFER",
-        message:
-          "Consent không tồn tại, không còn hiệu lực hoặc không khớp bệnh nhân/đơn vị nhận."
+      return sendFhirOperationOutcome(reply, {
+        statusCode: 403,
+        code: "suppressed",
+        diagnostics:
+          "Consent không tồn tại, không còn hiệu lực hoặc không khớp bệnh nhân/đơn vị nhận.",
+        expression: ["Bundle.meta.security"],
+        details: {
+          code: "CONSENT_NOT_VALID_FOR_TRANSFER",
+          display: "Consent not valid for transfer",
+          text: "Không được xuất Bundle vì consent chia sẻ hồ sơ không hợp lệ."
+        }
       });
     }
 
@@ -315,18 +346,33 @@ export async function registerPatientRoutes(
     const patient = await repository.findById(params.id);
 
     if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
+      return sendFhirOperationOutcome(reply, {
+        statusCode: 404,
+        code: "not-found",
+        diagnostics: `Patient/${params.id} không tồn tại để xuất FHIR document Bundle.`,
+        expression: ["Composition.subject.reference"],
+        details: {
+          code: "PATIENT_NOT_FOUND",
+          display: "Patient not found",
+          text: "Không tìm thấy hồ sơ bệnh nhân cần đóng gói document Bundle."
+        }
       });
     }
 
     const transferContext = readBundleTransferContext(request.headers);
 
     if (!transferContext) {
-      return reply.status(400).send({
-        error: "MISSING_BUNDLE_TRANSFER_CONTEXT",
-        message:
-          "Cần khai báo x-consent-reference và x-recipient-organization-id khi xuất FHIR document Bundle hồ sơ bệnh nhân."
+      return sendFhirOperationOutcome(reply, {
+        statusCode: 400,
+        code: "required",
+        diagnostics:
+          "Thiếu x-consent-reference hoặc x-recipient-organization-id khi xuất FHIR document Bundle hồ sơ bệnh nhân.",
+        details: {
+          code: "MISSING_BUNDLE_TRANSFER_CONTEXT",
+          display: "Missing transfer context",
+          text:
+            "Cần khai báo consent và đơn vị nhận trước khi xuất document Bundle phục vụ liên thông."
+        }
       });
     }
 
@@ -338,10 +384,17 @@ export async function registerPatientRoutes(
         granteeOrganizationId: transferContext.recipientOrganizationId
       })
     ) {
-      return reply.status(403).send({
-        error: "CONSENT_NOT_VALID_FOR_TRANSFER",
-        message:
-          "Consent không tồn tại, không còn hiệu lực hoặc không khớp bệnh nhân/đơn vị nhận."
+      return sendFhirOperationOutcome(reply, {
+        statusCode: 403,
+        code: "suppressed",
+        diagnostics:
+          "Consent không tồn tại, không còn hiệu lực hoặc không khớp bệnh nhân/đơn vị nhận.",
+        expression: ["Bundle.meta.security"],
+        details: {
+          code: "CONSENT_NOT_VALID_FOR_TRANSFER",
+          display: "Consent not valid for transfer",
+          text: "Không được xuất document Bundle vì consent chia sẻ hồ sơ không hợp lệ."
+        }
       });
     }
 

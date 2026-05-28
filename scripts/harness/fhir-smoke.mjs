@@ -33,6 +33,7 @@ const {
   ServiceRequest,
   WorkflowTask,
   buildAuditIntegrityReport,
+  buildFhirOperationOutcome,
   buildWiiiCareCapabilityStatement,
   canAccess,
   mapAuditEventToFhir,
@@ -180,6 +181,20 @@ const fhirCapabilityStatement = buildWiiiCareCapabilityStatement({
   generatedAt: new Date("2026-05-27T00:00:00.000Z"),
   implementationUrl: "http://localhost:7310/api/v1"
 });
+const fhirOperationOutcome = buildFhirOperationOutcome({
+  issues: [
+    {
+      code: "required",
+      diagnostics: "Harness validates FHIR OperationOutcome for facade errors.",
+      details: {
+        system: "urn:wiiicare:nexus:operation-outcome",
+        code: "MISSING_BUNDLE_TRANSFER_CONTEXT",
+        display: "Missing transfer context",
+        text: "Missing headers for patient record Bundle export."
+      }
+    }
+  ]
+});
 
 if (fhirProviderDirectoryBundle.entry.length !== 6) {
   throw new Error(
@@ -199,6 +214,14 @@ if (fhirCapabilityStatement.fhirVersion !== "4.0.1") {
 
 if (!fhirCapabilityStatement.rest[0]?.resource.some((resource) => resource.type === "AuditEvent")) {
   throw new Error("Expected CapabilityStatement to declare AuditEvent support.");
+}
+
+if (fhirOperationOutcome.resourceType !== "OperationOutcome") {
+  throw new Error("Expected OperationOutcome builder to emit resourceType OperationOutcome.");
+}
+
+if (fhirOperationOutcome.issue[0]?.code !== "required") {
+  throw new Error("Expected OperationOutcome issue code to be required.");
 }
 
 const fhirPatient = mapPatientToFhir(patient);
@@ -1574,6 +1597,8 @@ console.log(
       patientResourceType: fhirPatient.resourceType,
       capabilityStatementResourceType: fhirCapabilityStatement.resourceType,
       capabilityStatementFhirVersion: fhirCapabilityStatement.fhirVersion,
+      operationOutcomeResourceType: fhirOperationOutcome.resourceType,
+      operationOutcomeIssueCode: fhirOperationOutcome.issue[0]?.code,
       providerDirectoryEntryCount: fhirProviderDirectoryBundle.entry.length,
       documentId: fhirDocumentReference.id,
       documentResourceType: fhirDocumentReference.resourceType,

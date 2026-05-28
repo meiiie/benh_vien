@@ -16,6 +16,7 @@ import type {
 } from "@benh-vien-so/domain";
 import { requirePermission } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
+import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
 
 export async function registerConsentRoutes(
   app: FastifyInstance,
@@ -192,8 +193,16 @@ export async function registerConsentRoutes(
     const consent = await consentRepository.findById(params.consentId);
 
     if (!consent) {
-      return reply.status(404).send({
-        error: "CONSENT_NOT_FOUND"
+      return sendFhirOperationOutcome(reply, {
+        statusCode: 404,
+        code: "not-found",
+        diagnostics: `Consent/${params.consentId} không tồn tại để xuất FHIR Consent.`,
+        expression: ["Consent.id"],
+        details: {
+          code: "CONSENT_NOT_FOUND",
+          display: "Consent not found",
+          text: "Không tìm thấy consent cần xuất FHIR."
+        }
       });
     }
 
