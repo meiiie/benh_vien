@@ -716,6 +716,9 @@ type ImagingStudy = {
 };
 
 type AuditAction =
+  | "auth.login.success"
+  | "auth.login.failure"
+  | "access.denied"
   | "patient.list"
   | "patient.create"
   | "patient.read"
@@ -1583,6 +1586,7 @@ export function App() {
   const [imagingStudies, setImagingStudies] = useState<readonly ImagingStudy[]>([]);
   const [selectedImagingStudyId, setSelectedImagingStudyId] = useState<string>();
   const [auditEvents, setAuditEvents] = useState<readonly AuditEvent[]>([]);
+  const [globalAuditEvents, setGlobalAuditEvents] = useState<readonly AuditEvent[]>([]);
   const [auditIntegrityReport, setAuditIntegrityReport] =
     useState<AuditIntegrityReport>();
   const [auditFhirBundlePreview, setAuditFhirBundlePreview] = useState<unknown>();
@@ -1659,6 +1663,7 @@ export function App() {
   const [isLoadingDiagnosticReports, setIsLoadingDiagnosticReports] = useState(false);
   const [isLoadingImagingStudies, setIsLoadingImagingStudies] = useState(false);
   const [isLoadingAuditEvents, setIsLoadingAuditEvents] = useState(false);
+  const [isLoadingGlobalAuditEvents, setIsLoadingGlobalAuditEvents] = useState(false);
   const [isVerifyingAuditIntegrity, setIsVerifyingAuditIntegrity] = useState(false);
   const [isExportingAuditFhir, setIsExportingAuditFhir] = useState(false);
   const [isLoadingConsents, setIsLoadingConsents] = useState(false);
@@ -1774,6 +1779,15 @@ export function App() {
     void loadCapabilityStatement();
     void loadProviderDirectory();
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !canReadAudit) {
+      setGlobalAuditEvents([]);
+      return;
+    }
+
+    void loadGlobalAuditEvents({ silent: true });
+  }, [isAuthenticated, authSession?.actor.role]);
 
   useEffect(() => {
     if (!isAuthenticated || !selectedPatientId) {
@@ -2572,6 +2586,46 @@ export function App() {
     }
   }
 
+  async function loadGlobalAuditEvents(options: { readonly silent?: boolean } = {}) {
+    if (!canReadAudit) {
+      setGlobalAuditEvents([]);
+
+      if (!options.silent) {
+        setStatusMessage("Nhật ký bảo mật toàn hệ thống chỉ mở cho kiểm toán viên hoặc quản trị viên.");
+      }
+
+      return;
+    }
+
+    setIsLoadingGlobalAuditEvents(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/audit-events?limit=100`, {
+        headers: buildHeaders("AUDIT")
+      });
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      const data = (await response.json()) as AuditEventsResponse;
+      setGlobalAuditEvents(data.items);
+
+      if (!options.silent) {
+        setStatusMessage(`Đã tải ${data.items.length} bản ghi kiểm toán toàn hệ thống.`);
+      }
+    } catch (error) {
+      setGlobalAuditEvents([]);
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể tải nhật ký bảo mật toàn hệ thống: ${error.message}`
+          : "Không thể tải nhật ký bảo mật toàn hệ thống."
+      );
+    } finally {
+      setIsLoadingGlobalAuditEvents(false);
+    }
+  }
+
   async function verifyAuditIntegrity(
     patientId: string,
     options: { readonly silent?: boolean } = {}
@@ -3232,6 +3286,7 @@ export function App() {
     setDiagnosticReports([]);
     setImagingStudies([]);
     setAuditEvents([]);
+    setGlobalAuditEvents([]);
     setAuditIntegrityReport(undefined);
     setConsents([]);
     setProviderDirectory(undefined);
@@ -4661,6 +4716,7 @@ export function App() {
         />
 
         <section className="workspace">
+          {renderGlobalAuditPanel()}
           {renderAuditPanel()}
           <article className="panel">
             <p className="eyebrow">Policy note</p>
@@ -8252,6 +8308,100 @@ export function App() {
     );
   }
 
+  function renderGlobalAuditPanel(): ReactNode {
+    const loginEventCount = globalAuditEvents.filter((event) =>
+      event.action.startsWith("auth.login.")
+    ).length;
+    const deniedEventCount = globalAuditEvents.filter(
+      (event) => event.action === "access.denied"
+    ).length;
+    const latestEvent = globalAuditEvents[0];
+
+    return (
+      <article className="panel audit-panel global-audit-panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Vận hành bảo mật</p>
+            <h2>Nhật ký bảo mật toàn hệ thống</h2>
+            <p className="panel-note">
+              Theo dõi đăng nhập, truy cập bị chặn và các bản ghi kiểm toán không gắn trực tiếp với
+              một bệnh nhân cụ thể.
+            </p>
+          </div>
+          <div className="panel-actions">
+            <button
+              className="ghost-button"
+              type="button"
+              disabled={isLoadingGlobalAuditEvents || !canReadAudit}
+              onClick={() => void loadGlobalAuditEvents()}
+            >
+              {isLoadingGlobalAuditEvents
+                ? "Đang tải..."
+                : canReadAudit
+                  ? "Tải nhật ký toàn hệ thống"
+                  : "Cần quyền kiểm toán"}
+            </button>
+          </div>
+        </div>
+
+        <div className="security-audit-summary">
+          <div>
+            <span>Tổng bản ghi</span>
+            <strong>{globalAuditEvents.length}</strong>
+          </div>
+          <div>
+            <span>Đăng nhập</span>
+            <strong>{loginEventCount}</strong>
+          </div>
+          <div>
+            <span>Bị chặn</span>
+            <strong>{deniedEventCount}</strong>
+          </div>
+          <div>
+            <span>Mới nhất</span>
+            <strong>{latestEvent ? formatDateTime(latestEvent.occurredAt) : "Chưa có"}</strong>
+          </div>
+        </div>
+
+        <div className="audit-list">
+          {globalAuditEvents.slice(0, 12).map((event) => (
+            <div className="audit-item audit-item--global" key={event.id ?? `${event.occurredAt}:${event.action}`}>
+              <div>
+                <span>{formatDateTime(event.occurredAt)}</span>
+                <strong>{formatAuditAction(event.action)}</strong>
+              </div>
+              <div>
+                <span>Tác nhân</span>
+                <strong>{event.actorId}</strong>
+              </div>
+              <div>
+                <span>Tài nguyên</span>
+                <strong>
+                  {formatAuditResourceType(event.resourceType)} · {event.resourceId}
+                </strong>
+              </div>
+              <div>
+                <span>Phạm vi</span>
+                <strong>{event.patientId ? `Bệnh nhân ${event.patientId}` : "Toàn hệ thống"}</strong>
+              </div>
+              <div>
+                <span>Chi tiết</span>
+                <strong>{formatAuditMetadataSummary(event)}</strong>
+              </div>
+            </div>
+          ))}
+          {globalAuditEvents.length === 0 ? (
+            <p className="empty-state">
+              {canReadAudit
+                ? "Chưa có bản ghi kiểm toán toàn hệ thống. Hãy đăng nhập lại, thử truy cập bị chặn hoặc tải nhật ký theo bệnh nhân để phát sinh log."
+                : "Nhật ký bảo mật toàn hệ thống chỉ hiển thị với kiểm toán viên hoặc quản trị viên."}
+            </p>
+          ) : null}
+        </div>
+      </article>
+    );
+  }
+
   function renderAuditPanel(): ReactNode {
     return (
       <>
@@ -8789,6 +8939,9 @@ function formatDocumentStatus(status: ClinicalDocumentStatus): string {
 
 function formatAuditAction(action: AuditAction): string {
   const labels: Record<AuditAction, string> = {
+    "auth.login.success": "Đăng nhập thành công",
+    "auth.login.failure": "Đăng nhập thất bại",
+    "access.denied": "Truy cập bị chặn",
     "patient.list": "Tải danh sách bệnh nhân",
     "patient.create": "Tạo hồ sơ bệnh nhân",
     "patient.read": "Xem hồ sơ bệnh nhân",
@@ -8867,6 +9020,53 @@ function formatAuditAction(action: AuditAction): string {
   };
 
   return labels[action];
+}
+
+function formatAuditMetadataSummary(event: AuditEvent): string {
+  const reason = event.metadata.reason;
+  const denialCode = event.metadata.denialCode;
+  const deniedPermission = event.metadata.deniedPermission;
+  const actorRole = event.metadata.actorRole ?? event.metadata.deniedActorRole;
+
+  if (typeof reason === "string") {
+    return [
+      formatAuditReason(reason),
+      typeof event.metadata.requestedRole === "string"
+        ? `vai trò yêu cầu: ${event.metadata.requestedRole}`
+        : undefined
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }
+
+  if (typeof denialCode === "string") {
+    return [
+      formatAuditReason(denialCode),
+      typeof deniedPermission === "string" ? deniedPermission : undefined
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }
+
+  if (typeof actorRole === "string") {
+    return `Vai trò: ${actorRole}`;
+  }
+
+  return event.purposeOfUse ?? "Đã ghi nhận";
+}
+
+function formatAuditReason(reason: string): string {
+  const labels: Record<string, string> = {
+    AUTH_RATE_LIMITED: "Vượt giới hạn đăng nhập",
+    DEMO_AUTH_DISABLED: "Đăng nhập demo bị tắt",
+    FORBIDDEN: "Không đủ quyền",
+    INVALID_CREDENTIALS: "Sai thông tin đăng nhập",
+    PATIENT_ACCESS_DENIED: "Ngoài phạm vi hồ sơ",
+    ROLE_MISMATCH: "Sai vai trò đăng nhập",
+    VALIDATION_ERROR: "Dữ liệu không hợp lệ"
+  };
+
+  return labels[reason] ?? reason;
 }
 
 function formatAuditIntegrityStatus(status: AuditIntegrityStatus): string {

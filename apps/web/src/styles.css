@@ -155,6 +155,14 @@ h2 {
   gap: 8px;
 }
 
+.panel-note {
+  max-width: 760px;
+  margin: 6px 0 0;
+  color: var(--slate);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
 .ghost-button,
 .primary-button {
   min-height: 40px;
@@ -1014,6 +1022,37 @@ select:focus {
   font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
+.security-audit-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.security-audit-summary > div {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--primary);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--surface-muted);
+}
+
+.security-audit-summary span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.security-audit-summary strong {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--harbor-ink);
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
 .audit-item {
   display: grid;
   grid-template-columns: minmax(180px, 0.8fr) minmax(140px, 0.6fr) minmax(260px, 1fr) minmax(120px, 0.5fr) minmax(120px, 0.5fr);
@@ -1022,6 +1061,10 @@ select:focus {
   border-radius: 8px;
   padding: 14px;
   background: white;
+}
+
+.audit-item--global {
+  grid-template-columns: minmax(180px, 0.8fr) minmax(130px, 0.55fr) minmax(230px, 1fr) minmax(150px, 0.65fr) minmax(200px, 0.9fr);
 }
 
 .audit-item span {
@@ -1286,6 +1329,7 @@ pre {
   .document-meta,
   .document-form,
   .integrity-card,
+  .security-audit-summary,
   .audit-item,
   .reference-list {
     grid-template-columns: 1fr;
