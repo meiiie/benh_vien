@@ -204,9 +204,11 @@ type RecordTransferStatus =
   | "in-progress"
   | "completed"
   | "cancelled"
-  | "failed";
+  | "failed"
+  | "dead-lettered";
 type RecordTransferPriority = "routine" | "urgent" | "asap" | "stat";
 type RecordTransferBundleType = "collection" | "document";
+type RecordTransferDeliveryAttemptStatus = "queued" | "succeeded" | "failed";
 type ProviderOrganizationType =
   | "hospital"
   | "department"
@@ -731,6 +733,9 @@ type AuditAction =
   | "record-transfer.create"
   | "record-transfer.read"
   | "record-transfer.send"
+  | "record-transfer.fail"
+  | "record-transfer.retry"
+  | "record-transfer.dead-letter"
   | "record-transfer.receive"
   | "record-transfer.fhir-export"
   | "encounter.list"
@@ -883,7 +888,28 @@ type RecordTransfer = {
   readonly failureReason?: string;
   readonly nextRetryAt?: string;
   readonly retryCount: number;
+  readonly deadLetteredAt?: string;
   readonly note?: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
+type RecordTransferDeliveryAttempt = {
+  readonly id: string;
+  readonly recordTransferId: string;
+  readonly patientId: string;
+  readonly targetEndpointId: string;
+  readonly targetEndpointAddress: string;
+  readonly bundleId: string;
+  readonly bundleType: RecordTransferBundleType;
+  readonly idempotencyKey: string;
+  readonly attemptNumber: number;
+  readonly status: RecordTransferDeliveryAttemptStatus;
+  readonly queuedAt: string;
+  readonly completedAt?: string;
+  readonly httpStatus?: number;
+  readonly responseBodyPreview?: string;
+  readonly errorMessage?: string;
   readonly createdAt: string;
   readonly updatedAt: string;
 };
@@ -956,6 +982,10 @@ type ConsentsResponse = {
 
 type RecordTransfersResponse = {
   readonly items: readonly RecordTransfer[];
+};
+
+type RecordTransferDeliveryAttemptsResponse = {
+  readonly items: readonly RecordTransferDeliveryAttempt[];
 };
 
 type NewPatientForm = {
@@ -1597,6 +1627,8 @@ export function App() {
   const [consents, setConsents] = useState<readonly Consent[]>([]);
   const [recordTransfers, setRecordTransfers] = useState<readonly RecordTransfer[]>([]);
   const [selectedRecordTransferId, setSelectedRecordTransferId] = useState<string>();
+  const [recordTransferDeliveryAttempts, setRecordTransferDeliveryAttempts] =
+    useState<readonly RecordTransferDeliveryAttempt[]>([]);
   const [providerDirectory, setProviderDirectory] = useState<ProviderDirectory>();
   const [patientFhirPreview, setPatientFhirPreview] = useState<unknown>();
   const [patientFhirBundlePreview, setPatientFhirBundlePreview] = useState<unknown>();
@@ -1672,6 +1704,8 @@ export function App() {
   const [isExportingAuditFhir, setIsExportingAuditFhir] = useState(false);
   const [isLoadingConsents, setIsLoadingConsents] = useState(false);
   const [isLoadingRecordTransfers, setIsLoadingRecordTransfers] = useState(false);
+  const [isLoadingRecordTransferDeliveryAttempts, setIsLoadingRecordTransferDeliveryAttempts] =
+    useState(false);
   const [isLoadingProviderDirectory, setIsLoadingProviderDirectory] = useState(false);
   const [isSubmittingPatient, setIsSubmittingPatient] = useState(false);
   const [isSubmittingEncounter, setIsSubmittingEncounter] = useState(false);
@@ -1832,6 +1866,7 @@ export function App() {
       setAuditFhirBundlePreview(undefined);
       setConsents([]);
       setRecordTransfers([]);
+      setRecordTransferDeliveryAttempts([]);
       setSelectedEncounterId(undefined);
       setSelectedDocumentId(undefined);
       setSelectedAllergyIntoleranceId(undefined);
@@ -2003,10 +2038,12 @@ export function App() {
   useEffect(() => {
     if (!selectedRecordTransferId) {
       setRecordTransferFhirTaskPreview(undefined);
+      setRecordTransferDeliveryAttempts([]);
       return;
     }
 
     void loadRecordTransferFhirTaskPreview(selectedRecordTransferId);
+    void loadRecordTransferDeliveryAttempts(selectedRecordTransferId);
   }, [selectedRecordTransferId]);
 
   function buildHeaders(
@@ -2798,6 +2835,7 @@ export function App() {
     } catch (error) {
       setRecordTransfers([]);
       setSelectedRecordTransferId(undefined);
+      setRecordTransferDeliveryAttempts([]);
       setStatusMessage(
         error instanceof Error
           ? `Không thể tải gói chuyển hồ sơ: ${error.message}`
@@ -2826,6 +2864,35 @@ export function App() {
             ? `Không thể xuất FHIR Task chuyển hồ sơ: ${error.message}`
             : "Không thể xuất FHIR Task chuyển hồ sơ."
       });
+    }
+  }
+
+  async function loadRecordTransferDeliveryAttempts(recordTransferId: string) {
+    setIsLoadingRecordTransferDeliveryAttempts(true);
+
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/record-transfers/${recordTransferId}/delivery-attempts`,
+        {
+          headers: buildHeaders("TREATMENT")
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      const data = (await response.json()) as RecordTransferDeliveryAttemptsResponse;
+      setRecordTransferDeliveryAttempts(data.items);
+    } catch (error) {
+      setRecordTransferDeliveryAttempts([]);
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể tải lịch sử gửi hồ sơ: ${error.message}`
+          : "Không thể tải lịch sử gửi hồ sơ."
+      );
+    } finally {
+      setIsLoadingRecordTransferDeliveryAttempts(false);
     }
   }
 
@@ -3293,6 +3360,8 @@ export function App() {
     setGlobalAuditEvents([]);
     setAuditIntegrityReport(undefined);
     setConsents([]);
+    setRecordTransfers([]);
+    setRecordTransferDeliveryAttempts([]);
     setProviderDirectory(undefined);
     setPatientFhirPreview(undefined);
     setPatientFhirBundlePreview(undefined);
@@ -3312,6 +3381,7 @@ export function App() {
     setProcedureFhirPreview(undefined);
     setDiagnosticReportFhirPreview(undefined);
     setImagingStudyFhirPreview(undefined);
+    setRecordTransferFhirTaskPreview(undefined);
     setSelectedPatientId(undefined);
     setSelectedEncounterId(undefined);
     setSelectedDocumentId(undefined);
@@ -3326,6 +3396,7 @@ export function App() {
     setSelectedProcedureId(undefined);
     setSelectedDiagnosticReportId(undefined);
     setSelectedImagingStudyId(undefined);
+    setSelectedRecordTransferId(undefined);
     setTransitioningRecordTransferId(undefined);
   }
 
@@ -3458,6 +3529,7 @@ export function App() {
       const updatedTransfer = (await response.json()) as RecordTransfer;
       await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
       await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
+      await loadRecordTransferDeliveryAttempts(updatedTransfer.id);
       setStatusMessage(`Đã gửi gói chuyển hồ sơ ${updatedTransfer.id}.`);
     } catch (error) {
       setStatusMessage(
@@ -3497,6 +3569,7 @@ export function App() {
       const updatedTransfer = (await response.json()) as RecordTransfer;
       await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
       await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
+      await loadRecordTransferDeliveryAttempts(updatedTransfer.id);
       setStatusMessage(`Đã xác nhận bệnh viện nhận tiếp nhận gói ${updatedTransfer.id}.`);
     } catch (error) {
       setStatusMessage(
@@ -3537,6 +3610,7 @@ export function App() {
       const updatedTransfer = (await response.json()) as RecordTransfer;
       await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
       await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
+      await loadRecordTransferDeliveryAttempts(updatedTransfer.id);
       setStatusMessage(`Đã ghi nhận lỗi gửi gói chuyển hồ sơ ${updatedTransfer.id}.`);
     } catch (error) {
       setStatusMessage(
@@ -3576,6 +3650,7 @@ export function App() {
       const updatedTransfer = (await response.json()) as RecordTransfer;
       await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
       await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
+      await loadRecordTransferDeliveryAttempts(updatedTransfer.id);
       setStatusMessage(`Đã đưa gói chuyển hồ sơ ${updatedTransfer.id} về hàng đợi gửi lại.`);
     } catch (error) {
       setStatusMessage(
@@ -5075,6 +5150,7 @@ export function App() {
                   <Info label="Lỗi gửi" value={selectedRecordTransfer.failureReason ?? "Chưa ghi nhận"} />
                   <Info label="Thử lại" value={`${selectedRecordTransfer.retryCount} lần`} />
                   <Info label="Hẹn gửi lại" value={selectedRecordTransfer.nextRetryAt ? formatDateTime(selectedRecordTransfer.nextRetryAt) : "Chưa hẹn"} />
+                  <Info label="Hàng lỗi cuối" value={selectedRecordTransfer.deadLetteredAt ? formatDateTime(selectedRecordTransfer.deadLetteredAt) : "Chưa đưa vào"} />
                 </div>
                 <div className="panel-actions">
                   <button
@@ -5082,7 +5158,7 @@ export function App() {
                     type="button"
                     disabled={
                       Boolean(selectedRecordTransfer.sentAt) ||
-                      ["completed", "cancelled", "failed"].includes(selectedRecordTransfer.status) ||
+                      ["completed", "cancelled", "failed", "dead-lettered"].includes(selectedRecordTransfer.status) ||
                       transitioningRecordTransferId === selectedRecordTransfer.id
                     }
                     onClick={() => void handleSendRecordTransfer(selectedRecordTransfer)}
@@ -5112,6 +5188,7 @@ export function App() {
                       selectedRecordTransfer.status === "completed" ||
                       selectedRecordTransfer.status === "cancelled" ||
                       selectedRecordTransfer.status === "failed" ||
+                      selectedRecordTransfer.status === "dead-lettered" ||
                       transitioningRecordTransferId === selectedRecordTransfer.id
                     }
                     onClick={() => void handleFailRecordTransfer(selectedRecordTransfer)}
@@ -5138,6 +5215,13 @@ export function App() {
                   RecordTransfer là lớp điều phối nội bộ: sản phẩm dùng nó để theo dõi gửi/nhận,
                   còn khi liên thông chuẩn sẽ xuất thành FHIR Task trỏ tới Bundle và consent tương ứng.
                 </p>
+                {selectedRecordTransfer.status === "dead-lettered" ? (
+                  <p className="transfer-alert">
+                    Gói này đã vượt quá số lần thử gửi tự động. Cần kiểm tra endpoint FHIR,
+                    consent, mạng hoặc cấu hình bên nhận trước khi tạo luồng xử lý tiếp theo.
+                  </p>
+                ) : null}
+                {renderRecordTransferDeliveryAttemptList()}
               </>
             ) : (
               <p className="empty-state">Chọn một gói chuyển để xem siêu dữ liệu và xuất FHIR Task.</p>
@@ -5247,6 +5331,76 @@ export function App() {
           </button>
         </form>
       </article>
+    );
+  }
+
+  function renderRecordTransferDeliveryAttemptList(): ReactNode {
+    return (
+      <div className="delivery-attempts">
+        <div className="subsection-heading">
+          <div>
+            <strong>Lịch sử gửi qua endpoint</strong>
+            <span>
+              Outbox vận hành cho biết hệ thống đã xếp hàng, gửi thành công hay lỗi từng lần.
+            </span>
+          </div>
+          <span className="pill cyan">
+            {isLoadingRecordTransferDeliveryAttempts
+              ? "đang tải"
+              : `${recordTransferDeliveryAttempts.length} lần`}
+          </span>
+        </div>
+
+        {recordTransferDeliveryAttempts.map((attempt) => (
+          <div
+            className={`delivery-attempt delivery-attempt--${attempt.status}`}
+            key={attempt.id}
+          >
+            <div>
+              <span>Lần gửi</span>
+              <strong>#{attempt.attemptNumber}</strong>
+            </div>
+            <div>
+              <span>Trạng thái</span>
+              <strong>{formatRecordTransferDeliveryAttemptStatus(attempt.status)}</strong>
+            </div>
+            <div>
+              <span>HTTP</span>
+              <strong>{attempt.httpStatus ? `HTTP ${attempt.httpStatus}` : "Chưa có"}</strong>
+            </div>
+            <div>
+              <span>Xếp hàng</span>
+              <strong>{formatDateTime(attempt.queuedAt)}</strong>
+            </div>
+            <div>
+              <span>Hoàn tất</span>
+              <strong>{attempt.completedAt ? formatDateTime(attempt.completedAt) : "Đang chờ"}</strong>
+            </div>
+            <div className="delivery-attempt-wide">
+              <span>Endpoint đích</span>
+              <strong>{attempt.targetEndpointAddress}</strong>
+            </div>
+            <div className="delivery-attempt-wide">
+              <span>Idempotency key</span>
+              <strong className="hash-text">{attempt.idempotencyKey}</strong>
+            </div>
+            {attempt.errorMessage || attempt.responseBodyPreview ? (
+              <div className="delivery-attempt-wide">
+                <span>{attempt.errorMessage ? "Lỗi" : "Phản hồi"}</span>
+                <strong>{attempt.errorMessage ?? attempt.responseBodyPreview}</strong>
+              </div>
+            ) : null}
+          </div>
+        ))}
+
+        {!isLoadingRecordTransferDeliveryAttempts &&
+        recordTransferDeliveryAttempts.length === 0 ? (
+          <p className="empty-state">
+            Chưa có lần gửi nào. Khi bấm gửi, API sẽ tạo delivery attempt kèm endpoint,
+            Bundle và idempotency key để worker xử lý.
+          </p>
+        ) : null}
+      </div>
     );
   }
 
@@ -9068,6 +9222,9 @@ function formatAuditAction(action: AuditAction): string {
     "record-transfer.create": "Tạo gói chuyển hồ sơ",
     "record-transfer.read": "Xem gói chuyển hồ sơ",
     "record-transfer.send": "Gửi gói chuyển hồ sơ",
+    "record-transfer.fail": "Ghi nhận lỗi chuyển hồ sơ",
+    "record-transfer.retry": "Thử gửi lại gói chuyển hồ sơ",
+    "record-transfer.dead-letter": "Đưa gói chuyển hồ sơ vào hàng lỗi cuối",
     "record-transfer.receive": "Xác nhận nhận gói chuyển hồ sơ",
     "record-transfer.fhir-export": "Xuất FHIR Task chuyển hồ sơ",
     "encounter.list": "Tải danh sách lượt khám",
@@ -9256,11 +9413,24 @@ function formatRecordTransferStatus(status: RecordTransferStatus): string {
   const labels: Record<RecordTransferStatus, string> = {
     cancelled: "Đã hủy",
     completed: "Đã hoàn tất",
+    "dead-lettered": "Hàng lỗi cuối",
     draft: "Bản nháp",
     failed: "Lỗi chuyển",
     "in-progress": "Đang xử lý",
     ready: "Sẵn sàng gửi",
     requested: "Đã yêu cầu"
+  };
+
+  return labels[status];
+}
+
+function formatRecordTransferDeliveryAttemptStatus(
+  status: RecordTransferDeliveryAttemptStatus
+): string {
+  const labels: Record<RecordTransferDeliveryAttemptStatus, string> = {
+    failed: "Gửi lỗi",
+    queued: "Đang chờ gửi",
+    succeeded: "Gửi thành công"
   };
 
   return labels[status];
