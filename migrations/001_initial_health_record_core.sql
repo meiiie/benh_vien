@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS schema_migrations (
   version text PRIMARY KEY,
+  checksum_sha256 text,
   applied_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -63,4 +64,3 @@ CREATE INDEX IF NOT EXISTS idx_audit_events_patient_time
 
 CREATE INDEX IF NOT EXISTS idx_audit_events_resource
   ON audit_events (resource_type, resource_id);
-

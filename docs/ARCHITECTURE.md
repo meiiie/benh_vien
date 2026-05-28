@@ -120,7 +120,7 @@ Phiên bản hiện tại tạo các bảng tối thiểu:
 - `record_transfers`: gói chuyển hồ sơ liên viện, gồm trạng thái vận hành, FHIR Bundle đích, cơ sở gửi/nhận, consent, lý do chuyển và người tạo yêu cầu.
 - `provider_directory_resources`: danh bạ cơ sở y tế/khoa phòng, nhân sự, vai trò nhân sự và endpoint liên thông; lưu snapshot JSONB để prototype có thể đồng bộ nhanh nhiều loại FHIR resource.
 - `audit_events`: nhật ký thao tác theo thời gian, tài nguyên, bệnh nhân, mục đích sử dụng và chuỗi băm toàn vẹn (`hash_algorithm`, `previous_hash`, `payload_hash`, `integrity_hash`); xuất sang FHIR `AuditEvent` Bundle khi kiểm toán viên cần gói log chuẩn hóa.
-- `schema_migrations`: quản lý migration đã áp dụng.
+- `schema_migrations`: quản lý migration đã áp dụng và checksum SHA-256 để phát hiện file migration đã chạy bị sửa.
 
 ## Luồng mở rộng dự kiến
 
