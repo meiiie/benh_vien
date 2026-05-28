@@ -15,9 +15,13 @@ import type {
   AllergyIntoleranceSnapshot,
   AuditEventRepository,
   EncounterRepository,
-  PatientRepository
+  PatientRepository,
+  ProviderDirectoryRepository
 } from "@benh-vien-so/domain";
-import { requirePermission } from "../access-control/access-context.js";
+import {
+  requirePatientRecordAccessByPatientId,
+  requirePermission
+} from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 
 export async function registerAllergyIntoleranceRoutes(
@@ -25,6 +29,7 @@ export async function registerAllergyIntoleranceRoutes(
   patientRepository: PatientRepository,
   encounterRepository: EncounterRepository,
   allergyIntoleranceRepository: AllergyIntoleranceRepository,
+  providerDirectoryRepository: ProviderDirectoryRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
   app.get("/patients/:patientId/allergy-intolerances", async (request, reply) => {
@@ -35,10 +40,17 @@ export async function registerAllergyIntoleranceRoutes(
     }
 
     const params = PatientAllergyIntolerancesParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({ error: "PATIENT_NOT_FOUND" });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const allergyIntolerances = await allergyIntoleranceRepository.findByPatientId(
@@ -67,10 +79,17 @@ export async function registerAllergyIntoleranceRoutes(
     }
 
     const params = PatientAllergyIntolerancesParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({ error: "PATIENT_NOT_FOUND" });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const parsed = CreateAllergyIntoleranceRequestSchema.safeParse(request.body);
@@ -136,6 +155,19 @@ export async function registerAllergyIntoleranceRoutes(
       return reply.status(404).send({ error: "ALLERGY_INTOLERANCE_NOT_FOUND" });
     }
 
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        allergyIntolerance.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
+    }
+
     await recordAuditEvent(auditRepository, request, {
       action: "allergy-intolerance.read",
       resourceType: "AllergyIntolerance",
@@ -158,6 +190,19 @@ export async function registerAllergyIntoleranceRoutes(
 
     if (!allergyIntolerance) {
       return reply.status(404).send({ error: "ALLERGY_INTOLERANCE_NOT_FOUND" });
+    }
+
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        allergyIntolerance.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     await recordAuditEvent(auditRepository, request, {

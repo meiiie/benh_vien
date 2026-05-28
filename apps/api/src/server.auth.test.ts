@@ -767,8 +767,22 @@ describe("API auth and RBAC boundary", () => {
     });
 
     for (const [url, requestId] of [
+      [`/api/v1/patients/${outsidePatientId}/encounters`, "encounter-list-abac-denied-001"],
+      [
+        `/api/v1/patients/${outsidePatientId}/allergy-intolerances`,
+        "allergy-list-abac-denied-001"
+      ],
+      [`/api/v1/patients/${outsidePatientId}/conditions`, "condition-list-abac-denied-001"],
       [`/api/v1/patients/${outsidePatientId}/documents`, "document-list-abac-denied-001"],
       [`/api/v1/patients/${outsidePatientId}/observations`, "observation-list-abac-denied-001"],
+      [
+        `/api/v1/patients/${outsidePatientId}/service-requests`,
+        "service-request-list-abac-denied-001"
+      ],
+      [
+        `/api/v1/patients/${outsidePatientId}/workflow-tasks`,
+        "workflow-task-list-abac-denied-001"
+      ],
       [
         `/api/v1/patients/${outsidePatientId}/record-transfers`,
         "record-transfer-list-abac-denied-001"
@@ -790,6 +804,70 @@ describe("API auth and RBAC boundary", () => {
         patientId: outsidePatientId
       });
     }
+
+    const outsideEncounterResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/encounters`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        class: "ambulatory",
+        serviceType: "Khám ngoài tổ chức",
+        reasonText: "Encounter ngoài tổ chức để kiểm tra ABAC.",
+        attendingPractitionerId: "practitioner-demo-003",
+        startedAt: "2026-05-28T00:30:00.000Z"
+      }
+    });
+    const outsideEncounterId = outsideEncounterResponse.json().id as string;
+
+    expect(outsideEncounterResponse.statusCode).toBe(201);
+
+    const outsideAllergyResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/allergy-intolerances`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: outsideEncounterId,
+        type: "allergy",
+        category: "medication",
+        code: {
+          system: "http://snomed.info/sct",
+          code: "91936005",
+          display: "Allergy to penicillin"
+        },
+        recorderPractitionerId: "practitioner-demo-003"
+      }
+    });
+    const outsideAllergyId = outsideAllergyResponse.json().id as string;
+
+    expect(outsideAllergyResponse.statusCode).toBe(201);
+
+    const outsideConditionResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/conditions`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: outsideEncounterId,
+        category: "encounter-diagnosis",
+        code: {
+          system: "http://hl7.org/fhir/sid/icd-10",
+          code: "J18.9",
+          display: "Pneumonia, unspecified organism"
+        },
+        recorderPractitionerId: "practitioner-demo-003"
+      }
+    });
+    const outsideConditionId = outsideConditionResponse.json().id as string;
+
+    expect(outsideConditionResponse.statusCode).toBe(201);
 
     const outsideDocumentResponse = await app.inject({
       method: "POST",
@@ -837,6 +915,53 @@ describe("API auth and RBAC boundary", () => {
 
     expect(outsideObservationResponse.statusCode).toBe(201);
 
+    const outsideServiceRequestResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/service-requests`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: outsideEncounterId,
+        reasonConditionId: outsideConditionId,
+        category: "laboratory",
+        code: {
+          system: "http://loinc.org",
+          code: "58410-2",
+          display: "Complete blood count panel"
+        },
+        requesterPractitionerId: "practitioner-demo-003"
+      }
+    });
+    const outsideServiceRequestId = outsideServiceRequestResponse.json().id as string;
+
+    expect(outsideServiceRequestResponse.statusCode).toBe(201);
+
+    const outsideTaskResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/workflow-tasks`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: outsideEncounterId,
+        basedOnServiceRequestId: outsideServiceRequestId,
+        status: "requested",
+        code: {
+          system: "urn:wiiicare:nexus:workflow-task",
+          code: "lab-order",
+          display: "Lab order"
+        },
+        requesterPractitionerId: "practitioner-demo-003",
+        ownerOrganizationId: "hospital-outside-demo"
+      }
+    });
+    const outsideTaskId = outsideTaskResponse.json().id as string;
+
+    expect(outsideTaskResponse.statusCode).toBe(201);
+
     const outsideConsentResponse = await app.inject({
       method: "POST",
       url: `/api/v1/patients/${outsidePatientId}/consents`,
@@ -875,9 +1000,50 @@ describe("API auth and RBAC boundary", () => {
     expect(outsideTransferResponse.statusCode).toBe(201);
 
     for (const [url, requestId] of [
+      [`/api/v1/encounters/${outsideEncounterId}`, "encounter-read-abac-denied-001"],
+      [
+        `/api/v1/allergy-intolerances/${outsideAllergyId}`,
+        "allergy-read-abac-denied-001"
+      ],
+      [`/api/v1/conditions/${outsideConditionId}`, "condition-read-abac-denied-001"],
       [`/api/v1/clinical-documents/${outsideDocumentId}/fhir`, "document-read-abac-denied-001"],
       [`/api/v1/observations/${outsideObservationId}`, "observation-read-abac-denied-001"],
+      [
+        `/api/v1/service-requests/${outsideServiceRequestId}`,
+        "service-request-read-abac-denied-001"
+      ],
+      [`/api/v1/workflow-tasks/${outsideTaskId}`, "workflow-task-read-abac-denied-001"],
       [`/api/v1/record-transfers/${outsideTransferId}`, "transfer-read-abac-denied-001"]
+    ] as const) {
+      const response = await app.inject({
+        method: "GET",
+        url,
+        headers: {
+          ...treatmentHeaders(clinicianToken),
+          "x-request-id": requestId
+        }
+      });
+
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toMatchObject({
+        error: "PATIENT_ACCESS_DENIED",
+        requestId,
+        patientId: outsidePatientId
+      });
+    }
+
+    for (const [url, requestId] of [
+      [`/api/v1/encounters/${outsideEncounterId}/fhir`, "encounter-export-abac-denied-001"],
+      [
+        `/api/v1/allergy-intolerances/${outsideAllergyId}/fhir`,
+        "allergy-export-abac-denied-001"
+      ],
+      [`/api/v1/conditions/${outsideConditionId}/fhir`, "condition-export-abac-denied-001"],
+      [
+        `/api/v1/service-requests/${outsideServiceRequestId}/fhir`,
+        "service-request-export-abac-denied-001"
+      ],
+      [`/api/v1/workflow-tasks/${outsideTaskId}/fhir`, "workflow-task-export-abac-denied-001"]
     ] as const) {
       const response = await app.inject({
         method: "GET",

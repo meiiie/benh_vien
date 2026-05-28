@@ -446,6 +446,7 @@ export async function buildServer(options: ServerOptions = {}) {
         api,
         patientRepository,
         encounterRepository,
+        providerDirectoryRepository,
         auditEventRepository
       );
       await registerAllergyIntoleranceRoutes(
@@ -453,6 +454,7 @@ export async function buildServer(options: ServerOptions = {}) {
         patientRepository,
         encounterRepository,
         allergyIntoleranceRepository,
+        providerDirectoryRepository,
         auditEventRepository
       );
       await registerConditionRoutes(
@@ -460,6 +462,7 @@ export async function buildServer(options: ServerOptions = {}) {
         patientRepository,
         encounterRepository,
         conditionRepository,
+        providerDirectoryRepository,
         auditEventRepository
       );
       await registerObservationRoutes(
@@ -501,6 +504,7 @@ export async function buildServer(options: ServerOptions = {}) {
         encounterRepository,
         conditionRepository,
         serviceRequestRepository,
+        providerDirectoryRepository,
         auditEventRepository
       );
       await registerWorkflowTaskRoutes(
@@ -509,6 +513,7 @@ export async function buildServer(options: ServerOptions = {}) {
         encounterRepository,
         serviceRequestRepository,
         workflowTaskRepository,
+        providerDirectoryRepository,
         auditEventRepository
       );
       await registerProcedureRoutes(
