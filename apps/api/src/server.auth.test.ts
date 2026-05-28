@@ -1,6 +1,8 @@
-import type { FastifyInstance } from "fastify";
+import Fastify, { type FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ProviderDirectoryRepository } from "@benh-vien-so/domain";
+import { registerAuthRoutes } from "./modules/auth/auth-routes.js";
+import { createMemoryLoginRateLimiter } from "./modules/auth/login-rate-limit.js";
 import type { LoginRateLimiter } from "./modules/auth/login-rate-limit.js";
 import { buildServer } from "./server.js";
 
@@ -13,6 +15,7 @@ describe("API auth and RBAC boundary", () => {
   const originalAuthSecret = process.env.BVS_AUTH_SECRET;
   const originalAuthTokenTtlSeconds = process.env.BVS_AUTH_TOKEN_TTL_SECONDS;
   const originalCorsOrigins = process.env.BVS_CORS_ORIGINS;
+  const originalDatabaseUrl = process.env.DATABASE_URL;
   const originalNodeEnv = process.env.NODE_ENV;
   const originalAuthLoginRateLimitMax = process.env.BVS_AUTH_LOGIN_RATE_LIMIT_MAX;
   const originalAuthLoginRateLimitWindowSeconds =
@@ -36,6 +39,7 @@ describe("API auth and RBAC boundary", () => {
     restoreEnv("BVS_AUTH_SECRET", originalAuthSecret);
     restoreEnv("BVS_AUTH_TOKEN_TTL_SECONDS", originalAuthTokenTtlSeconds);
     restoreEnv("BVS_CORS_ORIGINS", originalCorsOrigins);
+    restoreEnv("DATABASE_URL", originalDatabaseUrl);
     restoreEnv("NODE_ENV", originalNodeEnv);
     restoreEnv("BVS_AUTH_LOGIN_RATE_LIMIT_MAX", originalAuthLoginRateLimitMax);
     restoreEnv(
@@ -86,10 +90,8 @@ describe("API auth and RBAC boundary", () => {
 
   it("disables demo login by default in production", async () => {
     process.env.NODE_ENV = "production";
-    process.env.BVS_CORS_ORIGINS = "https://wiiicare.example.vn";
-    process.env.BVS_RATE_LIMIT_STORE = "memory";
     delete process.env.BVS_DEMO_AUTH_ENABLED;
-    app = await readyServer();
+    app = await readyAuthRouteServer();
 
     const response = await login(
       app,
@@ -112,10 +114,8 @@ describe("API auth and RBAC boundary", () => {
 
   it("allows demo login in production only when explicitly enabled", async () => {
     process.env.NODE_ENV = "production";
-    process.env.BVS_CORS_ORIGINS = "https://wiiicare.example.vn";
-    process.env.BVS_RATE_LIMIT_STORE = "memory";
     process.env.BVS_DEMO_AUTH_ENABLED = "true";
-    app = await readyServer();
+    app = await readyAuthRouteServer();
 
     const response = await login(app, {
       username: "practitioner-demo-001",
@@ -501,6 +501,7 @@ describe("API auth and RBAC boundary", () => {
 
   it("requires explicit CORS origins in production", async () => {
     process.env.NODE_ENV = "production";
+    process.env.BVS_REPOSITORY = "postgres";
     delete process.env.BVS_CORS_ORIGINS;
 
     await expect(buildServer({ logger: false })).rejects.toThrow(
@@ -510,6 +511,7 @@ describe("API auth and RBAC boundary", () => {
 
   it("rejects unsafe CORS origins in production", async () => {
     process.env.NODE_ENV = "production";
+    process.env.BVS_REPOSITORY = "postgres";
 
     for (const [origin, message] of [
       ["*", "BVS_CORS_ORIGINS must not include wildcard '*' in production."],
@@ -562,6 +564,24 @@ describe("API auth and RBAC boundary", () => {
 
     await expect(buildServer({ logger: false })).rejects.toThrow(
       "BVS_AUTH_TOKEN_TTL_SECONDS must be an integer between 300 and 28800."
+    );
+  });
+
+  it("rejects invalid repository configuration", async () => {
+    process.env.BVS_REPOSITORY = "postgresql";
+
+    await expect(buildServer({ logger: false })).rejects.toThrow(
+      "BVS_REPOSITORY must be either 'postgres' or 'in-memory'."
+    );
+  });
+
+  it("requires PostgreSQL repositories in production", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.BVS_CORS_ORIGINS = "https://wiiicare.example.vn";
+    process.env.BVS_REPOSITORY = "in-memory";
+
+    await expect(buildServer({ logger: false })).rejects.toThrow(
+      "BVS_REPOSITORY must be 'postgres' in production."
     );
   });
 
@@ -2424,6 +2444,28 @@ async function readyServer(): Promise<FastifyInstance> {
   const server = await buildServer({
     logger: false
   });
+  await server.ready();
+  return server;
+}
+
+async function readyAuthRouteServer(): Promise<FastifyInstance> {
+  const server = Fastify({
+    logger: false,
+    requestIdHeader: "x-request-id"
+  });
+  await server.register(
+    async (api) => {
+      await registerAuthRoutes(api, {
+        loginRateLimiter: createMemoryLoginRateLimiter({
+          maxAttempts: 20,
+          windowMs: 60_000
+        })
+      });
+    },
+    {
+      prefix: "/api/v1"
+    }
+  );
   await server.ready();
   return server;
 }

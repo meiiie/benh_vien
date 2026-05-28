@@ -83,7 +83,7 @@ Backend hiện dùng Fastify + TypeScript. Trong Docker, API chạy với `BVS_R
 
 API có `/health` cho liveness và `/ready` cho readiness; `/ready` kiểm tra API đọc được repository bệnh nhân và Provider Directory trước khi container được xem là sẵn sàng nhận traffic.
 
-Khi chạy local không Docker, có thể dùng in-memory repository để phát triển nhanh; khi cần kiểm chứng sát thực tế, dùng Docker dev/prod để chạy PostgreSQL.
+Khi chạy local không Docker, có thể dùng in-memory repository để phát triển nhanh; khi cần kiểm chứng sát thực tế, dùng Docker dev/prod để chạy PostgreSQL. Ở `NODE_ENV=production`, API bắt buộc `BVS_REPOSITORY=postgres` để tránh chạy dữ liệu bệnh án trên store demo trong RAM.
 
 API nghiệp vụ yêu cầu đăng nhập qua `POST /api/v1/auth/login` và gửi `Authorization: Bearer <token>`. Biến `BVS_AUTH_SECRET` phải dài tối thiểu 32 ký tự; ở `NODE_ENV=production`, API sẽ từ chối khởi động nếu thiếu secret hợp lệ. Đăng nhập demo mặc định bị tắt trong production và chỉ được bật có chủ đích bằng `BVS_DEMO_AUTH_ENABLED=true` cho phiên smoke/demo có kiểm soát.
 
