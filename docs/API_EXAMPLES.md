@@ -74,6 +74,7 @@ Tài khoản demo:
 - `nurse-demo-001` / `demo`: vai trò `nurse`, dùng cho tiếp nhận/đọc hồ sơ.
 - `security-officer-demo` / `demo`: vai trò `auditor`, dùng cho nhật ký kiểm toán.
 - `admin-demo` / `demo`: vai trò `admin`, dùng cho kiểm tra toàn quyền trong prototype.
+- `gateway-hai-phong-referral` / `demo`: vai trò `integration`, chỉ dùng cho callback xác nhận nhận hồ sơ của gateway bệnh viện nhận.
 
 ## Header dùng chung
 
@@ -288,7 +289,7 @@ curl -X POST http://localhost:7310/api/v1/record-transfers/$TRANSFER_ID/receive 
 
 Khi xác nhận nhận thủ công, API tự lấy `receivedByActorId` từ Bearer token nếu client không gửi lên, sinh `acknowledgementReference` dạng `wiiicare-record-transfer-ack-*` và lưu cả hai trường này vào `RecordTransfer`, audit event và FHIR `Task.note`. Đây là biên nhận kỹ thuật tối thiểu để truy vết mốc tiếp nhận; chưa phải chữ ký số pháp lý.
 
-Nếu mô phỏng callback từ gateway của bệnh viện nhận, dùng route riêng dưới đây thay cho lệnh `/receive` thủ công ở trên, với `x-purpose-of-use: OPERATIONS`. Payload phải khai báo đúng `recipientOrganizationId` của gói chuyển; hệ thống sẽ từ chối callback từ actor không thuộc cơ sở nhận, trừ tài khoản admin/service vận hành. Khi `BVS_RECORD_TRANSFER_CALLBACK_SECRET` đã được cấu hình, gateway phải ký payload bằng `HMAC-SHA256` theo chuỗi `$TIMESTAMP.$TRANSFER_ID.$CANONICAL_JSON_BODY`, trong đó JSON object được sắp xếp key ổn định trước khi ký; gửi kèm `x-wiiicare-callback-timestamp` và `x-wiiicare-callback-signature`; timestamp chỉ được lệch tối đa 5 phút để giảm rủi ro replay.
+Nếu mô phỏng callback từ gateway của bệnh viện nhận, dùng route riêng dưới đây thay cho lệnh `/receive` thủ công ở trên, với `x-purpose-of-use: OPERATIONS`. Nên dùng tài khoản role `integration` của gateway bệnh viện nhận thay vì mượn token admin. Payload phải khai báo đúng `recipientOrganizationId` của gói chuyển; hệ thống sẽ từ chối callback từ actor không thuộc cơ sở nhận, trừ tài khoản admin vận hành. Khi `BVS_RECORD_TRANSFER_CALLBACK_SECRET` đã được cấu hình, gateway phải ký payload bằng `HMAC-SHA256` theo chuỗi `$TIMESTAMP.$TRANSFER_ID.$CANONICAL_JSON_BODY`, trong đó JSON object được sắp xếp key ổn định trước khi ký; gửi kèm `x-wiiicare-callback-timestamp` và `x-wiiicare-callback-signature`; timestamp chỉ được lệch tối đa 5 phút để giảm rủi ro replay.
 
 ```bash
 curl -X POST http://localhost:7310/api/v1/record-transfers/$TRANSFER_ID/acknowledgement-callback \

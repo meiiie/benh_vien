@@ -1931,7 +1931,7 @@ describe("API auth and RBAC boundary", () => {
         "DocumentReference"
       ])
     );
-    expect(body.entry).toHaveLength(45);
+    expect(body.entry).toHaveLength(47);
   });
 
   it("returns a patient-record FHIR document Bundle with Composition first", async () => {
@@ -1962,7 +1962,7 @@ describe("API auth and RBAC boundary", () => {
         }
       ]
     });
-    expect(body.entry).toHaveLength(46);
+    expect(body.entry).toHaveLength(48);
     expect(body.entry[0].resource.section).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -3655,7 +3655,23 @@ describe("API auth and RBAC boundary", () => {
   it("accepts an operations acknowledgement callback for a sent record transfer", async () => {
     app = await readyServer();
     const clinicianToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-    const adminToken = await loginForToken(app, "admin-demo", "admin");
+    const gatewayToken = await loginForToken(
+      app,
+      "gateway-hai-phong-referral",
+      "integration"
+    );
+
+    const gatewayPatientListResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients",
+      headers: operationsHeaders(gatewayToken)
+    });
+
+    expect(gatewayPatientListResponse.statusCode).toBe(403);
+    expect(gatewayPatientListResponse.json()).toMatchObject({
+      error: "FORBIDDEN",
+      permission: "patient:list"
+    });
 
     const sendResponse = await app.inject({
       method: "POST",
@@ -3706,7 +3722,7 @@ describe("API auth and RBAC boundary", () => {
       method: "POST",
       url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
       headers: {
-        ...operationsHeaders(adminToken),
+        ...operationsHeaders(gatewayToken),
         "content-type": "application/json"
       },
       payload: callbackPayload
@@ -3726,7 +3742,7 @@ describe("API auth and RBAC boundary", () => {
       method: "POST",
       url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
       headers: {
-        ...operationsHeaders(adminToken),
+        ...operationsHeaders(gatewayToken),
         "content-type": "application/json"
       },
       payload: callbackPayload
@@ -3760,7 +3776,11 @@ describe("API auth and RBAC boundary", () => {
     process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRET = callbackSecret;
     app = await readyServer();
     const clinicianToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-    const adminToken = await loginForToken(app, "admin-demo", "admin");
+    const gatewayToken = await loginForToken(
+      app,
+      "gateway-hai-phong-referral",
+      "integration"
+    );
 
     const sendResponse = await app.inject({
       method: "POST",
@@ -3791,7 +3811,7 @@ describe("API auth and RBAC boundary", () => {
       method: "POST",
       url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
       headers: {
-        ...operationsHeaders(adminToken),
+        ...operationsHeaders(gatewayToken),
         "content-type": "application/json"
       },
       payload: callbackPayload
@@ -3808,7 +3828,7 @@ describe("API auth and RBAC boundary", () => {
       method: "POST",
       url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
       headers: {
-        ...operationsHeaders(adminToken),
+        ...operationsHeaders(gatewayToken),
         "content-type": "application/json",
         [recordTransferCallbackTimestampHeader]: invalidTimestamp,
         [recordTransferCallbackSignatureHeader]: "invalid-signature"
@@ -3826,7 +3846,7 @@ describe("API auth and RBAC boundary", () => {
       method: "POST",
       url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
       headers: {
-        ...operationsHeaders(adminToken),
+        ...operationsHeaders(gatewayToken),
         "content-type": "application/json",
         ...signedRecordTransferCallbackHeaders({
           recordTransferId: "record-transfer-demo-001",

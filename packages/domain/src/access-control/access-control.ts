@@ -1,7 +1,7 @@
 import type { PatientSnapshot } from "../patient/patient.js";
 import type { ProviderDirectorySnapshot } from "../provider-directory/provider-directory.js";
 
-export type ActorRole = "clinician" | "nurse" | "auditor" | "admin";
+export type ActorRole = "clinician" | "nurse" | "auditor" | "admin" | "integration";
 
 export type PurposeOfUse = "TREATMENT" | "AUDIT" | "OPERATIONS";
 
@@ -291,6 +291,9 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "consent:fhir-export",
     "audit-event:list",
     "audit-event:fhir-export"
+  ],
+  integration: [
+    "record-transfer:acknowledge"
   ]
 };
 
@@ -354,7 +357,13 @@ export function filterAccessiblePatientRecords<
 }
 
 export function isActorRole(value: string): value is ActorRole {
-  return value === "clinician" || value === "nurse" || value === "auditor" || value === "admin";
+  return (
+    value === "clinician" ||
+    value === "nurse" ||
+    value === "auditor" ||
+    value === "admin" ||
+    value === "integration"
+  );
 }
 
 export function isPurposeOfUse(value: string): value is PurposeOfUse {

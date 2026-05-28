@@ -193,7 +193,7 @@ type ImagingStudyStatus =
   | "cancelled"
   | "entered-in-error"
   | "unknown";
-type DemoRole = "clinician" | "nurse" | "auditor" | "admin";
+type DemoRole = "clinician" | "nurse" | "auditor" | "admin" | "integration";
 type PurposeOfUse = "TREATMENT" | "AUDIT" | "OPERATIONS";
 type ConsentStatus = "active" | "revoked" | "expired";
 type ConsentCategory = "record-sharing";
@@ -1520,6 +1520,11 @@ const loginPresets: Record<DemoRole, LoginForm> = {
     username: "admin-demo",
     password: "demo",
     role: "admin"
+  },
+  integration: {
+    username: "gateway-hai-phong-referral",
+    password: "demo",
+    role: "integration"
   }
 };
 
@@ -9130,6 +9135,7 @@ function formatDemoRole(role: DemoRole): string {
     admin: "Quản trị",
     auditor: "Kiểm toán",
     clinician: "Bác sĩ điều trị",
+    integration: "Gateway liên thông",
     nurse: "Điều dưỡng tiếp nhận"
   };
 

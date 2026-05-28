@@ -20,7 +20,7 @@ TOKEN=$(curl -s -X POST http://localhost:7310/api/v1/auth/login \
 
 OPERATIONS_TOKEN=$(curl -s -X POST http://localhost:7310/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin-demo","password":"demo","role":"admin"}' | jq -r .accessToken)
+  -d '{"username":"gateway-hai-phong-referral","password":"demo","role":"integration"}' | jq -r .accessToken)
 
 curl -fsS http://localhost:7310/api/v1/patients \
   -H "Authorization: Bearer $TOKEN" \

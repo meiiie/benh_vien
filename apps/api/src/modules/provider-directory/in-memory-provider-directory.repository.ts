@@ -134,6 +134,19 @@ export function createSeedProviderDirectory(): ProviderDirectory {
         active: true,
         fullName: "Điều dưỡng tiếp nhận",
         qualification: "Điều dưỡng"
+      },
+      {
+        id: "system-hai-phong-referral-gateway",
+        identifiers: [
+          {
+            system: "urn:wiiicare:nexus:system-actor",
+            value: "GW-HP-REFERRAL-001",
+            type: "integration-gateway"
+          }
+        ],
+        active: true,
+        fullName: "Gateway liên thông BV tiếp nhận Hải Phòng",
+        qualification: "Tài khoản hệ thống liên thông hồ sơ"
       }
     ],
     endpoints: [
@@ -255,6 +268,18 @@ export function createSeedProviderDirectory(): ProviderDirectory {
           code: "nurse",
           display: "Nurse"
         }
+      },
+      {
+        id: "role-system-hai-phong-referral-gateway",
+        practitionerId: "system-hai-phong-referral-gateway",
+        organizationId: "hospital-hai-phong-referral",
+        active: true,
+        code: {
+          system: "urn:wiiicare:nexus:integration-role",
+          code: "record-transfer-acknowledgement-gateway",
+          display: "Record transfer acknowledgement gateway"
+        },
+        endpointIds: ["endpoint-fhir-hai-phong-referral"]
       }
     ]
   });

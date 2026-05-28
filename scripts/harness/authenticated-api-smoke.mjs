@@ -8,6 +8,7 @@ const requestTag = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const adminSession = await login("admin-demo", "admin");
 const clinicianSession = await login("practitioner-demo-001", "clinician");
 const auditorSession = await login("security-officer-demo", "auditor");
+const gatewaySession = await login("gateway-hai-phong-referral", "integration");
 
 const invalidLogin = await requestJson("/auth/login", {
   method: "POST",
@@ -384,7 +385,7 @@ const receivedTransfer = await requestJson(
   `/record-transfers/${smokeTransfer.id}/acknowledgement-callback`,
   {
     method: "POST",
-    token: adminSession.accessToken,
+    token: gatewaySession.accessToken,
     headers: {
       ...operationsHeaders(),
       ...recordTransferCallbackSignatureHeaders(smokeTransfer.id, acknowledgementCallbackBody)

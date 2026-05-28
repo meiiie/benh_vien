@@ -47,6 +47,13 @@ const demoAccounts: readonly DemoAccount[] = [
     actorId: "admin-demo",
     displayName: "Quản trị hệ thống",
     role: "admin"
+  },
+  {
+    username: "gateway-hai-phong-referral",
+    passwordHash: demoPasswordHash,
+    actorId: "system-hai-phong-referral-gateway",
+    displayName: "Gateway liên thông BV tiếp nhận Hải Phòng",
+    role: "integration"
   }
 ];
 

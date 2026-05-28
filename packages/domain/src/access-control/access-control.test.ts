@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  canAccess,
   canAccessPatientRecord,
   filterAccessiblePatientRecords,
   type ActorContext,
@@ -115,6 +116,24 @@ describe("patient record access control", () => {
     expect(
       canAccessPatientRecord(admin, { managingOrganizationId: "hospital-x" }, providerDirectory)
     ).toBe(true);
+  });
+
+  it("keeps integration actors out of patient charts", () => {
+    const integrationActor: ActorContext = {
+      actorId: "system-hai-phong-referral-gateway",
+      role: "integration",
+      purposeOfUse: "OPERATIONS"
+    };
+
+    expect(canAccess(integrationActor, "record-transfer:acknowledge")).toBe(true);
+    expect(canAccess(integrationActor, "patient:list")).toBe(false);
+    expect(
+      canAccessPatientRecord(
+        integrationActor,
+        { managingOrganizationId: "hospital-a" },
+        providerDirectory
+      )
+    ).toBe(false);
   });
 
   it("filters patient registries by the actor treatment organization", () => {
