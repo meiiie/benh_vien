@@ -13,9 +13,13 @@ import type {
   ImagingStudyRepository,
   ImagingStudySnapshot,
   PatientRepository,
+  ProviderDirectoryRepository,
   ServiceRequestRepository
 } from "@benh-vien-so/domain";
-import { requirePermission } from "../access-control/access-context.js";
+import {
+  requirePatientRecordAccessByPatientId,
+  requirePermission
+} from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 
 export async function registerImagingStudyRoutes(
@@ -25,6 +29,7 @@ export async function registerImagingStudyRoutes(
   serviceRequestRepository: ServiceRequestRepository,
   diagnosticReportRepository: DiagnosticReportRepository,
   imagingStudyRepository: ImagingStudyRepository,
+  providerDirectoryRepository: ProviderDirectoryRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
   app.get("/patients/:patientId/imaging-studies", async (request, reply) => {
@@ -35,12 +40,17 @@ export async function registerImagingStudyRoutes(
     }
 
     const params = PatientImagingStudiesParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const imagingStudies = await imagingStudyRepository.findByPatientId(params.patientId);
@@ -67,12 +77,17 @@ export async function registerImagingStudyRoutes(
     }
 
     const params = PatientImagingStudiesParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const parsed = CreateImagingStudyRequestSchema.safeParse(request.body);
@@ -170,6 +185,19 @@ export async function registerImagingStudyRoutes(
       });
     }
 
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        imagingStudy.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
+    }
+
     await recordAuditEvent(auditRepository, request, {
       action: "imaging-study.read",
       resourceType: "ImagingStudy",
@@ -194,6 +222,19 @@ export async function registerImagingStudyRoutes(
       return reply.status(404).send({
         error: "IMAGING_STUDY_NOT_FOUND"
       });
+    }
+
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        imagingStudy.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     await recordAuditEvent(auditRepository, request, {

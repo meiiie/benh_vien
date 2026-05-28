@@ -15,9 +15,13 @@ import type {
   PatientRepository,
   ProcedureRepository,
   ProcedureSnapshot,
+  ProviderDirectoryRepository,
   ServiceRequestRepository
 } from "@benh-vien-so/domain";
-import { requirePermission } from "../access-control/access-context.js";
+import {
+  requirePatientRecordAccessByPatientId,
+  requirePermission
+} from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 
 export async function registerProcedureRoutes(
@@ -29,6 +33,7 @@ export async function registerProcedureRoutes(
   diagnosticReportRepository: DiagnosticReportRepository,
   clinicalDocumentRepository: ClinicalDocumentRepository,
   procedureRepository: ProcedureRepository,
+  providerDirectoryRepository: ProviderDirectoryRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
   app.get("/patients/:patientId/procedures", async (request, reply) => {
@@ -39,12 +44,17 @@ export async function registerProcedureRoutes(
     }
 
     const params = PatientProceduresParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const procedures = await procedureRepository.findByPatientId(params.patientId);
@@ -71,12 +81,17 @@ export async function registerProcedureRoutes(
     }
 
     const params = PatientProceduresParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const parsed = CreateProcedureRequestSchema.safeParse(request.body);
@@ -157,6 +172,19 @@ export async function registerProcedureRoutes(
       });
     }
 
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        procedure.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
+    }
+
     await recordAuditEvent(auditRepository, request, {
       action: "procedure.read",
       resourceType: "Procedure",
@@ -181,6 +209,19 @@ export async function registerProcedureRoutes(
       return reply.status(404).send({
         error: "PROCEDURE_NOT_FOUND"
       });
+    }
+
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        procedure.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     await recordAuditEvent(auditRepository, request, {

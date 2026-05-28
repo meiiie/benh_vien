@@ -17,9 +17,13 @@ import type {
   MedicationAdministrationRepository,
   MedicationAdministrationSnapshot,
   MedicationRequestRepository,
-  PatientRepository
+  PatientRepository,
+  ProviderDirectoryRepository
 } from "@benh-vien-so/domain";
-import { requirePermission } from "../access-control/access-context.js";
+import {
+  requirePatientRecordAccessByPatientId,
+  requirePermission
+} from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 
 export async function registerMedicationAdministrationRoutes(
@@ -29,6 +33,7 @@ export async function registerMedicationAdministrationRoutes(
   conditionRepository: ConditionRepository,
   medicationRequestRepository: MedicationRequestRepository,
   medicationAdministrationRepository: MedicationAdministrationRepository,
+  providerDirectoryRepository: ProviderDirectoryRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
   app.get("/patients/:patientId/medication-administrations", async (request, reply) => {
@@ -39,12 +44,17 @@ export async function registerMedicationAdministrationRoutes(
     }
 
     const params = PatientMedicationAdministrationsParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const medicationAdministrations =
@@ -72,12 +82,17 @@ export async function registerMedicationAdministrationRoutes(
     }
 
     const params = PatientMedicationAdministrationsParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const parsed = CreateMedicationAdministrationRequestSchema.safeParse(request.body);
@@ -154,6 +169,19 @@ export async function registerMedicationAdministrationRoutes(
       });
     }
 
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        medicationAdministration.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
+    }
+
     await recordAuditEvent(auditRepository, request, {
       action: "medication-administration.read",
       resourceType: "MedicationAdministration",
@@ -179,6 +207,19 @@ export async function registerMedicationAdministrationRoutes(
       return reply.status(404).send({
         error: "MEDICATION_ADMINISTRATION_NOT_FOUND"
       });
+    }
+
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        medicationAdministration.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     await recordAuditEvent(auditRepository, request, {

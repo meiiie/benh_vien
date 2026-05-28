@@ -432,6 +432,7 @@ export async function buildServer(options: ServerOptions = {}) {
         api,
         patientRepository,
         consentRepository,
+        providerDirectoryRepository,
         auditEventRepository
       );
       await registerRecordTransferRoutes(
@@ -479,6 +480,7 @@ export async function buildServer(options: ServerOptions = {}) {
         encounterRepository,
         conditionRepository,
         medicationRequestRepository,
+        providerDirectoryRepository,
         auditEventRepository
       );
       await registerMedicationDispenseRoutes(
@@ -487,6 +489,7 @@ export async function buildServer(options: ServerOptions = {}) {
         encounterRepository,
         medicationRequestRepository,
         medicationDispenseRepository,
+        providerDirectoryRepository,
         auditEventRepository
       );
       await registerMedicationAdministrationRoutes(
@@ -496,6 +499,7 @@ export async function buildServer(options: ServerOptions = {}) {
         conditionRepository,
         medicationRequestRepository,
         medicationAdministrationRepository,
+        providerDirectoryRepository,
         auditEventRepository
       );
       await registerServiceRequestRoutes(
@@ -525,6 +529,7 @@ export async function buildServer(options: ServerOptions = {}) {
         diagnosticReportRepository,
         clinicalDocumentRepository,
         procedureRepository,
+        providerDirectoryRepository,
         auditEventRepository
       );
       await registerDiagnosticReportRoutes(
@@ -534,6 +539,7 @@ export async function buildServer(options: ServerOptions = {}) {
         serviceRequestRepository,
         observationRepository,
         diagnosticReportRepository,
+        providerDirectoryRepository,
         auditEventRepository
       );
       await registerImagingStudyRoutes(
@@ -543,6 +549,7 @@ export async function buildServer(options: ServerOptions = {}) {
         serviceRequestRepository,
         diagnosticReportRepository,
         imagingStudyRepository,
+        providerDirectoryRepository,
         auditEventRepository
       );
       await registerClinicalDocumentRoutes(
@@ -553,7 +560,12 @@ export async function buildServer(options: ServerOptions = {}) {
         providerDirectoryRepository,
         auditEventRepository
       );
-      await registerAuditEventRoutes(api, patientRepository, auditEventRepository);
+      await registerAuditEventRoutes(
+        api,
+        patientRepository,
+        providerDirectoryRepository,
+        auditEventRepository
+      );
     },
     {
       prefix: "/api/v1"
