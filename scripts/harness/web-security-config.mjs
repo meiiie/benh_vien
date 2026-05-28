@@ -51,8 +51,8 @@ assertIncludes(
 );
 assertIncludes(
   nginxConfig,
-  "proxy_set_header X-Request-Id $request_id;",
-  "Web edge must pass a trace id to proxied API requests."
+  "proxy_set_header X-Request-Id $http_x_request_id;",
+  "Web edge must preserve upstream trace ids for proxied API requests."
 );
 assertNotIncludes(
   nginxConfig,
