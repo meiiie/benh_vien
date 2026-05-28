@@ -1055,6 +1055,17 @@ type NewRecordTransferForm = {
   note: string;
 };
 
+type GatewayAcknowledgementForm = {
+  recordTransferId: string;
+  recipientOrganizationId: string;
+  acknowledgementReference: string;
+  receivedAt: string;
+  receivedByActorId: string;
+  targetEndpointId: string;
+  deliveryIdempotencyKey: string;
+  note: string;
+};
+
 type NewEncounterForm = {
   class: EncounterClass;
   serviceType: string;
@@ -1549,6 +1560,17 @@ const defaultRecordTransferForm: NewRecordTransferForm = {
   note: "Dùng FHIR document Bundle có Composition làm mục lục lâm sàng."
 };
 
+const defaultGatewayAcknowledgementForm: GatewayAcknowledgementForm = {
+  recordTransferId: "record-transfer-demo-001",
+  recipientOrganizationId: defaultTransferContext.recipientOrganizationId,
+  acknowledgementReference: "ack-record-transfer-callback-demo-001",
+  receivedAt: "",
+  receivedByActorId: "system-hai-phong-referral-gateway",
+  targetEndpointId: "endpoint-fhir-hai-phong-referral",
+  deliveryIdempotencyKey: "wiiicare-record-transfer-callback-demo-001",
+  note: "Bệnh viện nhận xác nhận đã tiếp nhận gói hồ sơ qua gateway liên thông."
+};
+
 const loginPresets: Record<DemoRole, LoginForm> = {
   clinician: {
     username: "practitioner-demo-001",
@@ -1725,6 +1747,10 @@ export function App() {
     useState<PatientMergeForm>(defaultPatientMergeForm);
   const [recordTransferForm, setRecordTransferForm] =
     useState<NewRecordTransferForm>(defaultRecordTransferForm);
+  const [gatewayAcknowledgementForm, setGatewayAcknowledgementForm] =
+    useState<GatewayAcknowledgementForm>(defaultGatewayAcknowledgementForm);
+  const [gatewayAcknowledgementResult, setGatewayAcknowledgementResult] =
+    useState<RecordTransfer>();
   const [encounterForm, setEncounterForm] = useState<NewEncounterForm>(defaultEncounterForm);
   const [documentForm, setDocumentForm] =
     useState<NewClinicalDocumentForm>(defaultClinicalDocumentForm);
@@ -1791,6 +1817,8 @@ export function App() {
   const [isSubmittingDiagnosticReport, setIsSubmittingDiagnosticReport] = useState(false);
   const [isSubmittingImagingStudy, setIsSubmittingImagingStudy] = useState(false);
   const [isSubmittingRecordTransfer, setIsSubmittingRecordTransfer] = useState(false);
+  const [isSubmittingGatewayAcknowledgement, setIsSubmittingGatewayAcknowledgement] =
+    useState(false);
   const [transitioningRecordTransferId, setTransitioningRecordTransferId] =
     useState<string>();
   const [revokingConsentId, setRevokingConsentId] = useState<string>();
@@ -1804,6 +1832,7 @@ export function App() {
   const isSelectedPatientMerged = selectedPatient?.status === "merged";
   const selectedPatientWriteDisabled = !selectedPatient || isSelectedPatientMerged;
   const canMergePatients = authSession?.actor.role === "admin";
+  const isIntegrationSession = authSession?.actor.role === "integration";
   const patientMergeCandidates = selectedPatient
     ? patients.filter((patient) => patient.id !== selectedPatient.id && patient.status === "active")
     : [];
@@ -1928,6 +1957,11 @@ export function App() {
       return;
     }
 
+    if (isIntegrationSession) {
+      void loadCapabilityStatement();
+      return;
+    }
+
     void loadPatients();
     void loadCapabilityStatement();
     if (canViewRuntimeInfo) {
@@ -1937,7 +1971,7 @@ export function App() {
       setApiRuntimeWarning(undefined);
     }
     void loadProviderDirectory();
-  }, [canViewRuntimeInfo, isAuthenticated]);
+  }, [canViewRuntimeInfo, isAuthenticated, isIntegrationSession]);
 
   useEffect(() => {
     if (!isAuthenticated || !canReadAudit) {
@@ -3908,6 +3942,79 @@ export function App() {
     }
   }
 
+  async function handleGatewayAcknowledgementSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const recordTransferId = gatewayAcknowledgementForm.recordTransferId.trim();
+    const recipientOrganizationId =
+      gatewayAcknowledgementForm.recipientOrganizationId.trim();
+    const acknowledgementReference =
+      gatewayAcknowledgementForm.acknowledgementReference.trim();
+
+    if (!recordTransferId || !recipientOrganizationId || !acknowledgementReference) {
+      setStatusMessage(
+        "Callback gateway cần mã gói chuyển, cơ sở nhận và mã biên nhận tiếp nhận."
+      );
+      return;
+    }
+
+    setIsSubmittingGatewayAcknowledgement(true);
+    setGatewayAcknowledgementResult(undefined);
+
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/record-transfers/${recordTransferId}/acknowledgement-callback`,
+        {
+          method: "POST",
+          headers: buildHeaders("OPERATIONS", {
+            "Content-Type": "application/json"
+          }),
+          body: JSON.stringify({
+            recipientOrganizationId,
+            acknowledgementReference,
+            ...(gatewayAcknowledgementForm.receivedAt.trim()
+              ? { receivedAt: toApiDateTime(gatewayAcknowledgementForm.receivedAt) }
+              : {}),
+            ...(gatewayAcknowledgementForm.receivedByActorId.trim()
+              ? { receivedByActorId: gatewayAcknowledgementForm.receivedByActorId.trim() }
+              : {}),
+            ...(gatewayAcknowledgementForm.targetEndpointId.trim()
+              ? { targetEndpointId: gatewayAcknowledgementForm.targetEndpointId.trim() }
+              : {}),
+            ...(gatewayAcknowledgementForm.deliveryIdempotencyKey.trim()
+              ? {
+                  deliveryIdempotencyKey:
+                    gatewayAcknowledgementForm.deliveryIdempotencyKey.trim()
+                }
+              : {}),
+            ...(gatewayAcknowledgementForm.note.trim()
+              ? { note: gatewayAcknowledgementForm.note.trim() }
+              : {})
+          })
+        }
+      );
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => undefined);
+        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
+      }
+
+      const acknowledgedTransfer = (await response.json()) as RecordTransfer;
+      setGatewayAcknowledgementResult(acknowledgedTransfer);
+      setStatusMessage(
+        `Gateway đã xác nhận tiếp nhận gói ${acknowledgedTransfer.id} bằng biên nhận ${acknowledgedTransfer.acknowledgementReference ?? acknowledgementReference}.`
+      );
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể gửi callback tiếp nhận: ${error.message}`
+          : "Không thể gửi callback tiếp nhận."
+      );
+    } finally {
+      setIsSubmittingGatewayAcknowledgement(false);
+    }
+  }
+
   async function handleFailRecordTransfer(recordTransfer: RecordTransfer) {
     if (!selectedPatient) {
       setStatusMessage("Cần chọn bệnh nhân trước khi ghi nhận lỗi chuyển hồ sơ.");
@@ -5086,11 +5193,11 @@ export function App() {
   return (
     <AuthenticatedLayout
       apiBaseUrl={apiBaseUrl}
-      currentRoute={appRoute}
+      currentRoute={isIntegrationSession ? "interop" : appRoute}
       userRole={authSession?.actor.role ?? loginForm.role}
       userName={authSession?.actor.displayName ?? loginForm.username}
       onLogout={handleLogout}
-      onNavigate={setAppRoute}
+      onNavigate={isIntegrationSession ? () => setAppRoute("interop") : setAppRoute}
       statusMessage={statusMessage}
     >
       {renderCurrentRoute()}
@@ -5098,6 +5205,10 @@ export function App() {
   );
 
   function renderCurrentRoute(): ReactNode {
+    if (isIntegrationSession) {
+      return renderGatewayAcknowledgementPage();
+    }
+
     if (appRoute === "workspace") {
       return renderWorkspacePage();
     }
@@ -5119,6 +5230,161 @@ export function App() {
     }
 
     return renderDashboardPage();
+  }
+
+  function renderGatewayAcknowledgementPage(): ReactNode {
+    return (
+      <div className="page-stack">
+        <PageHeader
+          eyebrow="Integration Gateway"
+          title="Callback tiếp nhận hồ sơ liên viện"
+          description="Màn này dành riêng cho tài khoản gateway của bệnh viện nhận. Nó chỉ gửi biên nhận kỹ thuật với mục đích OPERATIONS, không mở workspace lâm sàng của bác sĩ."
+        />
+
+        <section className="settings-grid">
+          <article className="panel">
+            <p className="eyebrow">Gateway context</p>
+            <h2>Phiên vận hành</h2>
+            <div className="detail-grid compact">
+              <Info label="Actor" value={authSession?.actor.actorId ?? "Chưa xác thực"} />
+              <Info label="Vai trò" value={formatDemoRole(authSession?.actor.role ?? "integration")} />
+              <Info label="PurposeOfUse" value="OPERATIONS" />
+              <Info label="API" value={apiBaseUrl} />
+            </div>
+            <p className="empty-state">
+              Luồng demo chuẩn: bác sĩ gửi gói chuyển hồ sơ trước, sau đó đăng nhập bằng gateway để xác nhận bệnh viện nhận đã tiếp nhận. Callback hợp lệ sẽ ghi audit `record-transfer.acknowledgement-callback` và đưa gói sang `completed`.
+            </p>
+          </article>
+
+          <article className="panel">
+            <div className="panel-heading">
+              <div>
+                <p className="eyebrow">Acknowledgement callback</p>
+                <h2>Gửi biên nhận tiếp nhận</h2>
+              </div>
+              <span className="pill cyan">OPERATIONS</span>
+            </div>
+
+            <form className="medication-form" onSubmit={(event) => void handleGatewayAcknowledgementSubmit(event)}>
+              <label>
+                Mã gói chuyển
+                <input
+                  value={gatewayAcknowledgementForm.recordTransferId}
+                  onChange={(event) =>
+                    setGatewayAcknowledgementForm({
+                      ...gatewayAcknowledgementForm,
+                      recordTransferId: event.target.value
+                    })
+                  }
+                />
+              </label>
+              <label>
+                Cơ sở nhận
+                <input
+                  value={gatewayAcknowledgementForm.recipientOrganizationId}
+                  onChange={(event) =>
+                    setGatewayAcknowledgementForm({
+                      ...gatewayAcknowledgementForm,
+                      recipientOrganizationId: event.target.value
+                    })
+                  }
+                />
+              </label>
+              <label>
+                Mã biên nhận
+                <input
+                  value={gatewayAcknowledgementForm.acknowledgementReference}
+                  onChange={(event) =>
+                    setGatewayAcknowledgementForm({
+                      ...gatewayAcknowledgementForm,
+                      acknowledgementReference: event.target.value
+                    })
+                  }
+                />
+              </label>
+              <label>
+                Thời điểm nhận
+                <input
+                  type="datetime-local"
+                  value={gatewayAcknowledgementForm.receivedAt}
+                  onChange={(event) =>
+                    setGatewayAcknowledgementForm({
+                      ...gatewayAcknowledgementForm,
+                      receivedAt: event.target.value
+                    })
+                  }
+                />
+              </label>
+              <label>
+                Actor xác nhận
+                <input
+                  value={gatewayAcknowledgementForm.receivedByActorId}
+                  onChange={(event) =>
+                    setGatewayAcknowledgementForm({
+                      ...gatewayAcknowledgementForm,
+                      receivedByActorId: event.target.value
+                    })
+                  }
+                />
+              </label>
+              <label>
+                Endpoint nhận
+                <input
+                  value={gatewayAcknowledgementForm.targetEndpointId}
+                  onChange={(event) =>
+                    setGatewayAcknowledgementForm({
+                      ...gatewayAcknowledgementForm,
+                      targetEndpointId: event.target.value
+                    })
+                  }
+                />
+              </label>
+              <label className="wide-field">
+                Idempotency key lần gửi
+                <input
+                  value={gatewayAcknowledgementForm.deliveryIdempotencyKey}
+                  onChange={(event) =>
+                    setGatewayAcknowledgementForm({
+                      ...gatewayAcknowledgementForm,
+                      deliveryIdempotencyKey: event.target.value
+                    })
+                  }
+                />
+              </label>
+              <label className="wide-field">
+                Ghi chú callback
+                <textarea
+                  value={gatewayAcknowledgementForm.note}
+                  onChange={(event) =>
+                    setGatewayAcknowledgementForm({
+                      ...gatewayAcknowledgementForm,
+                      note: event.target.value
+                    })
+                  }
+                />
+              </label>
+              <button className="primary-button" type="submit" disabled={isSubmittingGatewayAcknowledgement}>
+                {isSubmittingGatewayAcknowledgement ? "Đang gửi callback..." : "Gửi callback tiếp nhận"}
+              </button>
+            </form>
+          </article>
+
+          {gatewayAcknowledgementResult ? (
+            <article className="panel">
+              <p className="eyebrow">Callback result</p>
+              <h2>Gói đã được xác nhận</h2>
+              <div className="detail-grid compact">
+                <Info label="Mã gói" value={gatewayAcknowledgementResult.id} />
+                <Info label="Trạng thái" value={formatRecordTransferStatus(gatewayAcknowledgementResult.status)} />
+                <Info label="Thời điểm nhận" value={gatewayAcknowledgementResult.receivedAt ? formatDateTime(gatewayAcknowledgementResult.receivedAt) : "Chưa có"} />
+                <Info label="Người xác nhận" value={gatewayAcknowledgementResult.receivedByActorId ?? "Chưa có"} />
+                <Info label="Biên nhận" value={gatewayAcknowledgementResult.acknowledgementReference ?? "Chưa có"} />
+              </div>
+            </article>
+          ) : null}
+        </section>
+      </div>
+    );
   }
 
   function renderDashboardPage(): ReactNode {
@@ -5425,12 +5691,12 @@ export function App() {
           ) : null}
           <article className="panel">
             <p className="eyebrow">Roadmap</p>
-            <h2>Cần làm thật sau skeleton</h2>
+            <h2>Cần nâng cấp trước sản xuất</h2>
             <ul className="milestone-list">
               <li>Thêm IAM/SSO thật thay cho đăng nhập demo.</li>
-              <li>Bổ sung role matrix chi tiết theo bác sĩ, điều dưỡng, văn thư, kiểm toán, quản trị.</li>
-              <li>Thêm đồng ý chia sẻ (consent), chữ ký số, luồng gửi nhận FHIR Bundle.</li>
-              <li>Tách cấu hình cơ sở y tế, khoa/phòng, mã định danh và danh mục tài liệu.</li>
+              <li>Bổ sung role matrix chi tiết theo bác sĩ, điều dưỡng, văn thư, kiểm toán, quản trị và gateway liên thông.</li>
+              <li>Nâng biên nhận kỹ thuật thành chữ ký số/mTLS/JWS gateway theo yêu cầu triển khai thật.</li>
+              <li>Tách cấu hình cơ sở y tế, khoa/phòng, mã định danh, danh mục tài liệu và chính sách retention.</li>
             </ul>
           </article>
         </section>
@@ -9707,6 +9973,17 @@ function AuthenticatedLayout({
   readonly userName: string;
   readonly userRole: DemoRole;
 }) {
+  const visibleNavigationItems =
+    userRole === "integration"
+      ? [
+          {
+            route: "interop" as const,
+            label: "Gateway",
+            hint: "Callback tiếp nhận"
+          }
+        ]
+      : navigationItems;
+
   return (
     <main className="app-layout">
       <aside className="app-sidebar">
@@ -9715,7 +9992,7 @@ function AuthenticatedLayout({
           <strong>Nexus</strong>
         </div>
         <nav className="app-nav" aria-label="Điều hướng ứng dụng">
-          {navigationItems.map((item) => (
+          {visibleNavigationItems.map((item) => (
             <button
               className={currentRoute === item.route ? "selected" : ""}
               key={item.route}

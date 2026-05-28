@@ -34,12 +34,13 @@ migrations/ SQL migration cho PostgreSQL
 Ứng dụng web hiện đã có luồng sản phẩm đầy đủ hơn thay vì chỉ một trang demo:
 
 - `Landing`: giới thiệu WiiiCare Nexus, định vị EMR/FHIR và điều hướng vào phiên demo.
-- `Login`: đăng nhập demo phát Bearer token nội bộ cho vai trò bác sĩ, điều dưỡng, kiểm toán hoặc quản trị; đây chưa phải IAM/SSO sản xuất.
+- `Login`: đăng nhập demo phát Bearer token nội bộ cho vai trò bác sĩ, điều dưỡng, kiểm toán, quản trị hoặc gateway liên thông; đây chưa phải IAM/SSO sản xuất.
 - `Dashboard`: tổng quan số hồ sơ, lượt khám đang mở, dị ứng/cảnh báo, chẩn đoán/vấn đề sức khỏe, chỉ định dịch vụ, công việc thực thi, chỉ định thuốc, cấp phát thuốc, dùng thuốc thực tế, tài liệu nháp và hàng chờ thao tác.
 - `Patient Workspace`: chọn bệnh nhân, xem định danh, mở/kết thúc lượt khám, ghi nhận dị ứng/cảnh báo, chẩn đoán, chỉ định xét nghiệm/hình ảnh/thủ thuật, theo dõi công việc thực thi y lệnh, ghi nhận thủ thuật/hoạt động đã thực hiện, chỉ số sinh hiệu/xét nghiệm, chỉ định thuốc, cấp phát thuốc, xác nhận dùng thuốc thực tế, tạo tài liệu và xem FHIR theo hồ sơ.
 - `Documents`: quản lý tài liệu bệnh án theo nhóm CCD/CCDA/CCR, lab report, medical record và referral.
 - `Audit`: xem nhật ký thao tác nhạy cảm theo bệnh nhân, actor, mục đích sử dụng, tài nguyên, kiểm tra toàn vẹn chuỗi băm audit và xuất FHIR `AuditEvent` Bundle cho kiểm toán viên.
 - `Interop`: kiểm tra FHIR `CapabilityStatement`, `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Consent`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `DocumentReference`, `Provenance`, `Composition`, `Bundle`, consent chia sẻ hồ sơ, thu hồi consent, gói chuyển hồ sơ liên viện và các hướng mở sang HIS/LIS/PACS.
+- `Gateway`: khi đăng nhập bằng vai trò `integration`, giao diện chuyển sang màn callback tiếp nhận riêng, dùng `x-purpose-of-use=OPERATIONS` để mô phỏng gateway bệnh viện nhận gửi biên nhận kỹ thuật cho gói chuyển hồ sơ.
 - `Settings`: mô tả quyền demo, cấu hình vận hành và các việc cần thay bằng bảo mật thật khi lên production.
 
 ## Ảnh kiểm thử giao diện
