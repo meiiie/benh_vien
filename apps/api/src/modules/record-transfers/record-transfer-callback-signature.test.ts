@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  assertRecordTransferCallbackSignatureConfiguration,
   buildRecordTransferCallbackSignature,
   recordTransferCallbackKeyIdHeader,
   recordTransferCallbackSignatureHeader,
@@ -193,6 +194,30 @@ describe("record transfer callback signature", () => {
       statusCode: 503,
       error: "RECORD_TRANSFER_CALLBACK_SIGNATURE_NOT_CONFIGURED"
     });
+  });
+
+  it("validates callback signature configuration at production startup", () => {
+    process.env.NODE_ENV = "production";
+    delete process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRET;
+    delete process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON;
+
+    expect(() => assertRecordTransferCallbackSignatureConfiguration()).toThrow(
+      "BVS_RECORD_TRANSFER_CALLBACK_SECRET hoặc BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON phải được cấu hình tối thiểu 32 ký tự trong production."
+    );
+
+    process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRET =
+      "change-me-with-a-random-callback-secret-of-at-least-32-characters";
+
+    expect(() => assertRecordTransferCallbackSignatureConfiguration()).toThrow(
+      "BVS_RECORD_TRANSFER_CALLBACK_SECRET không được dùng giá trị mẫu trong production."
+    );
+
+    delete process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRET;
+    process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON = JSON.stringify({
+      [callbackKeyId]: callbackSecret
+    });
+
+    expect(() => assertRecordTransferCallbackSignatureConfiguration()).not.toThrow();
   });
 });
 

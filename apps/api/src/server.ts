@@ -73,6 +73,7 @@ import { registerProviderDirectoryRoutes } from "./modules/provider-directory/pr
 import { createRecordTransferDeliveryAttemptRepository } from "./modules/record-transfer-delivery-attempts/create-record-transfer-delivery-attempt.repository.js";
 import { startRecordTransferDeliveryWorker } from "./modules/record-transfer-delivery-attempts/record-transfer-delivery-worker.js";
 import { createRecordTransferRepository } from "./modules/record-transfers/create-record-transfer.repository.js";
+import { assertRecordTransferCallbackSignatureConfiguration } from "./modules/record-transfers/record-transfer-callback-signature.js";
 import { registerRecordTransferRoutes } from "./modules/record-transfers/record-transfer-routes.js";
 import { startRecordTransferRetryWorker } from "./modules/record-transfers/record-transfer-retry-worker.js";
 import { createServiceRequestRepository } from "./modules/service-requests/create-service-request.repository.js";
@@ -199,6 +200,7 @@ export async function buildServer(options: ServerOptions = {}) {
   await app.register(cors, {
     origin: resolveCorsOrigins()
   });
+  assertRecordTransferCallbackSignatureConfiguration();
   app.addHook("onRequest", async (request, reply) => {
     reply.header("X-Request-Id", request.id);
     reply.header("X-Content-Type-Options", "nosniff");

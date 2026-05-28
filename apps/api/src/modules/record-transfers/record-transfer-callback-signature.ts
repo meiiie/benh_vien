@@ -178,6 +178,53 @@ export function verifyRecordTransferCallbackSignature(input: {
   };
 }
 
+export function assertRecordTransferCallbackSignatureConfiguration(): void {
+  if (process.env.NODE_ENV !== "production") {
+    return;
+  }
+
+  const secretsByKeyId = process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON?.trim();
+
+  if (secretsByKeyId) {
+    const parsedSecrets = parseCallbackSecretsByKeyId(secretsByKeyId);
+
+    if ("error" in parsedSecrets) {
+      throw new Error(parsedSecrets.error);
+    }
+
+    for (const [keyId, secret] of Object.entries(parsedSecrets.secrets)) {
+      if (!keyId.trim()) {
+        throw new Error(`${callbackSecretsJsonEnv} phải dùng key id gateway không rỗng.`);
+      }
+
+      const secretValidation = validateCallbackSecret(
+        secret.trim(),
+        callbackSecretsJsonEnv
+      );
+
+      if (secretValidation) {
+        throw new Error(secretValidation.error);
+      }
+    }
+
+    return;
+  }
+
+  const secret = process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRET?.trim();
+
+  if (!secret) {
+    throw new Error(
+      `${callbackSecretEnv} hoặc ${callbackSecretsJsonEnv} phải được cấu hình tối thiểu ${minSecretLength} ký tự trong production.`
+    );
+  }
+
+  const secretValidation = validateCallbackSecret(secret, callbackSecretEnv);
+
+  if (secretValidation) {
+    throw new Error(secretValidation.error);
+  }
+}
+
 function buildSignaturePayload(
   timestamp: string,
   recordTransferId: string,
