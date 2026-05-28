@@ -62,7 +62,7 @@ Endpoint đăng nhập áp dụng rate limit theo IP + username đã băm SHA-25
 Các lỗi đăng nhập như payload sai, sai tài khoản/mật khẩu, sai vai trò hoặc phiên không hợp lệ đều trả `requestId` để đối chiếu log khi kiểm tra sự cố. Payload đăng nhập sai schema dùng cùng envelope `400 VALIDATION_ERROR` với các API nghiệp vụ.
 
 Thời hạn token demo được điều khiển bằng `BVS_AUTH_TOKEN_TTL_SECONDS`, mặc định `28800` giây.
-Khi kiểm tra phiên, API chỉ chấp nhận token có `iat`/`exp` hợp lệ, chưa hết hạn, không phát hành quá xa trong tương lai và không vượt trần thời lượng `28800` giây. Endpoint `GET /api/v1/auth/session` trả `WWW-Authenticate: Bearer` khi token thiếu hoặc không hợp lệ.
+Khi kiểm tra phiên, API chỉ chấp nhận token có segment base64url hợp lệ, kích thước nằm trong giới hạn, `iat`/`exp` hợp lệ, chưa hết hạn, không phát hành quá xa trong tương lai và không vượt trần thời lượng `28800` giây. Endpoint `GET /api/v1/auth/session` trả `WWW-Authenticate: Bearer` khi token thiếu hoặc không hợp lệ.
 
 Tài khoản demo:
 

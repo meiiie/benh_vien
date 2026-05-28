@@ -21,6 +21,10 @@ const defaultTokenTtlSeconds = 60 * 60 * 8;
 const minTokenTtlSeconds = 60 * 5;
 const maxTokenTtlSeconds = 60 * 60 * 8;
 const maxClockSkewSeconds = 60;
+const maxAccessTokenLength = 4096;
+const maxEncodedPayloadLength = 2048;
+const maxSignatureLength = 128;
+const tokenSegmentPattern = /^[A-Za-z0-9_-]+$/;
 const issuer = "wiiicare-nexus";
 
 export function createAccessToken(actor: AuthenticatedActor, now = new Date()): AuthenticatedSession & {
@@ -43,9 +47,18 @@ export function createAccessToken(actor: AuthenticatedActor, now = new Date()): 
 }
 
 export function verifyAccessToken(token: string, now = new Date()): AuthenticatedSession | undefined {
+  if (token.length > maxAccessTokenLength) {
+    return undefined;
+  }
+
   const [tokenIssuer, encodedPayload, signature, extra] = token.split(".");
 
-  if (tokenIssuer !== issuer || !encodedPayload || !signature || extra !== undefined) {
+  if (
+    tokenIssuer !== issuer ||
+    !isSafeTokenSegment(encodedPayload, maxEncodedPayloadLength) ||
+    !isSafeTokenSegment(signature, maxSignatureLength) ||
+    extra !== undefined
+  ) {
     return undefined;
   }
 
@@ -158,6 +171,15 @@ function isUnixTimestamp(value: unknown): value is number {
     Number.isInteger(value) &&
     Number.isFinite(value) &&
     value > 0
+  );
+}
+
+function isSafeTokenSegment(value: unknown, maxLength: number): value is string {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= maxLength &&
+    tokenSegmentPattern.test(value)
   );
 }
 

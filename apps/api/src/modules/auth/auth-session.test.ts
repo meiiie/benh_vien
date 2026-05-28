@@ -100,6 +100,43 @@ describe("auth session tokens", () => {
       )
     ).toBeUndefined();
   });
+
+  it("rejects oversized or malformed token segments before deep verification", () => {
+    const validSession = createAccessToken(
+      {
+        actorId: "practitioner-demo-001",
+        displayName: "Bac si dieu tri",
+        role: "clinician"
+      },
+      new Date("2026-05-27T00:00:00.000Z")
+    );
+    const [, encodedPayload, signature] = validSession.accessToken.split(".");
+
+    expect(
+      verifyAccessToken(
+        `${issuer}.${"a".repeat(2049)}.${signature}`,
+        new Date("2026-05-27T00:01:00.000Z")
+      )
+    ).toBeUndefined();
+    expect(
+      verifyAccessToken(
+        `${issuer}.${encodedPayload}.${"a".repeat(129)}`,
+        new Date("2026-05-27T00:01:00.000Z")
+      )
+    ).toBeUndefined();
+    expect(
+      verifyAccessToken(
+        `${issuer}.${encodedPayload}.bad signature`,
+        new Date("2026-05-27T00:01:00.000Z")
+      )
+    ).toBeUndefined();
+    expect(
+      verifyAccessToken(
+        `${issuer}.${"a".repeat(4097)}.${signature}`,
+        new Date("2026-05-27T00:01:00.000Z")
+      )
+    ).toBeUndefined();
+  });
 });
 
 function buildSignedToken(payload: TestTokenPayload): string {
