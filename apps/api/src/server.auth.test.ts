@@ -430,6 +430,31 @@ describe("API auth and RBAC boundary", () => {
     expect(body.latencyMs).toEqual(expect.any(Number));
   });
 
+  it("returns runtime metadata for web compatibility checks", async () => {
+    app = await readyServer();
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/runtime"
+    });
+    const body = response.json();
+
+    expect(response.statusCode).toBe(200);
+    expect(body).toMatchObject({
+      service: "benh-vien-so-api",
+      product: "WiiiCare Nexus",
+      version: "0.2.0",
+      repository: "in-memory",
+      publicApiBaseUrl: expect.stringContaining("/api/v1"),
+      features: {
+        recordTransferDeliveryAttempts: true,
+        recordTransferDeliveryWorkerEnabled: false,
+        recordTransferRetryWorkerEnabled: false
+      }
+    });
+    expect(Date.parse(body.checkedAt)).not.toBeNaN();
+  });
+
   it("marks readiness as not ready when the login rate limit store is unhealthy", async () => {
     const unhealthyLoginRateLimiter: LoginRateLimiter = {
       async consume() {

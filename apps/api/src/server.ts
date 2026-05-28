@@ -158,6 +158,7 @@ const requestIdHeaderName = "x-request-id";
 const maxRequestIdLength = 128;
 const requestIdPattern = /^[A-Za-z0-9._:-]+$/;
 const defaultPublicApiBaseUrl = "http://localhost:7310/api/v1";
+const apiVersion = "0.2.0";
 
 export async function buildServer(options: ServerOptions = {}) {
   assertAuthConfiguration();
@@ -245,7 +246,7 @@ export async function buildServer(options: ServerOptions = {}) {
     openapi: {
       info: {
         title: "WiiiCare Nexus API",
-        version: "0.2.0",
+        version: apiVersion,
         description: "API thử nghiệm cho hồ sơ bệnh án điện tử và liên thông FHIR."
       },
       components: {
@@ -536,6 +537,14 @@ export async function buildServer(options: ServerOptions = {}) {
 
   await app.register(
     async (api) => {
+      api.get("/runtime", async () =>
+        buildApiRuntimeInfo({
+          publicApiBaseUrl,
+          recordTransferDeliveryWorkerEnabled: Boolean(recordTransferDeliveryWorkerConfig),
+          recordTransferRetryWorkerEnabled: Boolean(recordTransferRetryWorkerConfig)
+        })
+      );
+
       api.get("/fhir/metadata", async () =>
         buildWiiiCareCapabilityStatement({
           implementationUrl: publicApiBaseUrl
@@ -717,6 +726,27 @@ export async function buildServer(options: ServerOptions = {}) {
   );
 
   return app;
+}
+
+function buildApiRuntimeInfo(input: {
+  readonly publicApiBaseUrl: string;
+  readonly recordTransferDeliveryWorkerEnabled: boolean;
+  readonly recordTransferRetryWorkerEnabled: boolean;
+}) {
+  return {
+    service: "benh-vien-so-api",
+    product: "WiiiCare Nexus",
+    version: apiVersion,
+    repository: process.env.BVS_REPOSITORY ?? "in-memory",
+    nodeEnv: process.env.NODE_ENV ?? "development",
+    publicApiBaseUrl: input.publicApiBaseUrl,
+    checkedAt: new Date().toISOString(),
+    features: {
+      recordTransferDeliveryAttempts: true,
+      recordTransferDeliveryWorkerEnabled: input.recordTransferDeliveryWorkerEnabled,
+      recordTransferRetryWorkerEnabled: input.recordTransferRetryWorkerEnabled
+    }
+  };
 }
 
 function isClosableRepository(repository: unknown): repository is ClosableRepository {

@@ -931,6 +931,21 @@ type RecordTransferOperationalSummary = {
   readonly nextRetry: string;
 };
 
+type ApiRuntimeInfo = {
+  readonly service: string;
+  readonly product: string;
+  readonly version: string;
+  readonly repository: string;
+  readonly nodeEnv: string;
+  readonly publicApiBaseUrl: string;
+  readonly checkedAt: string;
+  readonly features: {
+    readonly recordTransferDeliveryAttempts: boolean;
+    readonly recordTransferDeliveryWorkerEnabled: boolean;
+    readonly recordTransferRetryWorkerEnabled: boolean;
+  };
+};
+
 type PatientsResponse = {
   readonly items: readonly Patient[];
 };
@@ -1653,6 +1668,8 @@ export function App() {
     useState<readonly RecordTransferDeliveryAttempt[]>([]);
   const [recordTransferDeliveryAttemptWarning, setRecordTransferDeliveryAttemptWarning] =
     useState<string>();
+  const [apiRuntimeInfo, setApiRuntimeInfo] = useState<ApiRuntimeInfo>();
+  const [apiRuntimeWarning, setApiRuntimeWarning] = useState<string>();
   const [providerDirectory, setProviderDirectory] = useState<ProviderDirectory>();
   const [patientFhirPreview, setPatientFhirPreview] = useState<unknown>();
   const [patientFhirBundlePreview, setPatientFhirBundlePreview] = useState<unknown>();
@@ -1839,6 +1856,7 @@ export function App() {
 
     void loadPatients();
     void loadCapabilityStatement();
+    void loadApiRuntimeInfo();
     void loadProviderDirectory();
   }, [isAuthenticated]);
 
@@ -2189,6 +2207,34 @@ export function App() {
             ? `Không thể tải FHIR CapabilityStatement: ${error.message}`
             : "Không thể tải FHIR CapabilityStatement."
       });
+    }
+  }
+
+  async function loadApiRuntimeInfo() {
+    try {
+      const response = await fetch(`${apiBaseUrl}/runtime`);
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          setApiRuntimeInfo(undefined);
+          setApiRuntimeWarning(
+            "API runtime metadata chưa có trong backend đang chạy. Hãy khởi động lại backend mới nhất nếu cần kiểm tra phiên bản và trạng thái worker."
+          );
+          return;
+        }
+
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      setApiRuntimeInfo((await response.json()) as ApiRuntimeInfo);
+      setApiRuntimeWarning(undefined);
+    } catch (error) {
+      setApiRuntimeInfo(undefined);
+      setApiRuntimeWarning(
+        error instanceof Error
+          ? `Không thể đọc runtime metadata: ${error.message}`
+          : "Không thể đọc runtime metadata."
+      );
     }
   }
 
@@ -3416,6 +3462,8 @@ export function App() {
     setRecordTransfers([]);
     setRecordTransferDeliveryAttempts([]);
     setRecordTransferDeliveryAttemptWarning(undefined);
+    setApiRuntimeInfo(undefined);
+    setApiRuntimeWarning(undefined);
     setProviderDirectory(undefined);
     setPatientFhirPreview(undefined);
     setPatientFhirBundlePreview(undefined);
@@ -5024,6 +5072,64 @@ export function App() {
               <Info label="API" value={apiBaseUrl} />
               <Info label="Phiên hết hạn" value={authSession ? formatDateTime(authSession.expiresAt) : "Chưa có"} />
               <Info label="Mục đích" value="Bearer token + PurposeOfUse" />
+            </div>
+          </article>
+          <article className="panel">
+            <div className="panel-heading">
+              <div>
+                <p className="eyebrow">Runtime</p>
+                <h2>Backend đang kết nối</h2>
+              </div>
+              <button
+                className="ghost-button compact-button"
+                type="button"
+                onClick={() => void loadApiRuntimeInfo()}
+              >
+                Kiểm tra lại
+              </button>
+            </div>
+            {apiRuntimeWarning ? (
+              <p className="transfer-alert">{apiRuntimeWarning}</p>
+            ) : null}
+            <div className="detail-grid compact">
+              <Info label="Sản phẩm" value={apiRuntimeInfo?.product ?? "Chưa xác định"} />
+              <Info label="Service" value={apiRuntimeInfo?.service ?? "Chưa xác định"} />
+              <Info label="Phiên bản API" value={apiRuntimeInfo?.version ?? "Chưa xác định"} />
+              <Info label="Repository" value={apiRuntimeInfo?.repository ?? "Chưa xác định"} />
+              <Info label="Môi trường" value={apiRuntimeInfo?.nodeEnv ?? "Chưa xác định"} />
+              <Info label="Public API" value={apiRuntimeInfo?.publicApiBaseUrl ?? apiBaseUrl} />
+              <Info
+                label="Delivery attempts"
+                value={
+                  apiRuntimeInfo?.features.recordTransferDeliveryAttempts
+                    ? "Có route outbox"
+                    : "Chưa xác định"
+                }
+              />
+              <Info
+                label="Delivery worker"
+                value={
+                  apiRuntimeInfo?.features.recordTransferDeliveryWorkerEnabled
+                    ? "Đang bật"
+                    : "Đang tắt hoặc chưa xác định"
+                }
+              />
+              <Info
+                label="Retry worker"
+                value={
+                  apiRuntimeInfo?.features.recordTransferRetryWorkerEnabled
+                    ? "Đang bật"
+                    : "Đang tắt hoặc chưa xác định"
+                }
+              />
+              <Info
+                label="Kiểm tra lúc"
+                value={
+                  apiRuntimeInfo?.checkedAt
+                    ? formatDateTime(apiRuntimeInfo.checkedAt)
+                    : "Chưa có"
+                }
+              />
             </div>
           </article>
           <article className="panel">
