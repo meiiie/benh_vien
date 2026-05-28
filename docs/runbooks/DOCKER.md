@@ -101,6 +101,17 @@ status=$(curl -sS -o /tmp/wiiicare-demo-login.json -w "%{http_code}" \
 test "$status" = "403"
 grep -q "DEMO_AUTH_DISABLED" /tmp/wiiicare-demo-login.json
 
+cp .env.prod.local .env.prod.local.auth-smoke
+sed -i 's|^BVS_DEMO_AUTH_ENABLED=.*|BVS_DEMO_AUTH_ENABLED=true|g' .env.prod.local.auth-smoke
+docker compose --env-file .env.prod.local.auth-smoke -f docker-compose.yml -f docker-compose.prod.yml up -d --no-deps --force-recreate api
+for attempt in $(seq 1 30); do
+  if curl -fsS http://localhost:7310/ready >/tmp/wiiicare-ready-auth-smoke.json; then
+    break
+  fi
+  sleep 2
+done
+WIIICARE_SMOKE_BASE_URL=http://localhost:8080/api/v1 node scripts/harness/authenticated-api-smoke.mjs
+
 docker compose --env-file .env.prod.local -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -c "select version, left(checksum_sha256, 12) as checksum_prefix from schema_migrations order by version;"
 expected_migrations=$(find migrations -maxdepth 1 -name '*.sql' | wc -l | tr -d ' ')
 actual_migrations=$(docker compose --env-file .env.prod.local -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -Atc "select count(*) from schema_migrations;")
