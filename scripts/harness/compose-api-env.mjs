@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 
 const composeFiles = ["docker-compose.yml", "docker-compose.prod.yml"];
+const labComposeFiles = ["infra/docker-compose.yml"];
 const composeProfiles = ["interop", "imaging"];
 const requiredApiEnvironmentKeys = [
   "BVS_API_DOCS_ENABLED",
@@ -22,24 +23,16 @@ const composeArgs = [
   ...composeProfiles.flatMap((profile) => ["--profile", profile]),
   ...composeFiles.flatMap((file) => ["-f", file])
 ];
-const rawConfig = execFileSync(
-  "docker",
-  ["compose", ...composeArgs, "config", "--format", "json"],
-  {
-    encoding: "utf8"
-  }
-);
-const composeConfig = JSON.parse(rawConfig);
+const composeConfig = readComposeConfig(composeArgs);
+const labComposeConfig = readComposeConfig([
+  ...composeProfiles.flatMap((profile) => ["--profile", profile]),
+  ...labComposeFiles.flatMap((file) => ["-f", file])
+]);
 const apiEnvironment = composeConfig.services?.api?.environment;
 const apiPorts = composeConfig.services?.api?.ports ?? [];
 const webPorts = composeConfig.services?.web?.ports ?? [];
-const runtimeImages = Object.entries(composeConfig.services ?? {})
-  .flatMap(([serviceName, service]) =>
-    typeof service?.image === "string"
-      ? [{ serviceName, image: service.image }]
-      : []
-  )
-  .sort((left, right) => left.serviceName.localeCompare(right.serviceName));
+const runtimeImages = collectRuntimeImages(composeConfig);
+const labRuntimeImages = collectRuntimeImages(labComposeConfig);
 
 if (!apiEnvironment || typeof apiEnvironment !== "object") {
   throw new Error("Expected docker compose service api to expose an environment map.");
@@ -63,10 +56,10 @@ if (missingKeys.length > 0) {
   );
 }
 
-const mutableImages = runtimeImages.flatMap(({ serviceName, image }) => {
-  const reason = getMutableImageReason(image);
-  return reason ? [{ serviceName, image, reason }] : [];
-});
+const mutableImages = [
+  ...findMutableImages(runtimeImages, composeFiles),
+  ...findMutableImages(labRuntimeImages, labComposeFiles)
+];
 
 if (mutableImages.length > 0) {
   throw new Error(
@@ -82,16 +75,43 @@ console.log(
       status: "ok",
       check: "Docker compose API runtime environment, production exposure and image pinning",
       composeFiles,
+      labComposeFiles,
       composeProfiles,
       requiredApiEnvironmentKeys,
       apiPublishedPorts: apiPorts.length,
       webPublishedPorts: webPorts.length,
-      pinnedRuntimeImages: runtimeImages
+      pinnedRuntimeImages: runtimeImages,
+      pinnedLabRuntimeImages: labRuntimeImages
     },
     null,
     2
   )
 );
+
+function readComposeConfig(args) {
+  const rawConfig = execFileSync("docker", ["compose", ...args, "config", "--format", "json"], {
+    encoding: "utf8"
+  });
+
+  return JSON.parse(rawConfig);
+}
+
+function collectRuntimeImages(composeConfig) {
+  return Object.entries(composeConfig.services ?? {})
+    .flatMap(([serviceName, service]) =>
+      typeof service?.image === "string"
+        ? [{ serviceName, image: service.image }]
+        : []
+    )
+    .sort((left, right) => left.serviceName.localeCompare(right.serviceName));
+}
+
+function findMutableImages(images, sourceFiles) {
+  return images.flatMap(({ serviceName, image }) => {
+    const reason = getMutableImageReason(image);
+    return reason ? [{ serviceName, image, reason, sourceFiles }] : [];
+  });
+}
 
 function getMutableImageReason(image) {
   const digestIndex = image.indexOf("@");
