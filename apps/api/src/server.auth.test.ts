@@ -3531,6 +3531,37 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("rejects creating a record transfer directly in the dead-lettered state", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/record-transfers",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        status: "dead-lettered",
+        priority: "urgent",
+        bundleType: "document",
+        sourceOrganizationId: "hospital-hai-phong-demo",
+        recipientOrganizationId: "hospital-hai-phong-referral",
+        consentReference: "consent-demo-transfer-001",
+        reason: "Không cho client tạo trực tiếp trạng thái lỗi cuối.",
+        requestedAt: "2026-05-28T03:00:00.000Z",
+        sentAt: "2026-05-28T03:05:00.000Z",
+        failedAt: "2026-05-28T03:10:00.000Z"
+      }
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({
+      error: "VALIDATION_ERROR"
+    });
+  });
+
   it("keeps JSON and FHIR not-found errors separate for record transfers", async () => {
     app = await readyServer();
     const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");

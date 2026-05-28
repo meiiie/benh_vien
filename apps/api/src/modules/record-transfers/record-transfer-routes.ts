@@ -341,8 +341,12 @@ export async function registerRecordTransferRoutes(
         queuedAt
       });
 
-      await recordTransferRepository.save(recordTransfer);
-      await deliveryAttemptRepository.save(deliveryAttempt);
+      await saveRecordTransferWithDeliveryAttempt(
+        recordTransferRepository,
+        deliveryAttemptRepository,
+        recordTransfer,
+        deliveryAttempt
+      );
       await recordAuditEvent(auditRepository, request, {
         action: "record-transfer.send",
         resourceType: "RecordTransfer",
@@ -920,6 +924,37 @@ function buildDeliveryIdempotencyKey(input: {
     .digest("hex");
 
   return `wiiicare-record-transfer-${hash}`;
+}
+
+type TransactionalRecordTransferRepository = RecordTransferRepository & {
+  saveWithDeliveryAttempt(
+    recordTransfer: RecordTransfer,
+    deliveryAttempt: RecordTransferDeliveryAttempt
+  ): Promise<void>;
+};
+
+async function saveRecordTransferWithDeliveryAttempt(
+  recordTransferRepository: RecordTransferRepository,
+  deliveryAttemptRepository: RecordTransferDeliveryAttemptRepository,
+  recordTransfer: RecordTransfer,
+  deliveryAttempt: RecordTransferDeliveryAttempt
+): Promise<void> {
+  if (isTransactionalRecordTransferRepository(recordTransferRepository)) {
+    await recordTransferRepository.saveWithDeliveryAttempt(recordTransfer, deliveryAttempt);
+    return;
+  }
+
+  await recordTransferRepository.save(recordTransfer);
+  await deliveryAttemptRepository.save(deliveryAttempt);
+}
+
+function isTransactionalRecordTransferRepository(
+  repository: RecordTransferRepository
+): repository is TransactionalRecordTransferRepository {
+  return (
+    typeof (repository as Partial<TransactionalRecordTransferRepository>)
+      .saveWithDeliveryAttempt === "function"
+  );
 }
 
 function buildAcknowledgementReference(input: {

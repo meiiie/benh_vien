@@ -89,30 +89,34 @@ export async function processDueRecordTransferRetries(
       await dependencies.recordTransferRepository.save(recordTransfer);
 
       const after = recordTransfer.toSnapshot();
-      await dependencies.auditRepository.save(
-        AuditEvent.record({
-          occurredAt: dueAt,
-          actorId,
-          action: "record-transfer.dead-letter",
-          resourceType: "RecordTransfer",
-          resourceId: after.id,
-          patientId: after.patientId,
-          purposeOfUse: "OPERATIONS",
-          metadata: {
-            actorRole: "system",
-            worker: "record-transfer-retry-worker",
-            mode: "scheduled",
-            status: after.status,
-            retryCount: after.retryCount,
-            maxRetryCount,
-            scheduledRetryAt: before.nextRetryAt,
-            previousFailureReason: before.failureReason,
-            deadLetteredAt: after.deadLetteredAt,
-            recipientOrganizationId: after.recipientOrganizationId
-          }
-        })
-      );
       deadLetteredTransferIds.push(after.id);
+      try {
+        await dependencies.auditRepository.save(
+          AuditEvent.record({
+            occurredAt: dueAt,
+            actorId,
+            action: "record-transfer.dead-letter",
+            resourceType: "RecordTransfer",
+            resourceId: after.id,
+            patientId: after.patientId,
+            purposeOfUse: "OPERATIONS",
+            metadata: {
+              actorRole: "system",
+              worker: "record-transfer-retry-worker",
+              mode: "scheduled",
+              status: after.status,
+              retryCount: after.retryCount,
+              maxRetryCount,
+              scheduledRetryAt: before.nextRetryAt,
+              previousFailureReason: before.failureReason,
+              deadLetteredAt: after.deadLetteredAt,
+              recipientOrganizationId: after.recipientOrganizationId
+            }
+          })
+        );
+      } catch {
+        // Trạng thái nghiệp vụ đã lưu thành công; không báo sai là skipped.
+      }
     } catch {
       skippedTransferIds.push(before.id);
     }
@@ -129,28 +133,32 @@ export async function processDueRecordTransferRetries(
       await dependencies.recordTransferRepository.save(recordTransfer);
 
       const after = recordTransfer.toSnapshot();
-      await dependencies.auditRepository.save(
-        AuditEvent.record({
-          occurredAt: dueAt,
-          actorId,
-          action: "record-transfer.retry",
-          resourceType: "RecordTransfer",
-          resourceId: after.id,
-          patientId: after.patientId,
-          purposeOfUse: "OPERATIONS",
-          metadata: {
-            actorRole: "system",
-            worker: "record-transfer-retry-worker",
-            mode: "scheduled",
-            status: after.status,
-            retryCount: after.retryCount,
-            scheduledRetryAt: before.nextRetryAt,
-            previousFailureReason: before.failureReason,
-            recipientOrganizationId: after.recipientOrganizationId
-          }
-        })
-      );
       retriedTransferIds.push(after.id);
+      try {
+        await dependencies.auditRepository.save(
+          AuditEvent.record({
+            occurredAt: dueAt,
+            actorId,
+            action: "record-transfer.retry",
+            resourceType: "RecordTransfer",
+            resourceId: after.id,
+            patientId: after.patientId,
+            purposeOfUse: "OPERATIONS",
+            metadata: {
+              actorRole: "system",
+              worker: "record-transfer-retry-worker",
+              mode: "scheduled",
+              status: after.status,
+              retryCount: after.retryCount,
+              scheduledRetryAt: before.nextRetryAt,
+              previousFailureReason: before.failureReason,
+              recipientOrganizationId: after.recipientOrganizationId
+            }
+          })
+        );
+      } catch {
+        // Trạng thái nghiệp vụ đã lưu thành công; không báo sai là skipped.
+      }
     } catch {
       skippedTransferIds.push(before.id);
     }

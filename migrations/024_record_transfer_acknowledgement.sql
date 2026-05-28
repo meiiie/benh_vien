@@ -8,6 +8,7 @@ BEGIN
     SELECT 1
     FROM pg_constraint
     WHERE conname = 'record_transfers_acknowledgement_after_received'
+      AND conrelid = 'record_transfers'::regclass
   ) THEN
     ALTER TABLE record_transfers
       ADD CONSTRAINT record_transfers_acknowledgement_after_received CHECK (

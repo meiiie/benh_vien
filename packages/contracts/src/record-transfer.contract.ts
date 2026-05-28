@@ -11,6 +11,12 @@ export const RecordTransferStatusSchema = z.enum([
   "dead-lettered"
 ]);
 
+export const CreateRecordTransferStatusSchema = z.enum([
+  "draft",
+  "requested",
+  "ready"
+]);
+
 export const RecordTransferPrioritySchema = z.enum(["routine", "urgent", "asap", "stat"]);
 export const RecordTransferBundleTypeSchema = z.enum(["collection", "document"]);
 
@@ -23,7 +29,7 @@ export const RecordTransferIdParamsSchema = z.object({
 });
 
 export const CreateRecordTransferRequestSchema = z.object({
-  status: RecordTransferStatusSchema.optional(),
+  status: CreateRecordTransferStatusSchema.optional(),
   priority: RecordTransferPrioritySchema.optional(),
   bundleType: RecordTransferBundleTypeSchema.default("document"),
   sourceOrganizationId: z.string().min(1),
@@ -71,6 +77,9 @@ export const RetryRecordTransferRequestSchema = z.object({
 });
 
 export type RecordTransferStatus = z.infer<typeof RecordTransferStatusSchema>;
+export type CreateRecordTransferStatus = z.infer<
+  typeof CreateRecordTransferStatusSchema
+>;
 export type RecordTransferPriority = z.infer<typeof RecordTransferPrioritySchema>;
 export type RecordTransferBundleType = z.infer<typeof RecordTransferBundleTypeSchema>;
 export type PatientRecordTransfersParams = z.infer<

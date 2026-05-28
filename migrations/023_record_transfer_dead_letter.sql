@@ -18,10 +18,16 @@ ALTER TABLE record_transfers
     )
   ),
   ADD CONSTRAINT record_transfers_dead_letter_after_failed CHECK (
-    dead_lettered_at IS NULL
-    OR (
-      failed_at IS NOT NULL
-      AND dead_lettered_at >= failed_at
+    (
+      status <> 'dead-lettered'
+      OR dead_lettered_at IS NOT NULL
+    )
+    AND (
+      dead_lettered_at IS NULL
+      OR (
+        failed_at IS NOT NULL
+        AND dead_lettered_at >= failed_at
+      )
     )
   );
 

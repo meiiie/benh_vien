@@ -115,6 +115,28 @@ describe("RecordTransfer", () => {
     ).toThrow(DomainError);
   });
 
+  it("rejects rehydrated acknowledgement metadata before a transfer has been received", () => {
+    const transfer = RecordTransfer.create({
+      id: "record-transfer-test-010",
+      patientId: "patient-test-001",
+      bundleType: "document",
+      bundleId: "patient-document-patient-test-001",
+      sourceOrganizationId: "hospital-source",
+      recipientOrganizationId: "hospital-recipient",
+      consentReference: "consent-test-001",
+      requestedByActorId: "practitioner-test-001",
+      reason: "Chuyển hồ sơ để hội chẩn chuyên khoa.",
+      requestedAt: "2026-05-28T02:00:00.000Z"
+    });
+
+    expect(() =>
+      RecordTransfer.rehydrate({
+        ...transfer.toSnapshot(),
+        receivedByActorId: "practitioner-recipient-001"
+      })
+    ).toThrow(DomainError);
+  });
+
   it("records a failed delivery and prepares a retry", () => {
     const transfer = RecordTransfer.create({
       id: "record-transfer-test-006",
@@ -209,6 +231,40 @@ describe("RecordTransfer", () => {
       updatedAt: "2026-05-28T03:10:00.000Z"
     });
     expect(transfer.toSnapshot().nextRetryAt).toBeUndefined();
+  });
+
+  it("rejects rehydrated dead-lettered transfers that still have a retry schedule", () => {
+    const transfer = RecordTransfer.create({
+      id: "record-transfer-test-011",
+      patientId: "patient-test-001",
+      bundleType: "document",
+      bundleId: "patient-document-patient-test-001",
+      sourceOrganizationId: "hospital-source",
+      recipientOrganizationId: "hospital-recipient",
+      consentReference: "consent-test-001",
+      requestedByActorId: "practitioner-test-001",
+      reason: "Chuyển hồ sơ để hội chẩn chuyên khoa.",
+      requestedAt: "2026-05-28T02:00:00.000Z"
+    });
+
+    transfer.markSent({
+      sentAt: "2026-05-28T02:30:00.000Z"
+    });
+    transfer.markFailed({
+      failedAt: "2026-05-28T02:35:00.000Z",
+      failureReason: "Gateway bệnh viện nhận tạm thời không phản hồi.",
+      nextRetryAt: "2026-05-28T02:50:00.000Z"
+    });
+    transfer.markDeadLettered({
+      deadLetteredAt: "2026-05-28T03:10:00.000Z"
+    });
+
+    expect(() =>
+      RecordTransfer.rehydrate({
+        ...transfer.toSnapshot(),
+        nextRetryAt: "2026-05-28T03:30:00.000Z"
+      })
+    ).toThrow(DomainError);
   });
 
   it("rejects receiving a transfer before it has been sent", () => {
