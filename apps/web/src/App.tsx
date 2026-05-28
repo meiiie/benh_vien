@@ -1037,6 +1037,11 @@ type NewPatientForm = {
   managingOrganizationId: string;
 };
 
+type PatientMergeForm = {
+  targetPatientId: string;
+  reason: string;
+};
+
 type NewRecordTransferForm = {
   priority: RecordTransferPriority;
   bundleType: RecordTransferBundleType;
@@ -1293,6 +1298,11 @@ const defaultPatientForm: NewPatientForm = {
   phone: "0912345678",
   address: "Hải Phòng, Việt Nam",
   managingOrganizationId: "hospital-hai-phong-demo"
+};
+
+const defaultPatientMergeForm: PatientMergeForm = {
+  targetPatientId: "patient-demo-001",
+  reason: "Đối soát MPI xác nhận hồ sơ nguồn bị đăng ký trùng với hồ sơ đích."
 };
 
 const defaultEncounterForm: NewEncounterForm = {
@@ -1703,6 +1713,8 @@ export function App() {
   const [diagnosticReportFhirPreview, setDiagnosticReportFhirPreview] = useState<unknown>();
   const [imagingStudyFhirPreview, setImagingStudyFhirPreview] = useState<unknown>();
   const [patientForm, setPatientForm] = useState<NewPatientForm>(defaultPatientForm);
+  const [patientMergeForm, setPatientMergeForm] =
+    useState<PatientMergeForm>(defaultPatientMergeForm);
   const [recordTransferForm, setRecordTransferForm] =
     useState<NewRecordTransferForm>(defaultRecordTransferForm);
   const [encounterForm, setEncounterForm] = useState<NewEncounterForm>(defaultEncounterForm);
@@ -1755,6 +1767,7 @@ export function App() {
     useState(false);
   const [isLoadingProviderDirectory, setIsLoadingProviderDirectory] = useState(false);
   const [isSubmittingPatient, setIsSubmittingPatient] = useState(false);
+  const [isMergingPatient, setIsMergingPatient] = useState(false);
   const [isSubmittingEncounter, setIsSubmittingEncounter] = useState(false);
   const [isSubmittingDocument, setIsSubmittingDocument] = useState(false);
   const [isSubmittingAllergyIntolerance, setIsSubmittingAllergyIntolerance] = useState(false);
@@ -1782,6 +1795,15 @@ export function App() {
     : undefined;
   const isSelectedPatientMerged = selectedPatient?.status === "merged";
   const selectedPatientWriteDisabled = !selectedPatient || isSelectedPatientMerged;
+  const canMergePatients = authSession?.actor.role === "admin";
+  const patientMergeCandidates = selectedPatient
+    ? patients.filter((patient) => patient.id !== selectedPatient.id && patient.status === "active")
+    : [];
+  const patientMergeTargetId = patientMergeCandidates.some(
+    (patient) => patient.id === patientMergeForm.targetPatientId
+  )
+    ? patientMergeForm.targetPatientId
+    : patientMergeCandidates[0]?.id ?? "";
   const selectedEncounter = encounters.find((encounter) => encounter.id === selectedEncounterId);
   const selectedDocument = clinicalDocuments.find((document) => document.id === selectedDocumentId);
   const selectedAllergyIntolerance = allergyIntolerances.find(
@@ -3592,6 +3614,70 @@ export function App() {
     }
   }
 
+  async function handleMergeSelectedPatient(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedPatient) {
+      setStatusMessage("Cần chọn hồ sơ nguồn trước khi merge.");
+      return;
+    }
+
+    if (!canMergePatients) {
+      setStatusMessage("Chỉ quản trị viên mới được merge hồ sơ bệnh nhân.");
+      return;
+    }
+
+    if (selectedPatient.status !== "active") {
+      setStatusMessage("Chỉ merge được hồ sơ nguồn đang hoạt động.");
+      return;
+    }
+
+    if (!patientMergeTargetId) {
+      setStatusMessage("Cần chọn hồ sơ đích trước khi merge.");
+      return;
+    }
+
+    if (!patientMergeForm.reason.trim()) {
+      setStatusMessage("Cần nhập lý do merge để phục vụ kiểm toán/MPI.");
+      return;
+    }
+
+    setIsMergingPatient(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/merge`, {
+        method: "POST",
+        headers: buildHeaders("TREATMENT", {
+          "Content-Type": "application/json"
+        }),
+        body: JSON.stringify({
+          targetPatientId: patientMergeTargetId,
+          reason: patientMergeForm.reason.trim()
+        })
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => undefined);
+        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
+      }
+
+      const mergedPatient = (await response.json()) as Patient;
+      await loadPatients(mergedPatient.id);
+      await loadPatientWorkspace(mergedPatient.id);
+      setStatusMessage(
+        `Đã merge hồ sơ ${mergedPatient.fullName} vào hồ sơ đích ${mergedPatient.mergedIntoPatientId}. Hồ sơ nguồn đã chuyển sang chế độ chỉ đọc.`
+      );
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? `Không thể merge hồ sơ bệnh nhân: ${error.message}`
+          : "Không thể merge hồ sơ bệnh nhân."
+      );
+    } finally {
+      setIsMergingPatient(false);
+    }
+  }
+
   async function handleCreateRecordTransfer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -5041,6 +5127,7 @@ export function App() {
         <section className="workspace">
           {renderPatientListPanel()}
           {renderPatientDetailPanel()}
+          {canMergePatients ? renderPatientMergePanel() : null}
           {renderEncounterPanel()}
           {renderAllergyIntolerancePanel()}
           {renderConditionPanel()}
@@ -5837,6 +5924,96 @@ export function App() {
         ) : (
           <p className="empty-state">Chưa có bệnh nhân nào để hiển thị.</p>
         )}
+      </article>
+    );
+  }
+
+  function renderPatientMergePanel(): ReactNode {
+    const canMergeSelectedPatient = Boolean(selectedPatient && selectedPatient.status === "active");
+
+    return (
+      <article className="panel patient-merge-panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">MPI Governance</p>
+            <h2>Đối soát và merge hồ sơ</h2>
+          </div>
+          <span className="pill gold">Admin-only</span>
+        </div>
+
+        <p className="empty-state">
+          Dùng khi phát hiện hồ sơ đăng ký trùng. Hệ thống giữ lại hồ sơ nguồn để kiểm toán,
+          đánh dấu chỉ đọc và ghi liên kết tới hồ sơ đích theo hướng Master Patient Index.
+        </p>
+
+        {selectedPatient ? (
+          <div className="detail-grid compact">
+            <Info
+              label="Hồ sơ nguồn"
+              value={`${selectedPatient.fullName} (${selectedPatient.identifiers[0]?.value ?? selectedPatient.id})`}
+            />
+            <Info label="Trạng thái nguồn" value={formatPatientRecordStatus(selectedPatient.status)} />
+          </div>
+        ) : null}
+
+        <form className="patient-form" onSubmit={(event) => void handleMergeSelectedPatient(event)}>
+          <label>
+            Hồ sơ đích
+            <select
+              value={patientMergeTargetId}
+              onChange={(event) =>
+                setPatientMergeForm({
+                  ...patientMergeForm,
+                  targetPatientId: event.target.value
+                })
+              }
+              disabled={!canMergeSelectedPatient || isMergingPatient || patientMergeCandidates.length === 0}
+            >
+              {patientMergeCandidates.length === 0 ? (
+                <option value="">Không có hồ sơ đích khả dụng</option>
+              ) : (
+                patientMergeCandidates.map((patient) => (
+                  <option key={patient.id} value={patient.id}>
+                    {patient.fullName} · {patient.identifiers[0]?.value ?? patient.id}
+                  </option>
+                ))
+              )}
+            </select>
+          </label>
+
+          <label className="wide-field">
+            Lý do merge
+            <input
+              value={patientMergeForm.reason}
+              onChange={(event) =>
+                setPatientMergeForm({
+                  ...patientMergeForm,
+                  reason: event.target.value
+                })
+              }
+              placeholder="Ví dụ: Trùng CCCD/BHYT sau khi đối soát MPI."
+            />
+          </label>
+
+          {selectedPatient && selectedPatient.status !== "active" ? (
+            <p className="transfer-alert wide-field">
+              Hồ sơ đang chọn không còn ở trạng thái hoạt động nên không thể dùng làm hồ sơ nguồn để merge.
+            </p>
+          ) : null}
+
+          <button
+            className="primary-button"
+            type="submit"
+            disabled={
+              !canMergeSelectedPatient ||
+              !patientMergeTargetId ||
+              !patientMergeForm.reason.trim() ||
+              isMergingPatient
+            }
+          >
+            {isMergingPatient ? "Đang merge..." : "Merge hồ sơ nguồn"}
+          </button>
+        </form>
       </article>
     );
   }
