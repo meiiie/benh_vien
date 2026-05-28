@@ -315,9 +315,20 @@ BVS_RECORD_TRANSFER_RETRY_WORKER_MAX_RETRY_COUNT=3
 BVS_RECORD_TRANSFER_RETRY_WORKER_RUN_IMMEDIATELY=false
 ```
 
-Worker chỉ chuyển `RecordTransfer` từ `failed` về `ready`, tăng `retryCount` và ghi audit `record-transfer.retry` với `purposeOfUse = OPERATIONS`; nó không tự khẳng định đã gửi thành công sang bệnh viện nhận khi chưa có gateway liên thông thật.
+Nếu muốn worker tự xử lý các delivery attempt đang `queued`, bật riêng delivery worker:
 
-API sẽ kiểm `consentReference` trước khi tạo `RecordTransfer`, đồng thời yêu cầu đơn vị nhận có endpoint FHIR REST `active` và hỗ trợ payload `Bundle` trong Provider Directory. Nếu consent hợp lệ nhưng đơn vị nhận chưa có endpoint phù hợp, API trả `422 RECORD_TRANSFER_ENDPOINT_NOT_FOUND` thay vì tạo một gói chuyển không có đích kỹ thuật. Sau mỗi lần gọi `/send`, API tạo một delivery attempt ở trạng thái `queued`, gồm `targetEndpointId`, `targetEndpointAddress`, `bundleId`, `bundleType`, `attemptNumber`, `queuedAt` và `idempotencyKey`; đây là outbox để worker liên thông thật xử lý ở bước sau, không phải bằng chứng rằng bệnh viện nhận đã nhận hồ sơ. Vòng đời vận hành gồm `requested/ready`, `in-progress` sau khi gửi, `failed` khi gửi lỗi, `ready` khi được đưa vào hàng đợi thử lại và `completed` sau khi cơ sở nhận xác nhận. Kết quả FHIR mong muốn là `Task` có `focus` trỏ tới `Bundle/patient-document-patient-demo-001`, `for` trỏ tới `Patient/patient-demo-001`, `requester` là cơ sở gửi, `owner` là cơ sở nhận, `executionPeriod` khi đã có mốc gửi/nhận và `note` chứa lý do lỗi/hẹn thử lại nếu từng gửi thất bại. Route JSON `/record-transfers/:id` trả lỗi nội bộ `RECORD_TRANSFER_NOT_FOUND` khi không tìm thấy; riêng facade FHIR `/record-transfers/:id/fhir-task` trả lỗi `OperationOutcome` mã `not-found` để client liên thông không phải đọc envelope JSON nội bộ.
+```bash
+BVS_RECORD_TRANSFER_DELIVERY_WORKER_ENABLED=true
+BVS_RECORD_TRANSFER_DELIVERY_WORKER_INTERVAL_SECONDS=60
+BVS_RECORD_TRANSFER_DELIVERY_WORKER_LIMIT=10
+BVS_RECORD_TRANSFER_DELIVERY_WORKER_TIMEOUT_SECONDS=15
+BVS_RECORD_TRANSFER_DELIVERY_WORKER_RETRY_DELAY_SECONDS=300
+BVS_RECORD_TRANSFER_DELIVERY_WORKER_RUN_IMMEDIATELY=false
+```
+
+Delivery worker dựng FHIR Bundle theo `bundleType`, kiểm lại consent, gửi HTTP `POST` tới `targetEndpointAddress` với `Content-Type: application/fhir+json` và header `Idempotency-Key`. Nếu endpoint trả HTTP 2xx, attempt chuyển sang `succeeded`; nếu endpoint trả lỗi hoặc timeout, attempt chuyển sang `failed`, `RecordTransfer` chuyển sang `failed`, có `nextRetryAt` để retry worker đưa lại về `ready`. Retry worker chỉ chuyển `RecordTransfer` từ `failed` về `ready`, tăng `retryCount` và ghi audit `record-transfer.retry` với `purposeOfUse = OPERATIONS`; nó không tự khẳng định đã gửi thành công sang bệnh viện nhận.
+
+API sẽ kiểm `consentReference` trước khi tạo `RecordTransfer`, đồng thời yêu cầu đơn vị nhận có endpoint FHIR REST `active` và hỗ trợ payload `Bundle` trong Provider Directory. Nếu consent hợp lệ nhưng đơn vị nhận chưa có endpoint phù hợp, API trả `422 RECORD_TRANSFER_ENDPOINT_NOT_FOUND` thay vì tạo một gói chuyển không có đích kỹ thuật. Sau mỗi lần gọi `/send`, API tạo một delivery attempt ở trạng thái `queued`, gồm `targetEndpointId`, `targetEndpointAddress`, `bundleId`, `bundleType`, `attemptNumber`, `queuedAt` và `idempotencyKey`; đây là outbox để worker liên thông xử lý, không phải bằng chứng rằng bệnh viện nhận đã nhận hồ sơ. Vòng đời vận hành gồm `requested/ready`, `in-progress` sau khi gửi, `failed` khi gửi lỗi, `ready` khi được đưa vào hàng đợi thử lại và `completed` sau khi cơ sở nhận xác nhận. Kết quả FHIR mong muốn là `Task` có `focus` trỏ tới `Bundle/patient-document-patient-demo-001`, `for` trỏ tới `Patient/patient-demo-001`, `requester` là cơ sở gửi, `owner` là cơ sở nhận, `executionPeriod` khi đã có mốc gửi/nhận và `note` chứa lý do lỗi/hẹn thử lại nếu từng gửi thất bại. Route JSON `/record-transfers/:id` trả lỗi nội bộ `RECORD_TRANSFER_NOT_FOUND` khi không tìm thấy; riêng facade FHIR `/record-transfers/:id/fhir-task` trả lỗi `OperationOutcome` mã `not-found` để client liên thông không phải đọc envelope JSON nội bộ.
 
 ## Lấy và mở lượt khám
 

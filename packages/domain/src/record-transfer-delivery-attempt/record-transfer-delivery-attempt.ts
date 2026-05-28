@@ -36,8 +36,21 @@ export type QueueRecordTransferDeliveryAttemptInput = Omit<
   readonly queuedAt?: string;
 };
 
+export type MarkRecordTransferDeliveryAttemptSucceededInput = {
+  readonly completedAt?: string;
+  readonly httpStatus: number;
+  readonly responseBodyPreview?: string;
+};
+
+export type MarkRecordTransferDeliveryAttemptFailedInput = {
+  readonly completedAt?: string;
+  readonly httpStatus?: number;
+  readonly responseBodyPreview?: string;
+  readonly errorMessage: string;
+};
+
 export class RecordTransferDeliveryAttempt {
-  private constructor(private readonly props: RecordTransferDeliveryAttemptSnapshot) {}
+  private constructor(private props: RecordTransferDeliveryAttemptSnapshot) {}
 
   static queue(input: QueueRecordTransferDeliveryAttemptInput): RecordTransferDeliveryAttempt {
     const now = new Date();
@@ -74,22 +87,35 @@ export class RecordTransferDeliveryAttempt {
   static rehydrate(
     snapshot: RecordTransferDeliveryAttemptSnapshot
   ): RecordTransferDeliveryAttempt {
+    const status = normalizeStatus(snapshot.status);
+    const completedAt = snapshot.completedAt
+      ? parseDate(snapshot.completedAt, "Thời điểm hoàn tất gửi hồ sơ không hợp lệ.").toISOString()
+      : undefined;
+    const httpStatus = snapshot.httpStatus
+      ? normalizeHttpStatus(snapshot.httpStatus)
+      : undefined;
+    const errorMessage = normalizeOptional(snapshot.errorMessage);
+
+    validateTerminalState({
+      status,
+      completedAt,
+      httpStatus,
+      errorMessage
+    });
+
     return new RecordTransferDeliveryAttempt({
       ...snapshot,
       targetEndpointAddress: normalizeEndpointAddress(snapshot.targetEndpointAddress),
       attemptNumber: normalizeAttemptNumber(snapshot.attemptNumber),
+      status,
       queuedAt: parseDate(
         snapshot.queuedAt,
         "Thời điểm xếp hàng gửi hồ sơ không hợp lệ."
       ).toISOString(),
-      completedAt: snapshot.completedAt
-        ? parseDate(snapshot.completedAt, "Thời điểm hoàn tất gửi hồ sơ không hợp lệ.").toISOString()
-        : undefined,
-      httpStatus: snapshot.httpStatus
-        ? normalizeHttpStatus(snapshot.httpStatus)
-        : undefined,
+      completedAt,
+      httpStatus,
       responseBodyPreview: normalizeOptional(snapshot.responseBodyPreview),
-      errorMessage: normalizeOptional(snapshot.errorMessage),
+      errorMessage,
       createdAt: parseDate(snapshot.createdAt, "Thời điểm tạo lần gửi không hợp lệ.").toISOString(),
       updatedAt: parseDate(
         snapshot.updatedAt,
@@ -110,10 +136,57 @@ export class RecordTransferDeliveryAttempt {
     return this.props.patientId;
   }
 
+  markSucceeded(input: MarkRecordTransferDeliveryAttemptSucceededInput): void {
+    this.assertQueued();
+
+    const completedAt = input.completedAt
+      ? parseDate(input.completedAt, "Thời điểm hoàn tất gửi hồ sơ không hợp lệ.")
+      : new Date();
+    const httpStatus = normalizeHttpStatus(input.httpStatus);
+
+    if (httpStatus < 200 || httpStatus > 299) {
+      throw new DomainError("Lần gửi thành công phải có HTTP status 2xx.");
+    }
+
+    this.props = {
+      ...this.props,
+      status: "succeeded",
+      completedAt: completedAt.toISOString(),
+      httpStatus,
+      responseBodyPreview: normalizeOptional(input.responseBodyPreview),
+      errorMessage: undefined,
+      updatedAt: completedAt.toISOString()
+    };
+  }
+
+  markFailed(input: MarkRecordTransferDeliveryAttemptFailedInput): void {
+    this.assertQueued();
+
+    const completedAt = input.completedAt
+      ? parseDate(input.completedAt, "Thời điểm hoàn tất gửi hồ sơ không hợp lệ.")
+      : new Date();
+
+    this.props = {
+      ...this.props,
+      status: "failed",
+      completedAt: completedAt.toISOString(),
+      httpStatus: input.httpStatus ? normalizeHttpStatus(input.httpStatus) : undefined,
+      responseBodyPreview: normalizeOptional(input.responseBodyPreview),
+      errorMessage: normalizeRequired(input.errorMessage, "Cần có lý do lỗi gửi hồ sơ."),
+      updatedAt: completedAt.toISOString()
+    };
+  }
+
   toSnapshot(): RecordTransferDeliveryAttemptSnapshot {
     return {
       ...this.props
     };
+  }
+
+  private assertQueued(): void {
+    if (this.props.status !== "queued") {
+      throw new DomainError("Chỉ có thể cập nhật lần gửi hồ sơ đang ở trạng thái chờ gửi.");
+    }
   }
 }
 
@@ -160,12 +233,43 @@ function normalizeAttemptNumber(value: number): number {
   return value;
 }
 
+function normalizeStatus(value: RecordTransferDeliveryAttemptStatus): RecordTransferDeliveryAttemptStatus {
+  if (!["queued", "succeeded", "failed"].includes(value)) {
+    throw new DomainError("Trạng thái lần gửi hồ sơ không hợp lệ.");
+  }
+
+  return value;
+}
+
 function normalizeHttpStatus(value: number): number {
   if (!Number.isInteger(value) || value < 100 || value > 599) {
     throw new DomainError("HTTP status của lần gửi hồ sơ không hợp lệ.");
   }
 
   return value;
+}
+
+function validateTerminalState(input: {
+  readonly status: RecordTransferDeliveryAttemptStatus;
+  readonly completedAt?: string;
+  readonly httpStatus?: number;
+  readonly errorMessage?: string;
+}): void {
+  if (input.status === "queued" && input.completedAt) {
+    throw new DomainError("Lần gửi đang chờ không được có thời điểm hoàn tất.");
+  }
+
+  if (input.status !== "queued" && !input.completedAt) {
+    throw new DomainError("Lần gửi đã kết thúc phải có thời điểm hoàn tất.");
+  }
+
+  if (input.status === "succeeded" && !input.httpStatus) {
+    throw new DomainError("Lần gửi thành công phải có HTTP status.");
+  }
+
+  if (input.status === "failed" && !input.errorMessage) {
+    throw new DomainError("Lần gửi lỗi phải có thông điệp lỗi.");
+  }
 }
 
 function parseDate(value: string, message: string): Date {

@@ -1,5 +1,8 @@
 import { RecordTransferDeliveryAttempt } from "@benh-vien-so/domain";
-import type { RecordTransferDeliveryAttemptRepository } from "@benh-vien-so/domain";
+import type {
+  FindQueuedRecordTransferDeliveryAttemptsInput,
+  RecordTransferDeliveryAttemptRepository
+} from "@benh-vien-so/domain";
 
 export class InMemoryRecordTransferDeliveryAttemptRepository
   implements RecordTransferDeliveryAttemptRepository
@@ -15,6 +18,24 @@ export class InMemoryRecordTransferDeliveryAttemptRepository
       .map(cloneAttempt);
   }
 
+  async findQueued(
+    input: FindQueuedRecordTransferDeliveryAttemptsInput
+  ): Promise<RecordTransferDeliveryAttempt[]> {
+    const limit = normalizeLimit(input.limit);
+
+    if (limit === 0) {
+      return [];
+    }
+
+    return [...this.attempts.values()]
+      .filter((attempt) => attempt.toSnapshot().status === "queued")
+      .sort((left, right) =>
+        left.toSnapshot().queuedAt.localeCompare(right.toSnapshot().queuedAt)
+      )
+      .slice(0, limit)
+      .map(cloneAttempt);
+  }
+
   async save(attempt: RecordTransferDeliveryAttempt): Promise<void> {
     this.attempts.set(attempt.id, cloneAttempt(attempt));
   }
@@ -22,4 +43,12 @@ export class InMemoryRecordTransferDeliveryAttemptRepository
 
 function cloneAttempt(attempt: RecordTransferDeliveryAttempt): RecordTransferDeliveryAttempt {
   return RecordTransferDeliveryAttempt.rehydrate(attempt.toSnapshot());
+}
+
+function normalizeLimit(limit: number): number {
+  if (!Number.isInteger(limit) || limit < 1) {
+    return 0;
+  }
+
+  return limit;
 }

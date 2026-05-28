@@ -74,7 +74,11 @@ curl -fsS -X POST http://localhost:7310/api/v1/record-transfers/record-transfer-
   -H "Authorization: Bearer $TOKEN" \
   -H "x-purpose-of-use: TREATMENT" \
   -H "Content-Type: application/json" \
-  -d '{"note":"Đã gửi gói hồ sơ qua gateway liên thông."}'
+  -d '{"note":"Xếp gói hồ sơ vào hàng chờ gửi qua gateway liên thông."}'
+
+curl -fsS http://localhost:7310/api/v1/record-transfers/record-transfer-demo-001/delivery-attempts \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
 
 curl -fsS -X POST http://localhost:7310/api/v1/record-transfers/record-transfer-demo-001/receive \
   -H "Authorization: Bearer $TOKEN" \

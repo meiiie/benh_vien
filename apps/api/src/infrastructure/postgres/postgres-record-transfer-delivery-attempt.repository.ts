@@ -2,6 +2,7 @@ import pg from "pg";
 import { createPostgresRepositoryPool } from "./postgres-pool.js";
 import { RecordTransferDeliveryAttempt } from "@benh-vien-so/domain";
 import type {
+  FindQueuedRecordTransferDeliveryAttemptsInput,
   RecordTransferDeliveryAttemptRepository,
   RecordTransferDeliveryAttemptSnapshot,
   RecordTransferDeliveryAttemptStatus
@@ -44,6 +45,26 @@ export class PostgresRecordTransferDeliveryAttemptRepository
       WHERE record_transfer_id = $1
       ORDER BY attempt_number ASC`,
       [recordTransferId]
+    );
+
+    return result.rows.map(rowToRecordTransferDeliveryAttempt);
+  }
+
+  async findQueued(
+    input: FindQueuedRecordTransferDeliveryAttemptsInput
+  ): Promise<RecordTransferDeliveryAttempt[]> {
+    const limit = normalizeLimit(input.limit);
+
+    if (limit === 0) {
+      return [];
+    }
+
+    const result = await this.pool.query<RecordTransferDeliveryAttemptRow>(
+      `${selectRecordTransferDeliveryAttemptSql}
+      WHERE status = 'queued'
+      ORDER BY queued_at ASC, attempt_number ASC
+      LIMIT $1`,
+      [limit]
     );
 
     return result.rows.map(rowToRecordTransferDeliveryAttempt);
@@ -155,4 +176,12 @@ function rowToRecordTransferDeliveryAttempt(
 
 function toIsoString(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
+function normalizeLimit(limit: number): number {
+  if (!Number.isInteger(limit) || limit < 1) {
+    return 0;
+  }
+
+  return limit;
 }

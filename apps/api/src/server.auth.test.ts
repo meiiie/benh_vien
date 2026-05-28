@@ -26,11 +26,14 @@ describe("API auth and RBAC boundary", () => {
   const originalDemoAuthEnabled = process.env.BVS_DEMO_AUTH_ENABLED;
   const originalRecordTransferRetryWorkerEnabled =
     process.env.BVS_RECORD_TRANSFER_RETRY_WORKER_ENABLED;
+  const originalRecordTransferDeliveryWorkerEnabled =
+    process.env.BVS_RECORD_TRANSFER_DELIVERY_WORKER_ENABLED;
 
   beforeEach(() => {
     process.env.BVS_REPOSITORY = "in-memory";
     process.env.BVS_AUTH_SECRET = testSecret;
     process.env.BVS_RECORD_TRANSFER_RETRY_WORKER_ENABLED = "false";
+    process.env.BVS_RECORD_TRANSFER_DELIVERY_WORKER_ENABLED = "false";
   });
 
   afterEach(async () => {
@@ -57,6 +60,10 @@ describe("API auth and RBAC boundary", () => {
     restoreEnv(
       "BVS_RECORD_TRANSFER_RETRY_WORKER_ENABLED",
       originalRecordTransferRetryWorkerEnabled
+    );
+    restoreEnv(
+      "BVS_RECORD_TRANSFER_DELIVERY_WORKER_ENABLED",
+      originalRecordTransferDeliveryWorkerEnabled
     );
   });
 

@@ -69,6 +69,7 @@ import { registerProcedureRoutes } from "./modules/procedures/procedure-routes.j
 import { createProviderDirectoryRepository } from "./modules/provider-directory/create-provider-directory.repository.js";
 import { registerProviderDirectoryRoutes } from "./modules/provider-directory/provider-directory-routes.js";
 import { createRecordTransferDeliveryAttemptRepository } from "./modules/record-transfer-delivery-attempts/create-record-transfer-delivery-attempt.repository.js";
+import { startRecordTransferDeliveryWorker } from "./modules/record-transfer-delivery-attempts/record-transfer-delivery-worker.js";
 import { createRecordTransferRepository } from "./modules/record-transfers/create-record-transfer.repository.js";
 import { registerRecordTransferRoutes } from "./modules/record-transfers/record-transfer-routes.js";
 import { startRecordTransferRetryWorker } from "./modules/record-transfers/record-transfer-retry-worker.js";
@@ -109,6 +110,14 @@ type RecordTransferRetryWorkerConfig = {
   readonly intervalMs: number;
   readonly limit: number;
   readonly maxRetryCount: number;
+  readonly runImmediately: boolean;
+};
+
+type RecordTransferDeliveryWorkerConfig = {
+  readonly intervalMs: number;
+  readonly limit: number;
+  readonly timeoutMs: number;
+  readonly retryDelayMs: number;
   readonly runImmediately: boolean;
 };
 
@@ -388,6 +397,36 @@ export async function buildServer(options: ServerOptions = {}) {
         }
       )
     : undefined;
+  const recordTransferDeliveryWorkerConfig = resolveRecordTransferDeliveryWorkerConfig();
+  const recordTransferDeliveryWorker = recordTransferDeliveryWorkerConfig
+    ? startRecordTransferDeliveryWorker(
+        {
+          patientRepository,
+          encounterRepository,
+          allergyIntoleranceRepository,
+          clinicalDocumentRepository,
+          conditionRepository,
+          observationRepository,
+          diagnosticReportRepository,
+          imagingStudyRepository,
+          medicationRequestRepository,
+          medicationDispenseRepository,
+          medicationAdministrationRepository,
+          serviceRequestRepository,
+          workflowTaskRepository,
+          procedureRepository,
+          consentRepository,
+          providerDirectoryRepository,
+          recordTransferRepository,
+          deliveryAttemptRepository: recordTransferDeliveryAttemptRepository,
+          auditRepository: auditEventRepository
+        },
+        {
+          ...recordTransferDeliveryWorkerConfig,
+          logger: app.log
+        }
+      )
+    : undefined;
   const deniedAccessPayloads = new WeakMap<FastifyRequest, DeniedAccessPayload>();
 
   app.addHook("onSend", (request, reply, payload, done) => {
@@ -417,6 +456,7 @@ export async function buildServer(options: ServerOptions = {}) {
   });
 
   app.addHook("onClose", async () => {
+    recordTransferDeliveryWorker?.close();
     recordTransferRetryWorker?.close();
 
     for (const repository of [...managedRepositories].reverse()) {
@@ -785,6 +825,37 @@ function resolveRecordTransferRetryWorkerConfig(): RecordTransferRetryWorkerConf
     ),
     runImmediately: readBooleanEnv(
       "BVS_RECORD_TRANSFER_RETRY_WORKER_RUN_IMMEDIATELY",
+      false
+    )
+  };
+}
+
+function resolveRecordTransferDeliveryWorkerConfig(): RecordTransferDeliveryWorkerConfig | undefined {
+  const enabled = process.env.BVS_RECORD_TRANSFER_DELIVERY_WORKER_ENABLED?.trim();
+
+  if (!enabled || enabled === "false") {
+    return undefined;
+  }
+
+  if (enabled !== "true") {
+    throw new Error(
+      "BVS_RECORD_TRANSFER_DELIVERY_WORKER_ENABLED must be either 'true' or 'false'."
+    );
+  }
+
+  return {
+    intervalMs:
+      readPositiveIntegerEnv("BVS_RECORD_TRANSFER_DELIVERY_WORKER_INTERVAL_SECONDS", 60) *
+      1000,
+    limit: readPositiveIntegerEnv("BVS_RECORD_TRANSFER_DELIVERY_WORKER_LIMIT", 10),
+    timeoutMs:
+      readPositiveIntegerEnv("BVS_RECORD_TRANSFER_DELIVERY_WORKER_TIMEOUT_SECONDS", 15) *
+      1000,
+    retryDelayMs:
+      readPositiveIntegerEnv("BVS_RECORD_TRANSFER_DELIVERY_WORKER_RETRY_DELAY_SECONDS", 300) *
+      1000,
+    runImmediately: readBooleanEnv(
+      "BVS_RECORD_TRANSFER_DELIVERY_WORKER_RUN_IMMEDIATELY",
       false
     )
   };
