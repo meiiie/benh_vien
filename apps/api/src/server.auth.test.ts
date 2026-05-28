@@ -372,6 +372,16 @@ describe("API auth and RBAC boundary", () => {
     );
   });
 
+  it("requires a strong auth secret at startup in production", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.BVS_CORS_ORIGINS = "https://wiiicare.example.vn";
+    delete process.env.BVS_AUTH_SECRET;
+
+    await expect(buildServer({ logger: false })).rejects.toThrow(
+      "BVS_AUTH_SECRET must be set to at least 32 characters in production."
+    );
+  });
+
   it("serves FHIR CapabilityStatement metadata without a demo session", async () => {
     app = await readyServer();
 

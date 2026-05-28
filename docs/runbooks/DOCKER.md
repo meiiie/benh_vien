@@ -22,6 +22,8 @@ API giới hạn tần suất `POST /api/v1/auth/login` bằng `BVS_AUTH_LOGIN_R
 
 Ở `NODE_ENV=production`, API yêu cầu `BVS_CORS_ORIGINS` là danh sách Origin được phép, phân tách bằng dấu phẩy. Không dùng wildcard cho production vì API xử lý dữ liệu bệnh án nhạy cảm.
 
+Ở `NODE_ENV=production`, API cũng yêu cầu `BVS_AUTH_SECRET` tối thiểu 32 ký tự ngay khi khởi động. Nếu thiếu secret, container API sẽ dừng thay vì chờ tới request đăng nhập đầu tiên mới lỗi.
+
 ## Bật FHIR và PACS khi cần
 
 Chỉ bật khi demo liên thông hoặc ảnh y khoa:

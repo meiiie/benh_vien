@@ -93,6 +93,10 @@ export function getAuthSecret(): string {
   return "wiiicare-dev-only-auth-secret-change-before-production";
 }
 
+export function assertAuthSecretConfigured(): void {
+  getAuthSecret();
+}
+
 function sign(encodedPayload: string): string {
   return createHmac("sha256", getAuthSecret()).update(encodedPayload).digest("base64url");
 }
