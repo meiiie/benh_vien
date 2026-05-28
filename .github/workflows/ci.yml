@@ -193,6 +193,7 @@ jobs:
               ('clinical_documents'),
               ('consents'),
               ('record_transfers'),
+              ('record_transfer_delivery_attempts'),
               ('provider_directory_resources'),
               ('audit_events'),
               ('schema_migrations')
@@ -205,6 +206,33 @@ jobs:
           where table_schema = 'public';
           " | tee /tmp/missing-wiiicare-tables.txt
           test ! -s /tmp/missing-wiiicare-tables.txt
+          record_transfer_constraints=$(docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -Atc "
+          select count(*)
+          from pg_constraint
+          where conrelid = 'record_transfers'::regclass
+            and conname in (
+              'record_transfers_dead_letter_after_failed',
+              'record_transfers_acknowledgement_after_received'
+            );
+          ")
+          test "$record_transfer_constraints" = "2"
+          dead_letter_constraint=$(docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -Atc "
+          select count(*)
+          from pg_constraint
+          where conrelid = 'record_transfers'::regclass
+            and conname = 'record_transfers_dead_letter_after_failed'
+            and pg_get_constraintdef(oid) like '%dead_lettered_at IS NOT NULL%'
+            and pg_get_constraintdef(oid) like '%failed_at IS NOT NULL%';
+          ")
+          test "$dead_letter_constraint" = "1"
+          acknowledgement_constraint=$(docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -Atc "
+          select count(*)
+          from pg_constraint
+          where conrelid = 'record_transfers'::regclass
+            and conname = 'record_transfers_acknowledgement_after_received'
+            and pg_get_constraintdef(oid) like '%received_at IS NOT NULL%';
+          ")
+          test "$acknowledgement_constraint" = "1"
 
       - name: Print diagnostics on failure
         if: failure()
