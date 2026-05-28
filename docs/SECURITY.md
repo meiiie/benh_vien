@@ -30,6 +30,7 @@ Hồ sơ bệnh án là dữ liệu đặc biệt nhạy cảm. Dự án chưa t
 - Lỗi phân quyền chung trả `requestId`; lỗi `401 UNAUTHENTICATED` có thêm `WWW-Authenticate: Bearer` để client/proxy nhận biết yêu cầu Bearer token.
 - `POST /api/v1/auth/login` có rate limit theo IP + username đã băm SHA-256, cấu hình bằng `BVS_RATE_LIMIT_STORE`, `BVS_VALKEY_URL`, `BVS_AUTH_LOGIN_RATE_LIMIT_MAX` và `BVS_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS`. Dev đơn lẻ có thể dùng memory store; Docker/dev-prod dùng Valkey để chia sẻ bộ đếm giữa nhiều replica.
 - `/ready` kiểm tra kho rate limit đăng nhập để tránh đưa API vào rotation khi Valkey không sẵn sàng trong cấu hình dev-prod/production.
+- Ở production, `BVS_CORS_ORIGINS` chỉ chấp nhận Origin HTTPS canonical, không chấp nhận wildcard, HTTP hoặc URL có path để tránh mở rộng nhầm phạm vi truy cập từ trình duyệt.
 - API và web container đặt security headers nền tảng gồm `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` và `Cross-Origin-Resource-Policy`.
 - Web runtime Nginx áp dụng Content Security Policy chặt cho SPA (`default-src 'self'`, chặn inline script/style, `object-src 'none'`, `frame-ancestors 'none'`) để giảm rủi ro XSS/nhúng ngoài ý muốn. CSP được scope ở `location /` để không phá `/api` và Swagger UI được proxy qua `/docs`.
 - API đặt `Cache-Control: no-store` và `Pragma: no-cache` để giảm rủi ro browser/proxy lưu nhầm response chứa dữ liệu bệnh án.

@@ -458,6 +458,27 @@ describe("API auth and RBAC boundary", () => {
     );
   });
 
+  it("rejects unsafe CORS origins in production", async () => {
+    process.env.NODE_ENV = "production";
+
+    for (const [origin, message] of [
+      ["*", "BVS_CORS_ORIGINS must not include wildcard '*' in production."],
+      ["not-a-url", "BVS_CORS_ORIGINS must contain valid URL origins in production."],
+      [
+        "http://wiiicare.example.vn",
+        "BVS_CORS_ORIGINS must contain canonical HTTPS origins in production."
+      ],
+      [
+        "https://wiiicare.example.vn/app",
+        "BVS_CORS_ORIGINS must contain canonical HTTPS origins in production."
+      ]
+    ] as const) {
+      process.env.BVS_CORS_ORIGINS = origin;
+
+      await expect(buildServer({ logger: false })).rejects.toThrow(message);
+    }
+  });
+
   it("requires a strong auth secret at startup in production", async () => {
     process.env.NODE_ENV = "production";
     process.env.BVS_CORS_ORIGINS = "https://wiiicare.example.vn";

@@ -20,7 +20,7 @@ API giới hạn mỗi PostgreSQL repository pool bằng `BVS_POSTGRES_REPOSITOR
 
 API giới hạn tần suất `POST /api/v1/auth/login` bằng `BVS_AUTH_LOGIN_RATE_LIMIT_MAX` trong cửa sổ `BVS_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS`, mặc định `20` lần trong `60` giây theo IP + username đã băm SHA-256. `BVS_RATE_LIMIT_STORE=valkey` và `BVS_VALKEY_URL=redis://valkey:6379` dùng chung bộ đếm giữa nhiều replica; `memory` chỉ phù hợp dev đơn lẻ.
 
-Ở `NODE_ENV=production`, API yêu cầu `BVS_CORS_ORIGINS` là danh sách Origin được phép, phân tách bằng dấu phẩy. Không dùng wildcard cho production vì API xử lý dữ liệu bệnh án nhạy cảm.
+Ở `NODE_ENV=production`, API yêu cầu `BVS_CORS_ORIGINS` là danh sách Origin HTTPS canonical được phép, phân tách bằng dấu phẩy, ví dụ `https://wiiicare.example.vn`. Không dùng wildcard, URL có path hoặc Origin HTTP cho production vì API xử lý dữ liệu bệnh án nhạy cảm.
 
 Ở `NODE_ENV=production`, API cũng yêu cầu `BVS_AUTH_SECRET` tối thiểu 32 ký tự ngay khi khởi động. Nếu thiếu secret, container API sẽ dừng thay vì chờ tới request đăng nhập đầu tiên mới lỗi.
 

@@ -572,6 +572,10 @@ function resolveCorsOrigins(): boolean | string[] {
       .filter(Boolean);
 
     if (origins.length > 0) {
+      if (process.env.NODE_ENV === "production") {
+        assertProductionCorsOrigins(origins);
+      }
+
       return origins;
     }
   }
@@ -581,6 +585,28 @@ function resolveCorsOrigins(): boolean | string[] {
   }
 
   return true;
+}
+
+function assertProductionCorsOrigins(origins: readonly string[]): void {
+  for (const origin of origins) {
+    if (origin === "*") {
+      throw new Error("BVS_CORS_ORIGINS must not include wildcard '*' in production.");
+    }
+
+    let parsedOrigin: URL;
+
+    try {
+      parsedOrigin = new URL(origin);
+    } catch {
+      throw new Error("BVS_CORS_ORIGINS must contain valid URL origins in production.");
+    }
+
+    if (parsedOrigin.origin !== origin || parsedOrigin.protocol !== "https:") {
+      throw new Error(
+        "BVS_CORS_ORIGINS must contain canonical HTTPS origins in production."
+      );
+    }
+  }
 }
 
 function readHttpStatusCode(error: unknown): number {
