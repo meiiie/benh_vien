@@ -88,6 +88,20 @@ jobs:
           curl -fsSI http://localhost:8080/ | grep -i '^X-Frame-Options: DENY'
           curl -fsSI http://localhost:8080/ | grep -i '^X-Content-Type-Options: nosniff'
 
+      - name: Verify FHIR metadata public URL
+        run: |
+          curl -fsS http://localhost:8080/api/v1/fhir/metadata -o /tmp/fhir-metadata.json
+          node <<'NODE'
+          const fs = require("node:fs");
+          const metadata = JSON.parse(fs.readFileSync("/tmp/fhir-metadata.json", "utf8"));
+          if (metadata.resourceType !== "CapabilityStatement") {
+            throw new Error("Expected CapabilityStatement");
+          }
+          if (metadata.implementation?.url !== "https://api.wiiicare.example.vn/api/v1") {
+            throw new Error("Unexpected implementation.url: " + metadata.implementation?.url);
+          }
+          NODE
+
       - name: Verify patient API requires authentication
         run: |
           status=$(curl -sS -o /tmp/patient-api.json -w "%{http_code}" http://localhost:8080/api/v1/patients)

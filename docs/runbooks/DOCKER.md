@@ -60,6 +60,17 @@ docker compose --env-file .env.prod.local -f docker-compose.yml -f docker-compos
 curl -fsS http://localhost:7310/health
 curl -fsS http://localhost:7310/ready
 curl -fsS http://localhost:8080/health
+curl -fsS http://localhost:8080/api/v1/fhir/metadata -o /tmp/wiiicare-fhir-metadata.json
+node <<'NODE'
+const fs = require("node:fs");
+const metadata = JSON.parse(fs.readFileSync("/tmp/wiiicare-fhir-metadata.json", "utf8"));
+if (metadata.resourceType !== "CapabilityStatement") {
+  throw new Error("Expected CapabilityStatement");
+}
+if (metadata.implementation?.url !== "https://api.wiiicare.example.vn/api/v1") {
+  throw new Error("Unexpected implementation.url: " + metadata.implementation?.url);
+}
+NODE
 
 status=$(curl -sS -o /tmp/wiiicare-patients.json -w "%{http_code}" http://localhost:8080/api/v1/patients)
 test "$status" = "401"
