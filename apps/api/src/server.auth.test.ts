@@ -1,6 +1,10 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { ProviderDirectoryRepository } from "@benh-vien-so/domain";
+import type {
+  ProviderDirectoryRepository,
+  RecordTransferDeliveryAttempt,
+  RecordTransferDeliveryAttemptRepository
+} from "@benh-vien-so/domain";
 import { registerAuthRoutes } from "./modules/auth/auth-routes.js";
 import { createMemoryLoginRateLimiter } from "./modules/auth/login-rate-limit.js";
 import type { LoginRateLimiter } from "./modules/auth/login-rate-limit.js";
@@ -4128,6 +4132,43 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("rolls back a record transfer when queuing the delivery attempt fails", async () => {
+    app = await readyServer({
+      recordTransferDeliveryAttemptRepository:
+        new FailingRecordTransferDeliveryAttemptRepository()
+    });
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const sendResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/send",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        sentAt: "2026-05-28T04:00:00.000Z",
+        note: "Giả lập lỗi kho lịch sử gửi để kiểm tra rollback."
+      }
+    });
+
+    expect(sendResponse.statusCode).toBe(500);
+
+    const transferListResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/record-transfers",
+      headers: treatmentHeaders(accessToken)
+    });
+    const transferListBody = transferListResponse.json();
+
+    expect(transferListResponse.statusCode).toBe(200);
+    expect(transferListBody.items[0]).toMatchObject({
+      id: "record-transfer-demo-001",
+      status: "ready"
+    });
+    expect(transferListBody.items[0]).not.toHaveProperty("sentAt");
+  });
+
   it("accepts an operations acknowledgement callback for a sent record transfer", async () => {
     app = await readyServer();
     const clinicianToken = await loginForToken(app, "practitioner-demo-001", "clinician");
@@ -4582,12 +4623,31 @@ describe("API auth and RBAC boundary", () => {
   });
 });
 
-async function readyServer(): Promise<FastifyInstance> {
+async function readyServer(
+  options: Parameters<typeof buildServer>[0] = {}
+): Promise<FastifyInstance> {
   const server = await buildServer({
-    logger: false
+    logger: false,
+    ...options
   });
   await server.ready();
   return server;
+}
+
+class FailingRecordTransferDeliveryAttemptRepository
+  implements RecordTransferDeliveryAttemptRepository
+{
+  async findByRecordTransferId(): Promise<RecordTransferDeliveryAttempt[]> {
+    return [];
+  }
+
+  async findQueued(): Promise<RecordTransferDeliveryAttempt[]> {
+    return [];
+  }
+
+  async save(_attempt: RecordTransferDeliveryAttempt): Promise<void> {
+    throw new Error("delivery attempt store unavailable");
+  }
 }
 
 async function readyAuthRouteServer(): Promise<FastifyInstance> {
