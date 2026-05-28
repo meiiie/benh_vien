@@ -82,10 +82,7 @@ export async function registerDiagnosticReportRoutes(
     const parsed = CreateDiagnosticReportRequestSchema.safeParse(request.body);
 
     if (!parsed.success) {
-      return reply.status(400).send({
-        error: "INVALID_DIAGNOSTIC_REPORT_PAYLOAD",
-        issues: parsed.error.issues
-      });
+      throw parsed.error;
     }
 
     if (parsed.data.encounterId) {

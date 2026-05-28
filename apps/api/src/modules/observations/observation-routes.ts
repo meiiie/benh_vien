@@ -78,10 +78,7 @@ export async function registerObservationRoutes(
     const parsed = CreateObservationRequestSchema.safeParse(request.body);
 
     if (!parsed.success) {
-      return reply.status(400).send({
-        error: "INVALID_OBSERVATION_PAYLOAD",
-        issues: parsed.error.issues
-      });
+      throw parsed.error;
     }
 
     if (parsed.data.encounterId) {

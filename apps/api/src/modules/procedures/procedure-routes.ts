@@ -82,10 +82,7 @@ export async function registerProcedureRoutes(
     const parsed = CreateProcedureRequestSchema.safeParse(request.body);
 
     if (!parsed.success) {
-      return reply.status(400).send({
-        error: "INVALID_PROCEDURE_PAYLOAD",
-        issues: parsed.error.issues
-      });
+      throw parsed.error;
     }
 
     const validationError = await validateProcedureReferences(

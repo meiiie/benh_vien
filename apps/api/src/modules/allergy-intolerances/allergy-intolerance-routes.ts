@@ -76,10 +76,7 @@ export async function registerAllergyIntoleranceRoutes(
     const parsed = CreateAllergyIntoleranceRequestSchema.safeParse(request.body);
 
     if (!parsed.success) {
-      return reply.status(400).send({
-        error: "INVALID_ALLERGY_INTOLERANCE_PAYLOAD",
-        issues: parsed.error.issues
-      });
+      throw parsed.error;
     }
 
     if (parsed.data.encounterId) {

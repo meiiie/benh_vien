@@ -87,10 +87,7 @@ export async function registerPatientRoutes(
     const parsed = CreatePatientRequestSchema.safeParse(request.body);
 
     if (!parsed.success) {
-      return reply.status(400).send({
-        error: "INVALID_PATIENT_PAYLOAD",
-        issues: parsed.error.issues
-      });
+      throw parsed.error;
     }
 
     try {

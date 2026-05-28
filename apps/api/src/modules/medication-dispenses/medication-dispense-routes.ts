@@ -81,10 +81,7 @@ export async function registerMedicationDispenseRoutes(
     const parsed = CreateMedicationDispenseRequestSchema.safeParse(request.body);
 
     if (!parsed.success) {
-      return reply.status(400).send({
-        error: "INVALID_MEDICATION_DISPENSE_PAYLOAD",
-        issues: parsed.error.issues
-      });
+      throw parsed.error;
     }
 
     const validationError = await validateMedicationDispenseReferences(

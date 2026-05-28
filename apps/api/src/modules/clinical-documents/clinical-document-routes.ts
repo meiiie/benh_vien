@@ -80,10 +80,7 @@ export async function registerClinicalDocumentRoutes(
     const parsed = CreateClinicalDocumentRequestSchema.safeParse(request.body);
 
     if (!parsed.success) {
-      return reply.status(400).send({
-        error: "INVALID_CLINICAL_DOCUMENT_PAYLOAD",
-        issues: parsed.error.issues
-      });
+      throw parsed.error;
     }
 
     if (parsed.data.encounterId) {

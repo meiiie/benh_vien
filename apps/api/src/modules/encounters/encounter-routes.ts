@@ -76,10 +76,7 @@ export async function registerEncounterRoutes(
     const parsed = CreateEncounterRequestSchema.safeParse(request.body);
 
     if (!parsed.success) {
-      return reply.status(400).send({
-        error: "INVALID_ENCOUNTER_PAYLOAD",
-        issues: parsed.error.issues
-      });
+      throw parsed.error;
     }
 
     try {

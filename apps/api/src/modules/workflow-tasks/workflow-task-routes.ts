@@ -76,10 +76,7 @@ export async function registerWorkflowTaskRoutes(
     const parsed = CreateWorkflowTaskRequestSchema.safeParse(request.body);
 
     if (!parsed.success) {
-      return reply.status(400).send({
-        error: "INVALID_WORKFLOW_TASK_PAYLOAD",
-        issues: parsed.error.issues
-      });
+      throw parsed.error;
     }
 
     if (parsed.data.encounterId) {

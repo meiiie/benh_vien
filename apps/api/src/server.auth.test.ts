@@ -97,7 +97,8 @@ describe("API auth and RBAC boundary", () => {
     });
     expect(invalidPayloadResponse.statusCode).toBe(400);
     expect(invalidPayloadResponse.json()).toMatchObject({
-      error: "INVALID_LOGIN_PAYLOAD",
+      error: "VALIDATION_ERROR",
+      message: "Request validation failed.",
       requestId: "auth-invalid-payload-001"
     });
 
@@ -911,7 +912,8 @@ describe("API auth and RBAC boundary", () => {
       url: "/api/v1/patients/patient-demo-001/documents",
       headers: {
         ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
+        "content-type": "application/json",
+        "x-request-id": "clinical-document-validation-001"
       },
       payload: {
         encounterId: "encounter-demo-001",
@@ -926,7 +928,9 @@ describe("API auth and RBAC boundary", () => {
 
     expect(response.statusCode).toBe(400);
     expect(response.json()).toMatchObject({
-      error: "INVALID_CLINICAL_DOCUMENT_PAYLOAD"
+      error: "VALIDATION_ERROR",
+      requestId: "clinical-document-validation-001",
+      issues: expect.any(Array)
     });
   });
 

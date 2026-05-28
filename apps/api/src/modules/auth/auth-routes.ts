@@ -64,12 +64,7 @@ export async function registerAuthRoutes(
     const parsed = LoginRequestSchema.safeParse(request.body);
 
     if (!parsed.success) {
-      return reply.status(400).send({
-        error: "INVALID_LOGIN_PAYLOAD",
-        message: "Thông tin đăng nhập không hợp lệ.",
-        requestId: request.id,
-        issues: parsed.error.issues
-      });
+      throw parsed.error;
     }
 
     const rateLimitDecision = await loginRateLimiter.consume(

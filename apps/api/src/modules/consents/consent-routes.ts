@@ -75,10 +75,7 @@ export async function registerConsentRoutes(
     const parsed = CreateConsentRequestSchema.safeParse(request.body);
 
     if (!parsed.success) {
-      return reply.status(400).send({
-        error: "INVALID_CONSENT_PAYLOAD",
-        issues: parsed.error.issues
-      });
+      throw parsed.error;
     }
 
     try {
@@ -142,10 +139,7 @@ export async function registerConsentRoutes(
     const parsed = RevokeConsentRequestSchema.safeParse(request.body ?? {});
 
     if (!parsed.success) {
-      return reply.status(400).send({
-        error: "INVALID_CONSENT_REVOKE_PAYLOAD",
-        issues: parsed.error.issues
-      });
+      throw parsed.error;
     }
 
     try {

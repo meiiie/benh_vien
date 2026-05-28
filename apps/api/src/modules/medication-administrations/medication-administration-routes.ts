@@ -83,10 +83,7 @@ export async function registerMedicationAdministrationRoutes(
     const parsed = CreateMedicationAdministrationRequestSchema.safeParse(request.body);
 
     if (!parsed.success) {
-      return reply.status(400).send({
-        error: "INVALID_MEDICATION_ADMINISTRATION_PAYLOAD",
-        issues: parsed.error.issues
-      });
+      throw parsed.error;
     }
 
     const validationError = await validateMedicationAdministrationReferences(

@@ -82,10 +82,7 @@ export async function registerMedicationRequestRoutes(
     const parsed = CreateMedicationRequestRequestSchema.safeParse(request.body);
 
     if (!parsed.success) {
-      return reply.status(400).send({
-        error: "INVALID_MEDICATION_REQUEST_PAYLOAD",
-        issues: parsed.error.issues
-      });
+      throw parsed.error;
     }
 
     if (parsed.data.encounterId) {

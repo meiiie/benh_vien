@@ -81,10 +81,7 @@ export async function registerRecordTransferRoutes(
     const parsed = CreateRecordTransferRequestSchema.safeParse(request.body);
 
     if (!parsed.success) {
-      return reply.status(400).send({
-        error: "INVALID_RECORD_TRANSFER_PAYLOAD",
-        issues: parsed.error.issues
-      });
+      throw parsed.error;
     }
 
     const consent = await consentRepository.findById(parsed.data.consentReference);
@@ -184,10 +181,7 @@ export async function registerRecordTransferRoutes(
     const parsed = MarkRecordTransferSentRequestSchema.safeParse(request.body ?? {});
 
     if (!parsed.success) {
-      return reply.status(400).send({
-        error: "INVALID_RECORD_TRANSFER_SEND_PAYLOAD",
-        issues: parsed.error.issues
-      });
+      throw parsed.error;
     }
 
     const recordTransfer = await recordTransferRepository.findById(params.id);
@@ -237,10 +231,7 @@ export async function registerRecordTransferRoutes(
     const parsed = MarkRecordTransferReceivedRequestSchema.safeParse(request.body ?? {});
 
     if (!parsed.success) {
-      return reply.status(400).send({
-        error: "INVALID_RECORD_TRANSFER_RECEIVE_PAYLOAD",
-        issues: parsed.error.issues
-      });
+      throw parsed.error;
     }
 
     const recordTransfer = await recordTransferRepository.findById(params.id);
