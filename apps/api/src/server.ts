@@ -112,6 +112,8 @@ export async function buildServer(options: ServerOptions = {}) {
     reply.header("Referrer-Policy", "no-referrer");
     reply.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
     reply.header("Cross-Origin-Resource-Policy", "same-site");
+    reply.header("Cache-Control", "no-store");
+    reply.header("Pragma", "no-cache");
   });
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ZodError) {

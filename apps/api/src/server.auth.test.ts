@@ -108,6 +108,8 @@ describe("API auth and RBAC boundary", () => {
       "camera=(), microphone=(), geolocation=()"
     );
     expect(response.headers["cross-origin-resource-policy"]).toBe("same-site");
+    expect(response.headers["cache-control"]).toBe("no-store");
+    expect(response.headers.pragma).toBe("no-cache");
   });
 
   it("echoes the request id header for trace correlation", async () => {
