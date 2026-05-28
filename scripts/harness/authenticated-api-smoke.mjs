@@ -48,6 +48,34 @@ if (fhirPatient.resourceType !== "Patient") {
   throw new Error(`Expected FHIR Patient, received ${fhirPatient.resourceType}.`);
 }
 
+const duplicatePatient = await requestJson("/patients", {
+  method: "POST",
+  token: adminSession.accessToken,
+  headers: {
+    ...treatmentHeaders(),
+    "x-request-id": "postgres-smoke-patient-identifier-conflict"
+  },
+  expectedStatus: 409,
+  body: {
+    identifiers: [
+      {
+        system: "urn:gov:vietnam:national-id",
+        value: "000000000001",
+        type: "national-id"
+      }
+    ],
+    fullName: "Authenticated Smoke Duplicate Identity",
+    gender: "unknown",
+    managingOrganizationId: "hospital-hai-phong-demo"
+  }
+});
+
+if (duplicatePatient.error !== "PATIENT_IDENTIFIER_CONFLICT") {
+  throw new Error(
+    `Expected duplicate patient identifier conflict, received ${duplicatePatient.error}.`
+  );
+}
+
 const outsidePatient = await requestJson("/patients", {
   method: "POST",
   token: adminSession.accessToken,

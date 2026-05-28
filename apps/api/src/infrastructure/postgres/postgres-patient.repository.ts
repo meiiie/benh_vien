@@ -1,6 +1,6 @@
 import pg from "pg";
 import { createPostgresRepositoryPool } from "./postgres-pool.js";
-import { Patient } from "@benh-vien-so/domain";
+import { Patient, PatientIdentifierConflictError } from "@benh-vien-so/domain";
 import type {
   PatientIdentifier,
   PatientRecordStatus,
@@ -73,48 +73,111 @@ export class PostgresPatientRepository implements PatientRepository {
     return row ? rowToPatient(row) : undefined;
   }
 
+  async findByIdentifier(identifier: {
+    readonly system: string;
+    readonly value: string;
+  }): Promise<Patient | undefined> {
+    const result = await this.pool.query<PatientRow>(
+      `SELECT
+        p.id,
+        p.identifiers,
+        p.full_name,
+        p.birth_date::text AS birth_date,
+        p.gender,
+        p.address,
+        p.phone,
+        p.managing_organization_id,
+        p.status,
+        p.created_at,
+        p.updated_at
+      FROM patients p
+      INNER JOIN patient_identifier_index pii ON pii.patient_id = p.id
+      WHERE pii.system = $1 AND pii.value = $2
+      ORDER BY p.created_at ASC
+      LIMIT 1`,
+      [identifier.system, identifier.value]
+    );
+
+    const row = result.rows[0];
+    return row ? rowToPatient(row) : undefined;
+  }
+
   async save(patient: Patient): Promise<void> {
     const snapshot = patient.toSnapshot();
+    const client = await this.pool.connect();
 
-    await this.pool.query(
-      `INSERT INTO patients (
-        id,
-        identifiers,
-        full_name,
-        birth_date,
-        gender,
-        address,
-        phone,
-        managing_organization_id,
-        status,
-        created_at,
-        updated_at
-      )
-      VALUES ($1, $2::jsonb, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-      ON CONFLICT (id) DO UPDATE SET
-        identifiers = EXCLUDED.identifiers,
-        full_name = EXCLUDED.full_name,
-        birth_date = EXCLUDED.birth_date,
-        gender = EXCLUDED.gender,
-        address = EXCLUDED.address,
-        phone = EXCLUDED.phone,
-        managing_organization_id = EXCLUDED.managing_organization_id,
-        status = EXCLUDED.status,
-        updated_at = EXCLUDED.updated_at`,
-      [
-        snapshot.id,
-        JSON.stringify(snapshot.identifiers),
-        snapshot.fullName,
-        snapshot.birthDate ?? null,
-        snapshot.gender,
-        snapshot.address ?? null,
-        snapshot.phone ?? null,
-        snapshot.managingOrganizationId,
-        snapshot.status,
-        snapshot.createdAt,
-        snapshot.updatedAt
-      ]
-    );
+    try {
+      await client.query("BEGIN");
+      await client.query(
+        `INSERT INTO patients (
+          id,
+          identifiers,
+          full_name,
+          birth_date,
+          gender,
+          address,
+          phone,
+          managing_organization_id,
+          status,
+          created_at,
+          updated_at
+        )
+        VALUES ($1, $2::jsonb, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ON CONFLICT (id) DO UPDATE SET
+          identifiers = EXCLUDED.identifiers,
+          full_name = EXCLUDED.full_name,
+          birth_date = EXCLUDED.birth_date,
+          gender = EXCLUDED.gender,
+          address = EXCLUDED.address,
+          phone = EXCLUDED.phone,
+          managing_organization_id = EXCLUDED.managing_organization_id,
+          status = EXCLUDED.status,
+          updated_at = EXCLUDED.updated_at`,
+        [
+          snapshot.id,
+          JSON.stringify(snapshot.identifiers),
+          snapshot.fullName,
+          snapshot.birthDate ?? null,
+          snapshot.gender,
+          snapshot.address ?? null,
+          snapshot.phone ?? null,
+          snapshot.managingOrganizationId,
+          snapshot.status,
+          snapshot.createdAt,
+          snapshot.updatedAt
+        ]
+      );
+
+      await client.query("DELETE FROM patient_identifier_index WHERE patient_id = $1", [
+        snapshot.id
+      ]);
+
+      for (const identifier of snapshot.identifiers) {
+        await client.query(
+          `INSERT INTO patient_identifier_index (patient_id, system, value, type)
+          VALUES ($1, $2, $3, $4)`,
+          [snapshot.id, identifier.system, identifier.value, identifier.type]
+        );
+      }
+
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+
+      if (isUniqueViolation(error)) {
+        const conflict = await findConflictingIdentifier(this, snapshot);
+        throw new PatientIdentifierConflictError(
+          conflict ?? {
+            existingPatientId: "unknown",
+            identifier: snapshot.identifiers[0]
+          }
+        );
+      }
+
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async close(): Promise<void> {
@@ -160,4 +223,31 @@ function rowToPatient(row: PatientRow): Patient {
 
 function toIsoString(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
+async function findConflictingIdentifier(
+  repository: PostgresPatientRepository,
+  snapshot: PatientSnapshot
+) {
+  for (const identifier of snapshot.identifiers) {
+    const existing = await repository.findByIdentifier(identifier);
+
+    if (existing && existing.id !== snapshot.id) {
+      return {
+        existingPatientId: existing.id,
+        identifier
+      };
+    }
+  }
+
+  return undefined;
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { readonly code?: string }).code === "23505"
+  );
 }

@@ -723,6 +723,7 @@ type AuditAction =
   | "access.denied"
   | "patient.list"
   | "patient.create"
+  | "patient.identifier-conflict"
   | "patient.read"
   | "patient.fhir-export"
   | "patient.fhir-bundle-export"
@@ -9406,6 +9407,7 @@ function formatDocumentStatus(status: ClinicalDocumentStatus): string {
 
 function formatAuditAction(action: AuditAction): string {
   const labels: Record<AuditAction, string> = {
+    "patient.identifier-conflict": "Chặn trùng định danh bệnh nhân",
     "auth.login.success": "Đăng nhập thành công",
     "auth.login.failure": "Đăng nhập thất bại",
     "access.denied": "Truy cập bị chặn",

@@ -241,6 +241,47 @@ describe("AuditEvent integrity chain", () => {
     });
   });
 
+  it("maps patient identifier conflicts as failed execution events in FHIR", () => {
+    const identifierConflict = sealAuditEvent(
+      AuditEvent.record({
+        id: "audit-event-test-identifier-conflict",
+        occurredAt: new Date("2026-05-28T00:04:30.000Z"),
+        actorId: "admin-test",
+        action: "patient.identifier-conflict",
+        resourceType: "Patient",
+        resourceId: "patient-test-001",
+        patientId: "patient-test-001",
+        purposeOfUse: "TREATMENT",
+        metadata: {
+          identifierSystem: "urn:gov:vietnam:national-id",
+          identifierType: "national-id"
+        }
+      })
+    );
+
+    expect(mapAuditEventToFhir(identifierConflict)).toMatchObject({
+      resourceType: "AuditEvent",
+      id: "audit-event-test-identifier-conflict",
+      subtype: [
+        {
+          code: "patient.identifier-conflict"
+        }
+      ],
+      action: "E",
+      recorded: "2026-05-28T00:04:30.000Z",
+      outcome: "4",
+      outcomeDesc: "Patient identifier conflict",
+      entity: [
+        {
+          what: {
+            reference: "Patient/patient-test-001"
+          },
+          name: "patient.identifier-conflict"
+        }
+      ]
+    });
+  });
+
   it("maps failed login audit events as failed execution events in FHIR", () => {
     const failedLogin = sealAuditEvent(
       AuditEvent.record({

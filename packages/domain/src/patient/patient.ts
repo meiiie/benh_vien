@@ -78,9 +78,12 @@ export class Patient {
       throw new DomainError("Cơ sở quản lý hồ sơ không được để trống.");
     }
 
+    const identifiers = input.identifiers.map(normalizeIdentifier);
+    assertUniqueIdentifiers(identifiers);
+
     return new Patient({
       id: input.id.trim(),
-      identifiers: input.identifiers.map(normalizeIdentifier),
+      identifiers,
       fullName,
       birthDate: input.birthDate,
       gender: input.gender ?? "unknown",
@@ -201,6 +204,20 @@ function normalizeIdentifier(identifier: PatientIdentifier): PatientIdentifier {
   };
 }
 
+function assertUniqueIdentifiers(identifiers: readonly PatientIdentifier[]): void {
+  const seen = new Set<string>();
+
+  for (const identifier of identifiers) {
+    const key = `${identifier.system}\u0000${identifier.value}`;
+
+    if (seen.has(key)) {
+      throw new DomainError("Äá»‹nh danh bá»‡nh nhÃ¢n bá»‹ trÃ¹ng trong cÃ¹ng má»™t há»“ sÆ¡.");
+    }
+
+    seen.add(key);
+  }
+}
+
 function normalizeText(value: string): string {
   return value.trim().replace(/\s+/g, " ");
 }
@@ -209,4 +226,3 @@ function normalizeOptionalText(value: string | undefined): string | undefined {
   const normalized = value?.trim().replace(/\s+/g, " ");
   return normalized || undefined;
 }
-

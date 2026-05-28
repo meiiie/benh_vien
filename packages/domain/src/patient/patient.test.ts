@@ -24,6 +24,28 @@ describe("Patient", () => {
     });
   });
 
+  it("rejects duplicate identifiers inside one patient record", () => {
+    expect(() =>
+      Patient.register({
+        id: "patient-test-duplicate-identifier",
+        identifiers: [
+          {
+            system: "urn:gov:vietnam:national-id",
+            value: "000000000099",
+            type: "national-id"
+          },
+          {
+            system: "urn:gov:vietnam:national-id",
+            value: "000000000099",
+            type: "national-id"
+          }
+        ],
+        fullName: "Duplicate Identifier",
+        managingOrganizationId: "hospital-demo"
+      })
+    ).toThrow();
+  });
+
   it("maps a patient to FHIR Patient", () => {
     const patient = Patient.register({
       id: "patient-test-002",

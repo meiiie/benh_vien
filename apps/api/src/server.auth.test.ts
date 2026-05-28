@@ -854,6 +854,76 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("blocks duplicate patient identifiers before creating a new record", async () => {
+    app = await readyServer();
+    const adminToken = await loginForToken(app, "admin-demo", "admin");
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients",
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json",
+        "x-request-id": "patient-identifier-conflict-001"
+      },
+      payload: {
+        identifiers: [
+          {
+            system: "urn:gov:vietnam:national-id",
+            value: "000000000001",
+            type: "national-id"
+          }
+        ],
+        fullName: "Duplicate Identity Patient",
+        gender: "unknown",
+        managingOrganizationId: "hospital-hai-phong-demo"
+      }
+    });
+    const body = response.json();
+
+    expect(response.statusCode).toBe(409);
+    expect(body).toMatchObject({
+      error: "PATIENT_IDENTIFIER_CONFLICT",
+      requestId: "patient-identifier-conflict-001",
+      identifier: {
+        system: "urn:gov:vietnam:national-id",
+        type: "national-id"
+      }
+    });
+    expect(JSON.stringify(body)).not.toContain("patient-demo-001");
+
+    const patientsResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients",
+      headers: treatmentHeaders(adminToken)
+    });
+    expect(patientsResponse.json().items).toHaveLength(1);
+
+    const auditorToken = await loginForToken(app, "security-officer-demo", "auditor");
+    const auditResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/audit-events?limit=10",
+      headers: auditHeaders(auditorToken)
+    });
+    const conflictEvent = auditResponse
+      .json()
+      .items.find(
+        (event: { readonly metadata?: { readonly requestId?: string } }) =>
+          event.metadata?.requestId === "patient-identifier-conflict-001"
+      );
+
+    expect(conflictEvent).toMatchObject({
+      action: "patient.identifier-conflict",
+      resourceType: "Patient",
+      resourceId: "patient-demo-001",
+      patientId: "patient-demo-001",
+      metadata: expect.objectContaining({
+        identifierSystem: "urn:gov:vietnam:national-id",
+        identifierType: "national-id"
+      })
+    });
+  });
+
   it("filters treatment patient access by the actor provider organization", async () => {
     app = await readyServer();
     const adminToken = await loginForToken(app, "admin-demo", "admin");

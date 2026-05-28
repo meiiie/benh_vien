@@ -11,6 +11,7 @@ type FhirAuditEventEntityDetail = NonNullable<
 >[number];
 
 const auditActionLabels: Record<AuditAction, string> = {
+  "patient.identifier-conflict": "Chặn trùng định danh bệnh nhân",
   "auth.login.success": "Đăng nhập thành công",
   "auth.login.failure": "Đăng nhập thất bại",
   "access.denied": "Truy cập bị từ chối",
@@ -234,6 +235,7 @@ function mapAuditAction(action: AuditAction): FhirAuditEvent["action"] {
 
   if (
     action.endsWith(".integrity-verify") ||
+    action.endsWith(".identifier-conflict") ||
     action === "access.denied" ||
     action.startsWith("auth.login.")
   ) {
@@ -244,7 +246,11 @@ function mapAuditAction(action: AuditAction): FhirAuditEvent["action"] {
 }
 
 function mapAuditOutcome(action: AuditAction): FhirAuditEvent["outcome"] {
-  return action === "access.denied" || action === "auth.login.failure" ? "4" : "0";
+  return action === "access.denied" ||
+    action === "auth.login.failure" ||
+    action === "patient.identifier-conflict"
+    ? "4"
+    : "0";
 }
 
 function mapAuditOutcomeDescription(action: AuditAction): string {
@@ -252,7 +258,13 @@ function mapAuditOutcomeDescription(action: AuditAction): string {
     return "Authentication failed";
   }
 
-  return action === "access.denied" ? "Access denied" : "Success";
+  if (action === "access.denied") {
+    return "Access denied";
+  }
+
+  return action === "patient.identifier-conflict"
+    ? "Patient identifier conflict"
+    : "Success";
 }
 
 function mapPurposeOfUse(purposeOfUse: string) {

@@ -7,6 +7,7 @@ export type AuditAction =
   | "access.denied"
   | "patient.list"
   | "patient.create"
+  | "patient.identifier-conflict"
   | "patient.read"
   | "patient.fhir-export"
   | "patient.fhir-bundle-export"
