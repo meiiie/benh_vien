@@ -162,16 +162,9 @@ export async function registerRecordTransferRoutes(
     const recordTransfer = await recordTransferRepository.findById(params.id);
 
     if (!recordTransfer) {
-      return sendFhirOperationOutcome(reply, {
-        statusCode: 404,
-        code: "not-found",
-        diagnostics: `RecordTransfer/${params.id} không tồn tại để xuất FHIR Task.`,
-        expression: ["Task.id"],
-        details: {
-          code: "RECORD_TRANSFER_NOT_FOUND",
-          display: "Record transfer not found",
-          text: "Không tìm thấy yêu cầu chuyển hồ sơ cần xuất FHIR Task."
-        }
+      return reply.status(404).send({
+        error: "RECORD_TRANSFER_NOT_FOUND",
+        message: "Không tìm thấy yêu cầu chuyển hồ sơ."
       });
     }
 
@@ -336,8 +329,16 @@ export async function registerRecordTransferRoutes(
     const recordTransfer = await recordTransferRepository.findById(params.id);
 
     if (!recordTransfer) {
-      return reply.status(404).send({
-        error: "RECORD_TRANSFER_NOT_FOUND"
+      return sendFhirOperationOutcome(reply, {
+        statusCode: 404,
+        code: "not-found",
+        diagnostics: `RecordTransfer/${params.id} không tồn tại để xuất FHIR Task.`,
+        expression: ["Task.id"],
+        details: {
+          code: "RECORD_TRANSFER_NOT_FOUND",
+          display: "Record transfer not found",
+          text: "Không tìm thấy yêu cầu chuyển hồ sơ cần xuất FHIR Task."
+        }
       });
     }
 

@@ -3492,6 +3492,40 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("keeps JSON and FHIR not-found errors separate for record transfers", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const jsonResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/record-transfers/record-transfer-missing",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "x-request-id": "record-transfer-json-not-found-001"
+      }
+    });
+
+    expect(jsonResponse.statusCode).toBe(404);
+    expect(String(jsonResponse.headers["content-type"])).toContain("application/json");
+    expect(jsonResponse.json()).toMatchObject({
+      error: "RECORD_TRANSFER_NOT_FOUND",
+      message: "Không tìm thấy yêu cầu chuyển hồ sơ.",
+      requestId: "record-transfer-json-not-found-001"
+    });
+
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/record-transfers/record-transfer-missing/fhir-task",
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expectOperationOutcome(fhirResponse, {
+      statusCode: 404,
+      code: "not-found",
+      detailsCode: "RECORD_TRANSFER_NOT_FOUND"
+    });
+  });
+
   it("moves a record transfer through sent and received milestones", async () => {
     app = await readyServer();
     const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");

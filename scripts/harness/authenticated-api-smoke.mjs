@@ -210,6 +210,35 @@ if (
   throw new Error("Expected FHIR validation failure to return OperationOutcome invalid issue.");
 }
 
+const missingTransferJson = await requestJson("/record-transfers/record-transfer-smoke-missing", {
+  token: clinicianSession.accessToken,
+  headers: treatmentHeaders(),
+  expectedStatus: 404
+});
+
+if (missingTransferJson.error !== "RECORD_TRANSFER_NOT_FOUND") {
+  throw new Error(
+    `Expected missing JSON record transfer to return RECORD_TRANSFER_NOT_FOUND, received ${missingTransferJson.error}.`
+  );
+}
+
+const missingTransferFhir = await requestJson(
+  "/record-transfers/record-transfer-smoke-missing/fhir-task",
+  {
+    token: clinicianSession.accessToken,
+    headers: treatmentHeaders(),
+    expectedStatus: 404
+  }
+);
+
+if (
+  missingTransferFhir.resourceType !== "OperationOutcome" ||
+  missingTransferFhir.issue?.[0]?.code !== "not-found" ||
+  missingTransferFhir.issue?.[0]?.details?.coding?.[0]?.code !== "RECORD_TRANSFER_NOT_FOUND"
+) {
+  throw new Error("Expected missing FHIR record transfer Task to return OperationOutcome not-found.");
+}
+
 const globalAuditTrail = await waitForAuditTrail(
   "/audit-events?limit=100",
   {
@@ -316,6 +345,7 @@ console.log(
       deniedMedicationExportStatus: 403,
       deniedMedicationError: deniedMedicationExport.error,
       fhirValidationIssueCode: fhirValidationOutcome.issue[0]?.code,
+      missingRecordTransferFhirIssueCode: missingTransferFhir.issue[0]?.code,
       globalAuditEventCount: globalAuditTrail.items.length,
       authAuditEventCount: authAuditEvents.length,
       deniedAuditEventCount: deniedAuditEvents.length,

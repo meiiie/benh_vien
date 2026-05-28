@@ -282,7 +282,7 @@ curl -X POST http://localhost:7310/api/v1/record-transfers/$TRANSFER_ID/receive 
   -d '{"note":"Bệnh viện nhận đã xác nhận tiếp nhận."}'
 ```
 
-API sẽ kiểm `consentReference` trước khi tạo `RecordTransfer`. Vòng đời vận hành gồm `requested/ready`, `in-progress` sau khi gửi và `completed` sau khi cơ sở nhận xác nhận. Kết quả FHIR mong muốn là `Task` có `focus` trỏ tới `Bundle/patient-document-patient-demo-001`, `for` trỏ tới `Patient/patient-demo-001`, `requester` là cơ sở gửi, `owner` là cơ sở nhận và `executionPeriod` khi đã có mốc gửi/nhận.
+API sẽ kiểm `consentReference` trước khi tạo `RecordTransfer`. Vòng đời vận hành gồm `requested/ready`, `in-progress` sau khi gửi và `completed` sau khi cơ sở nhận xác nhận. Kết quả FHIR mong muốn là `Task` có `focus` trỏ tới `Bundle/patient-document-patient-demo-001`, `for` trỏ tới `Patient/patient-demo-001`, `requester` là cơ sở gửi, `owner` là cơ sở nhận và `executionPeriod` khi đã có mốc gửi/nhận. Route JSON `/record-transfers/:id` trả lỗi nội bộ `RECORD_TRANSFER_NOT_FOUND` khi không tìm thấy; riêng facade FHIR `/record-transfers/:id/fhir-task` trả lỗi `OperationOutcome` mã `not-found` để client liên thông không phải đọc envelope JSON nội bộ.
 
 ## Lấy và mở lượt khám
 
