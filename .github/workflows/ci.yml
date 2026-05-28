@@ -65,12 +65,30 @@ jobs:
       - name: Prepare production-like smoke env
         run: |
           cp .env.prod.example .env.ci.prod
-          sed -i 's|^BVS_AUTH_SECRET=.*|BVS_AUTH_SECRET=ci-wiiicare-auth-secret-0123456789abcdef|g' .env.ci.prod
-          sed -i 's|^BVS_RECORD_TRANSFER_CALLBACK_SECRET=.*|BVS_RECORD_TRANSFER_CALLBACK_SECRET=ci-wiiicare-callback-secret-0123456789abcdef|g' .env.ci.prod
-          sed -i 's|^BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON=.*|BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON={"gateway-hai-phong-referral":"ci-wiiicare-callback-secret-0123456789abcdef"}|g' .env.ci.prod
-          sed -i 's|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=ci_bvs_postgres_password|g' .env.ci.prod
-          sed -i 's|^DATABASE_URL=.*|DATABASE_URL=postgresql://bvs:ci_bvs_postgres_password@postgres:5432/benh_vien_so|g' .env.ci.prod
-          sed -i 's|^MINIO_ROOT_PASSWORD=.*|MINIO_ROOT_PASSWORD=ci_bvs_minio_password|g' .env.ci.prod
+          auth_secret="$(openssl rand -hex 32)"
+          callback_secret="$(openssl rand -hex 32)"
+          callback_key_id="gateway-hai-phong-referral"
+          callback_secrets_json="{\"$callback_key_id\":\"$callback_secret\"}"
+          postgres_password="ci_$(openssl rand -hex 16)"
+          minio_password="ci_$(openssl rand -hex 16)"
+
+          echo "::add-mask::$auth_secret"
+          echo "::add-mask::$callback_secret"
+          echo "::add-mask::$callback_secrets_json"
+          echo "::add-mask::$postgres_password"
+          echo "::add-mask::$minio_password"
+
+          sed -i "s|^BVS_AUTH_SECRET=.*|BVS_AUTH_SECRET=$auth_secret|g" .env.ci.prod
+          sed -i "s|^BVS_RECORD_TRANSFER_CALLBACK_SECRET=.*|BVS_RECORD_TRANSFER_CALLBACK_SECRET=$callback_secret|g" .env.ci.prod
+          sed -i "s|^BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON=.*|BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON=$callback_secrets_json|g" .env.ci.prod
+          sed -i "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$postgres_password|g" .env.ci.prod
+          sed -i "s|^DATABASE_URL=.*|DATABASE_URL=postgresql://bvs:$postgres_password@postgres:5432/benh_vien_so|g" .env.ci.prod
+          sed -i "s|^MINIO_ROOT_PASSWORD=.*|MINIO_ROOT_PASSWORD=$minio_password|g" .env.ci.prod
+
+          {
+            echo "BVS_RECORD_TRANSFER_CALLBACK_KEY_ID=$callback_key_id"
+            echo "BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON=$callback_secrets_json"
+          } >> "$GITHUB_ENV"
 
       - name: Build production images
         run: docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml build migrate api web
@@ -162,8 +180,6 @@ jobs:
       - name: Verify authenticated PostgreSQL API smoke
         env:
           WIIICARE_SMOKE_BASE_URL: http://localhost:8080/api/v1
-          BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON: '{"gateway-hai-phong-referral":"ci-wiiicare-callback-secret-0123456789abcdef"}'
-          BVS_RECORD_TRANSFER_CALLBACK_KEY_ID: gateway-hai-phong-referral
         run: node scripts/harness/authenticated-api-smoke.mjs
 
       - name: Verify database migration
