@@ -328,6 +328,27 @@ describe("API auth and RBAC boundary", () => {
     expect(response.headers["x-request-id"]).toBe("trace-demo-001");
   });
 
+  it("adds request ids to manual JSON error envelopes", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-missing-001/fhir-bundle",
+      headers: {
+        ...bundleTransferHeaders(accessToken),
+        "x-request-id": "manual-json-error-001"
+      }
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(String(response.headers["content-type"])).toContain("application/json");
+    expect(response.json()).toMatchObject({
+      error: "PATIENT_NOT_FOUND",
+      requestId: "manual-json-error-001"
+    });
+  });
+
   it("returns a safe validation error envelope with request id", async () => {
     app = await readyServer();
     const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
@@ -2353,7 +2374,9 @@ function expectOperationOutcome(
 ): void {
   expect(response.statusCode).toBe(expected.statusCode);
   expect(String(response.headers["content-type"])).toContain("application/fhir+json");
-  expect(response.json()).toMatchObject({
+  const body = response.json();
+  expect(body).not.toHaveProperty("requestId");
+  expect(body).toMatchObject({
     resourceType: "OperationOutcome",
     issue: [
       {

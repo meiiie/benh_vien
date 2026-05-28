@@ -8,6 +8,8 @@ Các lỗi không được xử lý riêng sẽ đi qua error envelope tập tru
 
 Các lỗi phân quyền nghiệp vụ trả `requestId`; riêng `401 UNAUTHENTICATED` có thêm header `WWW-Authenticate: Bearer`.
 
+Các lỗi JSON thủ công có trường `error` cũng được API tự bổ sung `requestId` nếu route chưa gắn sẵn. Riêng lỗi FHIR `OperationOutcome` vẫn giữ đúng cấu trúc FHIR và chỉ dùng `X-Request-Id` ở header để truy vết.
+
 ## Kiểm tra sức khỏe API
 
 ```bash

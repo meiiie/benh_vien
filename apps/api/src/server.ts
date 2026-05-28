@@ -152,6 +152,19 @@ export async function buildServer(options: ServerOptions = {}) {
       requestId: request.id
     });
   });
+  app.addHook("onSend", async (request, reply, payload) => {
+    if (reply.statusCode < 400 || hasFhirContentType(reply)) {
+      return payload;
+    }
+
+    const payloadText = readPayloadText(payload);
+
+    if (!payloadText) {
+      return payload;
+    }
+
+    return injectRequestIdIntoErrorPayload(payloadText, request.id) ?? payload;
+  });
 
   await app.register(swagger, {
     openapi: {
@@ -568,4 +581,61 @@ function readHttpStatusCode(error: unknown): number {
   const statusCode = (error as { readonly statusCode?: unknown }).statusCode;
 
   return typeof statusCode === "number" ? statusCode : 500;
+}
+
+function readPayloadText(payload: unknown): string | undefined {
+  if (typeof payload === "string") {
+    return payload;
+  }
+
+  if (Buffer.isBuffer(payload)) {
+    return payload.toString("utf8");
+  }
+
+  return undefined;
+}
+
+function injectRequestIdIntoErrorPayload(
+  payload: string,
+  requestId: string
+): string | undefined {
+  try {
+    const parsedPayload = JSON.parse(payload) as unknown;
+
+    if (!isErrorEnvelopeWithoutRequestId(parsedPayload)) {
+      return undefined;
+    }
+
+    return JSON.stringify({
+      ...parsedPayload,
+      requestId
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+function isErrorEnvelopeWithoutRequestId(
+  value: unknown
+): value is { readonly error: string } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    "error" in value &&
+    typeof (value as { readonly error?: unknown }).error === "string" &&
+    !("requestId" in value)
+  );
+}
+
+function hasFhirContentType(reply: {
+  getHeader(name: string): number | string | string[] | undefined;
+}): boolean {
+  const contentType = reply.getHeader("content-type");
+
+  if (Array.isArray(contentType)) {
+    return contentType.some((value) => value.includes("application/fhir+json"));
+  }
+
+  return typeof contentType === "string" && contentType.includes("application/fhir+json");
 }
