@@ -8,6 +8,8 @@ describe("API auth and RBAC boundary", () => {
   let app: FastifyInstance | undefined;
   const originalRepository = process.env.BVS_REPOSITORY;
   const originalAuthSecret = process.env.BVS_AUTH_SECRET;
+  const originalCorsOrigins = process.env.BVS_CORS_ORIGINS;
+  const originalNodeEnv = process.env.NODE_ENV;
 
   beforeEach(() => {
     process.env.BVS_REPOSITORY = "in-memory";
@@ -22,6 +24,8 @@ describe("API auth and RBAC boundary", () => {
 
     restoreEnv("BVS_REPOSITORY", originalRepository);
     restoreEnv("BVS_AUTH_SECRET", originalAuthSecret);
+    restoreEnv("BVS_CORS_ORIGINS", originalCorsOrigins);
+    restoreEnv("NODE_ENV", originalNodeEnv);
   });
 
   it("returns a signed demo session for valid credentials", async () => {
@@ -85,6 +89,15 @@ describe("API auth and RBAC boundary", () => {
       }
     });
     expect(body.latencyMs).toEqual(expect.any(Number));
+  });
+
+  it("requires explicit CORS origins in production", async () => {
+    process.env.NODE_ENV = "production";
+    delete process.env.BVS_CORS_ORIGINS;
+
+    await expect(buildServer({ logger: false })).rejects.toThrow(
+      "BVS_CORS_ORIGINS must be set in production."
+    );
   });
 
   it("serves FHIR CapabilityStatement metadata without a demo session", async () => {

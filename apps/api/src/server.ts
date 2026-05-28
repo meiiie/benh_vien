@@ -101,7 +101,7 @@ export async function buildServer(options: ServerOptions = {}) {
   };
 
   await app.register(cors, {
-    origin: true
+    origin: resolveCorsOrigins()
   });
 
   await app.register(swagger, {
@@ -473,4 +473,25 @@ function isClosableRepository(repository: unknown): repository is ClosableReposi
     "close" in repository &&
     typeof (repository as { readonly close?: unknown }).close === "function"
   );
+}
+
+function resolveCorsOrigins(): boolean | string[] {
+  const configuredOrigins = process.env.BVS_CORS_ORIGINS;
+
+  if (configuredOrigins) {
+    const origins = configuredOrigins
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean);
+
+    if (origins.length > 0) {
+      return origins;
+    }
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("BVS_CORS_ORIGINS must be set in production.");
+  }
+
+  return true;
 }
