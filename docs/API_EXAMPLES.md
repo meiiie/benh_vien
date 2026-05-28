@@ -839,6 +839,10 @@ curl -X POST http://localhost:7310/api/v1/patients/patient-demo-001/documents \
     "type": "referral-letter",
     "title": "Giấy chuyển tuyến điện tử - Hải Phòng",
     "storageUri": "s3://wiiicare-demo/patients/patient-demo-001/referral-letter.pdf",
+    "attachmentContentType": "application/pdf",
+    "attachmentSizeBytes": 131072,
+    "attachmentHashSha1Base64": "u5+Zwd+MnqJUBDLusw8YfS9xX9Y=",
+    "attachmentCreatedAt": "2026-05-28T02:00:00.000Z",
     "authorPractitionerId": "practitioner-demo-003"
   }'
 ```
@@ -855,7 +859,7 @@ curl http://localhost:7310/api/v1/clinical-documents/clinical-document-demo-001/
   -H "x-purpose-of-use: TREATMENT"
 ```
 
-Kết quả mong muốn là JSON có `resourceType` bằng `DocumentReference`, có `subject`, `author`, `status`, `docStatus` và `content.attachment.url`.
+Kết quả mong muốn là JSON có `resourceType` bằng `DocumentReference`, có `subject`, `author`, `status`, `docStatus` và `content.attachment` gồm `url`, `contentType`, `size`, `hash`, `title`, `creation`. Trường `hash` là SHA-1 Base64 theo FHIR R4 để bên nhận kiểm tra nội dung tải từ URL không đổi, không phải chữ ký số.
 
 ```bash
 curl http://localhost:7310/api/v1/clinical-documents/clinical-document-demo-001/fhir-provenance \

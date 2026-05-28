@@ -17,6 +17,10 @@ type ClinicalDocumentRow = {
   title: string;
   status: ClinicalDocumentStatus;
   storage_uri: string;
+  attachment_content_type: string | null;
+  attachment_size_bytes: number | string | null;
+  attachment_hash_sha1_base64: string | null;
+  attachment_created_at: Date | string | null;
   author_practitioner_id: string;
   signed_at: Date | string | null;
   created_at: Date | string;
@@ -43,6 +47,10 @@ export class PostgresClinicalDocumentRepository implements ClinicalDocumentRepos
         title,
         status,
         storage_uri,
+        attachment_content_type,
+        attachment_size_bytes,
+        attachment_hash_sha1_base64,
+        attachment_created_at,
         author_practitioner_id,
         signed_at,
         created_at,
@@ -66,6 +74,10 @@ export class PostgresClinicalDocumentRepository implements ClinicalDocumentRepos
         title,
         status,
         storage_uri,
+        attachment_content_type,
+        attachment_size_bytes,
+        attachment_hash_sha1_base64,
+        attachment_created_at,
         author_practitioner_id,
         signed_at,
         created_at,
@@ -91,12 +103,16 @@ export class PostgresClinicalDocumentRepository implements ClinicalDocumentRepos
         title,
         status,
         storage_uri,
+        attachment_content_type,
+        attachment_size_bytes,
+        attachment_hash_sha1_base64,
+        attachment_created_at,
         author_practitioner_id,
         signed_at,
         created_at,
         updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       ON CONFLICT (id) DO UPDATE SET
         patient_id = EXCLUDED.patient_id,
         encounter_id = EXCLUDED.encounter_id,
@@ -104,6 +120,10 @@ export class PostgresClinicalDocumentRepository implements ClinicalDocumentRepos
         title = EXCLUDED.title,
         status = EXCLUDED.status,
         storage_uri = EXCLUDED.storage_uri,
+        attachment_content_type = EXCLUDED.attachment_content_type,
+        attachment_size_bytes = EXCLUDED.attachment_size_bytes,
+        attachment_hash_sha1_base64 = EXCLUDED.attachment_hash_sha1_base64,
+        attachment_created_at = EXCLUDED.attachment_created_at,
         author_practitioner_id = EXCLUDED.author_practitioner_id,
         signed_at = EXCLUDED.signed_at,
         updated_at = EXCLUDED.updated_at`,
@@ -115,6 +135,10 @@ export class PostgresClinicalDocumentRepository implements ClinicalDocumentRepos
         snapshot.title,
         snapshot.status,
         snapshot.storageUri,
+        snapshot.attachmentContentType ?? null,
+        snapshot.attachmentSizeBytes ?? null,
+        snapshot.attachmentHashSha1Base64 ?? null,
+        snapshot.attachmentCreatedAt ?? null,
         snapshot.authorPractitionerId,
         snapshot.signedAt ?? null,
         snapshot.createdAt,
@@ -158,6 +182,13 @@ function rowToClinicalDocument(row: ClinicalDocumentRow): ClinicalDocument {
     title: row.title,
     status: row.status,
     storageUri: row.storage_uri,
+    attachmentContentType: row.attachment_content_type ?? undefined,
+    attachmentSizeBytes:
+      row.attachment_size_bytes === null ? undefined : Number(row.attachment_size_bytes),
+    attachmentHashSha1Base64: row.attachment_hash_sha1_base64 ?? undefined,
+    attachmentCreatedAt: row.attachment_created_at
+      ? toIsoString(row.attachment_created_at)
+      : undefined,
     authorPractitionerId: row.author_practitioner_id,
     signedAt: row.signed_at ? toIsoString(row.signed_at) : undefined,
     createdAt: toIsoString(row.created_at),

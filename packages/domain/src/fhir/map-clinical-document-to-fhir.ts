@@ -54,8 +54,12 @@ export function mapClinicalDocumentToFhir(document: ClinicalDocument): FhirDocum
     content: [
       {
         attachment: {
+          contentType: snapshot.attachmentContentType,
           url: snapshot.storageUri,
-          title: snapshot.title
+          size: snapshot.attachmentSizeBytes,
+          hash: snapshot.attachmentHashSha1Base64,
+          title: snapshot.title,
+          creation: snapshot.attachmentCreatedAt ?? snapshot.createdAt
         }
       }
     ]

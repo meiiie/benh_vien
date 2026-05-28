@@ -699,6 +699,10 @@ const document = ClinicalDocument.create({
   type: "referral-letter",
   title: "Referral letter harness",
   storageUri: "s3://wiiicare-harness/patients/patient-harness-001/referral-letter.pdf",
+  attachmentContentType: "application/pdf",
+  attachmentSizeBytes: 131072,
+  attachmentHashSha1Base64: "u5+Zwd+MnqJUBDLusw8YfS9xX9Y=",
+  attachmentCreatedAt: "2026-05-27T00:00:00.000Z",
   authorPractitionerId: "practitioner-harness-001"
 });
 
@@ -723,6 +727,21 @@ if (fhirDocumentReference.subject.reference !== "Patient/patient-harness-001") {
 
 if (fhirDocumentReference.docStatus !== "final") {
   throw new Error(`Expected docStatus final, received ${fhirDocumentReference.docStatus}`);
+}
+
+if (fhirDocumentReference.content[0]?.attachment.contentType !== "application/pdf") {
+  throw new Error("Expected DocumentReference attachment contentType application/pdf.");
+}
+
+if (fhirDocumentReference.content[0]?.attachment.size !== 131072) {
+  throw new Error("Expected DocumentReference attachment size 131072.");
+}
+
+if (
+  fhirDocumentReference.content[0]?.attachment.hash !==
+  "u5+Zwd+MnqJUBDLusw8YfS9xX9Y="
+) {
+  throw new Error("Expected DocumentReference attachment SHA-1 hash metadata.");
 }
 
 if (fhirDocumentProvenance.resourceType !== "Provenance") {
@@ -1558,6 +1577,8 @@ console.log(
       providerDirectoryEntryCount: fhirProviderDirectoryBundle.entry.length,
       documentId: fhirDocumentReference.id,
       documentResourceType: fhirDocumentReference.resourceType,
+      documentAttachmentContentType: fhirDocumentReference.content[0]?.attachment.contentType,
+      documentAttachmentHash: fhirDocumentReference.content[0]?.attachment.hash,
       documentProvenanceResourceType: fhirDocumentProvenance.resourceType,
       encounterId: fhirEncounter.id,
       encounterResourceType: fhirEncounter.resourceType,

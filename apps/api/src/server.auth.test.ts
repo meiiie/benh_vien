@@ -469,6 +469,36 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("exports clinical document attachment metadata as FHIR DocumentReference", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/clinical-documents/clinical-document-demo-001/fhir",
+      headers: treatmentHeaders(accessToken)
+    });
+    const body = response.json();
+
+    expect(response.statusCode).toBe(200);
+    expect(body).toMatchObject({
+      resourceType: "DocumentReference",
+      id: "clinical-document-demo-001",
+      content: [
+        {
+          attachment: {
+            contentType: "application/pdf",
+            url: "s3://wiiicare-demo/patients/patient-demo-001/discharge-summary.pdf",
+            size: 245760,
+            hash: "Q2xpRG9jRGVtby1EaXNjaGFyZ2U=",
+            title: "Tóm tắt ra viện - Nguyễn Văn An",
+            creation: "2026-05-27T01:55:00.000Z"
+          }
+        }
+      ]
+    });
+  });
+
   it("rejects FHIR Provenance export for an unsigned clinical document", async () => {
     app = await readyServer();
     const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");

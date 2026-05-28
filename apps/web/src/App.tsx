@@ -345,6 +345,10 @@ type ClinicalDocument = {
   readonly title: string;
   readonly status: ClinicalDocumentStatus;
   readonly storageUri: string;
+  readonly attachmentContentType?: string;
+  readonly attachmentSizeBytes?: number;
+  readonly attachmentHashSha1Base64?: string;
+  readonly attachmentCreatedAt?: string;
   readonly authorPractitionerId: string;
   readonly signedAt?: string;
   readonly createdAt: string;
@@ -982,6 +986,10 @@ type NewClinicalDocumentForm = {
   type: ClinicalDocumentType;
   title: string;
   storageUri: string;
+  attachmentContentType: string;
+  attachmentSizeBytes: string;
+  attachmentHashSha1Base64: string;
+  attachmentCreatedAt: string;
   authorPractitionerId: string;
 };
 
@@ -1226,6 +1234,10 @@ const defaultClinicalDocumentForm: NewClinicalDocumentForm = {
   type: "referral-letter",
   title: "Giấy chuyển tuyến điện tử - Hải Phòng",
   storageUri: "s3://wiiicare-demo/patients/current/referral-letter.pdf",
+  attachmentContentType: "application/pdf",
+  attachmentSizeBytes: "131072",
+  attachmentHashSha1Base64: "u5+Zwd+MnqJUBDLusw8YfS9xX9Y=",
+  attachmentCreatedAt: "2026-05-28T09:00",
   authorPractitionerId: "practitioner-demo-003"
 };
 
@@ -4388,6 +4400,14 @@ export function App() {
           type: documentForm.type,
           title: documentForm.title,
           storageUri: documentForm.storageUri.replace("/current/", `/${selectedPatient.id}/`),
+          attachmentContentType: documentForm.attachmentContentType || undefined,
+          attachmentSizeBytes: documentForm.attachmentSizeBytes
+            ? Number(documentForm.attachmentSizeBytes)
+            : undefined,
+          attachmentHashSha1Base64: documentForm.attachmentHashSha1Base64 || undefined,
+          attachmentCreatedAt: documentForm.attachmentCreatedAt
+            ? toApiDateTime(documentForm.attachmentCreatedAt)
+            : undefined,
           authorPractitionerId: documentForm.authorPractitionerId
         })
       });
@@ -8093,6 +8113,19 @@ export function App() {
                   <Info label="Trạng thái" value={formatDocumentStatus(selectedDocument.status)} />
                   <Info label="Encounter" value={selectedDocument.encounterId ?? "Chưa gắn"} />
                   <Info label="Người tạo" value={selectedDocument.authorPractitionerId} />
+                  <Info label="Định dạng" value={selectedDocument.attachmentContentType ?? "Chưa có"} />
+                  <Info
+                    label="Dung lượng"
+                    value={
+                      selectedDocument.attachmentSizeBytes !== undefined
+                        ? `${selectedDocument.attachmentSizeBytes.toLocaleString("vi-VN")} byte`
+                        : "Chưa có"
+                    }
+                  />
+                  <Info
+                    label="Hash SHA-1"
+                    value={selectedDocument.attachmentHashSha1Base64 ?? "Chưa có"}
+                  />
                 </div>
                 <code>{selectedDocument.storageUri}</code>
                 <div className="action-row">
@@ -8160,6 +8193,46 @@ export function App() {
             <input
               value={documentForm.storageUri}
               onChange={(event) => setDocumentForm({ ...documentForm, storageUri: event.target.value })}
+            />
+          </label>
+          <label>
+            Định dạng MIME
+            <input
+              value={documentForm.attachmentContentType}
+              onChange={(event) =>
+                setDocumentForm({ ...documentForm, attachmentContentType: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Dung lượng byte
+            <input
+              inputMode="numeric"
+              min="0"
+              type="number"
+              value={documentForm.attachmentSizeBytes}
+              onChange={(event) =>
+                setDocumentForm({ ...documentForm, attachmentSizeBytes: event.target.value })
+              }
+            />
+          </label>
+          <label className="wide-field">
+            Hash SHA-1 Base64
+            <input
+              value={documentForm.attachmentHashSha1Base64}
+              onChange={(event) =>
+                setDocumentForm({ ...documentForm, attachmentHashSha1Base64: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Thời điểm tạo tệp
+            <input
+              type="datetime-local"
+              value={documentForm.attachmentCreatedAt}
+              onChange={(event) =>
+                setDocumentForm({ ...documentForm, attachmentCreatedAt: event.target.value })
+              }
             />
           </label>
           <label className="wide-field">

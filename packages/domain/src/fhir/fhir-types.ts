@@ -152,8 +152,12 @@ export type FhirDocumentReference = {
   readonly date: string;
   readonly content: readonly {
     readonly attachment: {
+      readonly contentType?: string;
       readonly url: string;
+      readonly size?: number;
+      readonly hash?: string;
       readonly title: string;
+      readonly creation?: string;
     };
   }[];
 };
