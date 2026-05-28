@@ -32,6 +32,8 @@ API giới hạn tần suất `POST /api/v1/auth/login` bằng `BVS_AUTH_LOGIN_R
 
 Ở `NODE_ENV=production`, API cũng yêu cầu `BVS_AUTH_SECRET` tối thiểu 32 ký tự ngay khi khởi động và không chấp nhận giá trị mẫu như `change-me...` hoặc secret dev-only. Nếu thiếu secret hoặc dùng placeholder, container API sẽ dừng thay vì chờ tới request đăng nhập đầu tiên mới lỗi.
 
+Ở `NODE_ENV=production`, callback xác nhận nhận hồ sơ yêu cầu `BVS_RECORD_TRANSFER_CALLBACK_SECRET` tối thiểu 32 ký tự. Gateway bệnh viện nhận phải gửi `x-wiiicare-callback-timestamp` và `x-wiiicare-callback-signature`; chữ ký là `HMAC-SHA256` trên chuỗi `$TIMESTAMP.$TRANSFER_ID.$CANONICAL_JSON_BODY`, với object key được sắp xếp ổn định, và chỉ được lệch tối đa 5 phút.
+
 Ở `NODE_ENV=production`, đăng nhập demo mặc định bị tắt bằng `BVS_DEMO_AUTH_ENABLED=false`. Chỉ bật `BVS_DEMO_AUTH_ENABLED=true` cho phiên smoke/demo có kiểm soát; triển khai thật cần thay bằng IAM/SSO thay vì tài khoản demo hard-coded.
 
 Ở `NODE_ENV=production`, `DATABASE_URL` cũng không được chứa mật khẩu mẫu/dev như `change-me...` hoặc `bvs_dev_password`. `.env.prod.example` cố ý dùng placeholder để nhắc thay secret trước khi vận hành thật; nếu dùng nguyên file này cho production, API sẽ dừng sớm thay vì mở pool PostgreSQL với thông tin đăng nhập yếu.

@@ -1,3 +1,5 @@
+import { createHmac } from "node:crypto";
+
 const baseUrl = normalizeBaseUrl(
   process.env.WIIICARE_SMOKE_BASE_URL ?? "http://localhost:7310/api/v1"
 );
@@ -369,21 +371,25 @@ if (
 }
 
 const smokeAcknowledgementReference = `ack-smoke-${requestTag}`;
+const acknowledgementCallbackBody = {
+  recipientOrganizationId: "hospital-hai-phong-referral",
+  acknowledgementReference: smokeAcknowledgementReference,
+  receivedAt: new Date(Date.now() + 300_000).toISOString(),
+  receivedByActorId: "system-hai-phong-referral-gateway",
+  targetEndpointId: "endpoint-fhir-hai-phong-referral",
+  deliveryIdempotencyKey: smokeTransferAttemptsAfterRetry.items[1]?.idempotencyKey,
+  note: "Authenticated smoke recipient acknowledgement."
+};
 const receivedTransfer = await requestJson(
   `/record-transfers/${smokeTransfer.id}/acknowledgement-callback`,
   {
     method: "POST",
     token: adminSession.accessToken,
-    headers: operationsHeaders(),
-    body: {
-      recipientOrganizationId: "hospital-hai-phong-referral",
-      acknowledgementReference: smokeAcknowledgementReference,
-      receivedAt: new Date(Date.now() + 300_000).toISOString(),
-      receivedByActorId: "system-hai-phong-referral-gateway",
-      targetEndpointId: "endpoint-fhir-hai-phong-referral",
-      deliveryIdempotencyKey: smokeTransferAttemptsAfterRetry.items[1]?.idempotencyKey,
-      note: "Authenticated smoke recipient acknowledgement."
-    }
+    headers: {
+      ...operationsHeaders(),
+      ...recordTransferCallbackSignatureHeaders(smokeTransfer.id, acknowledgementCallbackBody)
+    },
+    body: acknowledgementCallbackBody
   }
 );
 
@@ -606,6 +612,45 @@ function operationsHeaders() {
   return {
     "x-purpose-of-use": "OPERATIONS"
   };
+}
+
+function recordTransferCallbackSignatureHeaders(recordTransferId, body) {
+  const secret = process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRET?.trim();
+
+  if (!secret) {
+    return {};
+  }
+
+  const timestamp = new Date().toISOString();
+  const signaturePayload = `${timestamp}.${recordTransferId}.${canonicalJson(body ?? {})}`;
+  const signature = createHmac("sha256", secret)
+    .update(signaturePayload)
+    .digest("base64url");
+
+  return {
+    "x-wiiicare-callback-timestamp": timestamp,
+    "x-wiiicare-callback-signature": signature
+  };
+}
+
+function canonicalJson(value) {
+  return JSON.stringify(sortJsonValue(value));
+}
+
+function sortJsonValue(value) {
+  if (Array.isArray(value)) {
+    return value.map(sortJsonValue);
+  }
+
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+        .map(([key, nestedValue]) => [key, sortJsonValue(nestedValue)])
+    );
+  }
+
+  return value;
 }
 
 function auditHeaders() {

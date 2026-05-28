@@ -9,7 +9,7 @@
     "check": "tsc -p tsconfig.json --noEmit",
     "db:migrate": "node scripts/migrate.mjs",
     "dev": "pnpm --filter @benh-vien-so/domain run build && pnpm --filter @benh-vien-so/contracts run build && tsx src/main.ts",
-    "test": "vitest run src"
+    "test": "vitest run src server.auth"
   },
   "dependencies": {
     "@benh-vien-so/contracts": "workspace:*",

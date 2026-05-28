@@ -4,9 +4,15 @@ import type { ProviderDirectoryRepository } from "@benh-vien-so/domain";
 import { registerAuthRoutes } from "./modules/auth/auth-routes.js";
 import { createMemoryLoginRateLimiter } from "./modules/auth/login-rate-limit.js";
 import type { LoginRateLimiter } from "./modules/auth/login-rate-limit.js";
+import {
+  buildRecordTransferCallbackSignature,
+  recordTransferCallbackSignatureHeader,
+  recordTransferCallbackTimestampHeader
+} from "./modules/record-transfers/record-transfer-callback-signature.js";
 import { buildServer } from "./server.js";
 
 const testSecret = "wiiicare-test-secret-at-least-32-characters";
+const callbackSecret = "wiiicare-record-transfer-callback-secret-for-tests";
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 describe("API auth and RBAC boundary", () => {
@@ -28,6 +34,8 @@ describe("API auth and RBAC boundary", () => {
     process.env.BVS_RECORD_TRANSFER_RETRY_WORKER_ENABLED;
   const originalRecordTransferDeliveryWorkerEnabled =
     process.env.BVS_RECORD_TRANSFER_DELIVERY_WORKER_ENABLED;
+  const originalRecordTransferCallbackSecret =
+    process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRET;
 
   beforeEach(() => {
     process.env.BVS_REPOSITORY = "in-memory";
@@ -64,6 +72,10 @@ describe("API auth and RBAC boundary", () => {
     restoreEnv(
       "BVS_RECORD_TRANSFER_DELIVERY_WORKER_ENABLED",
       originalRecordTransferDeliveryWorkerEnabled
+    );
+    restoreEnv(
+      "BVS_RECORD_TRANSFER_CALLBACK_SECRET",
+      originalRecordTransferCallbackSecret
     );
   });
 
@@ -3744,6 +3756,94 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("requires a valid HMAC signature for acknowledgement callbacks when configured", async () => {
+    process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRET = callbackSecret;
+    app = await readyServer();
+    const clinicianToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const adminToken = await loginForToken(app, "admin-demo", "admin");
+
+    const sendResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/send",
+      headers: {
+        ...treatmentHeaders(clinicianToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        sentAt: "2026-05-28T06:00:00.000Z",
+        note: "Xếp gói hồ sơ vào hàng chờ gửi qua gateway liên thông."
+      }
+    });
+
+    expect(sendResponse.statusCode).toBe(200);
+
+    const callbackPayload = {
+      recipientOrganizationId: "hospital-hai-phong-referral",
+      acknowledgementReference: "ack-record-transfer-callback-signed-001",
+      receivedAt: new Date().toISOString(),
+      receivedByActorId: "system-hai-phong-referral-gateway",
+      targetEndpointId: "endpoint-fhir-hai-phong-referral",
+      deliveryIdempotencyKey: "wiiicare-record-transfer-callback-signed-test-001",
+      note: "Bệnh viện nhận xác nhận tiếp nhận qua callback đã ký."
+    };
+
+    const unsignedCallbackResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
+      headers: {
+        ...operationsHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: callbackPayload
+    });
+
+    expect(unsignedCallbackResponse.statusCode).toBe(403);
+    expect(unsignedCallbackResponse.json()).toMatchObject({
+      error: "RECORD_TRANSFER_CALLBACK_SIGNATURE_REQUIRED",
+      permission: "record-transfer:acknowledge"
+    });
+
+    const invalidTimestamp = new Date().toISOString();
+    const invalidSignatureResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
+      headers: {
+        ...operationsHeaders(adminToken),
+        "content-type": "application/json",
+        [recordTransferCallbackTimestampHeader]: invalidTimestamp,
+        [recordTransferCallbackSignatureHeader]: "invalid-signature"
+      },
+      payload: callbackPayload
+    });
+
+    expect(invalidSignatureResponse.statusCode).toBe(403);
+    expect(invalidSignatureResponse.json()).toMatchObject({
+      error: "RECORD_TRANSFER_CALLBACK_SIGNATURE_INVALID",
+      permission: "record-transfer:acknowledge"
+    });
+
+    const signedCallbackResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
+      headers: {
+        ...operationsHeaders(adminToken),
+        "content-type": "application/json",
+        ...signedRecordTransferCallbackHeaders({
+          recordTransferId: "record-transfer-demo-001",
+          body: callbackPayload
+        })
+      },
+      payload: callbackPayload
+    });
+
+    expect(signedCallbackResponse.statusCode).toBe(200);
+    expect(signedCallbackResponse.json()).toMatchObject({
+      status: "completed",
+      receivedByActorId: "system-hai-phong-referral-gateway",
+      acknowledgementReference: "ack-record-transfer-callback-signed-001"
+    });
+  });
+
   it("records failed record transfer delivery and prepares a retry", async () => {
     app = await readyServer();
     const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
@@ -4059,6 +4159,23 @@ function operationsHeaders(accessToken: string): Record<string, string> {
   return {
     authorization: `Bearer ${accessToken}`,
     "x-purpose-of-use": "OPERATIONS"
+  };
+}
+
+function signedRecordTransferCallbackHeaders(input: {
+  readonly recordTransferId: string;
+  readonly body: unknown;
+}): Record<string, string> {
+  const timestamp = new Date().toISOString();
+
+  return {
+    [recordTransferCallbackTimestampHeader]: timestamp,
+    [recordTransferCallbackSignatureHeader]: buildRecordTransferCallbackSignature({
+      secret: callbackSecret,
+      timestamp,
+      recordTransferId: input.recordTransferId,
+      body: input.body
+    })
   };
 }
 

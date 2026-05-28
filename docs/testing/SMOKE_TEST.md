@@ -84,6 +84,8 @@ curl -fsS http://localhost:7310/api/v1/record-transfers/record-transfer-demo-001
   -H "Authorization: Bearer $TOKEN" \
   -H "x-purpose-of-use: TREATMENT"
 
+# Nếu `BVS_RECORD_TRANSFER_CALLBACK_SECRET` được bật, thêm
+# `x-wiiicare-callback-timestamp` và `x-wiiicare-callback-signature`.
 curl -fsS -X POST http://localhost:7310/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback \
   -H "Authorization: Bearer $OPERATIONS_TOKEN" \
   -H "x-purpose-of-use: OPERATIONS" \

@@ -36,6 +36,7 @@ import {
 } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
+import { verifyRecordTransferCallbackSignature } from "./record-transfer-callback-signature.js";
 
 export async function registerRecordTransferRoutes(
   app: FastifyInstance,
@@ -484,6 +485,26 @@ export async function registerRecordTransferRoutes(
       throw parsed.error;
     }
 
+    const signatureVerification = verifyRecordTransferCallbackSignature({
+      headers: request.headers,
+      recordTransferId: params.id,
+      body: request.body
+    });
+
+    if (signatureVerification.required && !signatureVerification.verified) {
+      return reply.status(signatureVerification.statusCode).send({
+        error: signatureVerification.error,
+        message: signatureVerification.message,
+        requestId: request.id,
+        permission: "record-transfer:acknowledge",
+        actor: {
+          id: actor.actorId,
+          role: actor.role,
+          purposeOfUse: actor.purposeOfUse
+        }
+      });
+    }
+
     const recordTransfer = await recordTransferRepository.findById(params.id);
 
     if (!recordTransfer) {
@@ -548,7 +569,8 @@ export async function registerRecordTransferRoutes(
               acknowledgementReference: snapshot.acknowledgementReference,
               recipientOrganizationId: snapshot.recipientOrganizationId,
               targetEndpointId: parsed.data.targetEndpointId,
-              deliveryIdempotencyKey: parsed.data.deliveryIdempotencyKey
+              deliveryIdempotencyKey: parsed.data.deliveryIdempotencyKey,
+              ...toCallbackSignatureAuditMetadata(signatureVerification)
             }
           });
 
@@ -590,7 +612,8 @@ export async function registerRecordTransferRoutes(
           recipientOrganizationId: recordTransfer.toSnapshot().recipientOrganizationId,
           targetEndpointId: parsed.data.targetEndpointId,
           deliveryIdempotencyKey: parsed.data.deliveryIdempotencyKey,
-          callbackActorId: actor.actorId
+          callbackActorId: actor.actorId,
+          ...toCallbackSignatureAuditMetadata(signatureVerification)
         }
       });
 
@@ -910,4 +933,20 @@ function buildAcknowledgementReference(input: {
     .slice(0, 32);
 
   return `wiiicare-record-transfer-ack-${hash}`;
+}
+
+function toCallbackSignatureAuditMetadata(input: ReturnType<
+  typeof verifyRecordTransferCallbackSignature
+>): {
+  readonly callbackSignatureRequired: boolean;
+  readonly callbackSignatureVerified: boolean;
+  readonly callbackSignatureTimestamp?: string;
+  readonly callbackSignatureAlgorithm?: string;
+} {
+  return {
+    callbackSignatureRequired: input.required,
+    callbackSignatureVerified: input.verified,
+    callbackSignatureTimestamp: input.timestamp,
+    callbackSignatureAlgorithm: input.algorithm
+  };
 }
