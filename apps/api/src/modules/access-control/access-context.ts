@@ -12,6 +12,7 @@ import type {
   ProviderDirectoryRepository
 } from "@benh-vien-so/domain";
 import { verifyAccessToken } from "../auth/auth-session.js";
+import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
 
 export function readActorContext(request: FastifyRequest): ActorContext | undefined {
   const token = readBearerToken(request.headers.authorization);
@@ -39,6 +40,23 @@ export function requirePermission(
 
   if (!actor) {
     reply.header("WWW-Authenticate", "Bearer");
+
+    if (acceptsFhirJson(request)) {
+      sendFhirOperationOutcome(reply, {
+        statusCode: 401,
+        code: "login",
+        diagnostics: `requestId=${request.id}`,
+        expression: ["Authorization"],
+        details: {
+          code: "UNAUTHENTICATED",
+          display: "Unauthenticated",
+          text: "Cần đăng nhập và gửi Authorization Bearer token hợp lệ."
+        }
+      });
+
+      return undefined;
+    }
+
     reply.status(401).send({
       error: "UNAUTHENTICATED",
       message: "Cần đăng nhập và gửi Authorization Bearer token hợp lệ.",
@@ -50,6 +68,28 @@ export function requirePermission(
 
   if (canAccess(actor, permission)) {
     return actor;
+  }
+
+  if (acceptsFhirJson(request)) {
+    sendFhirOperationOutcome(reply, {
+      statusCode: 403,
+      code: "forbidden",
+      diagnostics: [
+        `requestId=${request.id}`,
+        `permission=${permission}`,
+        `actorId=${actor.actorId}`,
+        `actorRole=${actor.role}`,
+        `purposeOfUse=${actor.purposeOfUse}`
+      ].join("; "),
+      expression: ["Authorization", "Permission"],
+      details: {
+        code: "FORBIDDEN",
+        display: "Forbidden",
+        text: "Actor không có quyền thực hiện thao tác này."
+      }
+    });
+
+    return undefined;
   }
 
   reply.status(403).send({
@@ -78,6 +118,28 @@ export async function requirePatientRecordAccess(
 
   if (canAccessPatientRecord(actor, patient.toSnapshot(), providerDirectory.toSnapshot())) {
     return true;
+  }
+
+  if (acceptsFhirJson(request)) {
+    sendFhirOperationOutcome(reply, {
+      statusCode: 403,
+      code: "forbidden",
+      diagnostics: [
+        `requestId=${request.id}`,
+        `patientId=${patient.id}`,
+        `actorId=${actor.actorId}`,
+        `actorRole=${actor.role}`,
+        `purposeOfUse=${actor.purposeOfUse}`
+      ].join("; "),
+      expression: ["Patient.id"],
+      details: {
+        code: "PATIENT_ACCESS_DENIED",
+        display: "Patient access denied",
+        text: "Actor không có quan hệ điều trị, quyền kiểm toán hoặc quyền quản trị phù hợp với hồ sơ bệnh nhân này."
+      }
+    });
+
+    return false;
   }
 
   reply.status(403).send({
@@ -149,6 +211,15 @@ function readHeader(value: string | string[] | undefined): string | undefined {
   }
 
   return value;
+}
+
+function acceptsFhirJson(request: FastifyRequest): boolean {
+  return (
+    readHeader(request.headers.accept)
+      ?.split(",")
+      .map((value) => value.trim().toLowerCase().split(";")[0])
+      .includes("application/fhir+json") ?? false
+  );
 }
 
 function readBearerToken(value: string | string[] | undefined): string | undefined {

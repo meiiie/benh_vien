@@ -825,14 +825,76 @@ function parseDeniedAccessPayload(payload: string): DeniedAccessPayload | undefi
   try {
     const parsedPayload = JSON.parse(payload) as unknown;
 
-    if (!isDeniedAccessPayload(parsedPayload)) {
-      return undefined;
+    if (isDeniedAccessPayload(parsedPayload)) {
+      return parsedPayload;
     }
 
-    return parsedPayload;
+    return parseDeniedAccessOperationOutcome(parsedPayload);
   } catch {
     return undefined;
   }
+}
+
+function parseDeniedAccessOperationOutcome(value: unknown): DeniedAccessPayload | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+
+  if ((value as { readonly resourceType?: unknown }).resourceType !== "OperationOutcome") {
+    return undefined;
+  }
+
+  const issue = (value as { readonly issue?: unknown }).issue;
+
+  if (!Array.isArray(issue)) {
+    return undefined;
+  }
+
+  const firstIssue = issue[0] as
+    | {
+        readonly details?: {
+          readonly coding?: readonly { readonly code?: unknown }[];
+        };
+        readonly diagnostics?: unknown;
+      }
+    | undefined;
+  const code = firstIssue?.details?.coding?.find((coding) =>
+    coding.code === "FORBIDDEN" || coding.code === "PATIENT_ACCESS_DENIED"
+  )?.code;
+
+  if (code !== "FORBIDDEN" && code !== "PATIENT_ACCESS_DENIED") {
+    return undefined;
+  }
+
+  const diagnostics = parseOperationOutcomeDiagnostics(firstIssue?.diagnostics);
+
+  return {
+    error: code,
+    requestId: diagnostics.requestId,
+    permission: diagnostics.permission,
+    patientId: diagnostics.patientId,
+    actor: {
+      id: diagnostics.actorId,
+      role: diagnostics.actorRole,
+      purposeOfUse: diagnostics.purposeOfUse
+    }
+  };
+}
+
+function parseOperationOutcomeDiagnostics(value: unknown): Record<string, string> {
+  if (typeof value !== "string") {
+    return {};
+  }
+
+  return Object.fromEntries(
+    value
+      .split(";")
+      .map((part) => part.trim().split("="))
+      .filter(
+        (entry): entry is [string, string] =>
+          entry.length === 2 && entry[0].length > 0 && entry[1].length > 0
+      )
+  );
 }
 
 function isDeniedAccessPayload(value: unknown): value is DeniedAccessPayload {
