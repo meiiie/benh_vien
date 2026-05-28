@@ -8,7 +8,7 @@
     "build": "pnpm -r --sort run build",
     "check": "pnpm run build && pnpm -r --sort run check",
     "test": "pnpm -r --sort --if-present run test",
-    "ci": "pnpm run check && pnpm run test && pnpm run harness:smoke && pnpm run harness:web-security && pnpm run harness:compose-env && pnpm run compose:config",
+    "ci": "pnpm run check && pnpm run test && pnpm run harness:smoke && pnpm run harness:web-security && pnpm run harness:migrations && pnpm run harness:compose-env && pnpm run compose:config",
     "compose:config": "docker compose -f docker-compose.yml -f docker-compose.dev.yml config --quiet && docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet && docker compose --profile interop --profile imaging -f infra/docker-compose.yml config --quiet",
     "db:migrate": "pnpm --filter @benh-vien-so/api run db:migrate",
     "dev:api": "pnpm --filter @benh-vien-so/api run dev",
@@ -16,6 +16,7 @@
     "harness:smoke": "node scripts/harness/fhir-smoke.mjs",
     "harness:api-auth-smoke": "node scripts/harness/authenticated-api-smoke.mjs",
     "harness:compose-env": "node scripts/harness/compose-api-env.mjs",
+    "harness:migrations": "node scripts/harness/migration-files.mjs",
     "harness:web-security": "node scripts/harness/web-security-config.mjs",
     "version:check": "changeset status --since=main",
     "version:bump": "changeset version"
