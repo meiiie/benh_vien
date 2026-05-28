@@ -926,20 +926,30 @@ describe("API auth and RBAC boundary", () => {
     );
   });
 
-  it("rejects loopback public API base URLs in production", async () => {
+  it("rejects local-only public API base URLs in production", async () => {
     process.env.NODE_ENV = "production";
     process.env.BVS_REPOSITORY = "postgres";
 
     for (const publicApiBaseUrl of [
       "https://localhost/api/v1",
+      "https://gateway.localhost/api/v1",
       "https://127.0.0.1/api/v1",
       "https://0.0.0.0/api/v1",
-      "https://[::1]/api/v1"
+      "https://10.0.0.5/api/v1",
+      "https://172.16.0.5/api/v1",
+      "https://172.31.255.250/api/v1",
+      "https://192.168.1.25/api/v1",
+      "https://169.254.10.20/api/v1",
+      "https://[::1]/api/v1",
+      "https://[fc00::1]/api/v1",
+      "https://[fd12:3456::1]/api/v1",
+      "https://[fe80::1]/api/v1",
+      "https://[::ffff:192.168.1.25]/api/v1"
     ]) {
       process.env.BVS_PUBLIC_API_BASE_URL = publicApiBaseUrl;
 
       await expect(buildServer({ logger: false })).rejects.toThrow(
-        "BVS_PUBLIC_API_BASE_URL must not use localhost or loopback hosts in production."
+        "BVS_PUBLIC_API_BASE_URL must not use localhost, loopback, private or link-local hosts in production."
       );
     }
   });
