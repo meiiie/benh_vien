@@ -58,7 +58,25 @@ sed -i 's|^MINIO_ROOT_PASSWORD=.*|MINIO_ROOT_PASSWORD=local_bvs_minio_password|g
 
 docker compose --env-file .env.prod.local -f docker-compose.yml -f docker-compose.prod.yml up -d --build --wait postgres valkey minio migrate api web
 curl -fsS http://localhost:7310/health
-curl -fsS http://localhost:7310/ready
+curl -fsS http://localhost:7310/ready -o /tmp/wiiicare-ready.json
+node <<'NODE'
+const fs = require("node:fs");
+const ready = JSON.parse(fs.readFileSync("/tmp/wiiicare-ready.json", "utf8"));
+if (ready.status !== "ready") {
+  throw new Error("API is not ready: " + ready.status);
+}
+if (ready.repository !== "postgres") {
+  throw new Error("Expected postgres repository, received " + ready.repository);
+}
+for (const [name, check] of Object.entries(ready.checks ?? {})) {
+  if (check.status !== "ok") {
+    throw new Error(`Readiness check ${name} is not ok: ${check.status}`);
+  }
+}
+if (ready.checks?.loginRateLimit?.store !== "valkey") {
+  throw new Error("Expected Valkey-backed login rate limit store.");
+}
+NODE
 curl -fsS http://localhost:8080/health
 curl -fsS http://localhost:8080/api/v1/fhir/metadata -o /tmp/wiiicare-fhir-metadata.json
 node <<'NODE'
@@ -84,6 +102,42 @@ test "$status" = "403"
 grep -q "DEMO_AUTH_DISABLED" /tmp/wiiicare-demo-login.json
 
 docker compose --env-file .env.prod.local -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -c "select version, left(checksum_sha256, 12) as checksum_prefix from schema_migrations order by version;"
+expected_migrations=$(find migrations -maxdepth 1 -name '*.sql' | wc -l | tr -d ' ')
+actual_migrations=$(docker compose --env-file .env.prod.local -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -Atc "select count(*) from schema_migrations;")
+test "$actual_migrations" = "$expected_migrations"
+missing_checksums=$(docker compose --env-file .env.prod.local -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -Atc "select count(*) from schema_migrations where checksum_sha256 is null or checksum_sha256 = '';")
+test "$missing_checksums" = "0"
+docker compose --env-file .env.prod.local -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -Atc "
+with expected(table_name) as (
+  values
+    ('patients'),
+    ('encounters'),
+    ('allergy_intolerances'),
+    ('conditions'),
+    ('service_requests'),
+    ('workflow_tasks'),
+    ('procedures'),
+    ('observations'),
+    ('diagnostic_reports'),
+    ('imaging_studies'),
+    ('medication_requests'),
+    ('medication_dispenses'),
+    ('medication_administrations'),
+    ('clinical_documents'),
+    ('consents'),
+    ('record_transfers'),
+    ('provider_directory_resources'),
+    ('audit_events'),
+    ('schema_migrations')
+)
+select table_name
+from expected
+except
+select table_name
+from information_schema.tables
+where table_schema = 'public';
+" | tee /tmp/missing-wiiicare-tables.txt
+test ! -s /tmp/missing-wiiicare-tables.txt
 docker compose --env-file .env.prod.local -f docker-compose.yml -f docker-compose.prod.yml down -v --remove-orphans
 ```
 
