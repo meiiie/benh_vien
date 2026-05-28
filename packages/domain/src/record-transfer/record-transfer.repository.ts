@@ -10,5 +10,6 @@ export type RecordTransferRepository = {
   findByPatientId(patientId: string): Promise<RecordTransfer[]>;
   findById(id: string): Promise<RecordTransfer | undefined>;
   findDueRetries(input: FindDueRecordTransferRetriesInput): Promise<RecordTransfer[]>;
+  findDueDeadLetters(input: FindDueRecordTransferRetriesInput): Promise<RecordTransfer[]>;
   save(recordTransfer: RecordTransfer): Promise<void>;
 };

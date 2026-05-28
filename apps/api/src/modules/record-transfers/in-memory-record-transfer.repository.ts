@@ -58,6 +58,37 @@ export class InMemoryRecordTransferRepository implements RecordTransferRepositor
       .map(cloneRecordTransfer);
   }
 
+  async findDueDeadLetters(input: FindDueRecordTransferRetriesInput): Promise<RecordTransfer[]> {
+    const dueAt = Date.parse(input.dueAt);
+    const limit = normalizeLimit(input.limit);
+    const maxRetryCount = input.maxRetryCount ?? Number.MAX_SAFE_INTEGER;
+
+    if (!Number.isFinite(dueAt) || limit === 0) {
+      return [];
+    }
+
+    return [...this.recordTransfers.values()]
+      .filter((recordTransfer) => {
+        const snapshot = recordTransfer.toSnapshot();
+
+        if (
+          snapshot.status !== "failed" ||
+          !snapshot.nextRetryAt ||
+          snapshot.retryCount < maxRetryCount
+        ) {
+          return false;
+        }
+
+        const nextRetryAt = Date.parse(snapshot.nextRetryAt);
+        return Number.isFinite(nextRetryAt) && nextRetryAt <= dueAt;
+      })
+      .sort((left, right) =>
+        compareRetrySchedule(left.toSnapshot(), right.toSnapshot())
+      )
+      .slice(0, limit)
+      .map(cloneRecordTransfer);
+  }
+
   async save(recordTransfer: RecordTransfer): Promise<void> {
     this.recordTransfers.set(recordTransfer.id, cloneRecordTransfer(recordTransfer));
   }

@@ -29,6 +29,7 @@ type RecordTransferRow = {
   failure_reason: string | null;
   next_retry_at: Date | string | null;
   retry_count: number;
+  dead_lettered_at: Date | string | null;
   note: string | null;
   created_at: Date | string;
   updated_at: Date | string;
@@ -84,6 +85,27 @@ export class PostgresRecordTransferRepository implements RecordTransferRepositor
     return result.rows.map(rowToRecordTransfer);
   }
 
+  async findDueDeadLetters(input: FindDueRecordTransferRetriesInput): Promise<RecordTransfer[]> {
+    const limit = normalizeLimit(input.limit);
+
+    if (limit === 0) {
+      return [];
+    }
+
+    const result = await this.pool.query<RecordTransferRow>(
+      `${selectRecordTransferSql}
+      WHERE status = 'failed'
+        AND next_retry_at IS NOT NULL
+        AND next_retry_at <= $1
+        AND retry_count >= $2
+      ORDER BY next_retry_at ASC, requested_at ASC
+      LIMIT $3`,
+      [input.dueAt, input.maxRetryCount ?? 2147483647, limit]
+    );
+
+    return result.rows.map(rowToRecordTransfer);
+  }
+
   async save(recordTransfer: RecordTransfer): Promise<void> {
     const snapshot = recordTransfer.toSnapshot();
 
@@ -107,11 +129,12 @@ export class PostgresRecordTransferRepository implements RecordTransferRepositor
         failure_reason,
         next_retry_at,
         retry_count,
+        dead_lettered_at,
         note,
         created_at,
         updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
       ON CONFLICT (id) DO UPDATE SET
         patient_id = EXCLUDED.patient_id,
         status = EXCLUDED.status,
@@ -130,6 +153,7 @@ export class PostgresRecordTransferRepository implements RecordTransferRepositor
         failure_reason = EXCLUDED.failure_reason,
         next_retry_at = EXCLUDED.next_retry_at,
         retry_count = EXCLUDED.retry_count,
+        dead_lettered_at = EXCLUDED.dead_lettered_at,
         note = EXCLUDED.note,
         updated_at = EXCLUDED.updated_at`,
       [
@@ -151,6 +175,7 @@ export class PostgresRecordTransferRepository implements RecordTransferRepositor
         snapshot.failureReason ?? null,
         snapshot.nextRetryAt ?? null,
         snapshot.retryCount,
+        snapshot.deadLetteredAt ?? null,
         snapshot.note ?? null,
         snapshot.createdAt,
         snapshot.updatedAt
@@ -203,6 +228,7 @@ const selectRecordTransferSql = `SELECT
   failure_reason,
   next_retry_at,
   retry_count,
+  dead_lettered_at,
   note,
   created_at,
   updated_at
@@ -228,6 +254,7 @@ function rowToRecordTransfer(row: RecordTransferRow): RecordTransfer {
     failureReason: row.failure_reason ?? undefined,
     nextRetryAt: row.next_retry_at ? toIsoString(row.next_retry_at) : undefined,
     retryCount: row.retry_count,
+    deadLetteredAt: row.dead_lettered_at ? toIsoString(row.dead_lettered_at) : undefined,
     note: row.note ?? undefined,
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at)

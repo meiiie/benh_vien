@@ -28,6 +28,7 @@ const auditActionLabels: Record<AuditAction, string> = {
   "record-transfer.send": "Gửi gói chuyển hồ sơ",
   "record-transfer.fail": "Ghi nhận lỗi chuyển hồ sơ",
   "record-transfer.retry": "Thử gửi lại gói chuyển hồ sơ",
+  "record-transfer.dead-letter": "Đưa gói chuyển hồ sơ vào hàng lỗi cuối",
   "record-transfer.receive": "Xác nhận nhận gói chuyển hồ sơ",
   "record-transfer.fhir-export": "Xuất gói chuyển hồ sơ FHIR",
   "encounter.list": "Tải lượt khám",
@@ -220,7 +221,12 @@ function mapAuditAction(action: AuditAction): FhirAuditEvent["action"] {
     return "C";
   }
 
-  if (action.endsWith(".sign") || action.endsWith(".finish") || action.endsWith(".revoke")) {
+  if (
+    action.endsWith(".sign") ||
+    action.endsWith(".finish") ||
+    action.endsWith(".revoke") ||
+    action.endsWith(".dead-letter")
+  ) {
     return "U";
   }
 

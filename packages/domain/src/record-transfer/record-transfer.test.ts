@@ -150,6 +150,44 @@ describe("RecordTransfer", () => {
     });
   });
 
+  it("moves an exhausted failed transfer to the dead-letter state", () => {
+    const transfer = RecordTransfer.create({
+      id: "record-transfer-test-008",
+      patientId: "patient-test-001",
+      bundleType: "document",
+      bundleId: "patient-document-patient-test-001",
+      sourceOrganizationId: "hospital-source",
+      recipientOrganizationId: "hospital-recipient",
+      consentReference: "consent-test-001",
+      requestedByActorId: "practitioner-test-001",
+      reason: "Chuyển hồ sơ để hội chẩn chuyên khoa.",
+      requestedAt: "2026-05-28T02:00:00.000Z"
+    });
+
+    transfer.markSent({
+      sentAt: "2026-05-28T02:30:00.000Z"
+    });
+    transfer.markFailed({
+      failedAt: "2026-05-28T02:35:00.000Z",
+      failureReason: "Gateway bệnh viện nhận tạm thời không phản hồi.",
+      nextRetryAt: "2026-05-28T02:50:00.000Z"
+    });
+    transfer.markDeadLettered({
+      deadLetteredAt: "2026-05-28T03:10:00.000Z",
+      note: "Đã vượt quá số lần thử gửi tự động, cần nhân sự vận hành kiểm tra."
+    });
+
+    expect(transfer.toSnapshot()).toMatchObject({
+      status: "dead-lettered",
+      failedAt: "2026-05-28T02:35:00.000Z",
+      failureReason: "Gateway bệnh viện nhận tạm thời không phản hồi.",
+      deadLetteredAt: "2026-05-28T03:10:00.000Z",
+      note: "Đã vượt quá số lần thử gửi tự động, cần nhân sự vận hành kiểm tra.",
+      updatedAt: "2026-05-28T03:10:00.000Z"
+    });
+    expect(transfer.toSnapshot().nextRetryAt).toBeUndefined();
+  });
+
   it("rejects receiving a transfer before it has been sent", () => {
     const transfer = RecordTransfer.create({
       id: "record-transfer-test-005",

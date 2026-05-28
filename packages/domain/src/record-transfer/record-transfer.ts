@@ -7,7 +7,8 @@ export type RecordTransferStatus =
   | "in-progress"
   | "completed"
   | "cancelled"
-  | "failed";
+  | "failed"
+  | "dead-lettered";
 
 export type RecordTransferPriority = "routine" | "urgent" | "asap" | "stat";
 export type RecordTransferBundleType = "collection" | "document";
@@ -31,6 +32,7 @@ export type RecordTransferSnapshot = {
   readonly failureReason?: string;
   readonly nextRetryAt?: string;
   readonly retryCount: number;
+  readonly deadLetteredAt?: string;
   readonly note?: string;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -47,6 +49,7 @@ export type CreateRecordTransferInput = Omit<
   | "failureReason"
   | "nextRetryAt"
   | "retryCount"
+  | "deadLetteredAt"
   | "createdAt"
   | "updatedAt"
 > & {
@@ -59,6 +62,7 @@ export type CreateRecordTransferInput = Omit<
   readonly failureReason?: string;
   readonly nextRetryAt?: string;
   readonly retryCount?: number;
+  readonly deadLetteredAt?: string;
 };
 
 export type MarkRecordTransferSentInput = {
@@ -83,6 +87,11 @@ export type RetryRecordTransferInput = {
   readonly note?: string;
 };
 
+export type MarkRecordTransferDeadLetteredInput = {
+  readonly deadLetteredAt?: string;
+  readonly note?: string;
+};
+
 export class RecordTransfer {
   private constructor(private props: RecordTransferSnapshot) {}
 
@@ -102,6 +111,9 @@ export class RecordTransfer {
       : undefined;
     const nextRetryAt = input.nextRetryAt
       ? parseDate(input.nextRetryAt, "Thời điểm thử gửi lại hồ sơ không hợp lệ.")
+      : undefined;
+    const deadLetteredAt = input.deadLetteredAt
+      ? parseDate(input.deadLetteredAt, "Thời điểm đưa hồ sơ vào hàng lỗi cuối không hợp lệ.")
       : undefined;
     const retryCount = normalizeRetryCount(input.retryCount ?? 0);
 
@@ -146,10 +158,30 @@ export class RecordTransfer {
       throw new DomainError("Thời điểm thử gửi lại không được trước thời điểm lỗi chuyển hồ sơ.");
     }
 
+    if (deadLetteredAt && !failedAt) {
+      throw new DomainError("Chỉ được đưa hồ sơ vào hàng lỗi cuối sau khi đã ghi nhận lỗi chuyển hồ sơ.");
+    }
+
+    if (failedAt && deadLetteredAt && deadLetteredAt < failedAt) {
+      throw new DomainError("Thời điểm đưa hồ sơ vào hàng lỗi cuối không được trước thời điểm lỗi chuyển hồ sơ.");
+    }
+
     const failureReason = normalizeOptional(input.failureReason);
 
     if (input.status === "failed" && (!failedAt || !failureReason)) {
       throw new DomainError("Hồ sơ lỗi cần có thời điểm lỗi và lý do lỗi.");
+    }
+
+    if (input.status === "dead-lettered" && (!failedAt || !failureReason || !deadLetteredAt)) {
+      throw new DomainError("Hồ sơ đưa vào hàng lỗi cuối cần có thời điểm lỗi, lý do lỗi và thời điểm kết thúc retry.");
+    }
+
+    if (input.status === "dead-lettered" && nextRetryAt) {
+      throw new DomainError("Hồ sơ đã vào hàng lỗi cuối không được giữ lịch thử gửi lại.");
+    }
+
+    if (deadLetteredAt && input.status !== "dead-lettered") {
+      throw new DomainError("Thời điểm đưa vào hàng lỗi cuối chỉ hợp lệ với hồ sơ ở trạng thái dead-lettered.");
     }
 
     return new RecordTransfer({
@@ -177,6 +209,7 @@ export class RecordTransfer {
       failureReason,
       nextRetryAt: nextRetryAt?.toISOString(),
       retryCount,
+      deadLetteredAt: deadLetteredAt?.toISOString(),
       note: normalizeOptional(input.note),
       createdAt: now.toISOString(),
       updatedAt: now.toISOString()
@@ -204,6 +237,9 @@ export class RecordTransfer {
         ? parseDate(snapshot.nextRetryAt, "Thời điểm thử gửi lại hồ sơ không hợp lệ.").toISOString()
         : undefined,
       retryCount: normalizeRetryCount(snapshot.retryCount),
+      deadLetteredAt: snapshot.deadLetteredAt
+        ? parseDate(snapshot.deadLetteredAt, "Thời điểm đưa hồ sơ vào hàng lỗi cuối không hợp lệ.").toISOString()
+        : undefined,
       note: normalizeOptional(snapshot.note)
     });
   }
@@ -221,8 +257,12 @@ export class RecordTransfer {
       throw new DomainError("Hồ sơ đã được tiếp nhận, không thể gửi lại.");
     }
 
-    if (this.props.status === "cancelled" || this.props.status === "failed") {
-      throw new DomainError("Không thể gửi hồ sơ khi yêu cầu đã hủy hoặc thất bại.");
+    if (
+      this.props.status === "cancelled" ||
+      this.props.status === "failed" ||
+      this.props.status === "dead-lettered"
+    ) {
+      throw new DomainError("Không thể gửi hồ sơ khi yêu cầu đã hủy, thất bại hoặc đã vào hàng lỗi cuối.");
     }
 
     if (this.props.sentAt) {
@@ -255,8 +295,12 @@ export class RecordTransfer {
       throw new DomainError("Hồ sơ đã được ghi nhận tiếp nhận.");
     }
 
-    if (this.props.status === "cancelled" || this.props.status === "failed") {
-      throw new DomainError("Không thể tiếp nhận hồ sơ khi yêu cầu đã hủy hoặc thất bại.");
+    if (
+      this.props.status === "cancelled" ||
+      this.props.status === "failed" ||
+      this.props.status === "dead-lettered"
+    ) {
+      throw new DomainError("Không thể tiếp nhận hồ sơ khi yêu cầu đã hủy, thất bại hoặc đã vào hàng lỗi cuối.");
     }
 
     if (!this.props.sentAt) {
@@ -288,6 +332,10 @@ export class RecordTransfer {
 
     if (this.props.status === "cancelled") {
       throw new DomainError("Không thể đánh dấu lỗi cho yêu cầu chuyển hồ sơ đã hủy.");
+    }
+
+    if (this.props.status === "dead-lettered") {
+      throw new DomainError("Không thể đánh dấu lỗi cho hồ sơ đã vào hàng lỗi cuối.");
     }
 
     const failedAt = input.failedAt
@@ -357,6 +405,34 @@ export class RecordTransfer {
       retryCount: this.props.retryCount + 1,
       note: normalizeOptional(input.note) ?? this.props.note,
       updatedAt: retryAt.toISOString()
+    };
+  }
+
+  markDeadLettered(input: MarkRecordTransferDeadLetteredInput = {}): void {
+    if (this.props.status !== "failed") {
+      throw new DomainError("Chỉ có thể đưa vào hàng lỗi cuối khi yêu cầu chuyển hồ sơ đang ở trạng thái lỗi.");
+    }
+
+    if (!this.props.failedAt || !this.props.failureReason) {
+      throw new DomainError("Hồ sơ vào hàng lỗi cuối cần có thời điểm lỗi và lý do lỗi trước đó.");
+    }
+
+    const deadLetteredAt = input.deadLetteredAt
+      ? parseDate(input.deadLetteredAt, "Thời điểm đưa hồ sơ vào hàng lỗi cuối không hợp lệ.")
+      : new Date();
+    const failedAt = parseDate(this.props.failedAt, "Thời điểm lỗi chuyển hồ sơ không hợp lệ.");
+
+    if (deadLetteredAt < failedAt) {
+      throw new DomainError("Thời điểm đưa hồ sơ vào hàng lỗi cuối không được trước thời điểm lỗi chuyển hồ sơ.");
+    }
+
+    this.props = {
+      ...this.props,
+      status: "dead-lettered",
+      nextRetryAt: undefined,
+      deadLetteredAt: deadLetteredAt.toISOString(),
+      note: normalizeOptional(input.note) ?? this.props.note,
+      updatedAt: deadLetteredAt.toISOString()
     };
   }
 

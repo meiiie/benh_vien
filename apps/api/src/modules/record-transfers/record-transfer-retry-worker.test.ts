@@ -35,6 +35,7 @@ describe("record transfer retry worker", () => {
       status: "ok",
       dueCount: 1,
       retriedCount: 1,
+      deadLetteredCount: 0,
       skippedCount: 0,
       retriedTransferIds: ["record-transfer-worker-due-001"]
     });
@@ -81,7 +82,7 @@ describe("record transfer retry worker", () => {
     });
   });
 
-  it("does not retry failed transfers that reached the configured retry ceiling", async () => {
+  it("dead-letters failed transfers that reached the configured retry ceiling", async () => {
     const cappedTransfer = createFailedRecordTransfer({
       id: "record-transfer-worker-capped-001",
       nextRetryAt: "2026-05-28T05:10:00.000Z",
@@ -104,18 +105,45 @@ describe("record transfer retry worker", () => {
     );
 
     expect(result).toMatchObject({
-      dueCount: 0,
+      dueCount: 1,
       retriedCount: 0,
-      skippedCount: 0
+      deadLetteredCount: 1,
+      skippedCount: 0,
+      deadLetteredTransferIds: ["record-transfer-worker-capped-001"]
     });
     expect(
       (await recordTransferRepository.findById("record-transfer-worker-capped-001"))?.toSnapshot()
     ).toMatchObject({
-      status: "failed",
+      status: "dead-lettered",
       retryCount: 3,
-      nextRetryAt: "2026-05-28T05:10:00.000Z"
+      deadLetteredAt: "2026-05-28T05:15:00.000Z",
+      note: "Retry worker đưa hồ sơ vào hàng lỗi cuối sau khi vượt quá số lần thử gửi."
     });
-    expect(await auditRepository.findByPatientId("patient-worker-001")).toHaveLength(0);
+    expect(
+      (await recordTransferRepository.findById("record-transfer-worker-capped-001"))?.toSnapshot()
+        .nextRetryAt
+    ).toBeUndefined();
+
+    const auditEvents = await auditRepository.findByPatientId("patient-worker-001");
+    expect(auditEvents).toHaveLength(1);
+    expect(auditEvents[0]?.toSnapshot()).toMatchObject({
+      action: "record-transfer.dead-letter",
+      resourceType: "RecordTransfer",
+      resourceId: "record-transfer-worker-capped-001",
+      patientId: "patient-worker-001",
+      purposeOfUse: "OPERATIONS",
+      metadata: {
+        actorRole: "system",
+        worker: "record-transfer-retry-worker",
+        mode: "scheduled",
+        status: "dead-lettered",
+        retryCount: 3,
+        maxRetryCount: 3,
+        scheduledRetryAt: "2026-05-28T05:10:00.000Z",
+        previousFailureReason: "Recipient gateway unavailable.",
+        deadLetteredAt: "2026-05-28T05:15:00.000Z"
+      }
+    });
   });
 });
 

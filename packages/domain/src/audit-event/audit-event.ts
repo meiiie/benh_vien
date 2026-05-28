@@ -19,6 +19,7 @@ export type AuditAction =
   | "record-transfer.send"
   | "record-transfer.fail"
   | "record-transfer.retry"
+  | "record-transfer.dead-letter"
   | "record-transfer.receive"
   | "record-transfer.fhir-export"
   | "encounter.list"

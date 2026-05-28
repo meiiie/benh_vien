@@ -21,8 +21,10 @@ export type ProcessDueRecordTransferRetriesResult = {
   readonly checkedAt: string;
   readonly dueCount: number;
   readonly retriedCount: number;
+  readonly deadLetteredCount: number;
   readonly skippedCount: number;
   readonly retriedTransferIds: readonly string[];
+  readonly deadLetteredTransferIds: readonly string[];
   readonly skippedTransferIds: readonly string[];
 };
 
@@ -58,13 +60,63 @@ export async function processDueRecordTransferRetries(
     "maxRetryCount"
   );
   const actorId = input.actorId?.trim() || defaultWorkerActorId;
-  const dueTransfers = await dependencies.recordTransferRepository.findDueRetries({
+  const dueDeadLetterTransfers = await dependencies.recordTransferRepository.findDueDeadLetters({
     dueAt: checkedAt,
     limit,
     maxRetryCount
   });
+  const remainingRetryLimit = Math.max(limit - dueDeadLetterTransfers.length, 0);
+  const dueTransfers =
+    remainingRetryLimit > 0
+      ? await dependencies.recordTransferRepository.findDueRetries({
+          dueAt: checkedAt,
+          limit: remainingRetryLimit,
+          maxRetryCount
+        })
+      : [];
   const retriedTransferIds: string[] = [];
+  const deadLetteredTransferIds: string[] = [];
   const skippedTransferIds: string[] = [];
+
+  for (const recordTransfer of dueDeadLetterTransfers) {
+    const before = recordTransfer.toSnapshot();
+
+    try {
+      recordTransfer.markDeadLettered({
+        deadLetteredAt: checkedAt,
+        note: "Retry worker đưa hồ sơ vào hàng lỗi cuối sau khi vượt quá số lần thử gửi."
+      });
+      await dependencies.recordTransferRepository.save(recordTransfer);
+
+      const after = recordTransfer.toSnapshot();
+      await dependencies.auditRepository.save(
+        AuditEvent.record({
+          occurredAt: dueAt,
+          actorId,
+          action: "record-transfer.dead-letter",
+          resourceType: "RecordTransfer",
+          resourceId: after.id,
+          patientId: after.patientId,
+          purposeOfUse: "OPERATIONS",
+          metadata: {
+            actorRole: "system",
+            worker: "record-transfer-retry-worker",
+            mode: "scheduled",
+            status: after.status,
+            retryCount: after.retryCount,
+            maxRetryCount,
+            scheduledRetryAt: before.nextRetryAt,
+            previousFailureReason: before.failureReason,
+            deadLetteredAt: after.deadLetteredAt,
+            recipientOrganizationId: after.recipientOrganizationId
+          }
+        })
+      );
+      deadLetteredTransferIds.push(after.id);
+    } catch {
+      skippedTransferIds.push(before.id);
+    }
+  }
 
   for (const recordTransfer of dueTransfers) {
     const before = recordTransfer.toSnapshot();
@@ -107,10 +159,12 @@ export async function processDueRecordTransferRetries(
   return {
     status: "ok",
     checkedAt,
-    dueCount: dueTransfers.length,
+    dueCount: dueDeadLetterTransfers.length + dueTransfers.length,
     retriedCount: retriedTransferIds.length,
+    deadLetteredCount: deadLetteredTransferIds.length,
     skippedCount: skippedTransferIds.length,
     retriedTransferIds,
+    deadLetteredTransferIds,
     skippedTransferIds
   };
 }
@@ -135,7 +189,7 @@ export function startRecordTransferRetryWorker(
     try {
       const result = await processDueRecordTransferRetries(dependencies, input);
 
-      if (result.retriedCount > 0 || result.skippedCount > 0) {
+      if (result.retriedCount > 0 || result.deadLetteredCount > 0 || result.skippedCount > 0) {
         input.logger?.info?.(
           { result },
           "Record transfer retry worker processed due transfers."

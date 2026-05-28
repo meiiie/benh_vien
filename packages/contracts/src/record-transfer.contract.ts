@@ -7,7 +7,8 @@ export const RecordTransferStatusSchema = z.enum([
   "in-progress",
   "completed",
   "cancelled",
-  "failed"
+  "failed",
+  "dead-lettered"
 ]);
 
 export const RecordTransferPrioritySchema = z.enum(["routine", "urgent", "asap", "stat"]);

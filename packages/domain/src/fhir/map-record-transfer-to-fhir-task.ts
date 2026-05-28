@@ -100,7 +100,10 @@ function buildRecordTransferNotes(
       : undefined,
     snapshot.failedAt ? `Thời điểm lỗi: ${snapshot.failedAt}` : undefined,
     snapshot.nextRetryAt ? `Hẹn thử gửi lại: ${snapshot.nextRetryAt}` : undefined,
-    snapshot.retryCount > 0 ? `Số lần thử gửi lại: ${snapshot.retryCount}` : undefined
+    snapshot.retryCount > 0 ? `Số lần thử gửi lại: ${snapshot.retryCount}` : undefined,
+    snapshot.deadLetteredAt
+      ? `Đưa vào hàng lỗi cuối lúc: ${snapshot.deadLetteredAt}`
+      : undefined
   ].filter((note): note is string => Boolean(note));
 
   return notes.length > 0 ? notes.map((text) => ({ text })) : undefined;
@@ -121,7 +124,7 @@ function mapRecordTransferStatus(
     return "cancelled";
   }
 
-  if (status === "failed") {
+  if (status === "failed" || status === "dead-lettered") {
     return "failed";
   }
 
@@ -134,6 +137,7 @@ function formatRecordTransferStatus(
   const labels: Record<ReturnType<RecordTransfer["toSnapshot"]>["status"], string> = {
     cancelled: "Đã hủy",
     completed: "Đã hoàn tất",
+    "dead-lettered": "Đã đưa vào hàng lỗi cuối",
     draft: "Bản nháp",
     failed: "Lỗi chuyển hồ sơ",
     "in-progress": "Đang xử lý",
