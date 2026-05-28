@@ -11,6 +11,9 @@ describe("API auth and RBAC boundary", () => {
   const originalAuthSecret = process.env.BVS_AUTH_SECRET;
   const originalCorsOrigins = process.env.BVS_CORS_ORIGINS;
   const originalNodeEnv = process.env.NODE_ENV;
+  const originalAuthLoginRateLimitMax = process.env.BVS_AUTH_LOGIN_RATE_LIMIT_MAX;
+  const originalAuthLoginRateLimitWindowSeconds =
+    process.env.BVS_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS;
 
   beforeEach(() => {
     process.env.BVS_REPOSITORY = "in-memory";
@@ -27,6 +30,11 @@ describe("API auth and RBAC boundary", () => {
     restoreEnv("BVS_AUTH_SECRET", originalAuthSecret);
     restoreEnv("BVS_CORS_ORIGINS", originalCorsOrigins);
     restoreEnv("NODE_ENV", originalNodeEnv);
+    restoreEnv("BVS_AUTH_LOGIN_RATE_LIMIT_MAX", originalAuthLoginRateLimitMax);
+    restoreEnv(
+      "BVS_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS",
+      originalAuthLoginRateLimitWindowSeconds
+    );
   });
 
   it("returns a signed demo session for valid credentials", async () => {
@@ -46,6 +54,50 @@ describe("API auth and RBAC boundary", () => {
       displayName: "Bác sĩ điều trị",
       role: "clinician"
     });
+  });
+
+  it("rate limits repeated login attempts for the same identity and client", async () => {
+    process.env.BVS_AUTH_LOGIN_RATE_LIMIT_MAX = "2";
+    process.env.BVS_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS = "60";
+    app = await readyServer();
+
+    for (const requestId of ["auth-rate-limit-001", "auth-rate-limit-002"]) {
+      const response = await login(
+        app,
+        {
+          username: "practitioner-demo-001",
+          password: "wrong-password",
+          role: "clinician"
+        },
+        {
+          "x-request-id": requestId
+        }
+      );
+
+      expect(response.statusCode).toBe(401);
+    }
+
+    const response = await login(
+      app,
+      {
+        username: "practitioner-demo-001",
+        password: "wrong-password",
+        role: "clinician"
+      },
+      {
+        "x-request-id": "auth-rate-limit-003"
+      }
+    );
+    const body = response.json();
+
+    expect(response.statusCode).toBe(429);
+    expect(response.headers["retry-after"]).toEqual(expect.stringMatching(/^[1-9]\d*$/));
+    expect(body).toMatchObject({
+      error: "AUTH_RATE_LIMITED",
+      requestId: "auth-rate-limit-003",
+      retryAfterSeconds: expect.any(Number)
+    });
+    expect(JSON.stringify(body)).not.toContain("stack");
   });
 
   it("rejects patient access without a Bearer token", async () => {
@@ -2059,12 +2111,14 @@ async function login(
     readonly username: string;
     readonly password: string;
     readonly role: string;
-  }
+  },
+  headers: Record<string, string> = {}
 ) {
   return app.inject({
     method: "POST",
     url: "/api/v1/auth/login",
     headers: {
+      ...headers,
       "content-type": "application/json"
     },
     payload

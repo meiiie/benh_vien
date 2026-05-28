@@ -18,6 +18,8 @@ Compose sẽ chạy service `migrate` trước API để áp dụng SQL migratio
 
 API giới hạn mỗi PostgreSQL repository pool bằng `BVS_POSTGRES_REPOSITORY_POOL_MAX`, mặc định `2`, và đóng các pool khi Fastify shutdown. Nếu chạy nhiều replica API, cần tính lại giá trị này theo `max_connections` của PostgreSQL.
 
+API giới hạn tần suất `POST /api/v1/auth/login` bằng `BVS_AUTH_LOGIN_RATE_LIMIT_MAX` trong cửa sổ `BVS_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS`, mặc định `20` lần trong `60` giây theo IP + username. Cơ chế hiện tại là in-memory theo process; nếu scale nhiều replica cần chuyển sang Valkey/Redis hoặc API gateway để dùng chung bộ đếm.
+
 Ở `NODE_ENV=production`, API yêu cầu `BVS_CORS_ORIGINS` là danh sách Origin được phép, phân tách bằng dấu phẩy. Không dùng wildcard cho production vì API xử lý dữ liệu bệnh án nhạy cảm.
 
 ## Bật FHIR và PACS khi cần

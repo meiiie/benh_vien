@@ -23,6 +23,7 @@ Hồ sơ bệnh án là dữ liệu đặc biệt nhạy cảm. Dự án chưa t
 
 - API đã yêu cầu `Authorization: Bearer <token>` cho endpoint nghiệp vụ.
 - Token demo do `POST /api/v1/auth/login` phát hành, ký bằng `BVS_AUTH_SECRET`.
+- `POST /api/v1/auth/login` có rate limit in-memory theo IP + username, cấu hình bằng `BVS_AUTH_LOGIN_RATE_LIMIT_MAX` và `BVS_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS`. Khi chạy nhiều replica, cần chuyển state rate limit sang Valkey/Redis hoặc API gateway để tránh mỗi replica đếm riêng.
 - API và web container đặt security headers nền tảng gồm `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` và `Cross-Origin-Resource-Policy`; đây là lớp giảm rủi ro misconfiguration, chưa thay thế CSP/edge security production.
 - API đặt `Cache-Control: no-store` và `Pragma: no-cache` để giảm rủi ro browser/proxy lưu nhầm response chứa dữ liệu bệnh án.
 - API phản hồi `X-Request-Id`, chấp nhận `x-request-id` từ proxy/upstream và ghi `requestId` vào metadata của audit event để nối log kỹ thuật với hành động lâm sàng.

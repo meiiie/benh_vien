@@ -51,6 +51,8 @@ TOKEN=$(curl -s -X POST http://localhost:7310/api/v1/auth/login \
   }' | jq -r .accessToken)
 ```
 
+Endpoint đăng nhập áp dụng rate limit theo IP + username, mặc định `20` lần trong `60` giây. Khi vượt ngưỡng, API trả `429 AUTH_RATE_LIMITED`, header `Retry-After`, `requestId` và `retryAfterSeconds` để client biết thời gian cần chờ trước khi thử lại.
+
 Tài khoản demo:
 
 - `practitioner-demo-001` / `demo`: vai trò `clinician`, dùng cho luồng điều trị.

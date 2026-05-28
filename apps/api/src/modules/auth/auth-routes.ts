@@ -11,6 +11,28 @@ type DemoAccount = {
   readonly role: ActorRole;
 };
 
+type LoginRateLimitConfig = {
+  readonly maxAttempts: number;
+  readonly windowMs: number;
+};
+
+type LoginRateLimitEntry = {
+  attempts: number;
+  readonly resetAt: number;
+};
+
+type LoginRateLimitDecision =
+  | {
+      readonly limited: false;
+    }
+  | {
+      readonly limited: true;
+      readonly retryAfterSeconds: number;
+    };
+
+const DEFAULT_LOGIN_RATE_LIMIT_MAX = 20;
+const DEFAULT_LOGIN_RATE_LIMIT_WINDOW_SECONDS = 60;
+
 const demoAccounts: readonly DemoAccount[] = [
   {
     username: "practitioner-demo-001",
@@ -43,6 +65,9 @@ const demoAccounts: readonly DemoAccount[] = [
 ];
 
 export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
+  const loginRateLimitConfig = resolveLoginRateLimitConfig();
+  const loginRateLimitEntries = new Map<string, LoginRateLimitEntry>();
+
   app.post("/auth/login", async (request, reply) => {
     const parsed = LoginRequestSchema.safeParse(request.body);
 
@@ -50,6 +75,23 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
       return reply.status(400).send({
         error: "INVALID_LOGIN_PAYLOAD",
         issues: parsed.error.issues
+      });
+    }
+
+    const rateLimitDecision = consumeLoginRateLimitAttempt(
+      loginRateLimitEntries,
+      loginRateLimitConfig,
+      createLoginRateLimitKey(request.ip, parsed.data.username)
+    );
+
+    if (rateLimitDecision.limited) {
+      reply.header("Retry-After", String(rateLimitDecision.retryAfterSeconds));
+
+      return reply.status(429).send({
+        error: "AUTH_RATE_LIMITED",
+        message: "Quá nhiều lần đăng nhập. Vui lòng thử lại sau.",
+        requestId: request.id,
+        retryAfterSeconds: rateLimitDecision.retryAfterSeconds
       });
     }
 
@@ -100,4 +142,68 @@ function readBearerToken(value: string | string[] | undefined): string | undefin
   }
 
   return header.slice("Bearer ".length).trim();
+}
+
+function resolveLoginRateLimitConfig(): LoginRateLimitConfig {
+  return {
+    maxAttempts: readPositiveIntegerEnv(
+      "BVS_AUTH_LOGIN_RATE_LIMIT_MAX",
+      DEFAULT_LOGIN_RATE_LIMIT_MAX
+    ),
+    windowMs:
+      readPositiveIntegerEnv(
+        "BVS_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS",
+        DEFAULT_LOGIN_RATE_LIMIT_WINDOW_SECONDS
+      ) * 1000
+  };
+}
+
+function consumeLoginRateLimitAttempt(
+  entries: Map<string, LoginRateLimitEntry>,
+  config: LoginRateLimitConfig,
+  key: string,
+  now = Date.now()
+): LoginRateLimitDecision {
+  let entry = entries.get(key);
+
+  if (!entry || entry.resetAt <= now) {
+    entry = {
+      attempts: 0,
+      resetAt: now + config.windowMs
+    };
+    entries.set(key, entry);
+  }
+
+  if (entry.attempts >= config.maxAttempts) {
+    return {
+      limited: true,
+      retryAfterSeconds: Math.max(1, Math.ceil((entry.resetAt - now) / 1000))
+    };
+  }
+
+  entry.attempts += 1;
+
+  return {
+    limited: false
+  };
+}
+
+function createLoginRateLimitKey(ipAddress: string, username: string): string {
+  return `${ipAddress}:${username.trim().toLowerCase()}`;
+}
+
+function readPositiveIntegerEnv(name: string, fallback: number): number {
+  const rawValue = process.env[name];
+
+  if (!rawValue?.trim()) {
+    return fallback;
+  }
+
+  const parsed = Number(rawValue);
+
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error(`${name} must be a positive integer.`);
+  }
+
+  return parsed;
 }
