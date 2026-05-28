@@ -22,7 +22,9 @@ const requiredHeaders = [
   'add_header X-Frame-Options "DENY" always;',
   'add_header Referrer-Policy "no-referrer" always;',
   'add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;',
-  'add_header Cross-Origin-Resource-Policy "same-origin" always;'
+  'add_header Cross-Origin-Resource-Policy "same-origin" always;',
+  'add_header Cross-Origin-Opener-Policy "same-origin" always;',
+  'add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;'
 ];
 
 for (const header of requiredHeaders) {
@@ -41,6 +43,16 @@ assertIncludes(
   nginxConfig,
   "Scope CSP to the SPA",
   "CSP must stay scoped to the SPA so proxied Swagger docs are not broken."
+);
+assertIncludes(
+  nginxConfig,
+  "server_tokens off;",
+  "Web runtime must not expose the Nginx version in error pages."
+);
+assertIncludes(
+  nginxConfig,
+  "proxy_set_header X-Request-Id $request_id;",
+  "Web edge must pass a trace id to proxied API requests."
 );
 assertNotIncludes(
   nginxConfig,

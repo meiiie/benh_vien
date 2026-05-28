@@ -140,6 +140,12 @@ jobs:
           curl -fsSI http://localhost:8080/ | grep -i '^Content-Security-Policy:'
           curl -fsSI http://localhost:8080/ | grep -i '^X-Frame-Options: DENY'
           curl -fsSI http://localhost:8080/ | grep -i '^X-Content-Type-Options: nosniff'
+          curl -fsSI http://localhost:8080/ | grep -i '^Cross-Origin-Opener-Policy: same-origin'
+          curl -fsSI http://localhost:8080/ | grep -i '^Strict-Transport-Security: max-age=31536000; includeSubDomains'
+          if curl -fsSI http://localhost:8080/ | grep -i '^Server:.*nginx/'; then
+            echo "Web edge must not expose the Nginx version."
+            exit 1
+          fi
 
       - name: Verify FHIR metadata public URL
         run: |
