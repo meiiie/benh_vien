@@ -117,6 +117,8 @@ export async function registerAuthRoutes(
     const session = token ? verifyAccessToken(token) : undefined;
 
     if (!session) {
+      reply.header("WWW-Authenticate", "Bearer");
+
       return reply.status(401).send({
         error: "UNAUTHENTICATED",
         message: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.",

@@ -147,6 +147,7 @@ describe("API auth and RBAC boundary", () => {
       }
     });
     expect(invalidSessionResponse.statusCode).toBe(401);
+    expect(invalidSessionResponse.headers["www-authenticate"]).toBe("Bearer");
     expect(invalidSessionResponse.json()).toMatchObject({
       error: "UNAUTHENTICATED",
       requestId: "auth-invalid-session-001"

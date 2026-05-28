@@ -20,6 +20,7 @@ type TokenPayload = AuthenticatedActor & {
 const defaultTokenTtlSeconds = 60 * 60 * 8;
 const minTokenTtlSeconds = 60 * 5;
 const maxTokenTtlSeconds = 60 * 60 * 8;
+const maxClockSkewSeconds = 60;
 const issuer = "wiiicare-nexus";
 
 export function createAccessToken(actor: AuthenticatedActor, now = new Date()): AuthenticatedSession & {
@@ -59,12 +60,8 @@ export function verifyAccessToken(token: string, now = new Date()): Authenticate
       typeof payload.actorId !== "string" ||
       typeof payload.displayName !== "string" ||
       !isTokenRole(payload.role) ||
-      typeof payload.exp !== "number"
+      !hasValidTokenLifetime(payload, now)
     ) {
-      return undefined;
-    }
-
-    if (payload.exp <= Math.floor(now.getTime() / 1000)) {
       return undefined;
     }
 
@@ -135,6 +132,33 @@ function safeEqual(left: string, right: string): boolean {
   }
 
   return timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function hasValidTokenLifetime(
+  payload: Partial<TokenPayload>,
+  now: Date
+): payload is TokenPayload {
+  if (!isUnixTimestamp(payload.iat) || !isUnixTimestamp(payload.exp)) {
+    return false;
+  }
+
+  const nowSeconds = Math.floor(now.getTime() / 1000);
+
+  return (
+    payload.iat <= nowSeconds + maxClockSkewSeconds &&
+    payload.exp > nowSeconds &&
+    payload.exp > payload.iat &&
+    payload.exp - payload.iat <= maxTokenTtlSeconds
+  );
+}
+
+function isUnixTimestamp(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    Number.isFinite(value) &&
+    value > 0
+  );
 }
 
 function base64UrlEncode(value: string): string {
