@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { nanoid } from "nanoid";
 import {
   CreatePatientRequestSchema,
+  MergePatientRequestSchema,
   PatientIdParamsSchema
 } from "@benh-vien-so/contracts";
 import {
@@ -169,6 +170,94 @@ export async function registerPatientRoutes(
           error: "PATIENT_IDENTIFIER_CONFLICT",
           message:
             "Äá»‹nh danh bá»‡nh nhÃ¢n Ä‘Ã£ thuá»™c vá» má»™t há»“ sÆ¡ khÃ¡c. Cáº§n Ä‘á»‘i soÃ¡t/MPI thay vÃ¬ táº¡o há»“ sÆ¡ má»›i."
+        });
+      }
+
+      throw error;
+    }
+  });
+
+  app.post("/patients/:id/merge", async (request, reply) => {
+    const actor = requirePermission(request, reply, "patient:merge");
+
+    if (!actor) {
+      return;
+    }
+
+    const params = PatientIdParamsSchema.parse(request.params);
+    const parsed = MergePatientRequestSchema.safeParse(request.body);
+
+    if (!parsed.success) {
+      throw parsed.error;
+    }
+
+    const sourcePatient = await repository.findById(params.id);
+
+    if (!sourcePatient) {
+      return reply.status(404).send({
+        error: "PATIENT_NOT_FOUND",
+        requestId: request.id
+      });
+    }
+
+    const targetPatient = await repository.findById(parsed.data.targetPatientId);
+
+    if (!targetPatient) {
+      return reply.status(404).send({
+        error: "TARGET_PATIENT_NOT_FOUND",
+        requestId: request.id
+      });
+    }
+
+    if (
+      !(await requirePatientRecordAccess(
+        request,
+        reply,
+        actor,
+        sourcePatient,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
+    }
+
+    if (
+      !(await requirePatientRecordAccess(
+        request,
+        reply,
+        actor,
+        targetPatient,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
+    }
+
+    try {
+      sourcePatient.markMerged({
+        targetPatientId: targetPatient.id,
+        mergedByActorId: actor.actorId,
+        reason: parsed.data.reason
+      });
+
+      await repository.save(sourcePatient);
+      await recordAuditEvent(auditRepository, request, {
+        action: "patient.merge",
+        resourceType: "Patient",
+        resourceId: sourcePatient.id,
+        patientId: sourcePatient.id,
+        metadata: {
+          targetPatientId: targetPatient.id,
+          mergeReason: parsed.data.reason
+        }
+      });
+
+      return toPatientResponse(sourcePatient);
+    } catch (error) {
+      if (error instanceof DomainError) {
+        return reply.status(422).send({
+          error: "PATIENT_DOMAIN_ERROR",
+          message: error.message
         });
       }
 

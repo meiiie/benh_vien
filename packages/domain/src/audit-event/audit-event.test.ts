@@ -282,6 +282,46 @@ describe("AuditEvent integrity chain", () => {
     });
   });
 
+  it("maps patient merge audit events as successful update events in FHIR", () => {
+    const mergeEvent = sealAuditEvent(
+      AuditEvent.record({
+        id: "audit-event-test-patient-merge",
+        occurredAt: new Date("2026-05-28T00:04:45.000Z"),
+        actorId: "admin-test",
+        action: "patient.merge",
+        resourceType: "Patient",
+        resourceId: "patient-duplicate-001",
+        patientId: "patient-duplicate-001",
+        purposeOfUse: "TREATMENT",
+        metadata: {
+          targetPatientId: "patient-canonical-001"
+        }
+      })
+    );
+
+    expect(mapAuditEventToFhir(mergeEvent)).toMatchObject({
+      resourceType: "AuditEvent",
+      id: "audit-event-test-patient-merge",
+      subtype: [
+        {
+          code: "patient.merge"
+        }
+      ],
+      action: "U",
+      recorded: "2026-05-28T00:04:45.000Z",
+      outcome: "0",
+      outcomeDesc: "Success",
+      entity: [
+        {
+          what: {
+            reference: "Patient/patient-duplicate-001"
+          },
+          name: "patient.merge"
+        }
+      ]
+    });
+  });
+
   it("maps failed login audit events as failed execution events in FHIR", () => {
     const failedLogin = sealAuditEvent(
       AuditEvent.record({

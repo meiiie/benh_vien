@@ -76,6 +76,59 @@ if (duplicatePatient.error !== "PATIENT_IDENTIFIER_CONFLICT") {
   );
 }
 
+const mergeSourcePatient = await requestJson("/patients", {
+  method: "POST",
+  token: adminSession.accessToken,
+  headers: treatmentHeaders(),
+  expectedStatus: 201,
+  body: {
+    identifiers: [
+      {
+        system: "urn:benh-vien-so:mrn",
+        value: `MRN-MERGE-SMOKE-${requestTag}`,
+        type: "hospital-mrn"
+      }
+    ],
+    fullName: "Authenticated Smoke Merge Source",
+    gender: "unknown",
+    managingOrganizationId: "hospital-hai-phong-demo"
+  }
+});
+
+const mergedPatient = await requestJson(`/patients/${mergeSourcePatient.id}/merge`, {
+  method: "POST",
+  token: adminSession.accessToken,
+  headers: {
+    ...treatmentHeaders(),
+    "x-request-id": "postgres-smoke-patient-merge"
+  },
+  expectedStatus: 200,
+  body: {
+    targetPatientId: "patient-demo-001",
+    reason: "Smoke test duplicate registration resolved by MPI merge."
+  }
+});
+
+if (
+  mergedPatient.status !== "merged" ||
+  mergedPatient.mergedIntoPatientId !== "patient-demo-001"
+) {
+  throw new Error("Expected merge source patient to be marked as merged into patient-demo-001.");
+}
+
+const mergedFhirPatient = await requestJson(`/patients/${mergeSourcePatient.id}/fhir`, {
+  token: adminSession.accessToken,
+  headers: treatmentHeaders()
+});
+
+if (
+  mergedFhirPatient.active !== false ||
+  mergedFhirPatient.link?.[0]?.other?.reference !== "Patient/patient-demo-001" ||
+  mergedFhirPatient.link?.[0]?.type !== "replaced-by"
+) {
+  throw new Error("Expected merged FHIR Patient to link to the canonical patient.");
+}
+
 const outsidePatient = await requestJson("/patients", {
   method: "POST",
   token: adminSession.accessToken,

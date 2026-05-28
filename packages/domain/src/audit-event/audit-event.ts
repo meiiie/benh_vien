@@ -8,6 +8,7 @@ export type AuditAction =
   | "patient.list"
   | "patient.create"
   | "patient.identifier-conflict"
+  | "patient.merge"
   | "patient.read"
   | "patient.fhir-export"
   | "patient.fhir-bundle-export"

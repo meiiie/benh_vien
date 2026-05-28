@@ -924,6 +924,125 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("merges a duplicate patient record into the canonical patient", async () => {
+    app = await readyServer();
+    const adminToken = await loginForToken(app, "admin-demo", "admin");
+    const clinicianToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const createResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients",
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        identifiers: [
+          {
+            system: "urn:benh-vien-so:mrn",
+            value: "MRN-MERGE-TEST",
+            type: "hospital-mrn"
+          }
+        ],
+        fullName: "Duplicate Patient For Merge",
+        gender: "unknown",
+        managingOrganizationId: "hospital-hai-phong-demo"
+      }
+    });
+    const sourcePatientId = createResponse.json().id as string;
+
+    expect(createResponse.statusCode).toBe(201);
+
+    const clinicianMergeResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${sourcePatientId}/merge`,
+      headers: {
+        ...treatmentHeaders(clinicianToken),
+        "content-type": "application/json",
+        "x-request-id": "patient-merge-clinician-denied-001"
+      },
+      payload: {
+        targetPatientId: "patient-demo-001",
+        reason: "Clinician should not merge patient registry records."
+      }
+    });
+
+    expect(clinicianMergeResponse.statusCode).toBe(403);
+    expect(clinicianMergeResponse.json()).toMatchObject({
+      error: "FORBIDDEN",
+      permission: "patient:merge",
+      requestId: "patient-merge-clinician-denied-001"
+    });
+
+    const mergeResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${sourcePatientId}/merge`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json",
+        "x-request-id": "patient-merge-001"
+      },
+      payload: {
+        targetPatientId: "patient-demo-001",
+        reason: "Duplicate registration found during MPI review."
+      }
+    });
+    const merged = mergeResponse.json();
+
+    expect(mergeResponse.statusCode).toBe(200);
+    expect(merged).toMatchObject({
+      id: sourcePatientId,
+      status: "merged",
+      mergedIntoPatientId: "patient-demo-001",
+      mergedByActorId: "admin-demo",
+      mergeReason: "Duplicate registration found during MPI review."
+    });
+    expect(Date.parse(merged.mergedAt)).not.toBeNaN();
+
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: `/api/v1/patients/${sourcePatientId}/fhir`,
+      headers: treatmentHeaders(adminToken)
+    });
+    expect(fhirResponse.statusCode).toBe(200);
+    expect(fhirResponse.json()).toMatchObject({
+      resourceType: "Patient",
+      id: sourcePatientId,
+      active: false,
+      link: [
+        {
+          other: {
+            reference: "Patient/patient-demo-001"
+          },
+          type: "replaced-by"
+        }
+      ]
+    });
+
+    const auditorToken = await loginForToken(app, "security-officer-demo", "auditor");
+    const auditResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/audit-events?limit=20",
+      headers: auditHeaders(auditorToken)
+    });
+    const mergeAuditEvent = auditResponse
+      .json()
+      .items.find(
+        (event: { readonly metadata?: { readonly requestId?: string } }) =>
+          event.metadata?.requestId === "patient-merge-001"
+      );
+
+    expect(mergeAuditEvent).toMatchObject({
+      action: "patient.merge",
+      resourceType: "Patient",
+      resourceId: sourcePatientId,
+      patientId: sourcePatientId,
+      metadata: expect.objectContaining({
+        targetPatientId: "patient-demo-001"
+      })
+    });
+  });
+
   it("filters treatment patient access by the actor provider organization", async () => {
     app = await readyServer();
     const adminToken = await loginForToken(app, "admin-demo", "admin");

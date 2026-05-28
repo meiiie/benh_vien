@@ -18,6 +18,10 @@ type PatientRow = {
   phone: string | null;
   managing_organization_id: string;
   status: PatientRecordStatus;
+  merged_into_patient_id: string | null;
+  merged_at: Date | string | null;
+  merged_by_actor_id: string | null;
+  merge_reason: string | null;
   created_at: Date | string;
   updated_at: Date | string;
 };
@@ -41,6 +45,10 @@ export class PostgresPatientRepository implements PatientRepository {
         phone,
         managing_organization_id,
         status,
+        merged_into_patient_id,
+        merged_at,
+        merged_by_actor_id,
+        merge_reason,
         created_at,
         updated_at
       FROM patients
@@ -62,6 +70,10 @@ export class PostgresPatientRepository implements PatientRepository {
         phone,
         managing_organization_id,
         status,
+        merged_into_patient_id,
+        merged_at,
+        merged_by_actor_id,
+        merge_reason,
         created_at,
         updated_at
       FROM patients
@@ -88,6 +100,10 @@ export class PostgresPatientRepository implements PatientRepository {
         p.phone,
         p.managing_organization_id,
         p.status,
+        p.merged_into_patient_id,
+        p.merged_at,
+        p.merged_by_actor_id,
+        p.merge_reason,
         p.created_at,
         p.updated_at
       FROM patients p
@@ -119,10 +135,14 @@ export class PostgresPatientRepository implements PatientRepository {
           phone,
           managing_organization_id,
           status,
+          merged_into_patient_id,
+          merged_at,
+          merged_by_actor_id,
+          merge_reason,
           created_at,
           updated_at
         )
-        VALUES ($1, $2::jsonb, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        VALUES ($1, $2::jsonb, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         ON CONFLICT (id) DO UPDATE SET
           identifiers = EXCLUDED.identifiers,
           full_name = EXCLUDED.full_name,
@@ -132,6 +152,10 @@ export class PostgresPatientRepository implements PatientRepository {
           phone = EXCLUDED.phone,
           managing_organization_id = EXCLUDED.managing_organization_id,
           status = EXCLUDED.status,
+          merged_into_patient_id = EXCLUDED.merged_into_patient_id,
+          merged_at = EXCLUDED.merged_at,
+          merged_by_actor_id = EXCLUDED.merged_by_actor_id,
+          merge_reason = EXCLUDED.merge_reason,
           updated_at = EXCLUDED.updated_at`,
         [
           snapshot.id,
@@ -143,6 +167,10 @@ export class PostgresPatientRepository implements PatientRepository {
           snapshot.phone ?? null,
           snapshot.managingOrganizationId,
           snapshot.status,
+          snapshot.mergedIntoPatientId ?? null,
+          snapshot.mergedAt ?? null,
+          snapshot.mergedByActorId ?? null,
+          snapshot.mergeReason ?? null,
           snapshot.createdAt,
           snapshot.updatedAt
         ]
@@ -216,6 +244,10 @@ function rowToPatient(row: PatientRow): Patient {
     phone: row.phone ?? undefined,
     managingOrganizationId: row.managing_organization_id,
     status: row.status,
+    mergedIntoPatientId: row.merged_into_patient_id ?? undefined,
+    mergedAt: row.merged_at ? toIsoString(row.merged_at) : undefined,
+    mergedByActorId: row.merged_by_actor_id ?? undefined,
+    mergeReason: row.merge_reason ?? undefined,
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at)
   });

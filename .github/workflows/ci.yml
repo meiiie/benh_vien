@@ -241,6 +241,15 @@ jobs:
             and conname = 'patient_identifier_index_unique_identifier';
           ")
           test "$patient_identifier_constraint" = "1"
+          patient_merge_constraint=$(docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -Atc "
+          select count(*)
+          from pg_constraint
+          where conrelid = 'patients'::regclass
+            and conname = 'patients_merge_metadata_required'
+            and pg_get_constraintdef(oid) like '%merged_into_patient_id IS NOT NULL%'
+            and pg_get_constraintdef(oid) like '%merged_at IS NOT NULL%';
+          ")
+          test "$patient_merge_constraint" = "1"
 
       - name: Print diagnostics on failure
         if: failure()

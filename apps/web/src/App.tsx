@@ -320,6 +320,10 @@ type Patient = {
   readonly phone?: string;
   readonly managingOrganizationId: string;
   readonly status: "active" | "merged" | "inactive";
+  readonly mergedIntoPatientId?: string;
+  readonly mergedAt?: string;
+  readonly mergedByActorId?: string;
+  readonly mergeReason?: string;
   readonly createdAt: string;
   readonly updatedAt: string;
 };
@@ -724,6 +728,7 @@ type AuditAction =
   | "patient.list"
   | "patient.create"
   | "patient.identifier-conflict"
+  | "patient.merge"
   | "patient.read"
   | "patient.fhir-export"
   | "patient.fhir-bundle-export"
@@ -9407,6 +9412,7 @@ function formatDocumentStatus(status: ClinicalDocumentStatus): string {
 
 function formatAuditAction(action: AuditAction): string {
   const labels: Record<AuditAction, string> = {
+    "patient.merge": "Merge hồ sơ bệnh nhân",
     "patient.identifier-conflict": "Chặn trùng định danh bệnh nhân",
     "auth.login.success": "Đăng nhập thành công",
     "auth.login.failure": "Đăng nhập thất bại",

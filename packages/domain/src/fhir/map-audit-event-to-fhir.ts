@@ -11,6 +11,7 @@ type FhirAuditEventEntityDetail = NonNullable<
 >[number];
 
 const auditActionLabels: Record<AuditAction, string> = {
+  "patient.merge": "Merge hồ sơ bệnh nhân",
   "patient.identifier-conflict": "Chặn trùng định danh bệnh nhân",
   "auth.login.success": "Đăng nhập thành công",
   "auth.login.failure": "Đăng nhập thất bại",
@@ -227,6 +228,7 @@ function mapAuditAction(action: AuditAction): FhirAuditEvent["action"] {
     action.endsWith(".sign") ||
     action.endsWith(".finish") ||
     action.endsWith(".revoke") ||
+    action.endsWith(".merge") ||
     action.endsWith(".dead-letter") ||
     action.endsWith(".acknowledgement-callback")
   ) {

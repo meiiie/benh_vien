@@ -9,6 +9,7 @@ export type Permission =
   | "patient:list"
   | "patient:create"
   | "patient:read"
+  | "patient:merge"
   | "patient:fhir-export"
   | "provider-directory:read"
   | "provider-directory:fhir-export"
@@ -223,6 +224,7 @@ const rolePermissions: Record<ActorRole, readonly Permission[]> = {
     "patient:list",
     "patient:create",
     "patient:read",
+    "patient:merge",
     "patient:fhir-export",
     "provider-directory:read",
     "provider-directory:fhir-export",
