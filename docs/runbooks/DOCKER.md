@@ -57,6 +57,8 @@ Khi đó có thêm:
 
 ## Prod-like smoke
 
+Prod-like compose chỉ publish web edge (`APP_HTTP_PORT`, mặc định `8080`). API không publish trực tiếp ra host; health/readiness của API được kiểm tra từ bên trong container để giữ ranh giới backend nội bộ.
+
 ```bash
 cp .env.prod.example .env.prod.local
 sed -i 's|^BVS_AUTH_SECRET=.*|BVS_AUTH_SECRET=local-wiiicare-auth-secret-0123456789abcdef|g' .env.prod.local
@@ -67,8 +69,8 @@ sed -i 's|^DATABASE_URL=.*|DATABASE_URL=postgresql://bvs:local_bvs_postgres_pass
 sed -i 's|^MINIO_ROOT_PASSWORD=.*|MINIO_ROOT_PASSWORD=local_bvs_minio_password|g' .env.prod.local
 
 docker compose --env-file .env.prod.local -f docker-compose.yml -f docker-compose.prod.yml up -d --build --wait postgres valkey minio migrate api web
-curl -fsS http://localhost:7310/health
-curl -fsS http://localhost:7310/ready -o /tmp/wiiicare-ready.json
+docker compose --env-file .env.prod.local -f docker-compose.yml -f docker-compose.prod.yml exec -T api wget -qO- http://127.0.0.1:7310/health
+docker compose --env-file .env.prod.local -f docker-compose.yml -f docker-compose.prod.yml exec -T api wget -qO- http://127.0.0.1:7310/ready > /tmp/wiiicare-ready.json
 node <<'NODE'
 const fs = require("node:fs");
 const ready = JSON.parse(fs.readFileSync("/tmp/wiiicare-ready.json", "utf8"));
@@ -115,7 +117,7 @@ cp .env.prod.local .env.prod.local.auth-smoke
 sed -i 's|^BVS_DEMO_AUTH_ENABLED=.*|BVS_DEMO_AUTH_ENABLED=true|g' .env.prod.local.auth-smoke
 docker compose --env-file .env.prod.local.auth-smoke -f docker-compose.yml -f docker-compose.prod.yml up -d --no-deps --force-recreate api
 for attempt in $(seq 1 30); do
-  if curl -fsS http://localhost:7310/ready >/tmp/wiiicare-ready-auth-smoke.json; then
+  if docker compose --env-file .env.prod.local.auth-smoke -f docker-compose.yml -f docker-compose.prod.yml exec -T api wget -qO- http://127.0.0.1:7310/ready >/tmp/wiiicare-ready-auth-smoke.json; then
     break
   fi
   sleep 2

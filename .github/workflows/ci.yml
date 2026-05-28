@@ -97,11 +97,18 @@ jobs:
         run: docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml up -d --wait postgres valkey minio migrate api web
 
       - name: Verify API health
-        run: curl -fsS http://localhost:7310/health
+        run: docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml exec -T api wget -qO- http://127.0.0.1:7310/health
+
+      - name: Verify API is backend-internal
+        run: |
+          if curl -fsS --max-time 2 http://localhost:7310/health; then
+            echo "Production compose must not publish the API port directly."
+            exit 1
+          fi
 
       - name: Verify API readiness dependencies
         run: |
-          curl -fsS http://localhost:7310/ready -o /tmp/api-ready.json
+          docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml exec -T api wget -qO- http://127.0.0.1:7310/ready > /tmp/api-ready.json
           node <<'NODE'
           const fs = require("node:fs");
           const ready = JSON.parse(fs.readFileSync("/tmp/api-ready.json", "utf8"));
@@ -169,7 +176,7 @@ jobs:
           sed -i 's|^BVS_DEMO_AUTH_ENABLED=.*|BVS_DEMO_AUTH_ENABLED=true|g' .env.ci.prod.auth-smoke
           docker compose --env-file .env.ci.prod.auth-smoke -f docker-compose.yml -f docker-compose.prod.yml up -d --no-deps --force-recreate api
           for attempt in $(seq 1 30); do
-            if curl -fsS http://localhost:7310/ready >/tmp/api-ready-auth-smoke.json; then
+            if docker compose --env-file .env.ci.prod.auth-smoke -f docker-compose.yml -f docker-compose.prod.yml exec -T api wget -qO- http://127.0.0.1:7310/ready >/tmp/api-ready-auth-smoke.json; then
               exit 0
             fi
             sleep 2

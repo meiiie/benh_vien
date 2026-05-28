@@ -27,9 +27,19 @@ const rawConfig = execFileSync(
 );
 const composeConfig = JSON.parse(rawConfig);
 const apiEnvironment = composeConfig.services?.api?.environment;
+const apiPorts = composeConfig.services?.api?.ports ?? [];
+const webPorts = composeConfig.services?.web?.ports ?? [];
 
 if (!apiEnvironment || typeof apiEnvironment !== "object") {
   throw new Error("Expected docker compose service api to expose an environment map.");
+}
+
+if (apiPorts.length > 0) {
+  throw new Error("Production compose must not publish the API service directly; expose it through the web edge only.");
+}
+
+if (webPorts.length === 0) {
+  throw new Error("Production compose must publish the web edge service.");
 }
 
 const missingKeys = requiredApiEnvironmentKeys.filter(
@@ -46,9 +56,11 @@ console.log(
   JSON.stringify(
     {
       status: "ok",
-      check: "Docker compose API runtime environment passthrough",
+      check: "Docker compose API runtime environment and production exposure",
       composeFiles,
-      requiredApiEnvironmentKeys
+      requiredApiEnvironmentKeys,
+      apiPublishedPorts: apiPorts.length,
+      webPublishedPorts: webPorts.length
     },
     null,
     2
