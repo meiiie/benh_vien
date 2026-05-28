@@ -628,7 +628,25 @@ function resolvePublicApiBaseUrl(): string {
     throw new Error("BVS_PUBLIC_API_BASE_URL must use HTTPS in production.");
   }
 
+  if (process.env.NODE_ENV === "production" && isLoopbackHostname(parsedUrl.hostname)) {
+    throw new Error(
+      "BVS_PUBLIC_API_BASE_URL must not use localhost or loopback hosts in production."
+    );
+  }
+
   return rawValue.replace(/\/+$/, "");
+}
+
+function isLoopbackHostname(hostname: string): boolean {
+  const normalizedHostname = hostname.toLowerCase();
+
+  return (
+    normalizedHostname === "localhost" ||
+    normalizedHostname === "0.0.0.0" ||
+    normalizedHostname === "::1" ||
+    normalizedHostname === "[::1]" ||
+    normalizedHostname.startsWith("127.")
+  );
 }
 
 function assertProductionCorsOrigins(origins: readonly string[]): void {

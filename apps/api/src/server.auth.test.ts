@@ -626,6 +626,24 @@ describe("API auth and RBAC boundary", () => {
     );
   });
 
+  it("rejects loopback public API base URLs in production", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.BVS_REPOSITORY = "postgres";
+
+    for (const publicApiBaseUrl of [
+      "https://localhost/api/v1",
+      "https://127.0.0.1/api/v1",
+      "https://0.0.0.0/api/v1",
+      "https://[::1]/api/v1"
+    ]) {
+      process.env.BVS_PUBLIC_API_BASE_URL = publicApiBaseUrl;
+
+      await expect(buildServer({ logger: false })).rejects.toThrow(
+        "BVS_PUBLIC_API_BASE_URL must not use localhost or loopback hosts in production."
+      );
+    }
+  });
+
   it("serves FHIR CapabilityStatement metadata without a demo session", async () => {
     process.env.BVS_PUBLIC_API_BASE_URL = "https://api.wiiicare.example.vn/api/v1/";
     app = await readyServer();

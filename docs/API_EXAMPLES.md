@@ -29,7 +29,7 @@ Endpoint này dùng cho discovery kỹ thuật của facade FHIR R4 và không y
 curl http://localhost:7310/api/v1/fhir/metadata
 ```
 
-Trường `implementation.url` lấy từ `BVS_PUBLIC_API_BASE_URL`. Ở production, biến này bắt buộc phải là URL HTTPS public của API, ví dụ `https://api.wiiicare.example.vn/api/v1`, để hệ thống nhận liên thông không thấy nhầm địa chỉ `localhost`.
+Trường `implementation.url` lấy từ `BVS_PUBLIC_API_BASE_URL`. Ở production, biến này bắt buộc phải là URL HTTPS public của API, ví dụ `https://api.wiiicare.example.vn/api/v1`, và không được dùng `localhost` hoặc loopback để hệ thống nhận liên thông không thấy nhầm địa chỉ nội bộ.
 
 ## Lỗi FHIR OperationOutcome
 

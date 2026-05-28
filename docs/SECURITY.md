@@ -23,7 +23,7 @@ Hồ sơ bệnh án là dữ liệu đặc biệt nhạy cảm. Dự án chưa t
 
 - API đã yêu cầu `Authorization: Bearer <token>` cho endpoint nghiệp vụ.
 - Ở `NODE_ENV=production`, API bắt buộc `BVS_REPOSITORY=postgres`; in-memory repository chỉ dành cho dev/test và không được dùng cho dữ liệu bệnh án thật.
-- Ở `NODE_ENV=production`, API bắt buộc cấu hình `BVS_PUBLIC_API_BASE_URL` bằng URL HTTPS public để FHIR metadata không công bố nhầm địa chỉ nội bộ hoặc `localhost`.
+- Ở `NODE_ENV=production`, API bắt buộc cấu hình `BVS_PUBLIC_API_BASE_URL` bằng URL HTTPS public, không dùng `localhost`/loopback, để FHIR metadata không công bố nhầm địa chỉ nội bộ.
 - Token demo do `POST /api/v1/auth/login` phát hành, ký bằng `BVS_AUTH_SECRET`. Mật khẩu demo được kiểm tra bằng hash `scrypt` và so sánh timing-safe; đây vẫn là cơ chế demo, chưa thay thế IAM/SSO production.
 - Ở `NODE_ENV=production`, đăng nhập demo mặc định bị tắt và chỉ hoạt động nếu cấu hình rõ `BVS_DEMO_AUTH_ENABLED=true` cho phiên smoke/demo có kiểm soát.
 - Ở `NODE_ENV=production`, API kiểm tra `BVS_AUTH_SECRET` ngay khi khởi động và dừng sớm nếu secret thiếu, ngắn hơn 32 ký tự hoặc vẫn là placeholder/dev-only secret.
