@@ -23,7 +23,7 @@ Hồ sơ bệnh án là dữ liệu đặc biệt nhạy cảm. Dự án chưa t
 
 - API đã yêu cầu `Authorization: Bearer <token>` cho endpoint nghiệp vụ.
 - Token demo do `POST /api/v1/auth/login` phát hành, ký bằng `BVS_AUTH_SECRET`. Mật khẩu demo được kiểm tra bằng hash `scrypt` và so sánh timing-safe; đây vẫn là cơ chế demo, chưa thay thế IAM/SSO production.
-- Ở `NODE_ENV=production`, API kiểm tra `BVS_AUTH_SECRET` ngay khi khởi động và dừng sớm nếu secret thiếu hoặc ngắn hơn 32 ký tự.
+- Ở `NODE_ENV=production`, API kiểm tra `BVS_AUTH_SECRET` ngay khi khởi động và dừng sớm nếu secret thiếu, ngắn hơn 32 ký tự hoặc vẫn là placeholder/dev-only secret.
 - TTL của token demo được cấu hình bằng `BVS_AUTH_TOKEN_TTL_SECONDS`, mặc định `28800` giây, và bị giới hạn trong khoảng `300` đến `28800` giây để tránh phiên quá ngắn hoặc quá dài do cấu hình sai.
 - Khi xác minh token, API kiểm tra định dạng base64url/kích thước segment trước khi xử lý sâu, sau đó kiểm tra `iat`, `exp`, không chấp nhận token phát hành trong tương lai quá xa, token hết hạn, token có `exp <= iat` hoặc thời lượng vượt trần `28800` giây dù chữ ký HMAC hợp lệ.
 - Lỗi auth trả `requestId` để nối phản hồi client với log kỹ thuật mà không lộ stack trace hoặc chi tiết nội bộ.

@@ -489,6 +489,22 @@ describe("API auth and RBAC boundary", () => {
     );
   });
 
+  it("rejects placeholder auth secrets at startup in production", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.BVS_CORS_ORIGINS = "https://wiiicare.example.vn";
+
+    for (const secret of [
+      "change-me-with-a-random-secret-of-at-least-32-characters",
+      "wiiicare-dev-only-auth-secret-change-before-production"
+    ]) {
+      process.env.BVS_AUTH_SECRET = secret;
+
+      await expect(buildServer({ logger: false })).rejects.toThrow(
+        "BVS_AUTH_SECRET must not use placeholder values in production."
+      );
+    }
+  });
+
   it("requires a bounded auth token TTL at startup", async () => {
     process.env.NODE_ENV = "production";
     process.env.BVS_CORS_ORIGINS = "https://wiiicare.example.vn";

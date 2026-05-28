@@ -62,11 +62,19 @@ jobs:
           docker compose --env-file .env.dev.example -f docker-compose.yml -f docker-compose.dev.yml config --quiet
           docker compose --env-file .env.prod.example -f docker-compose.yml -f docker-compose.prod.yml config --quiet
 
+      - name: Prepare production-like smoke env
+        run: |
+          cp .env.prod.example .env.ci.prod
+          sed -i 's|^BVS_AUTH_SECRET=.*|BVS_AUTH_SECRET=ci-wiiicare-auth-secret-0123456789abcdef|g' .env.ci.prod
+          sed -i 's|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=ci_bvs_postgres_password|g' .env.ci.prod
+          sed -i 's|^DATABASE_URL=.*|DATABASE_URL=postgresql://bvs:ci_bvs_postgres_password@postgres:5432/benh_vien_so|g' .env.ci.prod
+          sed -i 's|^MINIO_ROOT_PASSWORD=.*|MINIO_ROOT_PASSWORD=ci_bvs_minio_password|g' .env.ci.prod
+
       - name: Build production images
-        run: docker compose --env-file .env.prod.example -f docker-compose.yml -f docker-compose.prod.yml build migrate api web
+        run: docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml build migrate api web
 
       - name: Boot production-like smoke stack
-        run: docker compose --env-file .env.prod.example -f docker-compose.yml -f docker-compose.prod.yml up -d --wait postgres valkey minio migrate api web
+        run: docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml up -d --wait postgres valkey minio migrate api web
 
       - name: Verify API health
         run: curl -fsS http://localhost:7310/health
@@ -84,14 +92,14 @@ jobs:
         run: curl -fsS http://localhost:8080/api/v1/patients
 
       - name: Verify database migration
-        run: docker compose --env-file .env.prod.example -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -c "select version from schema_migrations order by version;"
+        run: docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -c "select version from schema_migrations order by version;"
 
       - name: Print diagnostics on failure
         if: failure()
         run: |
-          docker compose --env-file .env.prod.example -f docker-compose.yml -f docker-compose.prod.yml ps
-          docker compose --env-file .env.prod.example -f docker-compose.yml -f docker-compose.prod.yml logs --tail=200
+          docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml ps
+          docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml logs --tail=200
 
       - name: Tear down stack
         if: always()
-        run: docker compose --env-file .env.prod.example -f docker-compose.yml -f docker-compose.prod.yml down -v --remove-orphans
+        run: docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml down -v --remove-orphans

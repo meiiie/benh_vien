@@ -95,6 +95,10 @@ export function getAuthSecret(): string {
   const secret = process.env.BVS_AUTH_SECRET;
 
   if (secret && secret.length >= 32) {
+    if (process.env.NODE_ENV === "production" && isPlaceholderSecret(secret)) {
+      throw new Error("BVS_AUTH_SECRET must not use placeholder values in production.");
+    }
+
     return secret;
   }
 
@@ -112,6 +116,12 @@ export function assertAuthConfiguration(): void {
 
 function sign(encodedPayload: string): string {
   return createHmac("sha256", getAuthSecret()).update(encodedPayload).digest("base64url");
+}
+
+function isPlaceholderSecret(secret: string): boolean {
+  const normalizedSecret = secret.toLowerCase();
+
+  return normalizedSecret.includes("change-me") || normalizedSecret.includes("dev-only");
 }
 
 function getAuthTokenTtlSeconds(): number {

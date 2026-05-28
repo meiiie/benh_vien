@@ -22,7 +22,7 @@ API giới hạn tần suất `POST /api/v1/auth/login` bằng `BVS_AUTH_LOGIN_R
 
 Ở `NODE_ENV=production`, API yêu cầu `BVS_CORS_ORIGINS` là danh sách Origin HTTPS canonical được phép, phân tách bằng dấu phẩy, ví dụ `https://wiiicare.example.vn`. Không dùng wildcard, URL có path hoặc Origin HTTP cho production vì API xử lý dữ liệu bệnh án nhạy cảm.
 
-Ở `NODE_ENV=production`, API cũng yêu cầu `BVS_AUTH_SECRET` tối thiểu 32 ký tự ngay khi khởi động. Nếu thiếu secret, container API sẽ dừng thay vì chờ tới request đăng nhập đầu tiên mới lỗi.
+Ở `NODE_ENV=production`, API cũng yêu cầu `BVS_AUTH_SECRET` tối thiểu 32 ký tự ngay khi khởi động và không chấp nhận giá trị mẫu như `change-me...` hoặc secret dev-only. Nếu thiếu secret hoặc dùng placeholder, container API sẽ dừng thay vì chờ tới request đăng nhập đầu tiên mới lỗi.
 
 `BVS_AUTH_TOKEN_TTL_SECONDS` kiểm soát thời hạn token demo, mặc định `28800` giây và chỉ nhận giá trị từ `300` đến `28800`. Nếu cấu hình ngoài khoảng này, API sẽ dừng khi khởi động để tránh phiên đăng nhập quá dài hoặc quá ngắn ngoài ý muốn.
 
@@ -65,7 +65,7 @@ pnpm compose:config
 
 ## Lưu ý bảo mật
 
-- Không dùng `.env.prod.example` cho production thật.
+- Không dùng `.env.prod.example` cho production thật; file này cố ý chứa placeholder để buộc người vận hành thay secret/mật khẩu trước khi boot production.
 - Network `backend` là internal, chỉ web và API được đưa ra ngoài qua network `frontend`.
 - CI kiểm tra cấu hình web security header bằng `pnpm run harness:web-security` và kiểm tra header thật khi boot prod-like stack.
 - HAPI FHIR và Orthanc đang ở profile riêng để tránh vô tình bật dịch vụ nặng hoặc chưa có xác thực.
