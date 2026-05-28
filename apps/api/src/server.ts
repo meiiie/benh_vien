@@ -103,6 +103,13 @@ export async function buildServer(options: ServerOptions = {}) {
   await app.register(cors, {
     origin: resolveCorsOrigins()
   });
+  app.addHook("onRequest", async (_request, reply) => {
+    reply.header("X-Content-Type-Options", "nosniff");
+    reply.header("X-Frame-Options", "DENY");
+    reply.header("Referrer-Policy", "no-referrer");
+    reply.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    reply.header("Cross-Origin-Resource-Policy", "same-site");
+  });
 
   await app.register(swagger, {
     openapi: {

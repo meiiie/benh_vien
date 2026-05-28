@@ -91,6 +91,24 @@ describe("API auth and RBAC boundary", () => {
     expect(body.latencyMs).toEqual(expect.any(Number));
   });
 
+  it("sets baseline HTTP security headers", async () => {
+    app = await readyServer();
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/health"
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["x-content-type-options"]).toBe("nosniff");
+    expect(response.headers["x-frame-options"]).toBe("DENY");
+    expect(response.headers["referrer-policy"]).toBe("no-referrer");
+    expect(response.headers["permissions-policy"]).toBe(
+      "camera=(), microphone=(), geolocation=()"
+    );
+    expect(response.headers["cross-origin-resource-policy"]).toBe("same-site");
+  });
+
   it("requires explicit CORS origins in production", async () => {
     process.env.NODE_ENV = "production";
     delete process.env.BVS_CORS_ORIGINS;
