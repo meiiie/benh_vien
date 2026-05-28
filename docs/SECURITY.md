@@ -29,7 +29,8 @@ Hồ sơ bệnh án là dữ liệu đặc biệt nhạy cảm. Dự án chưa t
 - Lỗi phân quyền chung trả `requestId`; lỗi `401 UNAUTHENTICATED` có thêm `WWW-Authenticate: Bearer` để client/proxy nhận biết yêu cầu Bearer token.
 - `POST /api/v1/auth/login` có rate limit theo IP + username đã băm SHA-256, cấu hình bằng `BVS_RATE_LIMIT_STORE`, `BVS_VALKEY_URL`, `BVS_AUTH_LOGIN_RATE_LIMIT_MAX` và `BVS_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS`. Dev đơn lẻ có thể dùng memory store; Docker/dev-prod dùng Valkey để chia sẻ bộ đếm giữa nhiều replica.
 - `/ready` kiểm tra kho rate limit đăng nhập để tránh đưa API vào rotation khi Valkey không sẵn sàng trong cấu hình dev-prod/production.
-- API và web container đặt security headers nền tảng gồm `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` và `Cross-Origin-Resource-Policy`; đây là lớp giảm rủi ro misconfiguration, chưa thay thế CSP/edge security production.
+- API và web container đặt security headers nền tảng gồm `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` và `Cross-Origin-Resource-Policy`.
+- Web runtime Nginx áp dụng Content Security Policy chặt cho SPA (`default-src 'self'`, chặn inline script/style, `object-src 'none'`, `frame-ancestors 'none'`) để giảm rủi ro XSS/nhúng ngoài ý muốn. CSP được scope ở `location /` để không phá `/api` và Swagger UI được proxy qua `/docs`.
 - API đặt `Cache-Control: no-store` và `Pragma: no-cache` để giảm rủi ro browser/proxy lưu nhầm response chứa dữ liệu bệnh án.
 - API phản hồi `X-Request-Id`, chấp nhận `x-request-id` từ proxy/upstream và ghi `requestId` vào metadata của audit event để nối log kỹ thuật với hành động lâm sàng.
 - API có error handler tập trung: lỗi validation trả `400 VALIDATION_ERROR`, lỗi ngoài ý muốn trả `500 INTERNAL_SERVER_ERROR`, luôn kèm `requestId` và không trả stack trace hoặc chi tiết nội bộ cho client.

@@ -55,6 +55,8 @@ docker compose --env-file .env.prod.example -f docker-compose.yml -f docker-comp
 
 Migration lưu `checksum_sha256` trong `schema_migrations`. Nếu một migration đã áp dụng bị sửa nội dung, service `migrate` sẽ dừng thay vì âm thầm chạy tiếp với lịch sử schema không còn đáng tin cậy.
 
+Web runtime Nginx gắn CSP chặt cho SPA tại `/`, gồm `default-src 'self'`, `script-src 'self'`, `style-src 'self'`, `object-src 'none'` và `frame-ancestors 'none'`. CSP không áp cho `/docs` để Swagger UI được proxy từ API không bị chặn inline script/style của chính nó.
+
 ## Validate compose
 
 ```bash
@@ -65,4 +67,5 @@ pnpm compose:config
 
 - Không dùng `.env.prod.example` cho production thật.
 - Network `backend` là internal, chỉ web và API được đưa ra ngoài qua network `frontend`.
+- CI kiểm tra cấu hình web security header bằng `pnpm run harness:web-security` và kiểm tra header thật khi boot prod-like stack.
 - HAPI FHIR và Orthanc đang ở profile riêng để tránh vô tình bật dịch vụ nặng hoặc chưa có xác thực.
