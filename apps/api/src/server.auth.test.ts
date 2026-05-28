@@ -24,10 +24,13 @@ describe("API auth and RBAC boundary", () => {
   const originalRateLimitStore = process.env.BVS_RATE_LIMIT_STORE;
   const originalValkeyUrl = process.env.BVS_VALKEY_URL;
   const originalDemoAuthEnabled = process.env.BVS_DEMO_AUTH_ENABLED;
+  const originalRecordTransferRetryWorkerEnabled =
+    process.env.BVS_RECORD_TRANSFER_RETRY_WORKER_ENABLED;
 
   beforeEach(() => {
     process.env.BVS_REPOSITORY = "in-memory";
     process.env.BVS_AUTH_SECRET = testSecret;
+    process.env.BVS_RECORD_TRANSFER_RETRY_WORKER_ENABLED = "false";
   });
 
   afterEach(async () => {
@@ -51,6 +54,10 @@ describe("API auth and RBAC boundary", () => {
     restoreEnv("BVS_RATE_LIMIT_STORE", originalRateLimitStore);
     restoreEnv("BVS_VALKEY_URL", originalValkeyUrl);
     restoreEnv("BVS_DEMO_AUTH_ENABLED", originalDemoAuthEnabled);
+    restoreEnv(
+      "BVS_RECORD_TRANSFER_RETRY_WORKER_ENABLED",
+      originalRecordTransferRetryWorkerEnabled
+    );
   });
 
   it("returns a signed demo session for valid credentials", async () => {

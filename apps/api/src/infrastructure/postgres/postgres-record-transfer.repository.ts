@@ -2,6 +2,7 @@ import pg from "pg";
 import { createPostgresRepositoryPool } from "./postgres-pool.js";
 import { RecordTransfer } from "@benh-vien-so/domain";
 import type {
+  FindDueRecordTransferRetriesInput,
   RecordTransferBundleType,
   RecordTransferPriority,
   RecordTransferRepository,
@@ -60,6 +61,27 @@ export class PostgresRecordTransferRepository implements RecordTransferRepositor
 
     const row = result.rows[0];
     return row ? rowToRecordTransfer(row) : undefined;
+  }
+
+  async findDueRetries(input: FindDueRecordTransferRetriesInput): Promise<RecordTransfer[]> {
+    const limit = normalizeLimit(input.limit);
+
+    if (limit === 0) {
+      return [];
+    }
+
+    const result = await this.pool.query<RecordTransferRow>(
+      `${selectRecordTransferSql}
+      WHERE status = 'failed'
+        AND next_retry_at IS NOT NULL
+        AND next_retry_at <= $1
+        AND retry_count < $2
+      ORDER BY next_retry_at ASC, requested_at ASC
+      LIMIT $3`,
+      [input.dueAt, input.maxRetryCount ?? 2147483647, limit]
+    );
+
+    return result.rows.map(rowToRecordTransfer);
   }
 
   async save(recordTransfer: RecordTransfer): Promise<void> {
@@ -216,4 +238,12 @@ function rowToRecordTransfer(row: RecordTransferRow): RecordTransfer {
 
 function toIsoString(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
+function normalizeLimit(limit: number): number {
+  if (!Number.isInteger(limit) || limit < 1) {
+    return 0;
+  }
+
+  return limit;
 }

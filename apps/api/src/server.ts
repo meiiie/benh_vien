@@ -69,6 +69,7 @@ import { createProviderDirectoryRepository } from "./modules/provider-directory/
 import { registerProviderDirectoryRoutes } from "./modules/provider-directory/provider-directory-routes.js";
 import { createRecordTransferRepository } from "./modules/record-transfers/create-record-transfer.repository.js";
 import { registerRecordTransferRoutes } from "./modules/record-transfers/record-transfer-routes.js";
+import { startRecordTransferRetryWorker } from "./modules/record-transfers/record-transfer-retry-worker.js";
 import { createServiceRequestRepository } from "./modules/service-requests/create-service-request.repository.js";
 import { registerServiceRequestRoutes } from "./modules/service-requests/service-request-routes.js";
 import { createWorkflowTaskRepository } from "./modules/workflow-tasks/create-workflow-task.repository.js";
@@ -99,6 +100,13 @@ export type ServerOptions = {
 
 type ClosableRepository = {
   close(): Promise<void>;
+};
+
+type RecordTransferRetryWorkerConfig = {
+  readonly intervalMs: number;
+  readonly limit: number;
+  readonly maxRetryCount: number;
+  readonly runImmediately: boolean;
 };
 
 type DeniedAccessPayload = {
@@ -361,6 +369,19 @@ export async function buildServer(options: ServerOptions = {}) {
     options.recordTransferRepository ?? trackRepository(await createRecordTransferRepository());
   const auditEventRepository =
     options.auditEventRepository ?? trackRepository(await createAuditEventRepository());
+  const recordTransferRetryWorkerConfig = resolveRecordTransferRetryWorkerConfig();
+  const recordTransferRetryWorker = recordTransferRetryWorkerConfig
+    ? startRecordTransferRetryWorker(
+        {
+          recordTransferRepository,
+          auditRepository: auditEventRepository
+        },
+        {
+          ...recordTransferRetryWorkerConfig,
+          logger: app.log
+        }
+      )
+    : undefined;
   const deniedAccessPayloads = new WeakMap<FastifyRequest, DeniedAccessPayload>();
 
   app.addHook("onSend", (request, reply, payload, done) => {
@@ -390,6 +411,8 @@ export async function buildServer(options: ServerOptions = {}) {
   });
 
   app.addHook("onClose", async () => {
+    recordTransferRetryWorker?.close();
+
     for (const repository of [...managedRepositories].reverse()) {
       await repository.close();
     }
@@ -729,6 +752,69 @@ function resolvePublicApiBaseUrl(): string {
   }
 
   return rawValue.replace(/\/+$/, "");
+}
+
+function resolveRecordTransferRetryWorkerConfig(): RecordTransferRetryWorkerConfig | undefined {
+  const enabled = process.env.BVS_RECORD_TRANSFER_RETRY_WORKER_ENABLED?.trim();
+
+  if (!enabled || enabled === "false") {
+    return undefined;
+  }
+
+  if (enabled !== "true") {
+    throw new Error(
+      "BVS_RECORD_TRANSFER_RETRY_WORKER_ENABLED must be either 'true' or 'false'."
+    );
+  }
+
+  return {
+    intervalMs:
+      readPositiveIntegerEnv("BVS_RECORD_TRANSFER_RETRY_WORKER_INTERVAL_SECONDS", 60) *
+      1000,
+    limit: readPositiveIntegerEnv("BVS_RECORD_TRANSFER_RETRY_WORKER_LIMIT", 25),
+    maxRetryCount: readPositiveIntegerEnv(
+      "BVS_RECORD_TRANSFER_RETRY_WORKER_MAX_RETRY_COUNT",
+      3
+    ),
+    runImmediately: readBooleanEnv(
+      "BVS_RECORD_TRANSFER_RETRY_WORKER_RUN_IMMEDIATELY",
+      false
+    )
+  };
+}
+
+function readPositiveIntegerEnv(name: string, defaultValue: number): number {
+  const rawValue = process.env[name]?.trim();
+
+  if (!rawValue) {
+    return defaultValue;
+  }
+
+  const value = Number(rawValue);
+
+  if (!Number.isInteger(value) || value < 1) {
+    throw new Error(`${name} must be a positive integer.`);
+  }
+
+  return value;
+}
+
+function readBooleanEnv(name: string, defaultValue: boolean): boolean {
+  const rawValue = process.env[name]?.trim();
+
+  if (!rawValue) {
+    return defaultValue;
+  }
+
+  if (rawValue === "true") {
+    return true;
+  }
+
+  if (rawValue === "false") {
+    return false;
+  }
+
+  throw new Error(`${name} must be either 'true' or 'false'.`);
 }
 
 function isLoopbackHostname(hostname: string): boolean {
