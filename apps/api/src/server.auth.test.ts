@@ -2203,6 +2203,52 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("negotiates validation errors as FHIR OperationOutcome when requested", async () => {
+    app = await readyServer();
+    const auditorToken = await loginForToken(app, "security-officer-demo", "auditor");
+
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/audit-events?limit=0",
+      headers: {
+        ...auditHeaders(auditorToken),
+        accept: "application/fhir+json",
+        "x-request-id": "fhir-validation-error-001"
+      }
+    });
+
+    expectOperationOutcome(fhirResponse, {
+      statusCode: 400,
+      code: "invalid",
+      detailsCode: "VALIDATION_ERROR"
+    });
+    expect(fhirResponse.json()).toMatchObject({
+      issue: [
+        {
+          diagnostics: expect.any(String),
+          expression: ["limit"]
+        }
+      ]
+    });
+
+    const jsonResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/audit-events?limit=0",
+      headers: {
+        ...auditHeaders(auditorToken),
+        "x-request-id": "json-validation-error-001"
+      }
+    });
+
+    expect(jsonResponse.statusCode).toBe(400);
+    expect(String(jsonResponse.headers["content-type"])).toContain("application/json");
+    expect(jsonResponse.json()).toMatchObject({
+      error: "VALIDATION_ERROR",
+      message: "Request validation failed.",
+      requestId: "json-validation-error-001"
+    });
+  });
+
   it("rejects clinical document attachment metadata with invalid MIME type or SHA-1 hash", async () => {
     app = await readyServer();
     const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");

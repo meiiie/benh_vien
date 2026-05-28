@@ -5,7 +5,10 @@ import swaggerUi from "@fastify/swagger-ui";
 import Fastify from "fastify";
 import type { FastifyRequest } from "fastify";
 import { ZodError } from "zod";
-import { buildWiiiCareCapabilityStatement } from "@benh-vien-so/domain";
+import {
+  buildFhirOperationOutcome,
+  buildWiiiCareCapabilityStatement
+} from "@benh-vien-so/domain";
 import type {
   AuditEventRepository,
   AuditResourceType,
@@ -171,6 +174,13 @@ export async function buildServer(options: ServerOptions = {}) {
   });
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ZodError) {
+      if (acceptsFhirJson(request)) {
+        return reply
+          .status(400)
+          .type("application/fhir+json; charset=utf-8")
+          .send(buildValidationOperationOutcome(error));
+      }
+
       return reply.status(400).send({
         error: "VALIDATION_ERROR",
         message: "Request validation failed.",
@@ -759,6 +769,38 @@ function readHttpStatusCode(error: unknown): number {
   const statusCode = (error as { readonly statusCode?: unknown }).statusCode;
 
   return typeof statusCode === "number" ? statusCode : 500;
+}
+
+function buildValidationOperationOutcome(error: ZodError) {
+  return buildFhirOperationOutcome({
+    issues: error.issues.map((issue) => {
+      const expression = issue.path.map((pathPart) => String(pathPart)).join(".");
+
+      return {
+        code: expression ? "invalid" : "structure",
+        diagnostics: issue.message,
+        ...(expression ? { expression: [expression] } : {}),
+        details: {
+          system: "urn:wiiicare:nexus:operation-outcome",
+          code: "VALIDATION_ERROR",
+          display: "Validation error",
+          text: "Request validation failed."
+        }
+      };
+    })
+  });
+}
+
+function acceptsFhirJson(request: FastifyRequest): boolean {
+  const accept = request.headers.accept;
+  const values: readonly string[] = Array.isArray(accept) ? accept : accept ? [accept] : [];
+
+  return values.some((value) =>
+    value
+      .split(",")
+      .map((part: string) => part.trim().split(";")[0]?.toLowerCase())
+      .includes("application/fhir+json")
+  );
 }
 
 async function recordDeniedAccessAuditEvent(

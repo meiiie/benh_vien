@@ -192,6 +192,24 @@ if (deniedGlobalPatientList.error !== "FORBIDDEN") {
   );
 }
 
+const fhirValidationOutcome = await requestJson("/audit-events?limit=0", {
+  token: auditorSession.accessToken,
+  headers: {
+    ...auditHeaders(),
+    accept: "application/fhir+json",
+    "x-request-id": "postgres-smoke-fhir-validation-error"
+  },
+  expectedStatus: 400
+});
+
+if (
+  fhirValidationOutcome.resourceType !== "OperationOutcome" ||
+  fhirValidationOutcome.issue?.[0]?.code !== "invalid" ||
+  fhirValidationOutcome.issue?.[0]?.details?.coding?.[0]?.code !== "VALIDATION_ERROR"
+) {
+  throw new Error("Expected FHIR validation failure to return OperationOutcome invalid issue.");
+}
+
 const globalAuditTrail = await waitForAuditTrail(
   "/audit-events?limit=100",
   {
@@ -297,6 +315,7 @@ console.log(
       deniedMedicationListStatus: 403,
       deniedMedicationExportStatus: 403,
       deniedMedicationError: deniedMedicationExport.error,
+      fhirValidationIssueCode: fhirValidationOutcome.issue[0]?.code,
       globalAuditEventCount: globalAuditTrail.items.length,
       authAuditEventCount: authAuditEvents.length,
       deniedAuditEventCount: deniedAuditEvents.length,

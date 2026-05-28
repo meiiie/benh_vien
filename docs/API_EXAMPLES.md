@@ -41,7 +41,7 @@ curl http://localhost:7310/api/v1/clinical-documents/clinical-document-missing/f
   -H "x-purpose-of-use: TREATMENT"
 ```
 
-Kết quả lỗi có `Content-Type: application/fhir+json`, `resourceType = "OperationOutcome"`, `issue[0].severity = "error"`, `issue[0].code` dùng mã FHIR R4 như `not-found`, `required`, `suppressed`, `business-rule`; còn mã lỗi nội bộ nằm trong `issue[0].details.coding[0].code` để frontend, log và test vẫn đọc được nguyên nhân cụ thể.
+Kết quả lỗi có `Content-Type: application/fhir+json`, `resourceType = "OperationOutcome"`, `issue[0].severity = "error"`, `issue[0].code` dùng mã FHIR R4 như `not-found`, `required`, `suppressed`, `business-rule`, `invalid`; còn mã lỗi nội bộ nằm trong `issue[0].details.coding[0].code` để frontend, log và test vẫn đọc được nguyên nhân cụ thể. Với lỗi validation, client cần gửi `Accept: application/fhir+json` để nhận `OperationOutcome.issue[]`; client JSON thông thường vẫn nhận envelope `400 VALIDATION_ERROR` kèm `requestId`.
 
 Kết quả mong muốn là resource `CapabilityStatement` có `fhirVersion = "4.0.1"`, `rest.mode = "server"`, `format = ["json"]` và danh sách resource đang hỗ trợ như `Patient`, `DocumentReference`, `Provenance`, `Bundle`, `Consent`, `AuditEvent`.
 
