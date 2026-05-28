@@ -159,11 +159,20 @@ const maxRequestIdLength = 128;
 const requestIdPattern = /^[A-Za-z0-9._:-]+$/;
 const defaultPublicApiBaseUrl = "http://localhost:7310/api/v1";
 const apiVersion = "0.2.0";
+const defaultHttpBodyLimitBytes = 1_048_576;
+const minHttpBodyLimitBytes = 1_024;
+const maxHttpBodyLimitBytes = 10 * 1_024 * 1_024;
 
 export async function buildServer(options: ServerOptions = {}) {
   assertAuthConfiguration();
   assertRepositoryConfiguration();
   const publicApiBaseUrl = resolvePublicApiBaseUrl();
+  const httpBodyLimitBytes = readBoundedIntegerEnv(
+    "BVS_HTTP_BODY_LIMIT_BYTES",
+    defaultHttpBodyLimitBytes,
+    minHttpBodyLimitBytes,
+    maxHttpBodyLimitBytes
+  );
   const apiDocsEnabled = readBooleanEnv(
     "BVS_API_DOCS_ENABLED",
     process.env.NODE_ENV !== "production"
@@ -172,7 +181,8 @@ export async function buildServer(options: ServerOptions = {}) {
   const app = Fastify({
     logger: options.logger ?? true,
     requestIdHeader: false,
-    genReqId: createRequestId
+    genReqId: createRequestId,
+    bodyLimit: httpBodyLimitBytes
   });
   const loginRateLimiter = options.loginRateLimiter ?? createLoginRateLimiterFromEnv();
   const managedRepositories: ClosableRepository[] = [];
@@ -547,6 +557,7 @@ export async function buildServer(options: ServerOptions = {}) {
       api.get("/runtime", async () =>
         buildApiRuntimeInfo({
           publicApiBaseUrl,
+          httpBodyLimitBytes,
           apiDocsEnabled,
           recordTransferDeliveryWorkerEnabled: Boolean(recordTransferDeliveryWorkerConfig),
           recordTransferRetryWorkerEnabled: Boolean(recordTransferRetryWorkerConfig)
@@ -738,6 +749,7 @@ export async function buildServer(options: ServerOptions = {}) {
 
 function buildApiRuntimeInfo(input: {
   readonly publicApiBaseUrl: string;
+  readonly httpBodyLimitBytes: number;
   readonly apiDocsEnabled: boolean;
   readonly recordTransferDeliveryWorkerEnabled: boolean;
   readonly recordTransferRetryWorkerEnabled: boolean;
@@ -749,6 +761,7 @@ function buildApiRuntimeInfo(input: {
     repository: process.env.BVS_REPOSITORY ?? "in-memory",
     nodeEnv: process.env.NODE_ENV ?? "development",
     publicApiBaseUrl: input.publicApiBaseUrl,
+    httpBodyLimitBytes: input.httpBodyLimitBytes,
     checkedAt: new Date().toISOString(),
     features: {
       apiDocsEnabled: input.apiDocsEnabled,
@@ -912,6 +925,27 @@ function readPositiveIntegerEnv(name: string, defaultValue: number): number {
 
   if (!Number.isInteger(value) || value < 1) {
     throw new Error(`${name} must be a positive integer.`);
+  }
+
+  return value;
+}
+
+function readBoundedIntegerEnv(
+  name: string,
+  defaultValue: number,
+  minValue: number,
+  maxValue: number
+): number {
+  const rawValue = process.env[name]?.trim();
+
+  if (!rawValue) {
+    return defaultValue;
+  }
+
+  const value = Number(rawValue);
+
+  if (!Number.isInteger(value) || value < minValue || value > maxValue) {
+    throw new Error(`${name} must be an integer between ${minValue} and ${maxValue}.`);
   }
 
   return value;

@@ -32,6 +32,8 @@ API giới hạn tần suất `POST /api/v1/auth/login` bằng `BVS_AUTH_LOGIN_R
 
 Ở `NODE_ENV=production`, API cũng yêu cầu `BVS_AUTH_SECRET` tối thiểu 32 ký tự ngay khi khởi động và không chấp nhận giá trị mẫu như `change-me...` hoặc secret dev-only. Nếu thiếu secret hoặc dùng placeholder, container API sẽ dừng thay vì chờ tới request đăng nhập đầu tiên mới lỗi.
 
+`BVS_HTTP_BODY_LIMIT_BYTES` giới hạn request body JSON ở API, mặc định `1048576` byte. Chỉ tăng giá trị này khi có lý do vận hành rõ ràng; tài liệu/ảnh thật nên đi qua object storage hoặc luồng upload chuyên dụng, không gửi binary lớn trong JSON.
+
 Ở `NODE_ENV=production`, callback xác nhận nhận hồ sơ nên dùng `BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON` để cấu hình secret riêng theo key id gateway, ví dụ `{"gateway-hai-phong-referral":"..."}`. Gateway bệnh viện nhận phải gửi `x-wiiicare-callback-key-id`, `x-wiiicare-callback-timestamp` và `x-wiiicare-callback-signature`; chữ ký là `HMAC-SHA256` trên chuỗi `$TIMESTAMP.$TRANSFER_ID.$CANONICAL_JSON_BODY`, với object key được sắp xếp ổn định, và chỉ được lệch tối đa 5 phút. `BVS_RECORD_TRANSFER_CALLBACK_SECRET` vẫn là fallback cho môi trường chỉ có một gateway.
 
 Ở `NODE_ENV=production`, đăng nhập demo mặc định bị tắt bằng `BVS_DEMO_AUTH_ENABLED=false`. Chỉ bật `BVS_DEMO_AUTH_ENABLED=true` cho phiên smoke/demo có kiểm soát; triển khai thật cần thay bằng IAM/SSO thay vì tài khoản demo hard-coded.

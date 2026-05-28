@@ -41,6 +41,7 @@ describe("API auth and RBAC boundary", () => {
   const originalRecordTransferCallbackSecretsJson =
     process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON;
   const originalApiDocsEnabled = process.env.BVS_API_DOCS_ENABLED;
+  const originalHttpBodyLimitBytes = process.env.BVS_HTTP_BODY_LIMIT_BYTES;
 
   beforeEach(() => {
     process.env.BVS_REPOSITORY = "in-memory";
@@ -87,6 +88,7 @@ describe("API auth and RBAC boundary", () => {
       originalRecordTransferCallbackSecretsJson
     );
     restoreEnv("BVS_API_DOCS_ENABLED", originalApiDocsEnabled);
+    restoreEnv("BVS_HTTP_BODY_LIMIT_BYTES", originalHttpBodyLimitBytes);
   });
 
   it("returns a signed demo session for valid credentials", async () => {
@@ -448,6 +450,7 @@ describe("API auth and RBAC boundary", () => {
       version: "0.2.0",
       repository: "in-memory",
       publicApiBaseUrl: expect.stringContaining("/api/v1"),
+      httpBodyLimitBytes: 1_048_576,
       features: {
         recordTransferDeliveryAttempts: true,
         recordTransferDeliveryWorkerEnabled: false,
@@ -562,6 +565,41 @@ describe("API auth and RBAC boundary", () => {
     await expect(buildServer({ logger: false })).rejects.toThrow(
       "BVS_API_DOCS_ENABLED must be either 'true' or 'false'."
     );
+  });
+
+  it("rejects invalid HTTP body limit configuration", async () => {
+    for (const value of ["512", "10485761", "1.5", "not-a-number"]) {
+      process.env.BVS_HTTP_BODY_LIMIT_BYTES = value;
+
+      await expect(buildServer({ logger: false })).rejects.toThrow(
+        "BVS_HTTP_BODY_LIMIT_BYTES must be an integer between 1024 and 10485760."
+      );
+    }
+  });
+
+  it("rejects oversized JSON request bodies with a safe request error", async () => {
+    process.env.BVS_HTTP_BODY_LIMIT_BYTES = "1024";
+    app = await readyServer();
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/auth/login",
+      headers: {
+        "content-type": "application/json",
+        "x-request-id": "body-too-large-001"
+      },
+      payload: {
+        username: "practitioner-demo-001",
+        password: "x".repeat(2_000),
+        role: "clinician"
+      }
+    });
+
+    expect(response.statusCode).toBe(413);
+    expect(response.json()).toMatchObject({
+      error: "REQUEST_ERROR",
+      requestId: "body-too-large-001"
+    });
   });
 
   it("echoes the request id header for trace correlation", async () => {

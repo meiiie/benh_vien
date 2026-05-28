@@ -8,6 +8,8 @@ API chỉ chấp nhận `x-request-id` có độ dài tối đa 128 ký tự và
 
 Các lỗi không được xử lý riêng sẽ đi qua error envelope tập trung. Lỗi validation payload trên endpoint đăng nhập và endpoint nghiệp vụ trả `400 VALIDATION_ERROR`; lỗi nội bộ trả `500 INTERNAL_SERVER_ERROR`; cả hai đều có `requestId` và không trả stack trace cho client.
 
+API giới hạn request body bằng `BVS_HTTP_BODY_LIMIT_BYTES`, mặc định `1048576` byte. Payload vượt giới hạn trả `413 REQUEST_ERROR` kèm `requestId`; tài liệu/ảnh thật nên đi qua object storage hoặc luồng upload chuyên dụng, không nhồi binary lớn vào JSON metadata.
+
 Các lỗi phân quyền nghiệp vụ trả `requestId`; riêng `401 UNAUTHENTICATED` có thêm header `WWW-Authenticate: Bearer`.
 
 Các lỗi JSON thủ công có trường `error` cũng được API tự bổ sung `requestId` nếu route chưa gắn sẵn. Riêng lỗi FHIR `OperationOutcome` vẫn giữ đúng cấu trúc FHIR và chỉ dùng `X-Request-Id` ở header để truy vết.
