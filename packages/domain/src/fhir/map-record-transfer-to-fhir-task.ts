@@ -95,6 +95,12 @@ function buildRecordTransferNotes(
 ): FhirTask["note"] {
   const notes = [
     snapshot.note,
+    snapshot.receivedByActorId
+      ? `Người xác nhận nhận hồ sơ: ${snapshot.receivedByActorId}`
+      : undefined,
+    snapshot.acknowledgementReference
+      ? `Biên nhận tiếp nhận: ${snapshot.acknowledgementReference}`
+      : undefined,
     snapshot.failureReason
       ? `Lý do lỗi chuyển hồ sơ: ${snapshot.failureReason}`
       : undefined,

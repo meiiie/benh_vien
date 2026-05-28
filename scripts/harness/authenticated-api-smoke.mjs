@@ -368,6 +368,26 @@ if (
   throw new Error("Expected retried record transfer send to queue a second delivery attempt.");
 }
 
+const receivedTransfer = await requestJson(`/record-transfers/${smokeTransfer.id}/receive`, {
+  method: "POST",
+  token: clinicianSession.accessToken,
+  headers: treatmentHeaders(),
+  body: {
+    receivedAt: new Date(Date.now() + 300_000).toISOString(),
+    note: "Authenticated smoke recipient acknowledgement."
+  }
+});
+
+if (
+  receivedTransfer.status !== "completed" ||
+  receivedTransfer.receivedByActorId !== "practitioner-demo-001" ||
+  !/^wiiicare-record-transfer-ack-[a-f0-9]{32}$/.test(
+    receivedTransfer.acknowledgementReference ?? ""
+  )
+) {
+  throw new Error("Expected record transfer receive endpoint to store acknowledgement metadata.");
+}
+
 const globalAuditTrail = await waitForAuditTrail(
   "/audit-events?limit=100",
   {
@@ -478,6 +498,8 @@ console.log(
       referralFhirEndpointId: referralFhirEndpoint.id,
       retriedRecordTransferId: retriedTransfer.id,
       retriedRecordTransferRetryCount: retriedTransfer.retryCount,
+      receivedRecordTransferAcknowledgementReference:
+        receivedTransfer.acknowledgementReference,
       recordTransferDeliveryAttemptCount: smokeTransferAttemptsAfterRetry.items.length,
       globalAuditEventCount: globalAuditTrail.items.length,
       authAuditEventCount: authAuditEvents.length,

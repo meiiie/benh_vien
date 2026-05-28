@@ -884,6 +884,8 @@ type RecordTransfer = {
   readonly requestedAt: string;
   readonly sentAt?: string;
   readonly receivedAt?: string;
+  readonly receivedByActorId?: string;
+  readonly acknowledgementReference?: string;
   readonly failedAt?: string;
   readonly failureReason?: string;
   readonly nextRetryAt?: string;
@@ -5147,6 +5149,8 @@ export function App() {
                   <Info label="Người tạo" value={selectedRecordTransfer.requestedByActorId} />
                   <Info label="Thời điểm gửi" value={selectedRecordTransfer.sentAt ? formatDateTime(selectedRecordTransfer.sentAt) : "Chưa gửi"} />
                   <Info label="Thời điểm nhận" value={selectedRecordTransfer.receivedAt ? formatDateTime(selectedRecordTransfer.receivedAt) : "Chưa xác nhận"} />
+                  <Info label="Người xác nhận nhận" value={selectedRecordTransfer.receivedByActorId ?? "Chưa xác nhận"} />
+                  <Info label="Biên nhận tiếp nhận" value={selectedRecordTransfer.acknowledgementReference ?? "Chưa phát sinh"} />
                   <Info label="Lỗi gửi" value={selectedRecordTransfer.failureReason ?? "Chưa ghi nhận"} />
                   <Info label="Thử lại" value={`${selectedRecordTransfer.retryCount} lần`} />
                   <Info label="Hẹn gửi lại" value={selectedRecordTransfer.nextRetryAt ? formatDateTime(selectedRecordTransfer.nextRetryAt) : "Chưa hẹn"} />

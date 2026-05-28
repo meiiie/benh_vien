@@ -406,7 +406,22 @@ export async function registerRecordTransferRoutes(
     }
 
     try {
-      recordTransfer.markReceived(parsed.data);
+      const receivedAt = parsed.data.receivedAt ?? new Date().toISOString();
+      const receivedByActorId = parsed.data.receivedByActorId ?? actor.actorId;
+      const acknowledgementReference =
+        parsed.data.acknowledgementReference ??
+        buildAcknowledgementReference({
+          recordTransferId: recordTransfer.id,
+          receivedByActorId,
+          receivedAt
+        });
+
+      recordTransfer.markReceived({
+        ...parsed.data,
+        receivedAt,
+        receivedByActorId,
+        acknowledgementReference
+      });
       await recordTransferRepository.save(recordTransfer);
       await recordAuditEvent(auditRepository, request, {
         action: "record-transfer.receive",
@@ -417,6 +432,8 @@ export async function registerRecordTransferRoutes(
           status: recordTransfer.toSnapshot().status,
           sentAt: recordTransfer.toSnapshot().sentAt,
           receivedAt: recordTransfer.toSnapshot().receivedAt,
+          receivedByActorId: recordTransfer.toSnapshot().receivedByActorId,
+          acknowledgementReference: recordTransfer.toSnapshot().acknowledgementReference,
           recipientOrganizationId: recordTransfer.toSnapshot().recipientOrganizationId
         }
       });
@@ -682,4 +699,17 @@ function buildDeliveryIdempotencyKey(input: {
     .digest("hex");
 
   return `wiiicare-record-transfer-${hash}`;
+}
+
+function buildAcknowledgementReference(input: {
+  readonly recordTransferId: string;
+  readonly receivedByActorId: string;
+  readonly receivedAt: string;
+}): string {
+  const hash = createHash("sha256")
+    .update([input.recordTransferId, input.receivedByActorId, input.receivedAt].join("|"))
+    .digest("hex")
+    .slice(0, 32);
+
+  return `wiiicare-record-transfer-ack-${hash}`;
 }

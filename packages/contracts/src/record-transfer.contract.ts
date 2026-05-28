@@ -43,6 +43,8 @@ export const MarkRecordTransferSentRequestSchema = z.object({
 
 export const MarkRecordTransferReceivedRequestSchema = z.object({
   receivedAt: z.string().datetime().optional(),
+  receivedByActorId: z.string().min(1).optional(),
+  acknowledgementReference: z.string().min(1).optional(),
   note: z.string().min(1).optional()
 });
 

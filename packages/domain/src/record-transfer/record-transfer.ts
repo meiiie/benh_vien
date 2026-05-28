@@ -28,6 +28,8 @@ export type RecordTransferSnapshot = {
   readonly requestedAt: string;
   readonly sentAt?: string;
   readonly receivedAt?: string;
+  readonly receivedByActorId?: string;
+  readonly acknowledgementReference?: string;
   readonly failedAt?: string;
   readonly failureReason?: string;
   readonly nextRetryAt?: string;
@@ -45,6 +47,8 @@ export type CreateRecordTransferInput = Omit<
   | "requestedAt"
   | "sentAt"
   | "receivedAt"
+  | "receivedByActorId"
+  | "acknowledgementReference"
   | "failedAt"
   | "failureReason"
   | "nextRetryAt"
@@ -58,6 +62,8 @@ export type CreateRecordTransferInput = Omit<
   readonly requestedAt?: string;
   readonly sentAt?: string;
   readonly receivedAt?: string;
+  readonly receivedByActorId?: string;
+  readonly acknowledgementReference?: string;
   readonly failedAt?: string;
   readonly failureReason?: string;
   readonly nextRetryAt?: string;
@@ -72,6 +78,8 @@ export type MarkRecordTransferSentInput = {
 
 export type MarkRecordTransferReceivedInput = {
   readonly receivedAt?: string;
+  readonly receivedByActorId?: string;
+  readonly acknowledgementReference?: string;
   readonly note?: string;
 };
 
@@ -116,6 +124,8 @@ export class RecordTransfer {
       ? parseDate(input.deadLetteredAt, "Thời điểm đưa hồ sơ vào hàng lỗi cuối không hợp lệ.")
       : undefined;
     const retryCount = normalizeRetryCount(input.retryCount ?? 0);
+    const receivedByActorId = normalizeOptional(input.receivedByActorId);
+    const acknowledgementReference = normalizeOptional(input.acknowledgementReference);
 
     const sourceOrganizationId = normalizeRequired(
       input.sourceOrganizationId,
@@ -140,6 +150,12 @@ export class RecordTransfer {
 
     if (sentAt && receivedAt && receivedAt < sentAt) {
       throw new DomainError("Thời điểm tiếp nhận hồ sơ không được trước thời điểm gửi.");
+    }
+
+    if ((receivedByActorId || acknowledgementReference) && !receivedAt) {
+      throw new DomainError(
+        "Thông tin xác nhận nhận hồ sơ chỉ hợp lệ sau khi có thời điểm tiếp nhận."
+      );
     }
 
     if (failedAt && failedAt < requestedAt) {
@@ -205,6 +221,8 @@ export class RecordTransfer {
       requestedAt: requestedAt.toISOString(),
       sentAt: sentAt?.toISOString(),
       receivedAt: receivedAt?.toISOString(),
+      receivedByActorId,
+      acknowledgementReference,
       failedAt: failedAt?.toISOString(),
       failureReason,
       nextRetryAt: nextRetryAt?.toISOString(),
@@ -229,6 +247,8 @@ export class RecordTransfer {
       receivedAt: snapshot.receivedAt
         ? parseDate(snapshot.receivedAt, "Thời điểm tiếp nhận hồ sơ không hợp lệ.").toISOString()
         : undefined,
+      receivedByActorId: normalizeOptional(snapshot.receivedByActorId),
+      acknowledgementReference: normalizeOptional(snapshot.acknowledgementReference),
       failedAt: snapshot.failedAt
         ? parseDate(snapshot.failedAt, "Thời điểm lỗi chuyển hồ sơ không hợp lệ.").toISOString()
         : undefined,
@@ -320,6 +340,9 @@ export class RecordTransfer {
       ...this.props,
       status: "completed",
       receivedAt: receivedAt.toISOString(),
+      receivedByActorId: normalizeOptional(input.receivedByActorId) ?? this.props.receivedByActorId,
+      acknowledgementReference:
+        normalizeOptional(input.acknowledgementReference) ?? this.props.acknowledgementReference,
       note: normalizeOptional(input.note) ?? this.props.note,
       updatedAt: receivedAt.toISOString()
     };
@@ -399,6 +422,8 @@ export class RecordTransfer {
       status: "ready",
       sentAt: undefined,
       receivedAt: undefined,
+      receivedByActorId: undefined,
+      acknowledgementReference: undefined,
       failedAt: undefined,
       failureReason: undefined,
       nextRetryAt: undefined,

@@ -3611,7 +3611,11 @@ describe("API auth and RBAC boundary", () => {
       id: "record-transfer-demo-001",
       status: "completed",
       sentAt: "2026-05-28T04:00:00.000Z",
-      receivedAt: "2026-05-28T04:15:00.000Z"
+      receivedAt: "2026-05-28T04:15:00.000Z",
+      receivedByActorId: "practitioner-demo-001",
+      acknowledgementReference: expect.stringMatching(
+        /^wiiicare-record-transfer-ack-[a-f0-9]{32}$/
+      )
     });
 
     const fhirResponse = await app.inject({
@@ -3627,7 +3631,12 @@ describe("API auth and RBAC boundary", () => {
       executionPeriod: {
         start: "2026-05-28T04:00:00.000Z",
         end: "2026-05-28T04:15:00.000Z"
-      }
+      },
+      note: expect.arrayContaining([
+        {
+          text: "Người xác nhận nhận hồ sơ: practitioner-demo-001"
+        }
+      ])
     });
   });
 

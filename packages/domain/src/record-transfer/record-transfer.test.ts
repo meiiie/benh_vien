@@ -80,6 +80,8 @@ describe("RecordTransfer", () => {
     });
     transfer.markReceived({
       receivedAt: "2026-05-28T02:45:00.000Z",
+      receivedByActorId: "practitioner-recipient-001",
+      acknowledgementReference: "ack-record-transfer-test-004",
       note: "Bệnh viện nhận đã xác nhận."
     });
 
@@ -87,9 +89,30 @@ describe("RecordTransfer", () => {
       status: "completed",
       sentAt: "2026-05-28T02:30:00.000Z",
       receivedAt: "2026-05-28T02:45:00.000Z",
+      receivedByActorId: "practitioner-recipient-001",
+      acknowledgementReference: "ack-record-transfer-test-004",
       note: "Bệnh viện nhận đã xác nhận.",
       updatedAt: "2026-05-28T02:45:00.000Z"
     });
+  });
+
+  it("rejects acknowledgement metadata before a transfer has been received", () => {
+    expect(() =>
+      RecordTransfer.create({
+        id: "record-transfer-test-009",
+        patientId: "patient-test-001",
+        bundleType: "document",
+        bundleId: "patient-document-patient-test-001",
+        sourceOrganizationId: "hospital-source",
+        recipientOrganizationId: "hospital-recipient",
+        consentReference: "consent-test-001",
+        requestedByActorId: "practitioner-test-001",
+        reason: "Chuyển hồ sơ để hội chẩn chuyên khoa.",
+        requestedAt: "2026-05-28T02:00:00.000Z",
+        sentAt: "2026-05-28T02:30:00.000Z",
+        receivedByActorId: "practitioner-recipient-001"
+      })
+    ).toThrow(DomainError);
   });
 
   it("records a failed delivery and prepares a retry", () => {

@@ -25,6 +25,8 @@ type RecordTransferRow = {
   requested_at: Date | string;
   sent_at: Date | string | null;
   received_at: Date | string | null;
+  received_by_actor_id: string | null;
+  acknowledgement_reference: string | null;
   failed_at: Date | string | null;
   failure_reason: string | null;
   next_retry_at: Date | string | null;
@@ -125,6 +127,8 @@ export class PostgresRecordTransferRepository implements RecordTransferRepositor
         requested_at,
         sent_at,
         received_at,
+        received_by_actor_id,
+        acknowledgement_reference,
         failed_at,
         failure_reason,
         next_retry_at,
@@ -134,7 +138,7 @@ export class PostgresRecordTransferRepository implements RecordTransferRepositor
         created_at,
         updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
       ON CONFLICT (id) DO UPDATE SET
         patient_id = EXCLUDED.patient_id,
         status = EXCLUDED.status,
@@ -149,6 +153,8 @@ export class PostgresRecordTransferRepository implements RecordTransferRepositor
         requested_at = EXCLUDED.requested_at,
         sent_at = EXCLUDED.sent_at,
         received_at = EXCLUDED.received_at,
+        received_by_actor_id = EXCLUDED.received_by_actor_id,
+        acknowledgement_reference = EXCLUDED.acknowledgement_reference,
         failed_at = EXCLUDED.failed_at,
         failure_reason = EXCLUDED.failure_reason,
         next_retry_at = EXCLUDED.next_retry_at,
@@ -171,6 +177,8 @@ export class PostgresRecordTransferRepository implements RecordTransferRepositor
         snapshot.requestedAt,
         snapshot.sentAt ?? null,
         snapshot.receivedAt ?? null,
+        snapshot.receivedByActorId ?? null,
+        snapshot.acknowledgementReference ?? null,
         snapshot.failedAt ?? null,
         snapshot.failureReason ?? null,
         snapshot.nextRetryAt ?? null,
@@ -224,6 +232,8 @@ const selectRecordTransferSql = `SELECT
   requested_at,
   sent_at,
   received_at,
+  received_by_actor_id,
+  acknowledgement_reference,
   failed_at,
   failure_reason,
   next_retry_at,
@@ -250,6 +260,8 @@ function rowToRecordTransfer(row: RecordTransferRow): RecordTransfer {
     requestedAt: toIsoString(row.requested_at),
     sentAt: row.sent_at ? toIsoString(row.sent_at) : undefined,
     receivedAt: row.received_at ? toIsoString(row.received_at) : undefined,
+    receivedByActorId: row.received_by_actor_id ?? undefined,
+    acknowledgementReference: row.acknowledgement_reference ?? undefined,
     failedAt: row.failed_at ? toIsoString(row.failed_at) : undefined,
     failureReason: row.failure_reason ?? undefined,
     nextRetryAt: row.next_retry_at ? toIsoString(row.next_retry_at) : undefined,

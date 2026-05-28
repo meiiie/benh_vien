@@ -964,7 +964,9 @@ completedRecordTransfer.markSent({
   sentAt: "2026-05-27T12:15:00.000Z"
 });
 completedRecordTransfer.markReceived({
-  receivedAt: "2026-05-27T12:30:00.000Z"
+  receivedAt: "2026-05-27T12:30:00.000Z",
+  receivedByActorId: "practitioner-harness-recipient-001",
+  acknowledgementReference: "wiiicare-record-transfer-ack-harness-001"
 });
 const fhirCompletedRecordTransferTask = mapRecordTransferToFhirTask(completedRecordTransfer);
 const failedRecordTransfer = RecordTransfer.create({
@@ -1015,6 +1017,14 @@ if (fhirCompletedRecordTransferTask.status !== "completed") {
 
 if (fhirCompletedRecordTransferTask.executionPeriod?.end !== "2026-05-27T12:30:00.000Z") {
   throw new Error("Expected completed record transfer Task to include executionPeriod end.");
+}
+
+if (
+  !fhirCompletedRecordTransferTask.note?.some((note) =>
+    note.text.includes("wiiicare-record-transfer-ack-harness-001")
+  )
+) {
+  throw new Error("Expected completed record transfer Task to include acknowledgement note.");
 }
 
 if (fhirFailedRecordTransferTask.status !== "failed") {
