@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import cors from "@fastify/cors";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
@@ -94,12 +95,17 @@ type ClosableRepository = {
   close(): Promise<void>;
 };
 
+const requestIdHeaderName = "x-request-id";
+const maxRequestIdLength = 128;
+const requestIdPattern = /^[A-Za-z0-9._:-]+$/;
+
 export async function buildServer(options: ServerOptions = {}) {
   assertAuthConfiguration();
 
   const app = Fastify({
     logger: options.logger ?? true,
-    requestIdHeader: "x-request-id"
+    requestIdHeader: false,
+    genReqId: createRequestId
   });
   const loginRateLimiter = options.loginRateLimiter ?? createLoginRateLimiterFromEnv();
   const managedRepositories: ClosableRepository[] = [];
@@ -581,6 +587,24 @@ function readHttpStatusCode(error: unknown): number {
   const statusCode = (error as { readonly statusCode?: unknown }).statusCode;
 
   return typeof statusCode === "number" ? statusCode : 500;
+}
+
+function createRequestId(request: {
+  readonly headers: Record<string, string | string[] | undefined>;
+}): string {
+  const requestId = request.headers[requestIdHeaderName];
+  const candidate = Array.isArray(requestId) ? requestId[0] : requestId;
+
+  return isSafeRequestId(candidate) ? candidate : randomUUID();
+}
+
+function isSafeRequestId(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= maxRequestIdLength &&
+    requestIdPattern.test(value)
+  );
 }
 
 function readPayloadText(payload: unknown): string | undefined {

@@ -5,6 +5,7 @@ import type { LoginRateLimiter } from "./modules/auth/login-rate-limit.js";
 import { buildServer } from "./server.js";
 
 const testSecret = "wiiicare-test-secret-at-least-32-characters";
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 describe("API auth and RBAC boundary", () => {
   let app: FastifyInstance | undefined;
@@ -326,6 +327,43 @@ describe("API auth and RBAC boundary", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.headers["x-request-id"]).toBe("trace-demo-001");
+  });
+
+  it("replaces unsafe upstream request ids before echoing them", async () => {
+    app = await readyServer();
+
+    const healthResponse = await app.inject({
+      method: "GET",
+      url: "/health",
+      headers: {
+        "x-request-id": "bad trace id with spaces"
+      }
+    });
+    const replacementRequestId = String(healthResponse.headers["x-request-id"]);
+
+    expect(healthResponse.statusCode).toBe(200);
+    expect(replacementRequestId).not.toBe("bad trace id with spaces");
+    expect(replacementRequestId).toMatch(uuidPattern);
+
+    const validationResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/auth/login",
+      headers: {
+        "content-type": "application/json",
+        "x-request-id": "x".repeat(129)
+      },
+      payload: {
+        username: "practitioner-demo-001"
+      }
+    });
+    const validationBody = validationResponse.json();
+
+    expect(validationResponse.statusCode).toBe(400);
+    expect(validationBody).toMatchObject({
+      error: "VALIDATION_ERROR",
+      requestId: expect.stringMatching(uuidPattern)
+    });
+    expect(validationBody.requestId).not.toBe("x".repeat(129));
   });
 
   it("adds request ids to manual JSON error envelopes", async () => {

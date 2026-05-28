@@ -33,6 +33,7 @@ Hồ sơ bệnh án là dữ liệu đặc biệt nhạy cảm. Dự án chưa t
 - Web runtime Nginx áp dụng Content Security Policy chặt cho SPA (`default-src 'self'`, chặn inline script/style, `object-src 'none'`, `frame-ancestors 'none'`) để giảm rủi ro XSS/nhúng ngoài ý muốn. CSP được scope ở `location /` để không phá `/api` và Swagger UI được proxy qua `/docs`.
 - API đặt `Cache-Control: no-store` và `Pragma: no-cache` để giảm rủi ro browser/proxy lưu nhầm response chứa dữ liệu bệnh án.
 - API phản hồi `X-Request-Id`, chấp nhận `x-request-id` từ proxy/upstream và ghi `requestId` vào metadata của audit event để nối log kỹ thuật với hành động lâm sàng.
+- API chỉ tin `x-request-id` upstream nếu ID ngắn và dùng tập ký tự an toàn; giá trị rỗng, quá dài hoặc có khoảng trắng/ký tự lạ sẽ bị thay bằng UUID mới trước khi phản hồi/log/audit.
 - API có error handler tập trung: lỗi validation trả `400 VALIDATION_ERROR`, lỗi ngoài ý muốn trả `500 INTERNAL_SERVER_ERROR`, luôn kèm `requestId` và không trả stack trace hoặc chi tiết nội bộ cho client.
 - API có lớp bảo vệ cuối ở response boundary để tự bổ sung `requestId` cho lỗi JSON thủ công có trường `error`; payload FHIR `OperationOutcome` được loại trừ để giữ đúng contract liên thông.
 - Các lỗi validation payload của endpoint đăng nhập và endpoint nghiệp vụ đều đi qua cùng envelope `400 VALIDATION_ERROR`, tránh trộn nhiều format lỗi cho client.
