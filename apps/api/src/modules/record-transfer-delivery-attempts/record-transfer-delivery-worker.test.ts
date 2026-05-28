@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   Consent,
   Patient,
@@ -30,7 +30,13 @@ import type {
   RecordTransferFhirBundleSendInput
 } from "./record-transfer-delivery-worker.js";
 
+const originalNodeEnv = process.env.NODE_ENV;
+
 describe("record transfer delivery worker", () => {
+  afterEach(() => {
+    restoreEnv("NODE_ENV", originalNodeEnv);
+  });
+
   it("posts a queued FHIR Bundle and marks the delivery attempt as succeeded", async () => {
     const sentBundles: RecordTransferFhirBundleSendInput[] = [];
     const dependencies = await createDeliveryWorkerDependencies({
@@ -158,10 +164,76 @@ describe("record transfer delivery worker", () => {
       })
     });
   });
+
+  it("does not call the sender when production endpoint policy rejects the target endpoint", async () => {
+    process.env.NODE_ENV = "production";
+    let senderCalled = false;
+    const dependencies = await createDeliveryWorkerDependencies({
+      targetEndpointAddress: "http://localhost:8090/fhir",
+      sender: {
+        async send() {
+          senderCalled = true;
+          return {
+            httpStatus: 200
+          };
+        }
+      }
+    });
+
+    const result = await processQueuedRecordTransferDeliveries(dependencies, {
+      checkedAt: new Date("2026-05-28T07:00:05.000Z"),
+      retryDelayMs: 120_000,
+      actorId: "system:test-delivery-worker"
+    });
+
+    expect(senderCalled).toBe(false);
+    expect(result).toMatchObject({
+      queuedCount: 1,
+      deliveredCount: 0,
+      failedCount: 1,
+      failedAttemptIds: ["record-transfer-delivery-worker-001"]
+    });
+
+    const attempts = await dependencies.deliveryAttemptRepository.findByRecordTransferId(
+      "record-transfer-worker-001"
+    );
+    expect(attempts[0]?.toSnapshot()).toMatchObject({
+      status: "failed",
+      completedAt: "2026-05-28T07:00:05.000Z",
+      errorMessage:
+        "Trong production, endpoint FHIR nhận hồ sơ bệnh án phải dùng HTTPS."
+    });
+
+    const transfer = await dependencies.recordTransferRepository.findById(
+      "record-transfer-worker-001"
+    );
+    expect(transfer?.toSnapshot()).toMatchObject({
+      status: "failed",
+      failedAt: "2026-05-28T07:00:05.000Z",
+      failureReason:
+        "Trong production, endpoint FHIR nhận hồ sơ bệnh án phải dùng HTTPS.",
+      nextRetryAt: "2026-05-28T07:02:05.000Z"
+    });
+
+    const auditEvents = await dependencies.auditRepository.findByPatientId(
+      "patient-worker-001"
+    );
+    expect(auditEvents[0]?.toSnapshot()).toMatchObject({
+      action: "record-transfer.fail",
+      purposeOfUse: "OPERATIONS",
+      metadata: expect.objectContaining({
+        worker: "record-transfer-delivery-worker",
+        deliveryStatus: "failed",
+        errorMessage:
+          "Trong production, endpoint FHIR nhận hồ sơ bệnh án phải dùng HTTPS."
+      })
+    });
+  });
 });
 
 async function createDeliveryWorkerDependencies(input: {
   readonly sender: RecordTransferDeliveryWorkerDependencies["sender"];
+  readonly targetEndpointAddress?: string;
 }): Promise<RecordTransferDeliveryWorkerDependencies> {
   const recordTransfer = RecordTransfer.create({
     id: "record-transfer-worker-001",
@@ -183,7 +255,8 @@ async function createDeliveryWorkerDependencies(input: {
     recordTransferId: recordTransfer.id,
     patientId: recordTransfer.patientId,
     targetEndpointId: "endpoint-fhir-hai-phong-referral",
-    targetEndpointAddress: "https://fhir.referral.demo.wiiicare.vn/fhir",
+    targetEndpointAddress:
+      input.targetEndpointAddress ?? "https://fhir.referral.demo.wiiicare.vn/fhir",
     bundleId: "patient-document-patient-worker-001",
     bundleType: "document",
     idempotencyKey: "wiiicare-record-transfer-worker-key",
@@ -241,4 +314,13 @@ async function createDeliveryWorkerDependencies(input: {
     auditRepository: new InMemoryAuditEventRepository(),
     sender: input.sender
   };
+}
+
+function restoreEnv(name: string, value: string | undefined): void {
+  if (value === undefined) {
+    delete process.env[name];
+    return;
+  }
+
+  process.env[name] = value;
 }

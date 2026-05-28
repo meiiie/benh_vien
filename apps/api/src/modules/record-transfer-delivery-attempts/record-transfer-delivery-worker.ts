@@ -11,6 +11,7 @@ import {
   buildRecordTransferFhirBundle,
   type RecordTransferFhirBundleRepositories
 } from "./build-record-transfer-fhir-bundle.js";
+import { validateRecordTransferEndpointForDelivery } from "../record-transfers/record-transfer-endpoint-policy.js";
 
 export type RecordTransferDeliveryWorkerDependencies =
   RecordTransferFhirBundleRepositories & {
@@ -122,6 +123,19 @@ export async function processQueuedRecordTransferDeliveries(
     }
 
     try {
+      const endpointPolicy = validateRecordTransferEndpointForDelivery({
+        endpointAddress: attemptSnapshot.targetEndpointAddress
+      });
+
+      if (!endpointPolicy.allowed) {
+        await failAttemptAndTransfer(dependencies, recordTransfer, attempt, checkedAt, actorId, {
+          errorMessage: endpointPolicy.message,
+          retryDelayMs
+        });
+        failedAttemptIds.push(attemptSnapshot.id);
+        continue;
+      }
+
       const bundle = await buildRecordTransferFhirBundle(
         dependencies,
         recordTransfer,
@@ -242,6 +256,16 @@ export const defaultRecordTransferFhirBundleSender: RecordTransferFhirBundleSend
     }, input.timeoutMs);
 
     try {
+      const endpointPolicy = validateRecordTransferEndpointForDelivery({
+        endpointAddress: attemptSnapshot.targetEndpointAddress
+      });
+
+      if (!endpointPolicy.allowed) {
+        return {
+          errorMessage: endpointPolicy.message
+        };
+      }
+
       const response = await fetch(attemptSnapshot.targetEndpointAddress, {
         method: "POST",
         headers: {

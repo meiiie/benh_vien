@@ -37,6 +37,7 @@ import {
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
 import { verifyRecordTransferCallbackSignature } from "./record-transfer-callback-signature.js";
+import { validateRecordTransferEndpointForDelivery } from "./record-transfer-endpoint-policy.js";
 
 export async function registerRecordTransferRoutes(
   app: FastifyInstance,
@@ -136,6 +137,17 @@ export async function registerRecordTransferRoutes(
         error: "RECORD_TRANSFER_ENDPOINT_NOT_FOUND",
         message:
           "Đơn vị nhận chưa có endpoint FHIR REST đang hoạt động và hỗ trợ Bundle trong Provider Directory."
+      });
+    }
+
+    const endpointPolicy = validateRecordTransferEndpointForDelivery({
+      endpointAddress: targetEndpoint.address
+    });
+
+    if (!endpointPolicy.allowed) {
+      return reply.status(422).send({
+        error: endpointPolicy.error,
+        message: endpointPolicy.message
       });
     }
 
@@ -312,6 +324,17 @@ export async function registerRecordTransferRoutes(
         error: "RECORD_TRANSFER_ENDPOINT_NOT_FOUND",
         message:
           "Không thể gửi gói hồ sơ vì đơn vị nhận chưa có endpoint FHIR REST đang hoạt động và hỗ trợ Bundle."
+      });
+    }
+
+    const endpointPolicy = validateRecordTransferEndpointForDelivery({
+      endpointAddress: targetEndpoint.address
+    });
+
+    if (!endpointPolicy.allowed) {
+      return reply.status(422).send({
+        error: endpointPolicy.error,
+        message: endpointPolicy.message
       });
     }
 
