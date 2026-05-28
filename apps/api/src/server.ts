@@ -89,7 +89,8 @@ type ClosableRepository = {
 
 export async function buildServer(options: ServerOptions = {}) {
   const app = Fastify({
-    logger: options.logger ?? true
+    logger: options.logger ?? true,
+    requestIdHeader: "x-request-id"
   });
   const managedRepositories: ClosableRepository[] = [];
   const trackRepository = <Repository>(repository: Repository): Repository => {
@@ -103,7 +104,8 @@ export async function buildServer(options: ServerOptions = {}) {
   await app.register(cors, {
     origin: resolveCorsOrigins()
   });
-  app.addHook("onRequest", async (_request, reply) => {
+  app.addHook("onRequest", async (request, reply) => {
+    reply.header("X-Request-Id", request.id);
     reply.header("X-Content-Type-Options", "nosniff");
     reply.header("X-Frame-Options", "DENY");
     reply.header("Referrer-Policy", "no-referrer");

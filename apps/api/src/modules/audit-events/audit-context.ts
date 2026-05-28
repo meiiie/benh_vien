@@ -38,6 +38,7 @@ export async function recordAuditEvent(
       userAgent: readHeader(request.headers["user-agent"]),
       metadata: {
         actorRole: actor.role,
+        requestId: request.id,
         ...input.metadata
       }
     })

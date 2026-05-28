@@ -109,6 +109,21 @@ describe("API auth and RBAC boundary", () => {
     expect(response.headers["cross-origin-resource-policy"]).toBe("same-site");
   });
 
+  it("echoes the request id header for trace correlation", async () => {
+    app = await readyServer();
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/health",
+      headers: {
+        "x-request-id": "trace-demo-001"
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["x-request-id"]).toBe("trace-demo-001");
+  });
+
   it("requires explicit CORS origins in production", async () => {
     process.env.NODE_ENV = "production";
     delete process.env.BVS_CORS_ORIGINS;
@@ -252,6 +267,41 @@ describe("API auth and RBAC boundary", () => {
     expect(response.json()).toMatchObject({
       items: expect.any(Array)
     });
+  });
+
+  it("stores request id in audit metadata for clinical access", async () => {
+    app = await readyServer();
+    const clinicianToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const readResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001",
+      headers: {
+        ...treatmentHeaders(clinicianToken),
+        "x-request-id": "audit-trace-demo-001"
+      }
+    });
+    expect(readResponse.statusCode).toBe(200);
+
+    const auditorToken = await loginForToken(app, "security-officer-demo", "auditor");
+    const auditResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/audit-events",
+      headers: auditHeaders(auditorToken)
+    });
+    const body = auditResponse.json();
+
+    expect(auditResponse.statusCode).toBe(200);
+    expect(body.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: "patient.read",
+          metadata: expect.objectContaining({
+            requestId: "audit-trace-demo-001"
+          })
+        })
+      ])
+    );
   });
 
   it("exports patient audit trail as a FHIR AuditEvent Bundle for auditor review", async () => {
