@@ -464,6 +464,7 @@ export async function buildServer(options: ServerOptions = {}) {
       );
 
       await registerAuthRoutes(api, {
+        auditRepository: auditEventRepository,
         loginRateLimiter
       });
       await registerPatientRoutes(

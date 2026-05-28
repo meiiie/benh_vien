@@ -7,6 +7,25 @@ const adminSession = await login("admin-demo", "admin");
 const clinicianSession = await login("practitioner-demo-001", "clinician");
 const auditorSession = await login("security-officer-demo", "auditor");
 
+const invalidLogin = await requestJson("/auth/login", {
+  method: "POST",
+  expectedStatus: 401,
+  headers: {
+    "x-request-id": "postgres-smoke-auth-invalid"
+  },
+  body: {
+    username: `unknown-smoke-${requestTag}`,
+    password: "wrong-password",
+    role: "clinician"
+  }
+});
+
+if (invalidLogin.error !== "INVALID_CREDENTIALS") {
+  throw new Error(
+    `Expected invalid login to return INVALID_CREDENTIALS, received ${invalidLogin.error}.`
+  );
+}
+
 const clinicianPatients = await requestJson("/patients", {
   token: clinicianSession.accessToken,
   headers: treatmentHeaders()
@@ -190,6 +209,41 @@ if (
   throw new Error("Expected global denied patient list access to be visible in audit trail.");
 }
 
+const authAuditEvents = globalAuditTrail.items.filter((event) =>
+  event.action.startsWith("auth.login.")
+);
+
+if (
+  !authAuditEvents.some(
+    (event) =>
+      event.action === "auth.login.failure" &&
+      event.actorId === "anonymous" &&
+      event.metadata?.requestId === "postgres-smoke-auth-invalid" &&
+      event.metadata?.reason === "INVALID_CREDENTIALS" &&
+      typeof event.metadata?.usernameHash === "string" &&
+      !("username" in event.metadata)
+  )
+) {
+  throw new Error(
+    "Expected failed login attempt to be visible without raw username in audit trail."
+  );
+}
+
+if (
+  !authAuditEvents.some(
+    (event) =>
+      event.action === "auth.login.success" &&
+      event.actorId === "practitioner-demo-001" &&
+      event.metadata?.actorRole === "clinician" &&
+      typeof event.metadata?.usernameHash === "string" &&
+      !("username" in event.metadata)
+  )
+) {
+  throw new Error(
+    "Expected successful clinician login to be visible without raw username in audit trail."
+  );
+}
+
 const outsideAuditTrail = await requestJson(
   `/patients/${outsidePatient.id}/audit-events`,
   {
@@ -246,6 +300,7 @@ console.log(
       deniedMedicationExportStatus: 403,
       deniedMedicationError: deniedMedicationExport.error,
       globalAuditEventCount: globalAuditTrail.items.length,
+      authAuditEventCount: authAuditEvents.length,
       deniedAuditEventCount: deniedAuditEvents.length,
       deniedFhirAuditEventCount: deniedFhirAuditEvents.length
     },

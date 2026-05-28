@@ -11,6 +11,8 @@ type FhirAuditEventEntityDetail = NonNullable<
 >[number];
 
 const auditActionLabels: Record<AuditAction, string> = {
+  "auth.login.success": "Đăng nhập thành công",
+  "auth.login.failure": "Đăng nhập thất bại",
   "access.denied": "Truy cập bị từ chối",
   "patient.list": "Tải danh sách bệnh nhân",
   "patient.create": "Tạo bệnh nhân",
@@ -220,7 +222,11 @@ function mapAuditAction(action: AuditAction): FhirAuditEvent["action"] {
     return "U";
   }
 
-  if (action.endsWith(".integrity-verify") || action === "access.denied") {
+  if (
+    action.endsWith(".integrity-verify") ||
+    action === "access.denied" ||
+    action.startsWith("auth.login.")
+  ) {
     return "E";
   }
 
@@ -228,10 +234,14 @@ function mapAuditAction(action: AuditAction): FhirAuditEvent["action"] {
 }
 
 function mapAuditOutcome(action: AuditAction): FhirAuditEvent["outcome"] {
-  return action === "access.denied" ? "4" : "0";
+  return action === "access.denied" || action === "auth.login.failure" ? "4" : "0";
 }
 
 function mapAuditOutcomeDescription(action: AuditAction): string {
+  if (action === "auth.login.failure") {
+    return "Authentication failed";
+  }
+
   return action === "access.denied" ? "Access denied" : "Success";
 }
 

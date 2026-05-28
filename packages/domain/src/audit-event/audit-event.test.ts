@@ -240,4 +240,57 @@ describe("AuditEvent integrity chain", () => {
       ]
     });
   });
+
+  it("maps failed login audit events as failed execution events in FHIR", () => {
+    const failedLogin = sealAuditEvent(
+      AuditEvent.record({
+        id: "audit-event-test-007",
+        occurredAt: new Date("2026-05-28T00:05:00.000Z"),
+        actorId: "anonymous",
+        action: "auth.login.failure",
+        resourceType: "AuditEvent",
+        resourceId: "auth/login",
+        purposeOfUse: "OPERATIONS",
+        metadata: {
+          reason: "INVALID_CREDENTIALS",
+          usernameHash: "a".repeat(64)
+        }
+      })
+    );
+
+    expect(mapAuditEventToFhir(failedLogin)).toMatchObject({
+      resourceType: "AuditEvent",
+      id: "audit-event-test-007",
+      subtype: [
+        {
+          code: "auth.login.failure"
+        }
+      ],
+      action: "E",
+      recorded: "2026-05-28T00:05:00.000Z",
+      outcome: "4",
+      outcomeDesc: "Authentication failed",
+      agent: [
+        {
+          who: {
+            reference: "Practitioner/anonymous"
+          },
+          requestor: true,
+          purposeOfUse: [
+            {
+              code: "HOPERAT"
+            }
+          ]
+        }
+      ],
+      entity: [
+        {
+          what: {
+            reference: "AuditEvent/auth/login"
+          },
+          name: "auth.login.failure"
+        }
+      ]
+    });
+  });
 });

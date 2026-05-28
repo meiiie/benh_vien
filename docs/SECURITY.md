@@ -23,6 +23,7 @@ Hồ sơ bệnh án là dữ liệu đặc biệt nhạy cảm. Dự án chưa t
 
 - Các phản hồi `403 FORBIDDEN` và `403 PATIENT_ACCESS_DENIED` được ghi thành audit event `access.denied`; với lỗi theo hồ sơ bệnh nhân, sự kiện được gắn vào audit trail của bệnh nhân và khi xuất FHIR sẽ có `AuditEvent.outcome = 4` để thể hiện lần truy cập bị chặn.
 - Kiểm toán viên hoặc quản trị viên dùng mục đích `AUDIT` có thể gọi `GET /api/v1/audit-events` để xem các audit event gần nhất ở phạm vi toàn hệ thống, bao gồm cả sự kiện bảo mật không gắn `patientId`.
+- Đăng nhập demo thành công và thất bại được ghi audit bằng `auth.login.success`/`auth.login.failure`; sự kiện thất bại chỉ lưu `usernameHash`, không lưu username thô.
 
 - API đã yêu cầu `Authorization: Bearer <token>` cho endpoint nghiệp vụ.
 - Ở `NODE_ENV=production`, API bắt buộc `BVS_REPOSITORY=postgres`; in-memory repository chỉ dành cho dev/test và không được dùng cho dữ liệu bệnh án thật.
