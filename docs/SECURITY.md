@@ -23,6 +23,7 @@ Hồ sơ bệnh án là dữ liệu đặc biệt nhạy cảm. Dự án chưa t
 
 - API đã yêu cầu `Authorization: Bearer <token>` cho endpoint nghiệp vụ.
 - Token demo do `POST /api/v1/auth/login` phát hành, ký bằng `BVS_AUTH_SECRET`. Mật khẩu demo được kiểm tra bằng hash `scrypt` và so sánh timing-safe; đây vẫn là cơ chế demo, chưa thay thế IAM/SSO production.
+- Ở `NODE_ENV=production`, đăng nhập demo mặc định bị tắt và chỉ hoạt động nếu cấu hình rõ `BVS_DEMO_AUTH_ENABLED=true` cho phiên smoke/demo có kiểm soát.
 - Ở `NODE_ENV=production`, API kiểm tra `BVS_AUTH_SECRET` ngay khi khởi động và dừng sớm nếu secret thiếu, ngắn hơn 32 ký tự hoặc vẫn là placeholder/dev-only secret.
 - Ở `NODE_ENV=production`, API cũng từ chối mở PostgreSQL repository pool nếu `DATABASE_URL` vẫn chứa credential mẫu/dev như `change-me...` hoặc `bvs_dev_password`.
 - TTL của token demo được cấu hình bằng `BVS_AUTH_TOKEN_TTL_SECONDS`, mặc định `28800` giây, và bị giới hạn trong khoảng `300` đến `28800` giây để tránh phiên quá ngắn hoặc quá dài do cấu hình sai.

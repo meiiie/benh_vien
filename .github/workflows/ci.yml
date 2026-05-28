@@ -88,8 +88,20 @@ jobs:
           curl -fsSI http://localhost:8080/ | grep -i '^X-Frame-Options: DENY'
           curl -fsSI http://localhost:8080/ | grep -i '^X-Content-Type-Options: nosniff'
 
-      - name: Verify patient API
-        run: curl -fsS http://localhost:8080/api/v1/patients
+      - name: Verify patient API requires authentication
+        run: |
+          status=$(curl -sS -o /tmp/patient-api.json -w "%{http_code}" http://localhost:8080/api/v1/patients)
+          test "$status" = "401"
+          grep -q "UNAUTHENTICATED" /tmp/patient-api.json
+
+      - name: Verify demo login is disabled in production-like smoke
+        run: |
+          status=$(curl -sS -o /tmp/demo-login.json -w "%{http_code}" \
+            -X POST http://localhost:8080/api/v1/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"username":"practitioner-demo-001","password":"demo","role":"clinician"}')
+          test "$status" = "403"
+          grep -q "DEMO_AUTH_DISABLED" /tmp/demo-login.json
 
       - name: Verify database migration
         run: docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -c "select version from schema_migrations order by version;"

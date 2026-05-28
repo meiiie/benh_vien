@@ -85,7 +85,7 @@ API có `/health` cho liveness và `/ready` cho readiness; `/ready` kiểm tra A
 
 Khi chạy local không Docker, có thể dùng in-memory repository để phát triển nhanh; khi cần kiểm chứng sát thực tế, dùng Docker dev/prod để chạy PostgreSQL.
 
-API nghiệp vụ yêu cầu đăng nhập qua `POST /api/v1/auth/login` và gửi `Authorization: Bearer <token>`. Biến `BVS_AUTH_SECRET` phải dài tối thiểu 32 ký tự; ở `NODE_ENV=production`, API sẽ từ chối khởi động nếu thiếu secret hợp lệ.
+API nghiệp vụ yêu cầu đăng nhập qua `POST /api/v1/auth/login` và gửi `Authorization: Bearer <token>`. Biến `BVS_AUTH_SECRET` phải dài tối thiểu 32 ký tự; ở `NODE_ENV=production`, API sẽ từ chối khởi động nếu thiếu secret hợp lệ. Đăng nhập demo mặc định bị tắt trong production và chỉ được bật có chủ đích bằng `BVS_DEMO_AUTH_ENABLED=true` cho phiên smoke/demo có kiểm soát.
 
 ## GitHub và release
 

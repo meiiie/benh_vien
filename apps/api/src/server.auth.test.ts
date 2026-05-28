@@ -19,6 +19,7 @@ describe("API auth and RBAC boundary", () => {
     process.env.BVS_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS;
   const originalRateLimitStore = process.env.BVS_RATE_LIMIT_STORE;
   const originalValkeyUrl = process.env.BVS_VALKEY_URL;
+  const originalDemoAuthEnabled = process.env.BVS_DEMO_AUTH_ENABLED;
 
   beforeEach(() => {
     process.env.BVS_REPOSITORY = "in-memory";
@@ -43,6 +44,7 @@ describe("API auth and RBAC boundary", () => {
     );
     restoreEnv("BVS_RATE_LIMIT_STORE", originalRateLimitStore);
     restoreEnv("BVS_VALKEY_URL", originalValkeyUrl);
+    restoreEnv("BVS_DEMO_AUTH_ENABLED", originalDemoAuthEnabled);
   });
 
   it("returns a signed demo session for valid credentials", async () => {
@@ -80,6 +82,54 @@ describe("API auth and RBAC boundary", () => {
     expect(response.statusCode).toBe(200);
     expect(ttlSeconds).toBeGreaterThanOrEqual(590);
     expect(ttlSeconds).toBeLessThanOrEqual(610);
+  });
+
+  it("disables demo login by default in production", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.BVS_CORS_ORIGINS = "https://wiiicare.example.vn";
+    process.env.BVS_RATE_LIMIT_STORE = "memory";
+    delete process.env.BVS_DEMO_AUTH_ENABLED;
+    app = await readyServer();
+
+    const response = await login(
+      app,
+      {
+        username: "practitioner-demo-001",
+        password: "demo",
+        role: "clinician"
+      },
+      {
+        "x-request-id": "demo-auth-disabled-001"
+      }
+    );
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({
+      error: "DEMO_AUTH_DISABLED",
+      requestId: "demo-auth-disabled-001"
+    });
+  });
+
+  it("allows demo login in production only when explicitly enabled", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.BVS_CORS_ORIGINS = "https://wiiicare.example.vn";
+    process.env.BVS_RATE_LIMIT_STORE = "memory";
+    process.env.BVS_DEMO_AUTH_ENABLED = "true";
+    app = await readyServer();
+
+    const response = await login(app, {
+      username: "practitioner-demo-001",
+      password: "demo",
+      role: "clinician"
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      actor: {
+        actorId: "practitioner-demo-001",
+        role: "clinician"
+      }
+    });
   });
 
   it("returns request ids for auth boundary errors", async () => {

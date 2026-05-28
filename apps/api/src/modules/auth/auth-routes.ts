@@ -61,6 +61,15 @@ export async function registerAuthRoutes(
   });
 
   app.post("/auth/login", async (request, reply) => {
+    if (!isDemoAuthEnabled()) {
+      return reply.status(403).send({
+        error: "DEMO_AUTH_DISABLED",
+        message:
+          "Đăng nhập demo đã bị tắt trong môi trường production. Hãy tích hợp IAM/SSO hoặc bật BVS_DEMO_AUTH_ENABLED=true cho phiên demo có kiểm soát.",
+        requestId: request.id
+      });
+    }
+
     const parsed = LoginRequestSchema.safeParse(request.body);
 
     if (!parsed.success) {
@@ -138,4 +147,18 @@ function readBearerToken(value: string | string[] | undefined): string | undefin
   }
 
   return header.slice("Bearer ".length).trim();
+}
+
+function isDemoAuthEnabled(): boolean {
+  const rawValue = process.env.BVS_DEMO_AUTH_ENABLED?.trim().toLowerCase();
+
+  if (rawValue === "true") {
+    return true;
+  }
+
+  if (rawValue === "false") {
+    return false;
+  }
+
+  return process.env.NODE_ENV !== "production";
 }
