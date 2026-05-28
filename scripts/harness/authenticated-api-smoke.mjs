@@ -192,22 +192,22 @@ if (deniedGlobalPatientList.error !== "FORBIDDEN") {
   );
 }
 
-const globalAuditTrail = await requestJson("/audit-events?limit=100", {
-  token: auditorSession.accessToken,
-  headers: auditHeaders()
-});
-
-if (
-  !globalAuditTrail.items.some(
-    (event) =>
-      event.action === "access.denied" &&
-      event.patientId === undefined &&
-      event.resourceId === "patient:list" &&
-      event.metadata?.requestId === "postgres-smoke-global-patient-list-denied"
-  )
-) {
-  throw new Error("Expected global denied patient list access to be visible in audit trail.");
-}
+const globalAuditTrail = await waitForAuditTrail(
+  "/audit-events?limit=100",
+  {
+    token: auditorSession.accessToken,
+    headers: auditHeaders()
+  },
+  (auditTrail) =>
+    auditTrail.items.some(
+      (event) =>
+        event.action === "access.denied" &&
+        event.patientId === undefined &&
+        event.resourceId === "patient:list" &&
+        event.metadata?.requestId === "postgres-smoke-global-patient-list-denied"
+    ),
+  "Expected global denied patient list access to be visible in audit trail."
+);
 
 const authAuditEvents = globalAuditTrail.items.filter((event) =>
   event.action.startsWith("auth.login.")
@@ -244,27 +244,25 @@ if (
   );
 }
 
-const outsideAuditTrail = await requestJson(
+const outsideAuditTrail = await waitForAuditTrail(
   `/patients/${outsidePatient.id}/audit-events`,
   {
     token: auditorSession.accessToken,
     headers: auditHeaders()
-  }
+  },
+  (auditTrail) =>
+    auditTrail.items.some(
+      (event) =>
+        event.action === "access.denied" &&
+        event.patientId === outsidePatient.id &&
+        event.metadata?.requestId === "postgres-smoke-medication-list-denied" &&
+        event.metadata?.denialCode === "PATIENT_ACCESS_DENIED"
+    ),
+  "Expected denied medication list access to be captured in audit trail."
 );
 const deniedAuditEvents = outsideAuditTrail.items.filter(
   (event) => event.action === "access.denied"
 );
-
-if (
-  !deniedAuditEvents.some(
-    (event) =>
-      event.patientId === outsidePatient.id &&
-      event.metadata?.requestId === "postgres-smoke-medication-list-denied" &&
-      event.metadata?.denialCode === "PATIENT_ACCESS_DENIED"
-  )
-) {
-  throw new Error("Expected denied medication list access to be captured in audit trail.");
-}
 
 const outsideAuditBundle = await requestJson(
   `/patients/${outsidePatient.id}/audit-events/fhir-bundle`,
@@ -359,6 +357,32 @@ async function requestJson(
   }
 
   return payload;
+}
+
+async function waitForAuditTrail(path, requestOptions, predicate, errorMessage) {
+  const deadline = Date.now() + 5_000;
+  let latestAuditTrail;
+
+  while (Date.now() < deadline) {
+    latestAuditTrail = await requestJson(path, requestOptions);
+
+    if (predicate(latestAuditTrail)) {
+      return latestAuditTrail;
+    }
+
+    await sleep(100);
+  }
+
+  const latestCount = Array.isArray(latestAuditTrail?.items)
+    ? latestAuditTrail.items.length
+    : 0;
+  throw new Error(`${errorMessage} Last observed audit event count: ${latestCount}.`);
+}
+
+function sleep(milliseconds) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
 }
 
 function treatmentHeaders() {
