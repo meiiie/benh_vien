@@ -757,6 +757,21 @@ h2 {
   margin: 6px 0;
 }
 
+.patient-list-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.patient-list-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 0.55fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+
 .patient-cards,
 .timeline,
 .document-cards,
@@ -1427,6 +1442,10 @@ pre {
   .settings-grid,
   .workspace,
   .reference-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-list-controls {
     grid-template-columns: 1fr;
   }
 

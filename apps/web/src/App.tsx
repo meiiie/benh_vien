@@ -328,6 +328,8 @@ type Patient = {
   readonly updatedAt: string;
 };
 
+type PatientStatusFilter = "all" | Patient["status"];
+
 type Encounter = {
   readonly id: string;
   readonly patientId: string;
@@ -1644,6 +1646,9 @@ export function App() {
   const [loginError, setLoginError] = useState<string>();
   const [patients, setPatients] = useState<readonly Patient[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string>();
+  const [patientSearchTerm, setPatientSearchTerm] = useState("");
+  const [patientStatusFilter, setPatientStatusFilter] =
+    useState<PatientStatusFilter>("all");
   const [encounters, setEncounters] = useState<readonly Encounter[]>([]);
   const [selectedEncounterId, setSelectedEncounterId] = useState<string>();
   const [clinicalDocuments, setClinicalDocuments] = useState<readonly ClinicalDocument[]>([]);
@@ -1811,6 +1816,32 @@ export function App() {
   const isPatientMergeConfirmationValid =
     Boolean(selectedPatient) &&
     patientMergeForm.confirmationText.trim() === patientMergeConfirmationCode;
+  const normalizedPatientSearchTerm = normalizeSearchText(patientSearchTerm);
+  const visiblePatients = patients.filter((patient) => {
+    if (patientStatusFilter !== "all" && patient.status !== patientStatusFilter) {
+      return false;
+    }
+
+    if (!normalizedPatientSearchTerm) {
+      return true;
+    }
+
+    return [
+      patient.id,
+      patient.fullName,
+      patient.address ?? "",
+      patient.phone ?? "",
+      patient.managingOrganizationId,
+      formatPatientRecordStatus(patient.status),
+      ...patient.identifiers.flatMap((identifier) => [
+        identifier.value,
+        identifier.system,
+        formatIdentifierType(identifier.type)
+      ])
+    ].some((value) => normalizeSearchText(value).includes(normalizedPatientSearchTerm));
+  });
+  const hasPatientListFilter =
+    Boolean(normalizedPatientSearchTerm) || patientStatusFilter !== "all";
   const selectedEncounter = encounters.find((encounter) => encounter.id === selectedEncounterId);
   const selectedDocument = clinicalDocuments.find((document) => document.id === selectedDocumentId);
   const selectedAllergyIntolerance = allergyIntolerances.find(
@@ -5370,18 +5401,59 @@ export function App() {
             <p className="eyebrow">Registry</p>
             <h2>Danh sách bệnh nhân</h2>
           </div>
+          <div className="patient-list-actions">
+            <span className="pill cyan">
+              {visiblePatients.length}/{patients.length} hồ sơ
+            </span>
+            <button
+              className="ghost-button compact-button"
+              type="button"
+              onClick={() => void loadPatients()}
+              disabled={isLoadingPatients}
+            >
+              {isLoadingPatients ? "Đang tải..." : "Tải lại"}
+            </button>
+          </div>
+        </div>
+
+        <div className="patient-list-controls">
+          <label>
+            Tìm kiếm
+            <input
+              value={patientSearchTerm}
+              onChange={(event) => setPatientSearchTerm(event.target.value)}
+              placeholder="Tên, MRN/CCCD, điện thoại, cơ sở..."
+            />
+          </label>
+          <label>
+            Trạng thái
+            <select
+              value={patientStatusFilter}
+              onChange={(event) =>
+                setPatientStatusFilter(event.target.value as PatientStatusFilter)
+              }
+            >
+              <option value="all">Tất cả trạng thái</option>
+              <option value="active">Đang hoạt động</option>
+              <option value="merged">Đã merge</option>
+              <option value="inactive">Ngừng hoạt động</option>
+            </select>
+          </label>
           <button
-            className="ghost-button"
+            className="ghost-button compact-button"
             type="button"
-            onClick={() => void loadPatients()}
-            disabled={isLoadingPatients}
+            onClick={() => {
+              setPatientSearchTerm("");
+              setPatientStatusFilter("all");
+            }}
+            disabled={!hasPatientListFilter}
           >
-            {isLoadingPatients ? "Đang tải..." : "Tải lại"}
+            Xóa lọc
           </button>
         </div>
 
         <div className="patient-cards">
-          {patients.map((patient) => (
+          {visiblePatients.map((patient) => (
             <button
               className={[
                 "patient-card",
@@ -5401,6 +5473,11 @@ export function App() {
               <small>{patient.address ?? "Chưa có địa chỉ"}</small>
             </button>
           ))}
+          {!isLoadingPatients && visiblePatients.length === 0 ? (
+            <p className="empty-state">
+              Không có hồ sơ phù hợp với bộ lọc hiện tại. Hãy thử xóa lọc hoặc tìm theo mã MRN/CCCD khác.
+            </p>
+          ) : null}
         </div>
       </article>
     );
@@ -9725,6 +9802,15 @@ function formatPatientRecordStatus(status: Patient["status"]): string {
   };
 
   return labels[status];
+}
+
+function normalizeSearchText(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d");
 }
 
 function formatIdentifierType(type: PatientIdentifierType): string {
