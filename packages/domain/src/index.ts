@@ -41,6 +41,7 @@ export * from "./fhir/build-capability-statement.js";
 export * from "./fhir/map-audit-event-to-fhir.js";
 export * from "./fhir/map-allergy-intolerance-to-fhir.js";
 export * from "./fhir/map-clinical-document-to-fhir.js";
+export * from "./fhir/map-clinical-document-to-fhir-provenance.js";
 export * from "./fhir/map-consent-to-fhir.js";
 export * from "./fhir/map-condition-to-fhir.js";
 export * from "./fhir/map-diagnostic-report-to-fhir.js";

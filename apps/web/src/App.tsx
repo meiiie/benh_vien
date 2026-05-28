@@ -779,6 +779,7 @@ type AuditAction =
   | "clinical-document.create"
   | "clinical-document.sign"
   | "clinical-document.fhir-export"
+  | "clinical-document.provenance-export"
   | "consent.list"
   | "consent.create"
   | "consent.revoke"
@@ -1519,7 +1520,7 @@ const referenceSignals = [
   },
   {
     name: "HL7 FHIR R4",
-    value: "Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, MedicationDispense, MedicationAdministration, DocumentReference cùng Organization/Practitioner/Endpoint là lõi trao đổi dữ liệu; RecordTransfer xuất thành Task để điều phối chuyển hồ sơ."
+    value: "Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, MedicationDispense, MedicationAdministration, DocumentReference, Provenance cùng Organization/Practitioner/Endpoint là lõi trao đổi dữ liệu; RecordTransfer xuất thành Task để điều phối chuyển hồ sơ."
   },
   {
     name: "Bối cảnh Việt Nam",
@@ -1587,6 +1588,8 @@ export function App() {
     useState<unknown>();
   const [encounterFhirPreview, setEncounterFhirPreview] = useState<unknown>();
   const [documentFhirPreview, setDocumentFhirPreview] = useState<unknown>();
+  const [documentProvenanceFhirPreview, setDocumentProvenanceFhirPreview] =
+    useState<unknown>();
   const [allergyIntoleranceFhirPreview, setAllergyIntoleranceFhirPreview] = useState<unknown>();
   const [conditionFhirPreview, setConditionFhirPreview] = useState<unknown>();
   const [observationFhirPreview, setObservationFhirPreview] = useState<unknown>();
@@ -1853,11 +1856,20 @@ export function App() {
   useEffect(() => {
     if (!selectedDocumentId) {
       setDocumentFhirPreview(undefined);
+      setDocumentProvenanceFhirPreview(undefined);
       return;
     }
 
     void loadDocumentFhirPreview(selectedDocumentId);
-  }, [selectedDocumentId]);
+    if (selectedDocument?.status === "signed") {
+      void loadDocumentProvenanceFhirPreview(selectedDocumentId);
+      return;
+    }
+
+    setDocumentProvenanceFhirPreview({
+      note: "FHIR Provenance chỉ được xuất khi tài liệu đã ký/xác nhận."
+    });
+  }, [selectedDocumentId, selectedDocument?.status]);
 
   useEffect(() => {
     if (!selectedConditionId) {
@@ -2875,6 +2887,30 @@ export function App() {
           error instanceof Error
             ? `Không thể xuất FHIR DocumentReference: ${error.message}`
             : "Không thể xuất FHIR DocumentReference."
+      });
+    }
+  }
+
+  async function loadDocumentProvenanceFhirPreview(documentId: string) {
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/clinical-documents/${documentId}/fhir-provenance`,
+        {
+          headers: buildHeaders("TREATMENT")
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`API trả về HTTP ${response.status}`);
+      }
+
+      setDocumentProvenanceFhirPreview(await response.json());
+    } catch (error) {
+      setDocumentProvenanceFhirPreview({
+        error:
+          error instanceof Error
+            ? `Không thể xuất FHIR Provenance: ${error.message}`
+            : "Không thể xuất FHIR Provenance."
       });
     }
   }
@@ -4394,6 +4430,7 @@ export function App() {
       const signedDocument = (await response.json()) as ClinicalDocument;
       await loadClinicalDocuments(signedDocument.patientId, signedDocument.id);
       await loadDocumentFhirPreview(signedDocument.id);
+      await loadDocumentProvenanceFhirPreview(signedDocument.id);
       await loadAuditEvents(signedDocument.patientId, { silent: true });
       setStatusMessage(`Đã ký tài liệu "${signedDocument.title}".`);
     } catch (error) {
@@ -4509,7 +4546,7 @@ export function App() {
               </button>
               <button type="button" onClick={() => setAppRoute("interop")}>
                 <strong>Xem gói FHIR</strong>
-                <span>Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, MedicationDispense, MedicationAdministration, DocumentReference và gói chuyển hồ sơ đã có preview.</span>
+                <span>Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, MedicationDispense, MedicationAdministration, DocumentReference, Provenance và gói chuyển hồ sơ đã có preview.</span>
               </button>
             </div>
           </article>
@@ -4588,6 +4625,7 @@ export function App() {
           {renderPatientListPanel()}
           {renderDocumentPanel()}
           <FhirPanel title="FHIR DocumentReference JSON" badge="DocumentReference" value={documentFhirPreview} />
+          <FhirPanel title="FHIR Provenance JSON" badge="Provenance" value={documentProvenanceFhirPreview} />
         </section>
       </div>
     );
@@ -4656,6 +4694,7 @@ export function App() {
           <FhirPanel title="FHIR MedicationDispense JSON" badge="MedicationDispense" value={medicationDispenseFhirPreview} />
           <FhirPanel title="FHIR MedicationAdministration JSON" badge="MedicationAdministration" value={medicationAdministrationFhirPreview} />
           <FhirPanel title="FHIR DocumentReference JSON" badge="DocumentReference" value={documentFhirPreview} />
+          <FhirPanel title="FHIR Document Provenance JSON" badge="Provenance" value={documentProvenanceFhirPreview} />
           {renderConsentInteropPanel()}
           <FhirPanel title="FHIR Consent JSON" badge="Consent" value={consentFhirPreview} />
           {renderRecordTransferInteropPanel()}
@@ -8382,7 +8421,7 @@ function LandingPage({
           ["Patient Workspace", "Bàn làm việc theo bệnh nhân, giống nhịp vận hành EMR thật."],
           ["Document Center", "Quản lý CCR, CCDA, hồ sơ bệnh án, xét nghiệm và tài liệu chuyển tuyến."],
           ["Audit & RBAC", "Ghi log truy cập nhạy cảm và kiểm tra quyền theo vai trò demo."],
-          ["Liên thông FHIR", "Xuất Patient, Provider Directory, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, MedicationDispense, MedicationAdministration, DocumentReference và Task chuyển hồ sơ để chuẩn bị liên thông."]
+          ["Liên thông FHIR", "Xuất Patient, Provider Directory, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, MedicationDispense, MedicationAdministration, DocumentReference, Provenance và Task chuyển hồ sơ để chuẩn bị liên thông."]
         ].map(([title, description]) => (
           <article className="panel" key={title}>
             <p className="eyebrow">{title}</p>
@@ -8744,6 +8783,7 @@ function formatAuditAction(action: AuditAction): string {
     "clinical-document.create": "Tạo tài liệu bệnh án",
     "clinical-document.sign": "Ký tài liệu bệnh án",
     "clinical-document.fhir-export": "Xuất FHIR DocumentReference",
+    "clinical-document.provenance-export": "Xuất FHIR Provenance tài liệu",
     "consent.list": "Tải đồng ý chia sẻ hồ sơ",
     "consent.create": "Tạo đồng ý chia sẻ hồ sơ",
     "consent.revoke": "Thu hồi đồng ý chia sẻ hồ sơ",

@@ -93,6 +93,11 @@ const supportedResources: readonly SupportedFhirResource[] = [
     documentation: "Clinical document metadata for EMR documents and referral artifacts."
   },
   {
+    type: "Provenance",
+    documentation:
+      "Provenance records for signed clinical documents, linking actors and signing activity back to DocumentReference."
+  },
+  {
     type: "Composition",
     documentation: "Document Bundle table of contents used as the first entry of FHIR document exports."
   },

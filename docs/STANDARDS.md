@@ -44,9 +44,11 @@ Nguồn:
 - [FHIR Composition Resource](https://hl7.org/fhir/R4/composition.html)
 - [FHIR Bundle Resource](https://hl7.org/fhir/R4/bundle.html)
 - [FHIR DocumentReference Resource](https://hl7.org/fhir/R4/documentreference.html)
+- [FHIR Provenance Resource](https://hl7.org/fhir/R4/provenance.html)
 - [FHIR Consent Resource](https://hl7.org/fhir/R4/consent.html)
 - [FHIR AuditEvent Resource](https://hl7.org/fhir/R4/auditevent.html)
 - [FHIR CapabilityStatement Resource](https://hl7.org/fhir/R4/capabilitystatement.html)
+- [HL7 Terminology - DataOperation](https://terminology.hl7.org/5.1.0/CodeSystem-v3-DataOperation.html)
 
 Hàm ý cho dự án:
 
@@ -65,6 +67,7 @@ Hàm ý cho dự án:
 - `MedicationDispense` phù hợp cho sự kiện thuốc đã được cấp phát cho người bệnh hoặc khoa/phòng, thường là kết quả của hệ thống dược/kho đáp ứng một `MedicationRequest`. Trong dự án này, resource này giữ các thông tin “đã cấp bao nhiêu, cấp cho bao nhiêu ngày, chuẩn bị/bàn giao lúc nào, ai cấp và ai nhận”.
 - `MedicationAdministration` phù hợp cho sự kiện thuốc đã được dùng hoặc được xác nhận dùng cho người bệnh. Trong dự án này, resource này đóng vòng `MedicationRequest -> MedicationDispense -> MedicationAdministration`: chỉ định thuốc là “cần dùng thuốc gì”, cấp phát thuốc là “đã bàn giao thuốc gì, bao nhiêu”, còn dùng thuốc thực tế là “đã dùng lúc nào, liều bao nhiêu, ai/thiết bị nào xác nhận”.
 - `Composition` phù hợp để tạo mục lục lâm sàng cho một FHIR document. Khi `Bundle.type = document`, entry đầu tiên bắt buộc phải là `Composition`; các section của Composition nên tham chiếu các resource nằm trong Bundle.
+- `Provenance` phù hợp để ghi nguồn gốc của một resource: ai tham gia, hoạt động gì đã xảy ra, xảy ra khi nào và resource nào là đích. Trong dự án này, tài liệu bệnh án đã ký có thể xuất `Provenance` trỏ tới `DocumentReference`, dùng `recorded`/`occurredDateTime` theo thời điểm ký và `agent.who` trỏ tới bác sĩ/người chịu trách nhiệm. Resource này không thay thế chữ ký số pháp lý; nếu triển khai chữ ký số thật thì mới bổ sung `Provenance.signature`.
 - `Consent` là hướng chuẩn FHIR để biểu diễn đồng ý, chính sách chia sẻ và trạng thái hiệu lực của đồng ý. Domain hiện dùng trạng thái nội bộ `active`, `revoked`, `expired`; khi ánh xạ sang FHIR, `active` được giữ là `active`, còn `revoked`/`expired` được biểu diễn là `inactive` kèm metadata giải thích trong extension nội bộ của prototype.
 - `AuditEvent` dùng để biểu diễn sự kiện bảo mật/kiểm toán. Domain hiện ánh xạ action nội bộ sang `AuditEvent.type`, `subtype`, `action`, `recorded`, `agent`, `source`, `entity` và các `detail` chứa hash toàn vẹn; đây là profile tối thiểu để kiểm toán viên xem log theo ngôn ngữ FHIR R4.
 - `CapabilityStatement` dùng để công bố năng lực FHIR của facade. Endpoint `/api/v1/fhir/metadata` hiện khai báo các resource R4 đang xuất được, chế độ `server`, định dạng `json`, endpoint triển khai và cảnh báo rằng prototype chưa phải FHIR REST server đầy đủ.

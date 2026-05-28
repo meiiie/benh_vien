@@ -26,6 +26,10 @@ curl -fsS http://localhost:7310/api/v1/patients/patient-demo-001/fhir \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-purpose-of-use: TREATMENT"
 
+curl -fsS http://localhost:7310/api/v1/clinical-documents/clinical-document-demo-001/fhir-provenance \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+
 curl -fsS http://localhost:7310/api/v1/provider-directory \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-purpose-of-use: TREATMENT"

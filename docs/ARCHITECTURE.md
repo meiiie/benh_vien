@@ -72,7 +72,7 @@ sequenceDiagram
   EMR->>Audit: Ghi nhật ký thao tác
   User->>App: Ký hoặc xác nhận điện tử
   App->>EMR: Chuyển trạng thái tài liệu sang signed
-  EMR->>FHIR: Chuyển đổi sang FHIR Patient/Organization/Practitioner/PractitionerRole/Endpoint/Encounter/AllergyIntolerance/Condition/ServiceRequest/Task/Procedure/Observation/DiagnosticReport/ImagingStudy/MedicationRequest/MedicationDispense/MedicationAdministration/DocumentReference/Composition/Task chuyển hồ sơ
+  EMR->>FHIR: Chuyển đổi sang FHIR Patient/Organization/Practitioner/PractitionerRole/Endpoint/Encounter/AllergyIntolerance/Condition/ServiceRequest/Task/Procedure/Observation/DiagnosticReport/ImagingStudy/MedicationRequest/MedicationDispense/MedicationAdministration/DocumentReference/Provenance/Composition/Task chuyển hồ sơ
   FHIR->>Partner: Chia sẻ theo API hoặc hồ sơ IHE phù hợp
 ```
 
@@ -90,7 +90,7 @@ sequenceDiagram
 - **Vòng thuốc phải tách ba bước.** `MedicationRequest` là chỉ định/kế hoạch dùng thuốc; `MedicationDispense` là sự kiện khoa dược/kho thuốc đã cấp phát thuốc, số lượng và thời điểm bàn giao; `MedicationAdministration` là sự kiện thuốc đã được dùng hoặc được xác nhận dùng, có thời điểm, liều thực tế và người/thiết bị xác nhận.
 - **Chỉ số lâm sàng cần có cấu trúc máy đọc được.** Sinh hiệu và xét nghiệm không nên chỉ nằm trong PDF; tối thiểu cần mã chuẩn, giá trị, đơn vị, thời điểm, người ghi nhận và liên kết bệnh nhân/lượt khám.
 - **Chỉ định thuốc cần tách khỏi văn bản tự do trong tài liệu.** Tối thiểu cần mã thuốc, hướng dẫn dùng, người kê, trạng thái, mục đích, liên kết bệnh nhân/lượt khám và chẩn đoán liên quan khi có thể.
-- **Tài liệu bệnh án cần có vòng đời.** Tối thiểu gồm nháp, đã ký, bị thay thế, nhập sai.
+- **Tài liệu bệnh án cần có vòng đời và nguồn gốc.** Tối thiểu gồm nháp, đã ký, bị thay thế, nhập sai; khi tài liệu đã ký, lớp FHIR nên có `DocumentReference` để mô tả tài liệu và `Provenance` để mô tả ai ký/xác nhận, khi nào và nguồn tài liệu nào được dùng. `Provenance` không tự biến thành chữ ký số pháp lý nếu chưa có hạ tầng ký số thật.
 - **Chia sẻ hồ sơ cần consent có trạng thái và thời hạn.** FHIR Bundle liên viện không được xuất chỉ vì người dùng có role điều trị; phải có consent khớp bệnh nhân, đơn vị nhận và thời điểm truy cập. Consent đã bị thu hồi phải chặn các lần xuất hoặc chuyển hồ sơ mới; khi đóng gói FHIR, consent liên quan cần xuất thành resource `Consent` để tránh reference treo.
 - **Gói chuyển hồ sơ là workflow, không phải bản sao dữ liệu lâm sàng.** `RecordTransfer` giữ trạng thái gửi/nhận, cơ sở gửi/nhận, consent, lý do chuyển và `bundleId`; khi xuất chuẩn, nó thành FHIR `Task` trỏ tới `Bundle`, không nhân đôi toàn bộ hồ sơ bệnh án.
 - **Gói bệnh án chuyển viện cần Composition.** `Bundle.type = collection` phù hợp để gom dữ liệu thô; khi cần biểu diễn một tài liệu bệnh án có cấu trúc, dùng `Bundle.type = document` và đặt `Composition` làm entry đầu tiên để mô tả mục lục lâm sàng.
@@ -125,7 +125,7 @@ Phiên bản hiện tại tạo các bảng tối thiểu:
 ## Luồng mở rộng dự kiến
 
 1. Hoàn thiện registry bệnh nhân và tài liệu lâm sàng tối thiểu.
-2. Kết nối HAPI FHIR để xuất/nhập `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `DocumentReference`, `Composition` và `Task` điều phối chuyển hồ sơ.
+2. Kết nối HAPI FHIR để xuất/nhập `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `DocumentReference`, `Provenance`, `Composition` và `Task` điều phối chuyển hồ sơ.
 3. Kết nối Orthanc để minh họa PACS/DICOM và DICOMweb.
 4. Bổ sung xác thực, phân quyền, nhật ký kiểm toán và chính sách lưu trữ.
 5. Nếu cần mở rộng lớn, tách `Interoperability`, `Imaging`, `Audit` thành service riêng.

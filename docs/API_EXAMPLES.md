@@ -1,6 +1,6 @@
 # Ví dụ API
 
-API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `CapabilityStatement`, `Patient`, `ProviderDirectory`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `ClinicalDocument`, `Consent`, `RecordTransfer`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
+API hiện tại là prototype có thể chạy bằng in-memory repository hoặc PostgreSQL tùy `BVS_REPOSITORY`. Lát cắt chính gồm `CapabilityStatement`, `Patient`, `ProviderDirectory`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `ClinicalDocument`, `Provenance`, `Consent`, `RecordTransfer`, `AuditEvent`, phiên đăng nhập demo và FHIR facade.
 
 ## Kiểm tra sức khỏe API
 
@@ -19,7 +19,7 @@ Endpoint này dùng cho discovery kỹ thuật của facade FHIR R4 và không y
 curl http://localhost:7310/api/v1/fhir/metadata
 ```
 
-Kết quả mong muốn là resource `CapabilityStatement` có `fhirVersion = "4.0.1"`, `rest.mode = "server"`, `format = ["json"]` và danh sách resource đang hỗ trợ như `Patient`, `DocumentReference`, `Bundle`, `Consent`, `AuditEvent`.
+Kết quả mong muốn là resource `CapabilityStatement` có `fhirVersion = "4.0.1"`, `rest.mode = "server"`, `format = ["json"]` và danh sách resource đang hỗ trợ như `Patient`, `DocumentReference`, `Provenance`, `Bundle`, `Consent`, `AuditEvent`.
 
 ## Đăng nhập và lấy token
 
@@ -856,6 +856,14 @@ curl http://localhost:7310/api/v1/clinical-documents/clinical-document-demo-001/
 ```
 
 Kết quả mong muốn là JSON có `resourceType` bằng `DocumentReference`, có `subject`, `author`, `status`, `docStatus` và `content.attachment.url`.
+
+```bash
+curl http://localhost:7310/api/v1/clinical-documents/clinical-document-demo-001/fhir-provenance \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-purpose-of-use: TREATMENT"
+```
+
+Kết quả mong muốn là JSON có `resourceType` bằng `Provenance`, `target` trỏ tới `DocumentReference/clinical-document-demo-001`, `agent.who` trỏ tới người ký/xác nhận, `occurredDateTime`/`recorded` theo thời điểm ký và `entity` mô tả nguồn tài liệu. Endpoint này chỉ hợp lệ với tài liệu đã ký; tài liệu nháp trả lỗi 422 để tránh tạo nguồn gốc giả.
 
 ## Xem nhật ký kiểm toán của bệnh nhân
 

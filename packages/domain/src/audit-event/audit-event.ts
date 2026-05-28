@@ -69,6 +69,7 @@ export type AuditAction =
   | "clinical-document.create"
   | "clinical-document.sign"
   | "clinical-document.fhir-export"
+  | "clinical-document.provenance-export"
   | "consent.list"
   | "consent.create"
   | "consent.revoke"

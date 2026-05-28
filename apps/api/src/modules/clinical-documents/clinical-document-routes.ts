@@ -8,7 +8,8 @@ import {
 import {
   ClinicalDocument,
   DomainError,
-  mapClinicalDocumentToFhir
+  mapClinicalDocumentToFhir,
+  mapClinicalDocumentToFhirProvenance
 } from "@benh-vien-so/domain";
 import type {
   AuditEventRepository,
@@ -197,6 +198,50 @@ export async function registerClinicalDocumentRoutes(
     });
 
     return mapClinicalDocumentToFhir(document);
+  });
+
+  app.get("/clinical-documents/:id/fhir-provenance", async (request, reply) => {
+    const actor = requirePermission(request, reply, "clinical-document:fhir-export");
+
+    if (!actor) {
+      return;
+    }
+
+    const params = ClinicalDocumentIdParamsSchema.parse(request.params);
+    const document = await documentRepository.findById(params.id);
+
+    if (!document) {
+      return reply.status(404).send({
+        error: "CLINICAL_DOCUMENT_NOT_FOUND"
+      });
+    }
+
+    try {
+      const provenance = mapClinicalDocumentToFhirProvenance(document);
+      await recordAuditEvent(auditRepository, request, {
+        action: "clinical-document.provenance-export",
+        resourceType: "ClinicalDocument",
+        resourceId: document.id,
+        patientId: document.patientId,
+        metadata: {
+          standard: "HL7 FHIR R4",
+          resourceType: "Provenance",
+          targetResourceType: "DocumentReference",
+          documentStatus: document.status
+        }
+      });
+
+      return provenance;
+    } catch (error) {
+      if (error instanceof DomainError) {
+        return reply.status(422).send({
+          error: "CLINICAL_DOCUMENT_PROVENANCE_ERROR",
+          message: error.message
+        });
+      }
+
+      throw error;
+    }
   });
 }
 

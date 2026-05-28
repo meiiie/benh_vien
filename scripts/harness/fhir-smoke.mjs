@@ -39,6 +39,7 @@ const {
   mapAuditEventsToFhirBundle,
   mapAllergyIntoleranceToFhir,
   mapClinicalDocumentToFhir,
+  mapClinicalDocumentToFhirProvenance,
   mapConsentToFhir,
   mapConditionToFhir,
   mapDiagnosticReportToFhir,
@@ -704,6 +705,9 @@ const document = ClinicalDocument.create({
 document.sign(new Date("2026-05-27T00:00:00.000Z"));
 
 const fhirDocumentReference = mapClinicalDocumentToFhir(document);
+const fhirDocumentProvenance = mapClinicalDocumentToFhirProvenance(document, {
+  organizationId: "hospital-hai-phong-demo"
+});
 
 if (fhirDocumentReference.resourceType !== "DocumentReference") {
   throw new Error(
@@ -719,6 +723,23 @@ if (fhirDocumentReference.subject.reference !== "Patient/patient-harness-001") {
 
 if (fhirDocumentReference.docStatus !== "final") {
   throw new Error(`Expected docStatus final, received ${fhirDocumentReference.docStatus}`);
+}
+
+if (fhirDocumentProvenance.resourceType !== "Provenance") {
+  throw new Error(
+    `Expected resourceType Provenance, received ${fhirDocumentProvenance.resourceType}`
+  );
+}
+
+if (
+  fhirDocumentProvenance.target[0]?.reference !==
+  "DocumentReference/clinical-document-harness-001"
+) {
+  throw new Error("Expected Provenance to target the signed DocumentReference.");
+}
+
+if (fhirDocumentProvenance.agent[0]?.who.reference !== "Practitioner/practitioner-harness-001") {
+  throw new Error("Expected Provenance agent to reference the document signer.");
 }
 
 const consent = Consent.grant({
@@ -1537,6 +1558,7 @@ console.log(
       providerDirectoryEntryCount: fhirProviderDirectoryBundle.entry.length,
       documentId: fhirDocumentReference.id,
       documentResourceType: fhirDocumentReference.resourceType,
+      documentProvenanceResourceType: fhirDocumentProvenance.resourceType,
       encounterId: fhirEncounter.id,
       encounterResourceType: fhirEncounter.resourceType,
       allergyIntoleranceId: fhirAllergyIntolerance.id,

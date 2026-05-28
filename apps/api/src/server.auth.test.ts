@@ -108,6 +108,9 @@ describe("API auth and RBAC boundary", () => {
               type: "Patient"
             }),
             expect.objectContaining({
+              type: "Provenance"
+            }),
+            expect.objectContaining({
               type: "Bundle"
             }),
             expect.objectContaining({
@@ -423,6 +426,63 @@ describe("API auth and RBAC boundary", () => {
         })
       ])
     );
+  });
+
+  it("exports signed clinical document provenance as FHIR Provenance", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/clinical-documents/clinical-document-demo-001/fhir-provenance",
+      headers: treatmentHeaders(accessToken)
+    });
+    const body = response.json();
+
+    expect(response.statusCode).toBe(200);
+    expect(body).toMatchObject({
+      resourceType: "Provenance",
+      id: "clinical-document-demo-001-provenance",
+      target: [
+        {
+          reference: "DocumentReference/clinical-document-demo-001",
+          display: "Tóm tắt ra viện - Nguyễn Văn An"
+        }
+      ],
+      occurredDateTime: "2026-05-27T02:00:00.000Z",
+      recorded: "2026-05-27T02:00:00.000Z",
+      agent: [
+        {
+          who: {
+            reference: "Practitioner/practitioner-demo-001"
+          }
+        }
+      ],
+      entity: [
+        {
+          role: "source",
+          what: {
+            reference: "s3://wiiicare-demo/patients/patient-demo-001/discharge-summary.pdf"
+          }
+        }
+      ]
+    });
+  });
+
+  it("rejects FHIR Provenance export for an unsigned clinical document", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/clinical-documents/clinical-document-demo-002/fhir-provenance",
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(response.statusCode).toBe(422);
+    expect(response.json()).toMatchObject({
+      error: "CLINICAL_DOCUMENT_PROVENANCE_ERROR"
+    });
   });
 
   it("returns provider directory and FHIR Endpoint resources", async () => {

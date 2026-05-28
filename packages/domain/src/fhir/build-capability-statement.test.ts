@@ -36,6 +36,10 @@ describe("buildWiiiCareCapabilityStatement", () => {
           interaction: [{ code: "read" }]
         }),
         expect.objectContaining({
+          type: "Provenance",
+          profile: "http://hl7.org/fhir/StructureDefinition/Provenance"
+        }),
+        expect.objectContaining({
           type: "Bundle",
           profile: "http://hl7.org/fhir/StructureDefinition/Bundle"
         }),

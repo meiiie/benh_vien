@@ -78,6 +78,7 @@ const auditActionLabels: Record<AuditAction, string> = {
   "clinical-document.create": "Tạo tài liệu bệnh án",
   "clinical-document.sign": "Ký tài liệu bệnh án",
   "clinical-document.fhir-export": "Xuất DocumentReference FHIR",
+  "clinical-document.provenance-export": "Xuất Provenance FHIR của tài liệu",
   "consent.list": "Tải đồng ý chia sẻ hồ sơ",
   "consent.create": "Tạo đồng ý chia sẻ hồ sơ",
   "consent.revoke": "Thu hồi đồng ý chia sẻ hồ sơ",
