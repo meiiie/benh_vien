@@ -6,6 +6,7 @@ import { createMemoryLoginRateLimiter } from "./modules/auth/login-rate-limit.js
 import type { LoginRateLimiter } from "./modules/auth/login-rate-limit.js";
 import {
   buildRecordTransferCallbackSignature,
+  recordTransferCallbackKeyIdHeader,
   recordTransferCallbackSignatureHeader,
   recordTransferCallbackTimestampHeader
 } from "./modules/record-transfers/record-transfer-callback-signature.js";
@@ -13,6 +14,7 @@ import { buildServer } from "./server.js";
 
 const testSecret = "wiiicare-test-secret-at-least-32-characters";
 const callbackSecret = "wiiicare-record-transfer-callback-secret-for-tests";
+const callbackKeyId = "gateway-hai-phong-referral";
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 describe("API auth and RBAC boundary", () => {
@@ -36,6 +38,8 @@ describe("API auth and RBAC boundary", () => {
     process.env.BVS_RECORD_TRANSFER_DELIVERY_WORKER_ENABLED;
   const originalRecordTransferCallbackSecret =
     process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRET;
+  const originalRecordTransferCallbackSecretsJson =
+    process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON;
 
   beforeEach(() => {
     process.env.BVS_REPOSITORY = "in-memory";
@@ -76,6 +80,10 @@ describe("API auth and RBAC boundary", () => {
     restoreEnv(
       "BVS_RECORD_TRANSFER_CALLBACK_SECRET",
       originalRecordTransferCallbackSecret
+    );
+    restoreEnv(
+      "BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON",
+      originalRecordTransferCallbackSecretsJson
     );
   });
 
@@ -3773,7 +3781,9 @@ describe("API auth and RBAC boundary", () => {
   });
 
   it("requires a valid HMAC signature for acknowledgement callbacks when configured", async () => {
-    process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRET = callbackSecret;
+    process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON = JSON.stringify({
+      [callbackKeyId]: callbackSecret
+    });
     app = await readyServer();
     const clinicianToken = await loginForToken(app, "practitioner-demo-001", "clinician");
     const gatewayToken = await loginForToken(
@@ -3812,7 +3822,8 @@ describe("API auth and RBAC boundary", () => {
       url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
       headers: {
         ...operationsHeaders(gatewayToken),
-        "content-type": "application/json"
+        "content-type": "application/json",
+        [recordTransferCallbackKeyIdHeader]: callbackKeyId
       },
       payload: callbackPayload
     });
@@ -3830,6 +3841,7 @@ describe("API auth and RBAC boundary", () => {
       headers: {
         ...operationsHeaders(gatewayToken),
         "content-type": "application/json",
+        [recordTransferCallbackKeyIdHeader]: callbackKeyId,
         [recordTransferCallbackTimestampHeader]: invalidTimestamp,
         [recordTransferCallbackSignatureHeader]: "invalid-signature"
       },
@@ -4189,6 +4201,7 @@ function signedRecordTransferCallbackHeaders(input: {
   const timestamp = new Date().toISOString();
 
   return {
+    [recordTransferCallbackKeyIdHeader]: callbackKeyId,
     [recordTransferCallbackTimestampHeader]: timestamp,
     [recordTransferCallbackSignatureHeader]: buildRecordTransferCallbackSignature({
       secret: callbackSecret,

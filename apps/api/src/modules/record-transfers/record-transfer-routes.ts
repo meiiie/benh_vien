@@ -942,11 +942,13 @@ function toCallbackSignatureAuditMetadata(input: ReturnType<
   readonly callbackSignatureVerified: boolean;
   readonly callbackSignatureTimestamp?: string;
   readonly callbackSignatureAlgorithm?: string;
+  readonly callbackSignatureKeyId?: string;
 } {
   return {
     callbackSignatureRequired: input.required,
     callbackSignatureVerified: input.verified,
     callbackSignatureTimestamp: input.timestamp,
-    callbackSignatureAlgorithm: input.algorithm
+    callbackSignatureAlgorithm: input.algorithm,
+    callbackSignatureKeyId: input.keyId
   };
 }

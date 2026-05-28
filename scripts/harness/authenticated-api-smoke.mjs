@@ -616,22 +616,50 @@ function operationsHeaders() {
 }
 
 function recordTransferCallbackSignatureHeaders(recordTransferId, body) {
-  const secret = process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRET?.trim();
+  const signingCredential = readRecordTransferCallbackSigningCredential();
 
-  if (!secret) {
+  if (!signingCredential) {
     return {};
   }
 
   const timestamp = new Date().toISOString();
   const signaturePayload = `${timestamp}.${recordTransferId}.${canonicalJson(body ?? {})}`;
-  const signature = createHmac("sha256", secret)
+  const signature = createHmac("sha256", signingCredential.secret)
     .update(signaturePayload)
     .digest("base64url");
 
   return {
+    ...(signingCredential.keyId
+      ? { "x-wiiicare-callback-key-id": signingCredential.keyId }
+      : {}),
     "x-wiiicare-callback-timestamp": timestamp,
     "x-wiiicare-callback-signature": signature
   };
+}
+
+function readRecordTransferCallbackSigningCredential() {
+  const secretsByKeyId = process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON?.trim();
+
+  if (secretsByKeyId) {
+    const parsedSecrets = JSON.parse(secretsByKeyId);
+    const keyId =
+      process.env.BVS_RECORD_TRANSFER_CALLBACK_KEY_ID?.trim() ??
+      Object.keys(parsedSecrets)[0];
+    const secret = parsedSecrets[keyId]?.trim();
+
+    if (!secret) {
+      throw new Error(`Missing callback smoke secret for key id ${keyId}.`);
+    }
+
+    return {
+      keyId,
+      secret
+    };
+  }
+
+  const secret = process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRET?.trim();
+
+  return secret ? { secret } : undefined;
 }
 
 function canonicalJson(value) {

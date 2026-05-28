@@ -32,7 +32,7 @@ API giới hạn tần suất `POST /api/v1/auth/login` bằng `BVS_AUTH_LOGIN_R
 
 Ở `NODE_ENV=production`, API cũng yêu cầu `BVS_AUTH_SECRET` tối thiểu 32 ký tự ngay khi khởi động và không chấp nhận giá trị mẫu như `change-me...` hoặc secret dev-only. Nếu thiếu secret hoặc dùng placeholder, container API sẽ dừng thay vì chờ tới request đăng nhập đầu tiên mới lỗi.
 
-Ở `NODE_ENV=production`, callback xác nhận nhận hồ sơ yêu cầu `BVS_RECORD_TRANSFER_CALLBACK_SECRET` tối thiểu 32 ký tự. Gateway bệnh viện nhận phải gửi `x-wiiicare-callback-timestamp` và `x-wiiicare-callback-signature`; chữ ký là `HMAC-SHA256` trên chuỗi `$TIMESTAMP.$TRANSFER_ID.$CANONICAL_JSON_BODY`, với object key được sắp xếp ổn định, và chỉ được lệch tối đa 5 phút.
+Ở `NODE_ENV=production`, callback xác nhận nhận hồ sơ nên dùng `BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON` để cấu hình secret riêng theo key id gateway, ví dụ `{"gateway-hai-phong-referral":"..."}`. Gateway bệnh viện nhận phải gửi `x-wiiicare-callback-key-id`, `x-wiiicare-callback-timestamp` và `x-wiiicare-callback-signature`; chữ ký là `HMAC-SHA256` trên chuỗi `$TIMESTAMP.$TRANSFER_ID.$CANONICAL_JSON_BODY`, với object key được sắp xếp ổn định, và chỉ được lệch tối đa 5 phút. `BVS_RECORD_TRANSFER_CALLBACK_SECRET` vẫn là fallback cho môi trường chỉ có một gateway.
 
 Ở `NODE_ENV=production`, đăng nhập demo mặc định bị tắt bằng `BVS_DEMO_AUTH_ENABLED=false`. Chỉ bật `BVS_DEMO_AUTH_ENABLED=true` cho phiên smoke/demo có kiểm soát; triển khai thật cần thay bằng IAM/SSO thay vì tài khoản demo hard-coded.
 
@@ -59,6 +59,7 @@ Khi đó có thêm:
 cp .env.prod.example .env.prod.local
 sed -i 's|^BVS_AUTH_SECRET=.*|BVS_AUTH_SECRET=local-wiiicare-auth-secret-0123456789abcdef|g' .env.prod.local
 sed -i 's|^BVS_RECORD_TRANSFER_CALLBACK_SECRET=.*|BVS_RECORD_TRANSFER_CALLBACK_SECRET=local-wiiicare-callback-secret-0123456789abcdef|g' .env.prod.local
+sed -i 's|^BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON=.*|BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON={"gateway-hai-phong-referral":"local-wiiicare-callback-secret-0123456789abcdef"}|g' .env.prod.local
 sed -i 's|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=local_bvs_postgres_password|g' .env.prod.local
 sed -i 's|^DATABASE_URL=.*|DATABASE_URL=postgresql://bvs:local_bvs_postgres_password@postgres:5432/benh_vien_so|g' .env.prod.local
 sed -i 's|^MINIO_ROOT_PASSWORD=.*|MINIO_ROOT_PASSWORD=local_bvs_minio_password|g' .env.prod.local
@@ -117,7 +118,8 @@ for attempt in $(seq 1 30); do
   fi
   sleep 2
 done
-BVS_RECORD_TRANSFER_CALLBACK_SECRET=local-wiiicare-callback-secret-0123456789abcdef \
+BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON='{"gateway-hai-phong-referral":"local-wiiicare-callback-secret-0123456789abcdef"}' \
+BVS_RECORD_TRANSFER_CALLBACK_KEY_ID=gateway-hai-phong-referral \
 WIIICARE_SMOKE_BASE_URL=http://localhost:8080/api/v1 node scripts/harness/authenticated-api-smoke.mjs
 
 docker compose --env-file .env.prod.local -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -c "select version, left(checksum_sha256, 12) as checksum_prefix from schema_migrations order by version;"

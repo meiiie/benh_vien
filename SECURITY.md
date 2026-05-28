@@ -12,7 +12,7 @@ Tạo GitHub issue private/security advisory nếu repo bật tính năng này, 
 
 - Secret nằm ngoài Git.
 - `BVS_AUTH_SECRET` phải được cấu hình riêng cho từng môi trường và dài tối thiểu 32 ký tự.
-- `BVS_RECORD_TRANSFER_CALLBACK_SECRET` phải được cấu hình riêng cho gateway liên thông hồ sơ ở production; callback nhận hồ sơ cần chữ ký `HMAC-SHA256` và timestamp còn hiệu lực.
+- `BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON` nên được cấu hình riêng theo từng gateway liên thông hồ sơ ở production; `BVS_RECORD_TRANSFER_CALLBACK_SECRET` chỉ là fallback một gateway. Callback nhận hồ sơ cần key id, chữ ký `HMAC-SHA256` và timestamp còn hiệu lực.
 - Dữ liệu bệnh án cần audit trail.
 - API truy cập bệnh nhân phải có authorization theo đối tượng dữ liệu trước khi dùng thật.
 - Docker prod không dùng mật khẩu mẫu trong `.env.prod.example`.

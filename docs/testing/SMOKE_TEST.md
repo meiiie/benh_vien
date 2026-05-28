@@ -84,11 +84,11 @@ curl -fsS http://localhost:7310/api/v1/record-transfers/record-transfer-demo-001
   -H "Authorization: Bearer $TOKEN" \
   -H "x-purpose-of-use: TREATMENT"
 
-# Nếu `BVS_RECORD_TRANSFER_CALLBACK_SECRET` được bật, thêm
-# `x-wiiicare-callback-timestamp` và `x-wiiicare-callback-signature`.
+# Nếu secret callback được bật, thêm key id, timestamp và chữ ký HMAC.
 curl -fsS -X POST http://localhost:7310/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback \
   -H "Authorization: Bearer $OPERATIONS_TOKEN" \
   -H "x-purpose-of-use: OPERATIONS" \
+  -H "x-wiiicare-callback-key-id: gateway-hai-phong-referral" \
   -H "Content-Type: application/json" \
   -d '{"recipientOrganizationId":"hospital-hai-phong-referral","acknowledgementReference":"ack-smoke-demo-001","receivedByActorId":"system-hai-phong-referral-gateway"}'
 
