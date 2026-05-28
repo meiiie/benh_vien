@@ -129,6 +129,29 @@ if (
   throw new Error("Expected merged FHIR Patient to link to the canonical patient.");
 }
 
+const mergedPatientWrite = await requestJson(`/patients/${mergeSourcePatient.id}/encounters`, {
+  method: "POST",
+  token: adminSession.accessToken,
+  headers: {
+    ...treatmentHeaders(),
+    "x-request-id": "postgres-smoke-merged-patient-write-denied"
+  },
+  expectedStatus: 409,
+  body: {
+    class: "ambulatory",
+    serviceType: "Should not write to merged patient",
+    reasonText: "Merged source patient must stay read-only.",
+    attendingPractitionerId: "practitioner-demo-001",
+    startedAt: "2026-05-28T05:00:00.000Z"
+  }
+});
+
+if (mergedPatientWrite.error !== "PATIENT_RECORD_MERGED") {
+  throw new Error(
+    `Expected merged patient write denial, received ${mergedPatientWrite.error}.`
+  );
+}
+
 const outsidePatient = await requestJson("/patients", {
   method: "POST",
   token: adminSession.accessToken,

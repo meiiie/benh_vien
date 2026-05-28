@@ -189,6 +189,11 @@ export async function requirePatientRecordAccessByPatientId(
     return undefined;
   }
 
+  if (isPatientRecordWriteRequest(request) && patient.toSnapshot().status === "merged") {
+    sendMergedPatientRecordConflict(request, reply, patient);
+    return undefined;
+  }
+
   return patient;
 }
 
@@ -220,6 +225,49 @@ function acceptsFhirJson(request: FastifyRequest): boolean {
       .map((value) => value.trim().toLowerCase().split(";")[0])
       .includes("application/fhir+json") ?? false
   );
+}
+
+function isPatientRecordWriteRequest(request: FastifyRequest): boolean {
+  return !["GET", "HEAD", "OPTIONS"].includes(request.method.toUpperCase());
+}
+
+function sendMergedPatientRecordConflict(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  patient: Patient
+): void {
+  const snapshot = patient.toSnapshot();
+
+  if (acceptsFhirJson(request)) {
+    sendFhirOperationOutcome(reply, {
+      statusCode: 409,
+      code: "conflict",
+      diagnostics: [
+        `requestId=${request.id}`,
+        `patientId=${patient.id}`,
+        `mergedIntoPatientId=${snapshot.mergedIntoPatientId ?? ""}`
+      ].join("; "),
+      expression: ["Patient.active", "Patient.link"],
+      details: {
+        code: "PATIENT_RECORD_MERGED",
+        display: "Patient record merged",
+        text:
+          "Hồ sơ bệnh nhân này đã được merge vào hồ sơ chính; không được ghi dữ liệu mới vào hồ sơ nguồn."
+      }
+    });
+
+    return;
+  }
+
+  reply.status(409).send({
+    error: "PATIENT_RECORD_MERGED",
+    message:
+      "Hồ sơ bệnh nhân này đã được merge vào hồ sơ chính; không được ghi dữ liệu mới vào hồ sơ nguồn.",
+    requestId: request.id,
+    patientId: patient.id,
+    mergedIntoPatientId: snapshot.mergedIntoPatientId,
+    mergedAt: snapshot.mergedAt
+  });
 }
 
 function readBearerToken(value: string | string[] | undefined): string | undefined {

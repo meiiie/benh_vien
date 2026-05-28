@@ -1019,6 +1019,31 @@ describe("API auth and RBAC boundary", () => {
       ]
     });
 
+    const writeAfterMergeResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${sourcePatientId}/encounters`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json",
+        "x-request-id": "patient-merge-write-denied-001"
+      },
+      payload: {
+        class: "ambulatory",
+        serviceType: "Should not write to merged patient",
+        reasonText: "Merged source patient must stay read-only.",
+        attendingPractitionerId: "practitioner-demo-001",
+        startedAt: "2026-05-28T05:00:00.000Z"
+      }
+    });
+
+    expect(writeAfterMergeResponse.statusCode).toBe(409);
+    expect(writeAfterMergeResponse.json()).toMatchObject({
+      error: "PATIENT_RECORD_MERGED",
+      requestId: "patient-merge-write-denied-001",
+      patientId: sourcePatientId,
+      mergedIntoPatientId: "patient-demo-001"
+    });
+
     const auditorToken = await loginForToken(app, "security-officer-demo", "auditor");
     const auditResponse = await app.inject({
       method: "GET",
