@@ -286,7 +286,24 @@ curl -X POST http://localhost:7310/api/v1/record-transfers/$TRANSFER_ID/receive 
   -d '{"note":"Bệnh viện nhận đã xác nhận tiếp nhận."}'
 ```
 
-Khi xác nhận nhận, API tự lấy `receivedByActorId` từ Bearer token nếu client không gửi lên, sinh `acknowledgementReference` dạng `wiiicare-record-transfer-ack-*` và lưu cả hai trường này vào `RecordTransfer`, audit event và FHIR `Task.note`. Đây là biên nhận kỹ thuật tối thiểu để truy vết mốc tiếp nhận; chưa phải chữ ký số pháp lý hoặc callback xác thực hai chiều từ bệnh viện nhận.
+Khi xác nhận nhận thủ công, API tự lấy `receivedByActorId` từ Bearer token nếu client không gửi lên, sinh `acknowledgementReference` dạng `wiiicare-record-transfer-ack-*` và lưu cả hai trường này vào `RecordTransfer`, audit event và FHIR `Task.note`. Đây là biên nhận kỹ thuật tối thiểu để truy vết mốc tiếp nhận; chưa phải chữ ký số pháp lý.
+
+Nếu mô phỏng callback từ gateway của bệnh viện nhận, dùng route riêng dưới đây thay cho lệnh `/receive` thủ công ở trên, với `x-purpose-of-use: OPERATIONS`. Payload phải khai báo đúng `recipientOrganizationId` của gói chuyển; hệ thống sẽ từ chối callback từ actor không thuộc cơ sở nhận, trừ tài khoản admin/service vận hành.
+
+```bash
+curl -X POST http://localhost:7310/api/v1/record-transfers/$TRANSFER_ID/acknowledgement-callback \
+  -H "Authorization: Bearer $OPERATIONS_TOKEN" \
+  -H "x-purpose-of-use: OPERATIONS" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "recipientOrganizationId": "hospital-hai-phong-referral",
+    "acknowledgementReference": "ack-transfer-demo-001",
+    "receivedByActorId": "system-hai-phong-referral-gateway",
+    "targetEndpointId": "endpoint-fhir-hai-phong-referral",
+    "deliveryIdempotencyKey": "wiiicare-record-transfer-example",
+    "note": "Bệnh viện nhận xác nhận tiếp nhận qua callback liên thông."
+  }'
+```
 
 Nếu gateway liên thông hoặc cơ sở nhận tạm thời không phản hồi, ghi nhận lỗi và đưa gói về hàng đợi gửi lại:
 
@@ -330,7 +347,7 @@ BVS_RECORD_TRANSFER_DELIVERY_WORKER_RUN_IMMEDIATELY=false
 
 Delivery worker dựng FHIR Bundle theo `bundleType`, kiểm lại consent, gửi HTTP `POST` tới `targetEndpointAddress` với `Content-Type: application/fhir+json` và header `Idempotency-Key`. Nếu endpoint trả HTTP 2xx, attempt chuyển sang `succeeded`; nếu endpoint trả lỗi hoặc timeout, attempt chuyển sang `failed`, `RecordTransfer` chuyển sang `failed`, có `nextRetryAt` để retry worker xử lý. Retry worker chỉ chuyển `RecordTransfer` từ `failed` về `ready` khi còn lượt thử, tăng `retryCount` và ghi audit `record-transfer.retry` với `purposeOfUse = OPERATIONS`; khi `retryCount` đã đạt `BVS_RECORD_TRANSFER_RETRY_WORKER_MAX_RETRY_COUNT`, worker chuyển gói sang `dead-lettered`, xóa `nextRetryAt` và ghi audit `record-transfer.dead-letter`. Worker không tự khẳng định đã gửi thành công sang bệnh viện nhận.
 
-API sẽ kiểm `consentReference` trước khi tạo `RecordTransfer`, đồng thời yêu cầu đơn vị nhận có endpoint FHIR REST `active` và hỗ trợ payload `Bundle` trong Provider Directory. Nếu consent hợp lệ nhưng đơn vị nhận chưa có endpoint phù hợp, API trả `422 RECORD_TRANSFER_ENDPOINT_NOT_FOUND` thay vì tạo một gói chuyển không có đích kỹ thuật. Sau mỗi lần gọi `/send`, API tạo một delivery attempt ở trạng thái `queued`, gồm `targetEndpointId`, `targetEndpointAddress`, `bundleId`, `bundleType`, `attemptNumber`, `queuedAt` và `idempotencyKey`; đây là outbox để worker liên thông xử lý, không phải bằng chứng rằng bệnh viện nhận đã nhận hồ sơ. Vòng đời vận hành gồm `requested/ready`, `in-progress` sau khi gửi, `failed` khi gửi lỗi, `ready` khi được đưa vào hàng đợi thử lại, `dead-lettered` khi quá trần retry và `completed` sau khi cơ sở nhận xác nhận. Kết quả FHIR mong muốn là `Task` có `focus` trỏ tới `Bundle/patient-document-patient-demo-001`, `for` trỏ tới `Patient/patient-demo-001`, `requester` là cơ sở gửi, `owner` là cơ sở nhận, `executionPeriod` khi đã có mốc gửi/nhận và `note` chứa người xác nhận nhận, mã biên nhận tiếp nhận, lý do lỗi/hẹn thử lại/hàng lỗi cuối nếu từng gửi thất bại. Route JSON `/record-transfers/:id` trả lỗi nội bộ `RECORD_TRANSFER_NOT_FOUND` khi không tìm thấy; riêng facade FHIR `/record-transfers/:id/fhir-task` trả lỗi `OperationOutcome` mã `not-found` để client liên thông không phải đọc envelope JSON nội bộ.
+API sẽ kiểm `consentReference` trước khi tạo `RecordTransfer`, đồng thời yêu cầu đơn vị nhận có endpoint FHIR REST `active` và hỗ trợ payload `Bundle` trong Provider Directory. Nếu consent hợp lệ nhưng đơn vị nhận chưa có endpoint phù hợp, API trả `422 RECORD_TRANSFER_ENDPOINT_NOT_FOUND` thay vì tạo một gói chuyển không có đích kỹ thuật. Sau mỗi lần gọi `/send`, API tạo một delivery attempt ở trạng thái `queued`, gồm `targetEndpointId`, `targetEndpointAddress`, `bundleId`, `bundleType`, `attemptNumber`, `queuedAt` và `idempotencyKey`; đây là outbox để worker liên thông xử lý, không phải bằng chứng rằng bệnh viện nhận đã nhận hồ sơ. Vòng đời vận hành gồm `requested/ready`, `in-progress` sau khi gửi, `failed` khi gửi lỗi, `ready` khi được đưa vào hàng đợi thử lại, `dead-lettered` khi quá trần retry và `completed` sau khi cơ sở nhận xác nhận thủ công hoặc gửi callback acknowledgement hợp lệ. Kết quả FHIR mong muốn là `Task` có `focus` trỏ tới `Bundle/patient-document-patient-demo-001`, `for` trỏ tới `Patient/patient-demo-001`, `requester` là cơ sở gửi, `owner` là cơ sở nhận, `executionPeriod` khi đã có mốc gửi/nhận và `note` chứa người xác nhận nhận, mã biên nhận tiếp nhận, lý do lỗi/hẹn thử lại/hàng lỗi cuối nếu từng gửi thất bại. Route JSON `/record-transfers/:id` trả lỗi nội bộ `RECORD_TRANSFER_NOT_FOUND` khi không tìm thấy; riêng facade FHIR `/record-transfers/:id/fhir-task` trả lỗi `OperationOutcome` mã `not-found` để client liên thông không phải đọc envelope JSON nội bộ.
 
 ## Lấy và mở lượt khám
 

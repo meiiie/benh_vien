@@ -737,6 +737,7 @@ type AuditAction =
   | "record-transfer.retry"
   | "record-transfer.dead-letter"
   | "record-transfer.receive"
+  | "record-transfer.acknowledgement-callback"
   | "record-transfer.fhir-export"
   | "encounter.list"
   | "encounter.create"
@@ -9230,6 +9231,7 @@ function formatAuditAction(action: AuditAction): string {
     "record-transfer.retry": "Thử gửi lại gói chuyển hồ sơ",
     "record-transfer.dead-letter": "Đưa gói chuyển hồ sơ vào hàng lỗi cuối",
     "record-transfer.receive": "Xác nhận nhận gói chuyển hồ sơ",
+    "record-transfer.acknowledgement-callback": "Callback xác nhận nhận gói chuyển hồ sơ",
     "record-transfer.fhir-export": "Xuất FHIR Task chuyển hồ sơ",
     "encounter.list": "Tải danh sách lượt khám",
     "encounter.create": "Mở lượt khám",

@@ -18,6 +18,10 @@ TOKEN=$(curl -s -X POST http://localhost:7310/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"practitioner-demo-001","password":"demo","role":"clinician"}' | jq -r .accessToken)
 
+OPERATIONS_TOKEN=$(curl -s -X POST http://localhost:7310/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin-demo","password":"demo","role":"admin"}' | jq -r .accessToken)
+
 curl -fsS http://localhost:7310/api/v1/patients \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-purpose-of-use: TREATMENT"
@@ -80,11 +84,11 @@ curl -fsS http://localhost:7310/api/v1/record-transfers/record-transfer-demo-001
   -H "Authorization: Bearer $TOKEN" \
   -H "x-purpose-of-use: TREATMENT"
 
-curl -fsS -X POST http://localhost:7310/api/v1/record-transfers/record-transfer-demo-001/receive \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "x-purpose-of-use: TREATMENT" \
+curl -fsS -X POST http://localhost:7310/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback \
+  -H "Authorization: Bearer $OPERATIONS_TOKEN" \
+  -H "x-purpose-of-use: OPERATIONS" \
   -H "Content-Type: application/json" \
-  -d '{"note":"Bệnh viện nhận đã xác nhận tiếp nhận."}'
+  -d '{"recipientOrganizationId":"hospital-hai-phong-referral","acknowledgementReference":"ack-smoke-demo-001","receivedByActorId":"system-hai-phong-referral-gateway"}'
 
 curl -fsS http://localhost:7310/api/v1/patients/patient-demo-001/allergy-intolerances \
   -H "Authorization: Bearer $TOKEN" \

@@ -3640,6 +3640,110 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("accepts an operations acknowledgement callback for a sent record transfer", async () => {
+    app = await readyServer();
+    const clinicianToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const adminToken = await loginForToken(app, "admin-demo", "admin");
+
+    const sendResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/send",
+      headers: {
+        ...treatmentHeaders(clinicianToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        sentAt: "2026-05-28T04:30:00.000Z",
+        note: "Xếp gói hồ sơ vào hàng chờ gửi qua gateway liên thông."
+      }
+    });
+
+    expect(sendResponse.statusCode).toBe(200);
+
+    const deniedCallbackResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
+      headers: {
+        ...operationsHeaders(clinicianToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        recipientOrganizationId: "hospital-hai-phong-referral",
+        acknowledgementReference: "ack-denied-from-source-organization",
+        receivedAt: "2026-05-28T04:45:00.000Z"
+      }
+    });
+
+    expect(deniedCallbackResponse.statusCode).toBe(403);
+    expect(deniedCallbackResponse.json()).toMatchObject({
+      error: "FORBIDDEN",
+      permission: "record-transfer:acknowledge"
+    });
+
+    const callbackPayload = {
+      recipientOrganizationId: "hospital-hai-phong-referral",
+      acknowledgementReference: "ack-record-transfer-callback-001",
+      receivedAt: "2026-05-28T04:45:00.000Z",
+      receivedByActorId: "system-hai-phong-referral-gateway",
+      targetEndpointId: "endpoint-fhir-hai-phong-referral",
+      deliveryIdempotencyKey: "wiiicare-record-transfer-callback-test-001",
+      note: "Bệnh viện nhận xác nhận tiếp nhận qua callback liên thông."
+    };
+
+    const callbackResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
+      headers: {
+        ...operationsHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: callbackPayload
+    });
+
+    expect(callbackResponse.statusCode).toBe(200);
+    expect(callbackResponse.json()).toMatchObject({
+      id: "record-transfer-demo-001",
+      status: "completed",
+      sentAt: "2026-05-28T04:30:00.000Z",
+      receivedAt: "2026-05-28T04:45:00.000Z",
+      receivedByActorId: "system-hai-phong-referral-gateway",
+      acknowledgementReference: "ack-record-transfer-callback-001"
+    });
+
+    const duplicateCallbackResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
+      headers: {
+        ...operationsHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: callbackPayload
+    });
+
+    expect(duplicateCallbackResponse.statusCode).toBe(200);
+    expect(duplicateCallbackResponse.json()).toMatchObject({
+      status: "completed",
+      acknowledgementReference: "ack-record-transfer-callback-001"
+    });
+
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/fhir-task",
+      headers: treatmentHeaders(clinicianToken)
+    });
+
+    expect(fhirResponse.statusCode).toBe(200);
+    expect(fhirResponse.json()).toMatchObject({
+      resourceType: "Task",
+      status: "completed",
+      note: expect.arrayContaining([
+        {
+          text: "Biên nhận tiếp nhận: ack-record-transfer-callback-001"
+        }
+      ])
+    });
+  });
+
   it("records failed record transfer delivery and prepares a retry", async () => {
     app = await readyServer();
     const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
@@ -3948,6 +4052,13 @@ function treatmentHeaders(accessToken: string): Record<string, string> {
   return {
     authorization: `Bearer ${accessToken}`,
     "x-purpose-of-use": "TREATMENT"
+  };
+}
+
+function operationsHeaders(accessToken: string): Record<string, string> {
+  return {
+    authorization: `Bearer ${accessToken}`,
+    "x-purpose-of-use": "OPERATIONS"
   };
 }
 

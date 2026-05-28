@@ -21,6 +21,7 @@ export type AuditAction =
   | "record-transfer.retry"
   | "record-transfer.dead-letter"
   | "record-transfer.receive"
+  | "record-transfer.acknowledgement-callback"
   | "record-transfer.fhir-export"
   | "encounter.list"
   | "encounter.create"

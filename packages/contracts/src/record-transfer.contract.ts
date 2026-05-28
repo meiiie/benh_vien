@@ -48,6 +48,16 @@ export const MarkRecordTransferReceivedRequestSchema = z.object({
   note: z.string().min(1).optional()
 });
 
+export const RecordTransferAcknowledgementCallbackRequestSchema = z.object({
+  recipientOrganizationId: z.string().min(1),
+  acknowledgementReference: z.string().min(1),
+  receivedAt: z.string().datetime().optional(),
+  receivedByActorId: z.string().min(1).optional(),
+  targetEndpointId: z.string().min(1).optional(),
+  deliveryIdempotencyKey: z.string().min(1).optional(),
+  note: z.string().min(1).optional()
+});
+
 export const MarkRecordTransferFailedRequestSchema = z.object({
   failedAt: z.string().datetime().optional(),
   failureReason: z.string().min(1),
@@ -73,6 +83,9 @@ export type MarkRecordTransferSentRequest = z.infer<
 >;
 export type MarkRecordTransferReceivedRequest = z.infer<
   typeof MarkRecordTransferReceivedRequestSchema
+>;
+export type RecordTransferAcknowledgementCallbackRequest = z.infer<
+  typeof RecordTransferAcknowledgementCallbackRequestSchema
 >;
 export type MarkRecordTransferFailedRequest = z.infer<
   typeof MarkRecordTransferFailedRequestSchema
