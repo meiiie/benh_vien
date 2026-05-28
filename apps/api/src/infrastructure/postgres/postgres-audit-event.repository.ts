@@ -33,6 +33,33 @@ export class PostgresAuditEventRepository implements AuditEventRepository {
     this.pool = createPostgresRepositoryPool(connectionString);
   }
 
+  async findRecent(limit = 50): Promise<AuditEvent[]> {
+    const result = await this.pool.query<AuditEventRow>(
+      `SELECT
+        id,
+        occurred_at,
+        actor_id,
+        action,
+        resource_type,
+        resource_id,
+        patient_id,
+        purpose_of_use,
+        ip_address::text AS ip_address,
+        user_agent,
+        metadata,
+        hash_algorithm,
+        previous_hash,
+        payload_hash,
+        integrity_hash
+      FROM audit_events
+      ORDER BY occurred_at DESC, id DESC
+      LIMIT $1`,
+      [limit]
+    );
+
+    return result.rows.map(rowToAuditEvent);
+  }
+
   async findByPatientId(patientId: string, limit = 50): Promise<AuditEvent[]> {
     const result = await this.pool.query<AuditEventRow>(
       `SELECT

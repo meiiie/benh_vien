@@ -1,5 +1,8 @@
 import type { FastifyInstance } from "fastify";
-import { PatientAuditEventsParamsSchema } from "@benh-vien-so/contracts";
+import {
+  AuditEventsQuerySchema,
+  PatientAuditEventsParamsSchema
+} from "@benh-vien-so/contracts";
 import type {
   AuditEvent,
   AuditEventRepository,
@@ -20,6 +23,32 @@ export async function registerAuditEventRoutes(
   providerDirectoryRepository: ProviderDirectoryRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
+  app.get("/audit-events", async (request, reply) => {
+    const actor = requirePermission(request, reply, "audit-event:list");
+
+    if (!actor) {
+      return;
+    }
+
+    const query = AuditEventsQuerySchema.parse(request.query);
+    const events = await auditRepository.findRecent(query.limit);
+
+    await recordAuditEvent(auditRepository, request, {
+      action: "audit-event.list",
+      resourceType: "AuditEvent",
+      resourceId: "collection",
+      metadata: {
+        scope: "global",
+        limit: query.limit,
+        returnedCount: events.length
+      }
+    });
+
+    return {
+      items: events.map(toAuditEventResponse)
+    };
+  });
+
   app.get("/patients/:patientId/audit-events", async (request, reply) => {
     const actor = requirePermission(request, reply, "audit-event:list");
 

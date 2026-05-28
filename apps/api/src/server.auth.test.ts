@@ -1476,6 +1476,72 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("allows auditor audit-purpose review of global security audit events", async () => {
+    app = await readyServer();
+    const clinicianToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const auditorToken = await loginForToken(app, "security-officer-demo", "auditor");
+
+    const forbiddenAuditListResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/audit-events",
+      headers: {
+        ...treatmentHeaders(clinicianToken),
+        "x-request-id": "global-audit-clinician-denied-001"
+      }
+    });
+
+    expect(forbiddenAuditListResponse.statusCode).toBe(403);
+    expect(forbiddenAuditListResponse.json()).toMatchObject({
+      error: "FORBIDDEN",
+      permission: "audit-event:list",
+      requestId: "global-audit-clinician-denied-001"
+    });
+
+    const deniedResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients",
+      headers: {
+        ...treatmentHeaders(auditorToken),
+        "x-request-id": "global-audit-denied-001"
+      }
+    });
+
+    expect(deniedResponse.statusCode).toBe(403);
+    expect(deniedResponse.json()).toMatchObject({
+      error: "FORBIDDEN",
+      permission: "patient:list",
+      requestId: "global-audit-denied-001"
+    });
+
+    const auditResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/audit-events?limit=25",
+      headers: auditHeaders(auditorToken)
+    });
+    const auditBody = auditResponse.json();
+    const deniedAuditEvent = auditBody.items.find(
+      (event: { readonly metadata?: { readonly requestId?: string } }) =>
+        event.metadata?.requestId === "global-audit-denied-001"
+    );
+
+    expect(auditResponse.statusCode).toBe(200);
+    expect(deniedAuditEvent).toMatchObject({
+      action: "access.denied",
+      resourceType: "Patient",
+      resourceId: "patient:list",
+      metadata: expect.objectContaining({
+        denialCode: "FORBIDDEN",
+        deniedPermission: "patient:list",
+        deniedActorId: "security-officer-demo",
+        deniedActorRole: "auditor",
+        deniedActorPurposeOfUse: "TREATMENT",
+        route: "GET /api/v1/patients",
+        statusCode: 403
+      })
+    });
+    expect(deniedAuditEvent.patientId).toBeUndefined();
+  });
+
   it("stores request id in audit metadata for clinical access", async () => {
     app = await readyServer();
     const clinicianToken = await loginForToken(app, "practitioner-demo-001", "clinician");

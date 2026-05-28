@@ -158,6 +158,38 @@ if (deniedMedicationExport.error !== "PATIENT_ACCESS_DENIED") {
   );
 }
 
+const deniedGlobalPatientList = await requestJson("/patients", {
+  token: auditorSession.accessToken,
+  headers: {
+    ...treatmentHeaders(),
+    "x-request-id": "postgres-smoke-global-patient-list-denied"
+  },
+  expectedStatus: 403
+});
+
+if (deniedGlobalPatientList.error !== "FORBIDDEN") {
+  throw new Error(
+    `Expected global patient list denial FORBIDDEN, received ${deniedGlobalPatientList.error}.`
+  );
+}
+
+const globalAuditTrail = await requestJson("/audit-events?limit=100", {
+  token: auditorSession.accessToken,
+  headers: auditHeaders()
+});
+
+if (
+  !globalAuditTrail.items.some(
+    (event) =>
+      event.action === "access.denied" &&
+      event.patientId === undefined &&
+      event.resourceId === "patient:list" &&
+      event.metadata?.requestId === "postgres-smoke-global-patient-list-denied"
+  )
+) {
+  throw new Error("Expected global denied patient list access to be visible in audit trail.");
+}
+
 const outsideAuditTrail = await requestJson(
   `/patients/${outsidePatient.id}/audit-events`,
   {
@@ -213,6 +245,7 @@ console.log(
       deniedMedicationListStatus: 403,
       deniedMedicationExportStatus: 403,
       deniedMedicationError: deniedMedicationExport.error,
+      globalAuditEventCount: globalAuditTrail.items.length,
       deniedAuditEventCount: deniedAuditEvents.length,
       deniedFhirAuditEventCount: deniedFhirAuditEvents.length
     },
