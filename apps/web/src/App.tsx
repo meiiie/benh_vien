@@ -1651,6 +1651,8 @@ export function App() {
   const [selectedRecordTransferId, setSelectedRecordTransferId] = useState<string>();
   const [recordTransferDeliveryAttempts, setRecordTransferDeliveryAttempts] =
     useState<readonly RecordTransferDeliveryAttempt[]>([]);
+  const [recordTransferDeliveryAttemptWarning, setRecordTransferDeliveryAttemptWarning] =
+    useState<string>();
   const [providerDirectory, setProviderDirectory] = useState<ProviderDirectory>();
   const [patientFhirPreview, setPatientFhirPreview] = useState<unknown>();
   const [patientFhirBundlePreview, setPatientFhirBundlePreview] = useState<unknown>();
@@ -1889,6 +1891,7 @@ export function App() {
       setConsents([]);
       setRecordTransfers([]);
       setRecordTransferDeliveryAttempts([]);
+      setRecordTransferDeliveryAttemptWarning(undefined);
       setSelectedEncounterId(undefined);
       setSelectedDocumentId(undefined);
       setSelectedAllergyIntoleranceId(undefined);
@@ -2061,12 +2064,20 @@ export function App() {
     if (!selectedRecordTransferId) {
       setRecordTransferFhirTaskPreview(undefined);
       setRecordTransferDeliveryAttempts([]);
+      setRecordTransferDeliveryAttemptWarning(undefined);
+      return;
+    }
+
+    if (!recordTransfers.some((recordTransfer) => recordTransfer.id === selectedRecordTransferId)) {
+      setRecordTransferFhirTaskPreview(undefined);
+      setRecordTransferDeliveryAttempts([]);
+      setRecordTransferDeliveryAttemptWarning(undefined);
       return;
     }
 
     void loadRecordTransferFhirTaskPreview(selectedRecordTransferId);
     void loadRecordTransferDeliveryAttempts(selectedRecordTransferId);
-  }, [selectedRecordTransferId]);
+  }, [selectedRecordTransferId, recordTransfers]);
 
   function buildHeaders(
     purposeOfUse: PurposeOfUse,
@@ -2852,12 +2863,17 @@ export function App() {
       const data = (await response.json()) as RecordTransfersResponse;
       setRecordTransfers(data.items);
       setSelectedRecordTransferId(
-        nextSelectedRecordTransferId ?? selectedRecordTransferId ?? data.items[0]?.id
+        resolveSelectedRecordTransferId({
+          items: data.items,
+          preferredId: nextSelectedRecordTransferId,
+          currentId: selectedRecordTransferId
+        })
       );
     } catch (error) {
       setRecordTransfers([]);
       setSelectedRecordTransferId(undefined);
       setRecordTransferDeliveryAttempts([]);
+      setRecordTransferDeliveryAttemptWarning(undefined);
       setStatusMessage(
         error instanceof Error
           ? `Không thể tải gói chuyển hồ sơ: ${error.message}`
@@ -2891,6 +2907,7 @@ export function App() {
 
   async function loadRecordTransferDeliveryAttempts(recordTransferId: string) {
     setIsLoadingRecordTransferDeliveryAttempts(true);
+    setRecordTransferDeliveryAttemptWarning(undefined);
 
     try {
       const response = await fetch(
@@ -2901,11 +2918,25 @@ export function App() {
       );
 
       if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
+        const payload = await response.json().catch(() => undefined);
+
+        if (
+          response.status === 404 &&
+          isMissingRecordTransferDeliveryAttemptsRoute(payload)
+        ) {
+          setRecordTransferDeliveryAttempts([]);
+          setRecordTransferDeliveryAttemptWarning(
+            "API lịch sử gửi chưa sẵn sàng trong runtime hiện tại. Gói chuyển vẫn hiển thị được, nhưng cần khởi động lại backend mới nhất để xem delivery attempt/outbox."
+          );
+          return;
+        }
+
+        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
       }
 
       const data = (await response.json()) as RecordTransferDeliveryAttemptsResponse;
       setRecordTransferDeliveryAttempts(data.items);
+      setRecordTransferDeliveryAttemptWarning(undefined);
     } catch (error) {
       setRecordTransferDeliveryAttempts([]);
       setStatusMessage(
@@ -3384,6 +3415,7 @@ export function App() {
     setConsents([]);
     setRecordTransfers([]);
     setRecordTransferDeliveryAttempts([]);
+    setRecordTransferDeliveryAttemptWarning(undefined);
     setProviderDirectory(undefined);
     setPatientFhirPreview(undefined);
     setPatientFhirBundlePreview(undefined);
@@ -5378,6 +5410,10 @@ export function App() {
               : `${recordTransferDeliveryAttempts.length} lần`}
           </span>
         </div>
+
+        {recordTransferDeliveryAttemptWarning ? (
+          <p className="transfer-alert">{recordTransferDeliveryAttemptWarning}</p>
+        ) : null}
 
         {recordTransferDeliveryAttempts.map((attempt) => (
           <div
@@ -9670,6 +9706,36 @@ function getLatestRecordTransferAttempt(
 
     return Date.parse(attempt.updatedAt) > Date.parse(latest.updatedAt) ? attempt : latest;
   }, undefined);
+}
+
+function resolveSelectedRecordTransferId(input: {
+  readonly items: readonly RecordTransfer[];
+  readonly preferredId?: string;
+  readonly currentId?: string;
+}): string | undefined {
+  const preferredId = input.preferredId?.trim();
+  const currentId = input.currentId?.trim();
+
+  if (preferredId && input.items.some((item) => item.id === preferredId)) {
+    return preferredId;
+  }
+
+  if (currentId && input.items.some((item) => item.id === currentId)) {
+    return currentId;
+  }
+
+  return input.items[0]?.id;
+}
+
+function isMissingRecordTransferDeliveryAttemptsRoute(payload: unknown): boolean {
+  const message = (payload as { readonly message?: unknown } | undefined)?.message;
+
+  return (
+    typeof message === "string" &&
+    message.includes("Route GET:") &&
+    message.includes("/record-transfers/") &&
+    message.includes("/delivery-attempts")
+  );
 }
 
 function formatConsentCategory(category: ConsentCategory): string {
