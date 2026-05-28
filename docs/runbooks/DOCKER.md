@@ -22,6 +22,8 @@ API giới hạn tần suất `POST /api/v1/auth/login` bằng `BVS_AUTH_LOGIN_R
 
 Ở `NODE_ENV=production`, API yêu cầu `BVS_CORS_ORIGINS` là danh sách Origin HTTPS canonical được phép, phân tách bằng dấu phẩy, ví dụ `https://wiiicare.example.vn`. Không dùng wildcard, URL có path hoặc Origin HTTP cho production vì API xử lý dữ liệu bệnh án nhạy cảm.
 
+Ở `NODE_ENV=production`, API yêu cầu `BVS_PUBLIC_API_BASE_URL` là URL HTTPS public của API, ví dụ `https://api.wiiicare.example.vn/api/v1`. Giá trị này được công bố trong FHIR `CapabilityStatement.implementation.url`, nên không được để mặc định `localhost`.
+
 Ở `NODE_ENV=production`, API bắt buộc `BVS_REPOSITORY=postgres`. `in-memory` chỉ dành cho dev/test để tránh mất dữ liệu và tránh nhầm store demo thành môi trường vận hành thật.
 
 Ở `NODE_ENV=production`, API cũng yêu cầu `BVS_AUTH_SECRET` tối thiểu 32 ký tự ngay khi khởi động và không chấp nhận giá trị mẫu như `change-me...` hoặc secret dev-only. Nếu thiếu secret hoặc dùng placeholder, container API sẽ dừng thay vì chờ tới request đăng nhập đầu tiên mới lỗi.

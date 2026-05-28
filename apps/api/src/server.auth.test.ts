@@ -17,6 +17,7 @@ describe("API auth and RBAC boundary", () => {
   const originalCorsOrigins = process.env.BVS_CORS_ORIGINS;
   const originalDatabaseUrl = process.env.DATABASE_URL;
   const originalNodeEnv = process.env.NODE_ENV;
+  const originalPublicApiBaseUrl = process.env.BVS_PUBLIC_API_BASE_URL;
   const originalAuthLoginRateLimitMax = process.env.BVS_AUTH_LOGIN_RATE_LIMIT_MAX;
   const originalAuthLoginRateLimitWindowSeconds =
     process.env.BVS_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS;
@@ -41,6 +42,7 @@ describe("API auth and RBAC boundary", () => {
     restoreEnv("BVS_CORS_ORIGINS", originalCorsOrigins);
     restoreEnv("DATABASE_URL", originalDatabaseUrl);
     restoreEnv("NODE_ENV", originalNodeEnv);
+    restoreEnv("BVS_PUBLIC_API_BASE_URL", originalPublicApiBaseUrl);
     restoreEnv("BVS_AUTH_LOGIN_RATE_LIMIT_MAX", originalAuthLoginRateLimitMax);
     restoreEnv(
       "BVS_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS",
@@ -502,6 +504,7 @@ describe("API auth and RBAC boundary", () => {
   it("requires explicit CORS origins in production", async () => {
     process.env.NODE_ENV = "production";
     process.env.BVS_REPOSITORY = "postgres";
+    process.env.BVS_PUBLIC_API_BASE_URL = "https://api.wiiicare.example.vn/api/v1";
     delete process.env.BVS_CORS_ORIGINS;
 
     await expect(buildServer({ logger: false })).rejects.toThrow(
@@ -512,6 +515,7 @@ describe("API auth and RBAC boundary", () => {
   it("rejects unsafe CORS origins in production", async () => {
     process.env.NODE_ENV = "production";
     process.env.BVS_REPOSITORY = "postgres";
+    process.env.BVS_PUBLIC_API_BASE_URL = "https://api.wiiicare.example.vn/api/v1";
 
     for (const [origin, message] of [
       ["*", "BVS_CORS_ORIGINS must not include wildcard '*' in production."],
@@ -585,7 +589,45 @@ describe("API auth and RBAC boundary", () => {
     );
   });
 
+  it("requires a public API base URL in production", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.BVS_REPOSITORY = "postgres";
+    delete process.env.BVS_PUBLIC_API_BASE_URL;
+
+    await expect(buildServer({ logger: false })).rejects.toThrow(
+      "BVS_PUBLIC_API_BASE_URL must be set in production."
+    );
+  });
+
+  it("rejects invalid public API base URLs", async () => {
+    process.env.BVS_PUBLIC_API_BASE_URL = "not-a-url";
+
+    await expect(buildServer({ logger: false })).rejects.toThrow(
+      "BVS_PUBLIC_API_BASE_URL must be a valid absolute URL."
+    );
+  });
+
+  it("rejects public API base URLs with query or fragment", async () => {
+    process.env.BVS_PUBLIC_API_BASE_URL =
+      "https://api.wiiicare.example.vn/api/v1?tenant=demo";
+
+    await expect(buildServer({ logger: false })).rejects.toThrow(
+      "BVS_PUBLIC_API_BASE_URL must not include query or fragment."
+    );
+  });
+
+  it("requires HTTPS public API base URLs in production", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.BVS_REPOSITORY = "postgres";
+    process.env.BVS_PUBLIC_API_BASE_URL = "http://api.wiiicare.example.vn/api/v1";
+
+    await expect(buildServer({ logger: false })).rejects.toThrow(
+      "BVS_PUBLIC_API_BASE_URL must use HTTPS in production."
+    );
+  });
+
   it("serves FHIR CapabilityStatement metadata without a demo session", async () => {
+    process.env.BVS_PUBLIC_API_BASE_URL = "https://api.wiiicare.example.vn/api/v1/";
     app = await readyServer();
 
     const response = await app.inject({
@@ -598,6 +640,9 @@ describe("API auth and RBAC boundary", () => {
     expect(body).toMatchObject({
       resourceType: "CapabilityStatement",
       fhirVersion: "4.0.1",
+      implementation: {
+        url: "https://api.wiiicare.example.vn/api/v1"
+      },
       rest: [
         {
           mode: "server",

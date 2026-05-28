@@ -98,10 +98,12 @@ type ClosableRepository = {
 const requestIdHeaderName = "x-request-id";
 const maxRequestIdLength = 128;
 const requestIdPattern = /^[A-Za-z0-9._:-]+$/;
+const defaultPublicApiBaseUrl = "http://localhost:7310/api/v1";
 
 export async function buildServer(options: ServerOptions = {}) {
   assertAuthConfiguration();
   assertRepositoryConfiguration();
+  const publicApiBaseUrl = resolvePublicApiBaseUrl();
 
   const app = Fastify({
     logger: options.logger ?? true,
@@ -394,8 +396,7 @@ export async function buildServer(options: ServerOptions = {}) {
     async (api) => {
       api.get("/fhir/metadata", async () =>
         buildWiiiCareCapabilityStatement({
-          implementationUrl:
-            process.env.BVS_PUBLIC_API_BASE_URL ?? "http://localhost:7310/api/v1"
+          implementationUrl: publicApiBaseUrl
         })
       );
 
@@ -598,6 +599,36 @@ function assertRepositoryConfiguration(): void {
   if (process.env.NODE_ENV === "production" && repository !== "postgres") {
     throw new Error("BVS_REPOSITORY must be 'postgres' in production.");
   }
+}
+
+function resolvePublicApiBaseUrl(): string {
+  const rawValue = process.env.BVS_PUBLIC_API_BASE_URL?.trim();
+
+  if (!rawValue) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("BVS_PUBLIC_API_BASE_URL must be set in production.");
+    }
+
+    return defaultPublicApiBaseUrl;
+  }
+
+  let parsedUrl: URL;
+
+  try {
+    parsedUrl = new URL(rawValue);
+  } catch {
+    throw new Error("BVS_PUBLIC_API_BASE_URL must be a valid absolute URL.");
+  }
+
+  if (parsedUrl.search || parsedUrl.hash) {
+    throw new Error("BVS_PUBLIC_API_BASE_URL must not include query or fragment.");
+  }
+
+  if (process.env.NODE_ENV === "production" && parsedUrl.protocol !== "https:") {
+    throw new Error("BVS_PUBLIC_API_BASE_URL must use HTTPS in production.");
+  }
+
+  return rawValue.replace(/\/+$/, "");
 }
 
 function assertProductionCorsOrigins(origins: readonly string[]): void {

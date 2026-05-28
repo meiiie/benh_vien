@@ -91,6 +91,7 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: ${PORT:-7310}
+      BVS_PUBLIC_API_BASE_URL: ${BVS_PUBLIC_API_BASE_URL:-}
       BVS_REPOSITORY: ${BVS_REPOSITORY:-postgres}
       BVS_AUTH_SECRET: ${BVS_AUTH_SECRET:-}
       BVS_AUTH_TOKEN_TTL_SECONDS: ${BVS_AUTH_TOKEN_TTL_SECONDS:-28800}
