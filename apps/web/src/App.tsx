@@ -1040,6 +1040,7 @@ type NewPatientForm = {
 type PatientMergeForm = {
   targetPatientId: string;
   reason: string;
+  confirmationText: string;
 };
 
 type NewRecordTransferForm = {
@@ -1302,7 +1303,8 @@ const defaultPatientForm: NewPatientForm = {
 
 const defaultPatientMergeForm: PatientMergeForm = {
   targetPatientId: "patient-demo-001",
-  reason: "Đối soát MPI xác nhận hồ sơ nguồn bị đăng ký trùng với hồ sơ đích."
+  reason: "Đối soát MPI xác nhận hồ sơ nguồn bị đăng ký trùng với hồ sơ đích.",
+  confirmationText: ""
 };
 
 const defaultEncounterForm: NewEncounterForm = {
@@ -1804,6 +1806,11 @@ export function App() {
   )
     ? patientMergeForm.targetPatientId
     : patientMergeCandidates[0]?.id ?? "";
+  const patientMergeConfirmationCode =
+    selectedPatient?.identifiers[0]?.value ?? selectedPatient?.id ?? "";
+  const isPatientMergeConfirmationValid =
+    Boolean(selectedPatient) &&
+    patientMergeForm.confirmationText.trim() === patientMergeConfirmationCode;
   const selectedEncounter = encounters.find((encounter) => encounter.id === selectedEncounterId);
   const selectedDocument = clinicalDocuments.find((document) => document.id === selectedDocumentId);
   const selectedAllergyIntolerance = allergyIntolerances.find(
@@ -3642,6 +3649,11 @@ export function App() {
       return;
     }
 
+    if (!isPatientMergeConfirmationValid) {
+      setStatusMessage(`Cần nhập đúng mã xác nhận "${patientMergeConfirmationCode}" trước khi merge.`);
+      return;
+    }
+
     setIsMergingPatient(true);
 
     try {
@@ -3664,6 +3676,10 @@ export function App() {
       const mergedPatient = (await response.json()) as Patient;
       await loadPatients(mergedPatient.id);
       await loadPatientWorkspace(mergedPatient.id);
+      setPatientMergeForm({
+        ...patientMergeForm,
+        confirmationText: ""
+      });
       setStatusMessage(
         `Đã merge hồ sơ ${mergedPatient.fullName} vào hồ sơ đích ${mergedPatient.mergedIntoPatientId}. Hồ sơ nguồn đã chuyển sang chế độ chỉ đọc.`
       );
@@ -5953,6 +5969,7 @@ export function App() {
               value={`${selectedPatient.fullName} (${selectedPatient.identifiers[0]?.value ?? selectedPatient.id})`}
             />
             <Info label="Trạng thái nguồn" value={formatPatientRecordStatus(selectedPatient.status)} />
+            <Info label="Mã xác nhận merge" value={patientMergeConfirmationCode} />
           </div>
         ) : null}
 
@@ -5995,6 +6012,27 @@ export function App() {
             />
           </label>
 
+          <label className="wide-field">
+            Nhập lại mã xác nhận của hồ sơ nguồn
+            <input
+              value={patientMergeForm.confirmationText}
+              onChange={(event) =>
+                setPatientMergeForm({
+                  ...patientMergeForm,
+                  confirmationText: event.target.value
+                })
+              }
+              placeholder={patientMergeConfirmationCode || "Chọn hồ sơ nguồn trước"}
+            />
+          </label>
+
+          {selectedPatient && patientMergeForm.confirmationText.trim() && !isPatientMergeConfirmationValid ? (
+            <p className="transfer-alert wide-field">
+              Mã xác nhận chưa khớp. Để tránh merge nhầm bệnh án, hãy nhập đúng{" "}
+              <strong>{patientMergeConfirmationCode}</strong>.
+            </p>
+          ) : null}
+
           {selectedPatient && selectedPatient.status !== "active" ? (
             <p className="transfer-alert wide-field">
               Hồ sơ đang chọn không còn ở trạng thái hoạt động nên không thể dùng làm hồ sơ nguồn để merge.
@@ -6008,6 +6046,7 @@ export function App() {
               !canMergeSelectedPatient ||
               !patientMergeTargetId ||
               !patientMergeForm.reason.trim() ||
+              !isPatientMergeConfirmationValid ||
               isMergingPatient
             }
           >
