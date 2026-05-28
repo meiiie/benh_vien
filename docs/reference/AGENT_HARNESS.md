@@ -11,6 +11,7 @@ Nguồn tham khảo: [How Claude Code works in large codebases: Best practices a
 - `apps/api/AGENTS.md`, `packages/domain/AGENTS.md`, `docs/AGENTS.md`: context cục bộ theo thư mục.
 - `.claude/settings.json`: loại trừ generated files và thư mục nhiễu.
 - `docs/testing/SMOKE_TEST.md` và `scripts/harness/*`: kiểm chứng deterministic, không dựa vào trí nhớ agent.
+- `scripts/harness/compose-api-env.mjs`: kiểm tra compose service `api` thật sự truyền các biến runtime quan trọng như API docs, body limit và record-transfer worker vào container.
 - `.github/workflows/ci.yml`: chạy cùng các gate quan trọng trên GitHub.
 - `.coderabbit.yaml`: review bằng tiếng Việt, bám kiến trúc và tránh comment cosmetic.
 
