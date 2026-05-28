@@ -26,6 +26,7 @@ Hồ sơ bệnh án là dữ liệu đặc biệt nhạy cảm. Dự án chưa t
 - Ở `NODE_ENV=production`, API kiểm tra `BVS_AUTH_SECRET` ngay khi khởi động và dừng sớm nếu secret thiếu hoặc ngắn hơn 32 ký tự.
 - TTL của token demo được cấu hình bằng `BVS_AUTH_TOKEN_TTL_SECONDS`, mặc định `28800` giây, và bị giới hạn trong khoảng `300` đến `28800` giây để tránh phiên quá ngắn hoặc quá dài do cấu hình sai.
 - Lỗi auth trả `requestId` để nối phản hồi client với log kỹ thuật mà không lộ stack trace hoặc chi tiết nội bộ.
+- Lỗi phân quyền chung trả `requestId`; lỗi `401 UNAUTHENTICATED` có thêm `WWW-Authenticate: Bearer` để client/proxy nhận biết yêu cầu Bearer token.
 - `POST /api/v1/auth/login` có rate limit theo IP + username đã băm SHA-256, cấu hình bằng `BVS_RATE_LIMIT_STORE`, `BVS_VALKEY_URL`, `BVS_AUTH_LOGIN_RATE_LIMIT_MAX` và `BVS_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS`. Dev đơn lẻ có thể dùng memory store; Docker/dev-prod dùng Valkey để chia sẻ bộ đếm giữa nhiều replica.
 - `/ready` kiểm tra kho rate limit đăng nhập để tránh đưa API vào rotation khi Valkey không sẵn sàng trong cấu hình dev-prod/production.
 - API và web container đặt security headers nền tảng gồm `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` và `Cross-Origin-Resource-Policy`; đây là lớp giảm rủi ro misconfiguration, chưa thay thế CSP/edge security production.

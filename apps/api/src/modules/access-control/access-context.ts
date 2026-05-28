@@ -1,8 +1,5 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import {
-  canAccess,
-  isPurposeOfUse
-} from "@benh-vien-so/domain";
+import { canAccess, isPurposeOfUse } from "@benh-vien-so/domain";
 import type { ActorContext, Permission } from "@benh-vien-so/domain";
 import { verifyAccessToken } from "../auth/auth-session.js";
 
@@ -31,9 +28,11 @@ export function requirePermission(
   const actor = readActorContext(request);
 
   if (!actor) {
+    reply.header("WWW-Authenticate", "Bearer");
     reply.status(401).send({
       error: "UNAUTHENTICATED",
-      message: "Cần đăng nhập và gửi Authorization Bearer token hợp lệ."
+      message: "Cần đăng nhập và gửi Authorization Bearer token hợp lệ.",
+      requestId: request.id
     });
 
     return undefined;
@@ -46,6 +45,7 @@ export function requirePermission(
   reply.status(403).send({
     error: "FORBIDDEN",
     message: "Actor không có quyền thực hiện thao tác này.",
+    requestId: request.id,
     permission,
     actor: {
       id: actor.actorId,

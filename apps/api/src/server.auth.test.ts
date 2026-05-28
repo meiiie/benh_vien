@@ -200,12 +200,17 @@ describe("API auth and RBAC boundary", () => {
 
     const response = await app.inject({
       method: "GET",
-      url: "/api/v1/patients"
+      url: "/api/v1/patients",
+      headers: {
+        "x-request-id": "access-unauthenticated-001"
+      }
     });
 
     expect(response.statusCode).toBe(401);
+    expect(response.headers["www-authenticate"]).toBe("Bearer");
     expect(response.json()).toMatchObject({
-      error: "UNAUTHENTICATED"
+      error: "UNAUTHENTICATED",
+      requestId: "access-unauthenticated-001"
     });
   });
 
@@ -491,13 +496,17 @@ describe("API auth and RBAC boundary", () => {
     const response = await app.inject({
       method: "GET",
       url: "/api/v1/patients",
-      headers: treatmentHeaders(accessToken)
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "x-request-id": "access-forbidden-auditor-treatment-001"
+      }
     });
 
     expect(response.statusCode).toBe(403);
     expect(response.json()).toMatchObject({
       error: "FORBIDDEN",
-      permission: "patient:list"
+      permission: "patient:list",
+      requestId: "access-forbidden-auditor-treatment-001"
     });
   });
 
