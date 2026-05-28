@@ -11,12 +11,6 @@ export const RecordTransferStatusSchema = z.enum([
   "dead-lettered"
 ]);
 
-export const CreateRecordTransferStatusSchema = z.enum([
-  "draft",
-  "requested",
-  "ready"
-]);
-
 export const RecordTransferPrioritySchema = z.enum(["routine", "urgent", "asap", "stat"]);
 export const RecordTransferBundleTypeSchema = z.enum(["collection", "document"]);
 
@@ -28,19 +22,18 @@ export const RecordTransferIdParamsSchema = z.object({
   id: z.string().min(1)
 });
 
-export const CreateRecordTransferRequestSchema = z.object({
-  status: CreateRecordTransferStatusSchema.optional(),
-  priority: RecordTransferPrioritySchema.optional(),
-  bundleType: RecordTransferBundleTypeSchema.default("document"),
-  sourceOrganizationId: z.string().min(1),
-  recipientOrganizationId: z.string().min(1),
-  consentReference: z.string().min(1),
-  reason: z.string().min(1),
-  requestedAt: z.string().datetime().optional(),
-  sentAt: z.string().datetime().optional(),
-  receivedAt: z.string().datetime().optional(),
-  note: z.string().min(1).optional()
-});
+export const CreateRecordTransferRequestSchema = z
+  .object({
+    priority: RecordTransferPrioritySchema.optional(),
+    bundleType: RecordTransferBundleTypeSchema.default("document"),
+    sourceOrganizationId: z.string().min(1),
+    recipientOrganizationId: z.string().min(1),
+    consentReference: z.string().min(1),
+    reason: z.string().min(1),
+    requestedAt: z.string().datetime().optional(),
+    note: z.string().min(1).optional()
+  })
+  .strict();
 
 export const MarkRecordTransferSentRequestSchema = z.object({
   sentAt: z.string().datetime().optional(),
@@ -77,9 +70,6 @@ export const RetryRecordTransferRequestSchema = z.object({
 });
 
 export type RecordTransferStatus = z.infer<typeof RecordTransferStatusSchema>;
-export type CreateRecordTransferStatus = z.infer<
-  typeof CreateRecordTransferStatusSchema
->;
 export type RecordTransferPriority = z.infer<typeof RecordTransferPrioritySchema>;
 export type RecordTransferBundleType = z.infer<typeof RecordTransferBundleTypeSchema>;
 export type PatientRecordTransfersParams = z.infer<

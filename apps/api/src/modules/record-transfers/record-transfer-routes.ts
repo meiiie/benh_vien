@@ -141,11 +141,12 @@ export async function registerRecordTransferRoutes(
 
     try {
       const recordTransfer = RecordTransfer.create({
+        ...parsed.data,
         id: `record-transfer-${nanoid(10)}`,
         patientId: params.patientId,
+        status: "requested",
         requestedByActorId: actor.actorId,
-        bundleId: buildBundleId(params.patientId, parsed.data.bundleType),
-        ...parsed.data
+        bundleId: buildBundleId(params.patientId, parsed.data.bundleType)
       });
 
       await recordTransferRepository.save(recordTransfer);
