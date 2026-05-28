@@ -40,7 +40,7 @@ Hồ sơ bệnh án là dữ liệu đặc biệt nhạy cảm. Dự án chưa t
 - `/ready` kiểm tra kho rate limit đăng nhập để tránh đưa API vào rotation khi Valkey không sẵn sàng trong cấu hình dev-prod/production.
 - Ở production, `BVS_CORS_ORIGINS` chỉ chấp nhận Origin HTTPS canonical, không chấp nhận wildcard, HTTP hoặc URL có path để tránh mở rộng nhầm phạm vi truy cập từ trình duyệt.
 - API và web container đặt security headers nền tảng gồm `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` và `Cross-Origin-Resource-Policy`.
-- Web runtime Nginx áp dụng Content Security Policy chặt cho SPA (`default-src 'self'`, chặn inline script/style, `object-src 'none'`, `frame-ancestors 'none'`) để giảm rủi ro XSS/nhúng ngoài ý muốn. CSP được scope ở `location /` để không phá `/api` và Swagger UI được proxy qua `/docs`.
+- Web runtime Nginx áp dụng Content Security Policy chặt cho SPA (`default-src 'self'`, chặn inline script/style, `object-src 'none'`, `frame-ancestors 'none'`) để giảm rủi ro XSS/nhúng ngoài ý muốn. CSP được scope ở `location /` để không phá `/api`; Swagger UI/OpenAPI docs tại `/docs` mặc định tắt trong production và chỉ nên bật bằng `BVS_API_DOCS_ENABLED=true` sau mạng nội bộ hoặc lớp kiểm soát truy cập phù hợp.
 - API đặt `Cache-Control: no-store` và `Pragma: no-cache` để giảm rủi ro browser/proxy lưu nhầm response chứa dữ liệu bệnh án.
 - API phản hồi `X-Request-Id`, chấp nhận `x-request-id` từ proxy/upstream và ghi `requestId` vào metadata của audit event để nối log kỹ thuật với hành động lâm sàng.
 - API chỉ tin `x-request-id` upstream nếu ID ngắn và dùng tập ký tự an toàn; giá trị rỗng, quá dài hoặc có khoảng trắng/ký tự lạ sẽ bị thay bằng UUID mới trước khi phản hồi/log/audit.

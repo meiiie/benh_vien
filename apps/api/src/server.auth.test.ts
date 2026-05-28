@@ -40,6 +40,7 @@ describe("API auth and RBAC boundary", () => {
     process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRET;
   const originalRecordTransferCallbackSecretsJson =
     process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON;
+  const originalApiDocsEnabled = process.env.BVS_API_DOCS_ENABLED;
 
   beforeEach(() => {
     process.env.BVS_REPOSITORY = "in-memory";
@@ -85,6 +86,7 @@ describe("API auth and RBAC boundary", () => {
       "BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON",
       originalRecordTransferCallbackSecretsJson
     );
+    restoreEnv("BVS_API_DOCS_ENABLED", originalApiDocsEnabled);
   });
 
   it("returns a signed demo session for valid credentials", async () => {
@@ -517,6 +519,49 @@ describe("API auth and RBAC boundary", () => {
     expect(response.headers["cross-origin-resource-policy"]).toBe("same-site");
     expect(response.headers["cache-control"]).toBe("no-store");
     expect(response.headers.pragma).toBe("no-cache");
+  });
+
+  it("serves API documentation outside production by default", async () => {
+    delete process.env.BVS_API_DOCS_ENABLED;
+    app = await readyServer();
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/docs/"
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(String(response.headers["content-type"])).toContain("text/html");
+  });
+
+  it("can disable API documentation through runtime configuration", async () => {
+    process.env.BVS_API_DOCS_ENABLED = "false";
+    app = await readyServer();
+
+    const docsResponse = await app.inject({
+      method: "GET",
+      url: "/docs/"
+    });
+    const runtimeResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/runtime"
+    });
+
+    expect(docsResponse.statusCode).toBe(404);
+    expect(runtimeResponse.statusCode).toBe(200);
+    expect(runtimeResponse.json()).toMatchObject({
+      features: {
+        apiDocsEnabled: false
+      }
+    });
+  });
+
+  it("rejects invalid API documentation feature flag values", async () => {
+    process.env.BVS_API_DOCS_ENABLED = "sometimes";
+
+    await expect(buildServer({ logger: false })).rejects.toThrow(
+      "BVS_API_DOCS_ENABLED must be either 'true' or 'false'."
+    );
   });
 
   it("echoes the request id header for trace correlation", async () => {
