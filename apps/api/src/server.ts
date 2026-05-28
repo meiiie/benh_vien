@@ -439,6 +439,7 @@ export async function buildServer(options: ServerOptions = {}) {
         patientRepository,
         consentRepository,
         recordTransferRepository,
+        providerDirectoryRepository,
         auditEventRepository
       );
       await registerEncounterRoutes(
@@ -466,6 +467,7 @@ export async function buildServer(options: ServerOptions = {}) {
         patientRepository,
         encounterRepository,
         observationRepository,
+        providerDirectoryRepository,
         auditEventRepository
       );
       await registerMedicationRequestRoutes(
@@ -543,6 +545,7 @@ export async function buildServer(options: ServerOptions = {}) {
         patientRepository,
         encounterRepository,
         clinicalDocumentRepository,
+        providerDirectoryRepository,
         auditEventRepository
       );
       await registerAuditEventRoutes(api, patientRepository, auditEventRepository);

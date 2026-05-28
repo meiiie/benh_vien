@@ -16,10 +16,14 @@ import type {
   AuditEventRepository,
   ConsentRepository,
   PatientRepository,
+  ProviderDirectoryRepository,
   RecordTransferRepository,
   RecordTransferSnapshot
 } from "@benh-vien-so/domain";
-import { requirePermission } from "../access-control/access-context.js";
+import {
+  requirePatientRecordAccessByPatientId,
+  requirePermission
+} from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
 
@@ -28,6 +32,7 @@ export async function registerRecordTransferRoutes(
   patientRepository: PatientRepository,
   consentRepository: ConsentRepository,
   recordTransferRepository: RecordTransferRepository,
+  providerDirectoryRepository: ProviderDirectoryRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
   app.get("/patients/:patientId/record-transfers", async (request, reply) => {
@@ -38,12 +43,17 @@ export async function registerRecordTransferRoutes(
     }
 
     const params = PatientRecordTransfersParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const recordTransfers = await recordTransferRepository.findByPatientId(params.patientId);
@@ -70,12 +80,17 @@ export async function registerRecordTransferRoutes(
     }
 
     const params = PatientRecordTransfersParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const parsed = CreateRecordTransferRequestSchema.safeParse(request.body);
@@ -160,6 +175,19 @@ export async function registerRecordTransferRoutes(
       });
     }
 
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        recordTransfer.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
+    }
+
     await recordAuditEvent(auditRepository, request, {
       action: "record-transfer.read",
       resourceType: "RecordTransfer",
@@ -190,6 +218,19 @@ export async function registerRecordTransferRoutes(
       return reply.status(404).send({
         error: "RECORD_TRANSFER_NOT_FOUND"
       });
+    }
+
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        recordTransfer.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     try {
@@ -242,6 +283,19 @@ export async function registerRecordTransferRoutes(
       });
     }
 
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        recordTransfer.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
+    }
+
     try {
       recordTransfer.markReceived(parsed.data);
       await recordTransferRepository.save(recordTransfer);
@@ -285,6 +339,19 @@ export async function registerRecordTransferRoutes(
       return reply.status(404).send({
         error: "RECORD_TRANSFER_NOT_FOUND"
       });
+    }
+
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        recordTransfer.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     await recordAuditEvent(auditRepository, request, {

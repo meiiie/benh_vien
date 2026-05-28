@@ -7,6 +7,7 @@ import {
 import type {
   ActorContext,
   Patient,
+  PatientRepository,
   Permission,
   ProviderDirectoryRepository
 } from "@benh-vien-so/domain";
@@ -93,6 +94,40 @@ export async function requirePatientRecordAccess(
   });
 
   return false;
+}
+
+export async function requirePatientRecordAccessByPatientId(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  actor: ActorContext,
+  patientId: string,
+  patientRepository: PatientRepository,
+  providerDirectoryRepository: ProviderDirectoryRepository
+): Promise<Patient | undefined> {
+  const patient = await patientRepository.findById(patientId);
+
+  if (!patient) {
+    reply.status(404).send({
+      error: "PATIENT_NOT_FOUND",
+      requestId: request.id
+    });
+
+    return undefined;
+  }
+
+  if (
+    !(await requirePatientRecordAccess(
+      request,
+      reply,
+      actor,
+      patient,
+      providerDirectoryRepository
+    ))
+  ) {
+    return undefined;
+  }
+
+  return patient;
 }
 
 export async function filterPatientsByAccess(

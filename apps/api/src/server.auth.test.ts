@@ -766,6 +766,136 @@ describe("API auth and RBAC boundary", () => {
       }
     });
 
+    for (const [url, requestId] of [
+      [`/api/v1/patients/${outsidePatientId}/documents`, "document-list-abac-denied-001"],
+      [`/api/v1/patients/${outsidePatientId}/observations`, "observation-list-abac-denied-001"],
+      [
+        `/api/v1/patients/${outsidePatientId}/record-transfers`,
+        "record-transfer-list-abac-denied-001"
+      ]
+    ] as const) {
+      const response = await app.inject({
+        method: "GET",
+        url,
+        headers: {
+          ...treatmentHeaders(clinicianToken),
+          "x-request-id": requestId
+        }
+      });
+
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toMatchObject({
+        error: "PATIENT_ACCESS_DENIED",
+        requestId,
+        patientId: outsidePatientId
+      });
+    }
+
+    const outsideDocumentResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/documents`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        type: "referral-letter",
+        title: "Outside referral letter",
+        storageUri: "s3://wiiicare-test/outside/referral-letter.pdf",
+        authorPractitionerId: "practitioner-demo-003"
+      }
+    });
+    const outsideDocumentId = outsideDocumentResponse.json().id as string;
+
+    expect(outsideDocumentResponse.statusCode).toBe(201);
+
+    const outsideObservationResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/observations`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        category: "vital-signs",
+        code: {
+          system: "http://loinc.org",
+          code: "8310-5",
+          display: "Body temperature"
+        },
+        effectiveAt: "2026-05-28T01:00:00.000Z",
+        valueQuantity: {
+          value: 37,
+          unit: "Cel",
+          system: "http://unitsofmeasure.org",
+          code: "Cel"
+        },
+        performerPractitionerId: "practitioner-demo-001"
+      }
+    });
+    const outsideObservationId = outsideObservationResponse.json().id as string;
+
+    expect(outsideObservationResponse.statusCode).toBe(201);
+
+    const outsideConsentResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/consents`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        category: "record-sharing",
+        granteeOrganizationId: "hospital-hai-phong-referral",
+        validFrom: "2026-05-28T00:00:00.000Z",
+        validUntil: "2026-12-31T23:59:59.000Z"
+      }
+    });
+    const outsideConsentId = outsideConsentResponse.json().id as string;
+
+    expect(outsideConsentResponse.statusCode).toBe(201);
+
+    const outsideTransferResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/record-transfers`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        bundleType: "document",
+        sourceOrganizationId: "hospital-outside-demo",
+        recipientOrganizationId: "hospital-hai-phong-referral",
+        consentReference: outsideConsentId,
+        reason: "Outside transfer for ABAC verification."
+      }
+    });
+    const outsideTransferId = outsideTransferResponse.json().id as string;
+
+    expect(outsideTransferResponse.statusCode).toBe(201);
+
+    for (const [url, requestId] of [
+      [`/api/v1/clinical-documents/${outsideDocumentId}/fhir`, "document-read-abac-denied-001"],
+      [`/api/v1/observations/${outsideObservationId}`, "observation-read-abac-denied-001"],
+      [`/api/v1/record-transfers/${outsideTransferId}`, "transfer-read-abac-denied-001"]
+    ] as const) {
+      const response = await app.inject({
+        method: "GET",
+        url,
+        headers: {
+          ...treatmentHeaders(clinicianToken),
+          "x-request-id": requestId
+        }
+      });
+
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toMatchObject({
+        error: "PATIENT_ACCESS_DENIED",
+        requestId,
+        patientId: outsidePatientId
+      });
+    }
+
     const auditorListResponse = await app.inject({
       method: "GET",
       url: "/api/v1/patients",

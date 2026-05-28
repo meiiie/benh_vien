@@ -16,9 +16,13 @@ import type {
   ClinicalDocumentRepository,
   ClinicalDocumentSnapshot,
   EncounterRepository,
-  PatientRepository
+  PatientRepository,
+  ProviderDirectoryRepository
 } from "@benh-vien-so/domain";
-import { requirePermission } from "../access-control/access-context.js";
+import {
+  requirePatientRecordAccessByPatientId,
+  requirePermission
+} from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
 
@@ -27,6 +31,7 @@ export async function registerClinicalDocumentRoutes(
   patientRepository: PatientRepository,
   encounterRepository: EncounterRepository,
   documentRepository: ClinicalDocumentRepository,
+  providerDirectoryRepository: ProviderDirectoryRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
   app.get("/patients/:patientId/documents", async (request, reply) => {
@@ -37,12 +42,17 @@ export async function registerClinicalDocumentRoutes(
     }
 
     const params = PatientDocumentsParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const documents = await documentRepository.findByPatientId(params.patientId);
@@ -69,12 +79,17 @@ export async function registerClinicalDocumentRoutes(
     }
 
     const params = PatientDocumentsParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const parsed = CreateClinicalDocumentRequestSchema.safeParse(request.body);
@@ -150,6 +165,19 @@ export async function registerClinicalDocumentRoutes(
       });
     }
 
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        document.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
+    }
+
     try {
       document.sign();
       await documentRepository.save(document);
@@ -200,6 +228,19 @@ export async function registerClinicalDocumentRoutes(
       });
     }
 
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        document.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
+    }
+
     await recordAuditEvent(auditRepository, request, {
       action: "clinical-document.fhir-export",
       resourceType: "ClinicalDocument",
@@ -228,6 +269,19 @@ export async function registerClinicalDocumentRoutes(
       return reply.status(404).send({
         error: "CLINICAL_DOCUMENT_NOT_FOUND"
       });
+    }
+
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        document.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     try {
