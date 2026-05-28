@@ -1,4 +1,5 @@
 import pg from "pg";
+import { createPostgresRepositoryPool } from "./postgres-pool.js";
 import { Patient } from "@benh-vien-so/domain";
 import type {
   PatientIdentifier,
@@ -6,8 +7,6 @@ import type {
   PatientRepository,
   PatientSnapshot
 } from "@benh-vien-so/domain";
-
-const { Pool } = pg;
 
 type PatientRow = {
   id: string;
@@ -27,10 +26,7 @@ export class PostgresPatientRepository implements PatientRepository {
   private readonly pool: pg.Pool;
 
   constructor(connectionString: string) {
-    this.pool = new Pool({
-      connectionString,
-      max: 10
-    });
+    this.pool = createPostgresRepositoryPool(connectionString);
   }
 
   async findAll(): Promise<Patient[]> {
@@ -165,4 +161,3 @@ function rowToPatient(row: PatientRow): Patient {
 function toIsoString(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
-

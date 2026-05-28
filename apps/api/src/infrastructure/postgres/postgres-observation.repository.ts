@@ -1,4 +1,5 @@
 import pg from "pg";
+import { createPostgresRepositoryPool } from "./postgres-pool.js";
 import { Observation } from "@benh-vien-so/domain";
 import type {
   ObservationCategory,
@@ -8,8 +9,6 @@ import type {
   ObservationSnapshot,
   ObservationStatus
 } from "@benh-vien-so/domain";
-
-const { Pool } = pg;
 
 type ObservationRow = {
   id: string;
@@ -30,10 +29,7 @@ export class PostgresObservationRepository implements ObservationRepository {
   private readonly pool: pg.Pool;
 
   constructor(connectionString: string) {
-    this.pool = new Pool({
-      connectionString,
-      max: 10
-    });
+    this.pool = createPostgresRepositoryPool(connectionString);
   }
 
   async findByPatientId(patientId: string): Promise<Observation[]> {

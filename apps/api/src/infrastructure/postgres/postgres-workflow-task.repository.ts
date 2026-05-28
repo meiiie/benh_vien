@@ -1,4 +1,5 @@
 import pg from "pg";
+import { createPostgresRepositoryPool } from "./postgres-pool.js";
 import { WorkflowTask } from "@benh-vien-so/domain";
 import type {
   WorkflowTaskBusinessStatus,
@@ -11,8 +12,6 @@ import type {
   WorkflowTaskSnapshot,
   WorkflowTaskStatus
 } from "@benh-vien-so/domain";
-
-const { Pool } = pg;
 
 type WorkflowTaskRow = {
   id: string;
@@ -42,10 +41,7 @@ export class PostgresWorkflowTaskRepository implements WorkflowTaskRepository {
   private readonly pool: pg.Pool;
 
   constructor(connectionString: string) {
-    this.pool = new Pool({
-      connectionString,
-      max: 10
-    });
+    this.pool = createPostgresRepositoryPool(connectionString);
   }
 
   async findByPatientId(patientId: string): Promise<WorkflowTask[]> {

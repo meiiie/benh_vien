@@ -1,4 +1,5 @@
 import pg from "pg";
+import { createPostgresRepositoryPool } from "./postgres-pool.js";
 import { Procedure } from "@benh-vien-so/domain";
 import type {
   ProcedureCategory,
@@ -10,8 +11,6 @@ import type {
   ProcedureSnapshot,
   ProcedureStatus
 } from "@benh-vien-so/domain";
-
-const { Pool } = pg;
 
 type ProcedureRow = {
   id: string;
@@ -40,10 +39,7 @@ export class PostgresProcedureRepository implements ProcedureRepository {
   private readonly pool: pg.Pool;
 
   constructor(connectionString: string) {
-    this.pool = new Pool({
-      connectionString,
-      max: 10
-    });
+    this.pool = createPostgresRepositoryPool(connectionString);
   }
 
   async findByPatientId(patientId: string): Promise<Procedure[]> {

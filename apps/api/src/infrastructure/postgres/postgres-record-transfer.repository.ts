@@ -1,4 +1,5 @@
 import pg from "pg";
+import { createPostgresRepositoryPool } from "./postgres-pool.js";
 import { RecordTransfer } from "@benh-vien-so/domain";
 import type {
   RecordTransferBundleType,
@@ -7,8 +8,6 @@ import type {
   RecordTransferSnapshot,
   RecordTransferStatus
 } from "@benh-vien-so/domain";
-
-const { Pool } = pg;
 
 type RecordTransferRow = {
   id: string;
@@ -34,10 +33,7 @@ export class PostgresRecordTransferRepository implements RecordTransferRepositor
   private readonly pool: pg.Pool;
 
   constructor(connectionString: string) {
-    this.pool = new Pool({
-      connectionString,
-      max: 10
-    });
+    this.pool = createPostgresRepositoryPool(connectionString);
   }
 
   async findByPatientId(patientId: string): Promise<RecordTransfer[]> {

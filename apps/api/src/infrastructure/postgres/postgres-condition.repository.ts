@@ -1,4 +1,5 @@
 import pg from "pg";
+import { createPostgresRepositoryPool } from "./postgres-pool.js";
 import { Condition } from "@benh-vien-so/domain";
 import type {
   ConditionCategory,
@@ -9,8 +10,6 @@ import type {
   ConditionSnapshot,
   ConditionVerificationStatus
 } from "@benh-vien-so/domain";
-
-const { Pool } = pg;
 
 type ConditionRow = {
   id: string;
@@ -33,10 +32,7 @@ export class PostgresConditionRepository implements ConditionRepository {
   private readonly pool: pg.Pool;
 
   constructor(connectionString: string) {
-    this.pool = new Pool({
-      connectionString,
-      max: 10
-    });
+    this.pool = createPostgresRepositoryPool(connectionString);
   }
 
   async findByPatientId(patientId: string): Promise<Condition[]> {

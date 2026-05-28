@@ -1,4 +1,5 @@
 import pg from "pg";
+import { createPostgresRepositoryPool } from "./postgres-pool.js";
 import { ImagingStudy } from "@benh-vien-so/domain";
 import type {
   ImagingStudyRepository,
@@ -6,8 +7,6 @@ import type {
   ImagingStudySnapshot,
   ImagingStudyStatus
 } from "@benh-vien-so/domain";
-
-const { Pool } = pg;
 
 type ImagingStudyRow = {
   id: string;
@@ -34,10 +33,7 @@ export class PostgresImagingStudyRepository implements ImagingStudyRepository {
   private readonly pool: pg.Pool;
 
   constructor(connectionString: string) {
-    this.pool = new Pool({
-      connectionString,
-      max: 10
-    });
+    this.pool = createPostgresRepositoryPool(connectionString);
   }
 
   async findByPatientId(patientId: string): Promise<ImagingStudy[]> {

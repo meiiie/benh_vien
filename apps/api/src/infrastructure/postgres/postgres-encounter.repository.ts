@@ -1,4 +1,5 @@
 import pg from "pg";
+import { createPostgresRepositoryPool } from "./postgres-pool.js";
 import { Encounter } from "@benh-vien-so/domain";
 import type {
   EncounterClass,
@@ -6,8 +7,6 @@ import type {
   EncounterSnapshot,
   EncounterStatus
 } from "@benh-vien-so/domain";
-
-const { Pool } = pg;
 
 type EncounterRow = {
   id: string;
@@ -28,10 +27,7 @@ export class PostgresEncounterRepository implements EncounterRepository {
   private readonly pool: pg.Pool;
 
   constructor(connectionString: string) {
-    this.pool = new Pool({
-      connectionString,
-      max: 10
-    });
+    this.pool = createPostgresRepositoryPool(connectionString);
   }
 
   async findByPatientId(patientId: string): Promise<Encounter[]> {

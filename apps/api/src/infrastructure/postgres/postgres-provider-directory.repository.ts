@@ -1,4 +1,5 @@
 import pg from "pg";
+import { createPostgresRepositoryPool } from "./postgres-pool.js";
 import { ProviderDirectory } from "@benh-vien-so/domain";
 import type {
   ProviderDirectoryRepository,
@@ -8,8 +9,6 @@ import type {
   ProviderPractitionerRoleSnapshot,
   ProviderPractitionerSnapshot
 } from "@benh-vien-so/domain";
-
-const { Pool } = pg;
 
 type ProviderDirectoryResourceType =
   | "Organization"
@@ -27,10 +26,7 @@ export class PostgresProviderDirectoryRepository implements ProviderDirectoryRep
   private readonly pool: pg.Pool;
 
   constructor(connectionString: string) {
-    this.pool = new Pool({
-      connectionString,
-      max: 10
-    });
+    this.pool = createPostgresRepositoryPool(connectionString);
   }
 
   async findDirectory(): Promise<ProviderDirectory> {

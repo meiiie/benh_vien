@@ -83,10 +83,22 @@ export type ServerOptions = {
   readonly logger?: boolean;
 };
 
+type ClosableRepository = {
+  close(): Promise<void>;
+};
+
 export async function buildServer(options: ServerOptions = {}) {
   const app = Fastify({
     logger: options.logger ?? true
   });
+  const managedRepositories: ClosableRepository[] = [];
+  const trackRepository = <Repository>(repository: Repository): Repository => {
+    if (isClosableRepository(repository)) {
+      managedRepositories.push(repository);
+    }
+
+    return repository;
+  };
 
   await app.register(cors, {
     origin: true
@@ -189,42 +201,55 @@ export async function buildServer(options: ServerOptions = {}) {
     routePrefix: "/docs"
   });
 
-  const patientRepository = options.patientRepository ?? (await createPatientRepository());
+  const patientRepository =
+    options.patientRepository ?? trackRepository(await createPatientRepository());
   const providerDirectoryRepository =
-    options.providerDirectoryRepository ?? (await createProviderDirectoryRepository());
+    options.providerDirectoryRepository ??
+    trackRepository(await createProviderDirectoryRepository());
   const encounterRepository =
-    options.encounterRepository ?? (await createEncounterRepository());
+    options.encounterRepository ?? trackRepository(await createEncounterRepository());
   const allergyIntoleranceRepository =
-    options.allergyIntoleranceRepository ?? (await createAllergyIntoleranceRepository());
+    options.allergyIntoleranceRepository ??
+    trackRepository(await createAllergyIntoleranceRepository());
   const conditionRepository =
-    options.conditionRepository ?? (await createConditionRepository());
+    options.conditionRepository ?? trackRepository(await createConditionRepository());
   const observationRepository =
-    options.observationRepository ?? (await createObservationRepository());
+    options.observationRepository ?? trackRepository(await createObservationRepository());
   const medicationRequestRepository =
-    options.medicationRequestRepository ?? (await createMedicationRequestRepository());
+    options.medicationRequestRepository ??
+    trackRepository(await createMedicationRequestRepository());
   const medicationDispenseRepository =
-    options.medicationDispenseRepository ?? (await createMedicationDispenseRepository());
+    options.medicationDispenseRepository ??
+    trackRepository(await createMedicationDispenseRepository());
   const medicationAdministrationRepository =
     options.medicationAdministrationRepository ??
-    (await createMedicationAdministrationRepository());
+    trackRepository(await createMedicationAdministrationRepository());
   const serviceRequestRepository =
-    options.serviceRequestRepository ?? (await createServiceRequestRepository());
+    options.serviceRequestRepository ?? trackRepository(await createServiceRequestRepository());
   const workflowTaskRepository =
-    options.workflowTaskRepository ?? (await createWorkflowTaskRepository());
+    options.workflowTaskRepository ?? trackRepository(await createWorkflowTaskRepository());
   const procedureRepository =
-    options.procedureRepository ?? (await createProcedureRepository());
+    options.procedureRepository ?? trackRepository(await createProcedureRepository());
   const diagnosticReportRepository =
-    options.diagnosticReportRepository ?? (await createDiagnosticReportRepository());
+    options.diagnosticReportRepository ??
+    trackRepository(await createDiagnosticReportRepository());
   const imagingStudyRepository =
-    options.imagingStudyRepository ?? (await createImagingStudyRepository());
+    options.imagingStudyRepository ?? trackRepository(await createImagingStudyRepository());
   const clinicalDocumentRepository =
-    options.clinicalDocumentRepository ?? (await createClinicalDocumentRepository());
+    options.clinicalDocumentRepository ??
+    trackRepository(await createClinicalDocumentRepository());
   const consentRepository =
-    options.consentRepository ?? (await createConsentRepository());
+    options.consentRepository ?? trackRepository(await createConsentRepository());
   const recordTransferRepository =
-    options.recordTransferRepository ?? (await createRecordTransferRepository());
+    options.recordTransferRepository ?? trackRepository(await createRecordTransferRepository());
   const auditEventRepository =
-    options.auditEventRepository ?? (await createAuditEventRepository());
+    options.auditEventRepository ?? trackRepository(await createAuditEventRepository());
+
+  app.addHook("onClose", async () => {
+    for (const repository of [...managedRepositories].reverse()) {
+      await repository.close();
+    }
+  });
 
   app.get("/health", async () => ({
     status: "ok",
@@ -439,4 +464,13 @@ export async function buildServer(options: ServerOptions = {}) {
   );
 
   return app;
+}
+
+function isClosableRepository(repository: unknown): repository is ClosableRepository {
+  return (
+    typeof repository === "object" &&
+    repository !== null &&
+    "close" in repository &&
+    typeof (repository as { readonly close?: unknown }).close === "function"
+  );
 }

@@ -1,4 +1,5 @@
 import pg from "pg";
+import { createPostgresRepositoryPool } from "./postgres-pool.js";
 import { AllergyIntolerance } from "@benh-vien-so/domain";
 import type {
   AllergyCategory,
@@ -11,8 +12,6 @@ import type {
   AllergyType,
   AllergyVerificationStatus
 } from "@benh-vien-so/domain";
-
-const { Pool } = pg;
 
 type AllergyIntoleranceRow = {
   id: string;
@@ -36,10 +35,7 @@ export class PostgresAllergyIntoleranceRepository implements AllergyIntoleranceR
   private readonly pool: pg.Pool;
 
   constructor(connectionString: string) {
-    this.pool = new Pool({
-      connectionString,
-      max: 10
-    });
+    this.pool = createPostgresRepositoryPool(connectionString);
   }
 
   async findByPatientId(patientId: string): Promise<AllergyIntolerance[]> {

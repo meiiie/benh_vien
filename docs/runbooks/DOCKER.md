@@ -16,6 +16,8 @@ Mặc định mở:
 
 Compose sẽ chạy service `migrate` trước API để áp dụng SQL migration trong `migrations/`.
 
+API giới hạn mỗi PostgreSQL repository pool bằng `BVS_POSTGRES_REPOSITORY_POOL_MAX`, mặc định `2`, và đóng các pool khi Fastify shutdown. Nếu chạy nhiều replica API, cần tính lại giá trị này theo `max_connections` của PostgreSQL.
+
 ## Bật FHIR và PACS khi cần
 
 Chỉ bật khi demo liên thông hoặc ảnh y khoa:

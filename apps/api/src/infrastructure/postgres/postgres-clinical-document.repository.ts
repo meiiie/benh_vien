@@ -1,4 +1,5 @@
 import pg from "pg";
+import { createPostgresRepositoryPool } from "./postgres-pool.js";
 import { ClinicalDocument } from "@benh-vien-so/domain";
 import type {
   ClinicalDocumentRepository,
@@ -6,8 +7,6 @@ import type {
   ClinicalDocumentStatus,
   ClinicalDocumentType
 } from "@benh-vien-so/domain";
-
-const { Pool } = pg;
 
 type ClinicalDocumentRow = {
   id: string;
@@ -31,10 +30,7 @@ export class PostgresClinicalDocumentRepository implements ClinicalDocumentRepos
   private readonly pool: pg.Pool;
 
   constructor(connectionString: string) {
-    this.pool = new Pool({
-      connectionString,
-      max: 10
-    });
+    this.pool = createPostgresRepositoryPool(connectionString);
   }
 
   async findByPatientId(patientId: string): Promise<ClinicalDocument[]> {

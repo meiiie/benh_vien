@@ -1,4 +1,5 @@
 import pg from "pg";
+import { createPostgresRepositoryPool } from "./postgres-pool.js";
 import { Consent } from "@benh-vien-so/domain";
 import type {
   ConsentCategory,
@@ -6,8 +7,6 @@ import type {
   ConsentSnapshot,
   ConsentStatus
 } from "@benh-vien-so/domain";
-
-const { Pool } = pg;
 
 type ConsentRow = {
   id: string;
@@ -30,10 +29,7 @@ export class PostgresConsentRepository implements ConsentRepository {
   private readonly pool: pg.Pool;
 
   constructor(connectionString: string) {
-    this.pool = new Pool({
-      connectionString,
-      max: 10
-    });
+    this.pool = createPostgresRepositoryPool(connectionString);
   }
 
   async findByPatientId(patientId: string): Promise<Consent[]> {

@@ -1,4 +1,5 @@
 import pg from "pg";
+import { createPostgresRepositoryPool } from "./postgres-pool.js";
 import { AuditEvent, buildAuditIntegrityReport, sealAuditEvent } from "@benh-vien-so/domain";
 import type {
   AuditAction,
@@ -6,8 +7,6 @@ import type {
   AuditEventSnapshot,
   AuditResourceType
 } from "@benh-vien-so/domain";
-
-const { Pool } = pg;
 
 type AuditEventRow = {
   id: string | number;
@@ -31,10 +30,7 @@ export class PostgresAuditEventRepository implements AuditEventRepository {
   private readonly pool: pg.Pool;
 
   constructor(connectionString: string) {
-    this.pool = new Pool({
-      connectionString,
-      max: 10
-    });
+    this.pool = createPostgresRepositoryPool(connectionString);
   }
 
   async findByPatientId(patientId: string, limit = 50): Promise<AuditEvent[]> {

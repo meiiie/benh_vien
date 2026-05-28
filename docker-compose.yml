@@ -93,6 +93,7 @@ services:
       PORT: ${PORT:-7310}
       BVS_REPOSITORY: ${BVS_REPOSITORY:-postgres}
       BVS_AUTH_SECRET: ${BVS_AUTH_SECRET:-}
+      BVS_POSTGRES_REPOSITORY_POOL_MAX: ${BVS_POSTGRES_REPOSITORY_POOL_MAX:-2}
       DATABASE_URL: ${DATABASE_URL:-postgresql://bvs:bvs_dev_password@postgres:5432/benh_vien_so}
       FHIR_BASE_URL: ${FHIR_BASE_URL:-http://hapi-fhir:8080/fhir}
       ORTHANC_BASE_URL: ${ORTHANC_BASE_URL:-http://orthanc:8042}

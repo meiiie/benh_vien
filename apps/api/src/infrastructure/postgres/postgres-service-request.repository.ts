@@ -1,4 +1,5 @@
 import pg from "pg";
+import { createPostgresRepositoryPool } from "./postgres-pool.js";
 import { ServiceRequest } from "@benh-vien-so/domain";
 import type {
   ServiceRequestCategory,
@@ -9,8 +10,6 @@ import type {
   ServiceRequestSnapshot,
   ServiceRequestStatus
 } from "@benh-vien-so/domain";
-
-const { Pool } = pg;
 
 type ServiceRequestRow = {
   id: string;
@@ -36,10 +35,7 @@ export class PostgresServiceRequestRepository implements ServiceRequestRepositor
   private readonly pool: pg.Pool;
 
   constructor(connectionString: string) {
-    this.pool = new Pool({
-      connectionString,
-      max: 10
-    });
+    this.pool = createPostgresRepositoryPool(connectionString);
   }
 
   async findByPatientId(patientId: string): Promise<ServiceRequest[]> {
