@@ -29,7 +29,10 @@ import { registerAuditEventRoutes } from "./modules/audit-events/audit-event-rou
 import { createAllergyIntoleranceRepository } from "./modules/allergy-intolerances/create-allergy-intolerance.repository.js";
 import { registerAllergyIntoleranceRoutes } from "./modules/allergy-intolerances/allergy-intolerance-routes.js";
 import { registerAuthRoutes } from "./modules/auth/auth-routes.js";
-import type { LoginRateLimiter } from "./modules/auth/login-rate-limit.js";
+import {
+  createLoginRateLimiterFromEnv,
+  type LoginRateLimiter
+} from "./modules/auth/login-rate-limit.js";
 import { createClinicalDocumentRepository } from "./modules/clinical-documents/create-clinical-document.repository.js";
 import { registerClinicalDocumentRoutes } from "./modules/clinical-documents/clinical-document-routes.js";
 import { createConditionRepository } from "./modules/conditions/create-condition.repository.js";
@@ -95,6 +98,7 @@ export async function buildServer(options: ServerOptions = {}) {
     logger: options.logger ?? true,
     requestIdHeader: "x-request-id"
   });
+  const loginRateLimiter = options.loginRateLimiter ?? createLoginRateLimiterFromEnv();
   const managedRepositories: ClosableRepository[] = [];
   const trackRepository = <Repository>(repository: Repository): Repository => {
     if (isClosableRepository(repository)) {
@@ -303,11 +307,36 @@ export async function buildServer(options: ServerOptions = {}) {
     const startedAt = Date.now();
 
     try {
-      const [patients, providerDirectory] = await Promise.all([
+      const [patients, providerDirectory, loginRateLimit] = await Promise.all([
         patientRepository.findAll(),
-        providerDirectoryRepository.findDirectory()
+        providerDirectoryRepository.findDirectory(),
+        loginRateLimiter.check()
       ]);
       const providerDirectorySnapshot = providerDirectory.toSnapshot();
+      const checks = {
+        patients: {
+          status: "ok",
+          count: patients.length
+        },
+        providerDirectory: {
+          status: "ok",
+          organizations: providerDirectorySnapshot.organizations.length,
+          practitioners: providerDirectorySnapshot.practitioners.length,
+          endpoints: providerDirectorySnapshot.endpoints.length
+        },
+        loginRateLimit
+      };
+
+      if (loginRateLimit.status !== "ok") {
+        return reply.status(503).send({
+          status: "not_ready",
+          service: "benh-vien-so-api",
+          repository: process.env.BVS_REPOSITORY ?? "in-memory",
+          checkedAt,
+          latencyMs: Date.now() - startedAt,
+          checks
+        });
+      }
 
       return {
         status: "ready",
@@ -315,18 +344,7 @@ export async function buildServer(options: ServerOptions = {}) {
         repository: process.env.BVS_REPOSITORY ?? "in-memory",
         checkedAt,
         latencyMs: Date.now() - startedAt,
-        checks: {
-          patients: {
-            status: "ok",
-            count: patients.length
-          },
-          providerDirectory: {
-            status: "ok",
-            organizations: providerDirectorySnapshot.organizations.length,
-            practitioners: providerDirectorySnapshot.practitioners.length,
-            endpoints: providerDirectorySnapshot.endpoints.length
-          }
-        }
+        checks
       };
     } catch {
       return reply.status(503).send({
@@ -339,6 +357,9 @@ export async function buildServer(options: ServerOptions = {}) {
             status: "unknown"
           },
           providerDirectory: {
+            status: "unknown"
+          },
+          loginRateLimit: {
             status: "unknown"
           }
         }
@@ -356,7 +377,7 @@ export async function buildServer(options: ServerOptions = {}) {
       );
 
       await registerAuthRoutes(api, {
-        loginRateLimiter: options.loginRateLimiter
+        loginRateLimiter
       });
       await registerPatientRoutes(
         api,

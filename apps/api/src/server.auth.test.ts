@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ProviderDirectoryRepository } from "@benh-vien-so/domain";
+import type { LoginRateLimiter } from "./modules/auth/login-rate-limit.js";
 import { buildServer } from "./server.js";
 
 const testSecret = "wiiicare-test-secret-at-least-32-characters";
@@ -142,10 +143,58 @@ describe("API auth and RBAC boundary", () => {
           organizations: expect.any(Number),
           practitioners: expect.any(Number),
           endpoints: expect.any(Number)
+        },
+        loginRateLimit: {
+          status: "ok",
+          store: "memory"
         }
       }
     });
     expect(body.latencyMs).toEqual(expect.any(Number));
+  });
+
+  it("marks readiness as not ready when the login rate limit store is unhealthy", async () => {
+    const unhealthyLoginRateLimiter: LoginRateLimiter = {
+      async consume() {
+        return {
+          limited: false
+        };
+      },
+      async check() {
+        return {
+          status: "error",
+          store: "valkey",
+          message: "Valkey rate limit store is unavailable."
+        };
+      }
+    };
+    app = await buildServer({
+      logger: false,
+      loginRateLimiter: unhealthyLoginRateLimiter
+    });
+    await app.ready();
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/ready"
+    });
+
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toMatchObject({
+      status: "not_ready",
+      checks: {
+        patients: {
+          status: "ok"
+        },
+        providerDirectory: {
+          status: "ok"
+        },
+        loginRateLimit: {
+          status: "error",
+          store: "valkey"
+        }
+      }
+    });
   });
 
   it("sets baseline HTTP security headers", async () => {

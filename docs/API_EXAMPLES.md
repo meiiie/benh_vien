@@ -13,7 +13,7 @@ curl http://localhost:7310/health
 curl http://localhost:7310/ready
 ```
 
-`/health` chỉ xác nhận process API còn sống. `/ready` kiểm tra API đọc được repository bệnh nhân và Provider Directory, phù hợp hơn cho readiness/healthcheck của container.
+`/health` chỉ xác nhận process API còn sống. `/ready` kiểm tra API đọc được repository bệnh nhân, Provider Directory và kho rate limit đăng nhập, phù hợp hơn cho readiness/healthcheck của container.
 
 ## Lấy FHIR CapabilityStatement
 

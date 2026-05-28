@@ -47,7 +47,7 @@ docker compose --env-file .env.prod.example -f docker-compose.yml -f docker-comp
 docker compose --env-file .env.prod.example -f docker-compose.yml -f docker-compose.prod.yml down -v --remove-orphans
 ```
 
-`/health` là liveness check tối thiểu. `/ready` đọc repository bệnh nhân và Provider Directory nên phù hợp hơn để xác nhận API có thể nhận traffic nghiệp vụ sau khi container khởi động.
+`/health` là liveness check tối thiểu. `/ready` đọc repository bệnh nhân, Provider Directory và kho rate limit đăng nhập nên phù hợp hơn để xác nhận API có thể nhận traffic nghiệp vụ sau khi container khởi động.
 
 Migration lưu `checksum_sha256` trong `schema_migrations`. Nếu một migration đã áp dụng bị sửa nội dung, service `migrate` sẽ dừng thay vì âm thầm chạy tiếp với lịch sử schema không còn đáng tin cậy.
 

@@ -12,8 +12,20 @@ export type LoginRateLimitDecision =
 
 export type LoginRateLimiter = {
   consume(key: string): Promise<LoginRateLimitDecision>;
+  check(): Promise<LoginRateLimitHealth>;
   close?(): Promise<void>;
 };
+
+export type LoginRateLimitHealth =
+  | {
+      readonly status: "ok";
+      readonly store: "memory" | "valkey";
+    }
+  | {
+      readonly status: "error";
+      readonly store: "valkey";
+      readonly message: string;
+    };
 
 export type LoginRateLimitConfig = {
   readonly maxAttempts: number;
@@ -24,6 +36,7 @@ export type ValkeyLoginRateLimitClient = {
   readonly isOpen?: boolean;
   on?(event: "error", listener: (error: unknown) => void): unknown;
   connect(): Promise<unknown>;
+  ping?(): Promise<unknown>;
   eval(
     script: string,
     options: {
@@ -73,6 +86,12 @@ export function createMemoryLoginRateLimiter(config: LoginRateLimitConfig): Logi
   return {
     async consume(key: string): Promise<LoginRateLimitDecision> {
       return consumeMemoryAttempt(entries, config, key);
+    },
+    async check(): Promise<LoginRateLimitHealth> {
+      return {
+        status: "ok",
+        store: "memory"
+      };
     }
   };
 }
@@ -120,6 +139,29 @@ export function createValkeyLoginRateLimiter(
       return {
         limited: false
       };
+    },
+    async check(): Promise<LoginRateLimitHealth> {
+      try {
+        await ensureValkeyConnected(client, () => {
+          connectPromise ??= client.connect().catch((error: unknown) => {
+            connectPromise = undefined;
+            throw error;
+          });
+          return connectPromise;
+        });
+        await client.ping?.();
+
+        return {
+          status: "ok",
+          store: "valkey"
+        };
+      } catch {
+        return {
+          status: "error",
+          store: "valkey",
+          message: "Valkey rate limit store is unavailable."
+        };
+      }
     },
     async close(): Promise<void> {
       if (!client.isOpen) {
