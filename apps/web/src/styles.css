@@ -1050,6 +1050,70 @@ select:focus {
   padding-top: 14px;
 }
 
+.transfer-ops-summary {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-left: 4px solid #2563eb;
+  border-radius: 10px;
+  padding: 14px;
+  background: #f8fbff;
+}
+
+.transfer-ops-summary--success {
+  border-left-color: var(--care-green);
+  background: #f0fdf4;
+}
+
+.transfer-ops-summary--warning {
+  border-left-color: var(--audit-gold);
+  background: #fffbeb;
+}
+
+.transfer-ops-summary--danger {
+  border-left-color: #b91c1c;
+  background: #fef2f2;
+}
+
+.transfer-ops-headline span,
+.transfer-ops-action span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.transfer-ops-headline strong,
+.transfer-ops-action strong {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--harbor-ink);
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.transfer-ops-headline p {
+  margin: 6px 0 0;
+  color: var(--slate);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.transfer-ops-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.transfer-ops-action {
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  padding-top: 12px;
+}
+
 .delivery-attempt {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1357,6 +1421,10 @@ pre {
   .workflow-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .transfer-ops-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 680px) {
@@ -1416,6 +1484,7 @@ pre {
   .document-meta,
   .document-form,
   .integrity-card,
+  .transfer-ops-grid,
   .delivery-attempt,
   .security-audit-summary,
   .audit-item,

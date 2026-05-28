@@ -890,7 +890,7 @@ type RecordTransfer = {
   readonly failedAt?: string;
   readonly failureReason?: string;
   readonly nextRetryAt?: string;
-  readonly retryCount: number;
+  readonly retryCount?: number;
   readonly deadLetteredAt?: string;
   readonly note?: string;
   readonly createdAt: string;
@@ -915,6 +915,20 @@ type RecordTransferDeliveryAttempt = {
   readonly errorMessage?: string;
   readonly createdAt: string;
   readonly updatedAt: string;
+};
+
+type RecordTransferOperationalSeverity = "info" | "success" | "warning" | "danger";
+
+type RecordTransferOperationalSummary = {
+  readonly severity: RecordTransferOperationalSeverity;
+  readonly title: string;
+  readonly description: string;
+  readonly nextAction: string;
+  readonly technicalSignal: string;
+  readonly attemptCount: number;
+  readonly failedAttemptCount: number;
+  readonly lastHttpStatus: string;
+  readonly nextRetry: string;
 };
 
 type PatientsResponse = {
@@ -5144,6 +5158,10 @@ export function App() {
           <div className="medication-summary">
             {selectedRecordTransfer ? (
               <>
+                {renderRecordTransferOperationalSummary(
+                  selectedRecordTransfer,
+                  recordTransferDeliveryAttempts
+                )}
                 <div className="document-meta">
                   <Info label="Trạng thái" value={formatRecordTransferStatus(selectedRecordTransfer.status)} />
                   <Info label="Độ ưu tiên" value={formatRecordTransferPriority(selectedRecordTransfer.priority)} />
@@ -5158,7 +5176,7 @@ export function App() {
                   <Info label="Người xác nhận nhận" value={selectedRecordTransfer.receivedByActorId ?? "Chưa xác nhận"} />
                   <Info label="Biên nhận tiếp nhận" value={selectedRecordTransfer.acknowledgementReference ?? "Chưa phát sinh"} />
                   <Info label="Lỗi gửi" value={selectedRecordTransfer.failureReason ?? "Chưa ghi nhận"} />
-                  <Info label="Thử lại" value={`${selectedRecordTransfer.retryCount} lần`} />
+                  <Info label="Thử lại" value={formatRecordTransferRetryCount(selectedRecordTransfer.retryCount)} />
                   <Info label="Hẹn gửi lại" value={selectedRecordTransfer.nextRetryAt ? formatDateTime(selectedRecordTransfer.nextRetryAt) : "Chưa hẹn"} />
                   <Info label="Hàng lỗi cuối" value={selectedRecordTransfer.deadLetteredAt ? formatDateTime(selectedRecordTransfer.deadLetteredAt) : "Chưa đưa vào"} />
                 </div>
@@ -5410,6 +5428,34 @@ export function App() {
             Bundle và idempotency key để worker xử lý.
           </p>
         ) : null}
+      </div>
+    );
+  }
+
+  function renderRecordTransferOperationalSummary(
+    recordTransfer: RecordTransfer,
+    attempts: readonly RecordTransferDeliveryAttempt[]
+  ): ReactNode {
+    const summary = buildRecordTransferOperationalSummary(recordTransfer, attempts);
+
+    return (
+      <div className={`transfer-ops-summary transfer-ops-summary--${summary.severity}`}>
+        <div className="transfer-ops-headline">
+          <span>Tình trạng vận hành</span>
+          <strong>{summary.title}</strong>
+          <p>{summary.description}</p>
+        </div>
+        <div className="transfer-ops-grid">
+          <Info label="Tín hiệu kỹ thuật" value={summary.technicalSignal} />
+          <Info label="Số lần gửi" value={`${summary.attemptCount}`} />
+          <Info label="Lần lỗi" value={`${summary.failedAttemptCount}`} />
+          <Info label="HTTP gần nhất" value={summary.lastHttpStatus} />
+          <Info label="Lịch retry" value={summary.nextRetry} />
+        </div>
+        <div className="transfer-ops-action">
+          <span>Việc cần làm tiếp</span>
+          <strong>{summary.nextAction}</strong>
+        </div>
       </div>
     );
   }
@@ -9459,6 +9505,10 @@ function formatRecordTransferPriority(priority: RecordTransferPriority): string 
   return labels[priority];
 }
 
+function formatRecordTransferRetryCount(retryCount: number | undefined): string {
+  return `${retryCount ?? 0} lần`;
+}
+
 function formatRecordTransferBundleType(bundleType: RecordTransferBundleType): string {
   const labels: Record<RecordTransferBundleType, string> = {
     collection: "FHIR collection Bundle",
@@ -9466,6 +9516,160 @@ function formatRecordTransferBundleType(bundleType: RecordTransferBundleType): s
   };
 
   return labels[bundleType];
+}
+
+function buildRecordTransferOperationalSummary(
+  recordTransfer: RecordTransfer,
+  attempts: readonly RecordTransferDeliveryAttempt[]
+): RecordTransferOperationalSummary {
+  const latestAttempt = getLatestRecordTransferAttempt(attempts);
+  const failedAttemptCount = attempts.filter((attempt) => attempt.status === "failed").length;
+  const lastHttpStatus = latestAttempt?.httpStatus
+    ? `HTTP ${latestAttempt.httpStatus}`
+    : "Chưa có";
+  const nextRetry = recordTransfer.nextRetryAt
+    ? formatDateTime(recordTransfer.nextRetryAt)
+    : "Chưa hẹn";
+  const technicalSignal = latestAttempt
+    ? `Lần #${latestAttempt.attemptNumber}: ${formatRecordTransferDeliveryAttemptStatus(latestAttempt.status)}`
+    : "Chưa có delivery attempt";
+  const baseMetrics = {
+    attemptCount: attempts.length,
+    failedAttemptCount,
+    lastHttpStatus,
+    nextRetry,
+    technicalSignal
+  };
+
+  if (recordTransfer.status === "completed") {
+    return {
+      ...baseMetrics,
+      severity: "success",
+      title: "Đã hoàn tất tiếp nhận",
+      description: recordTransfer.receivedAt
+        ? `Bên nhận đã xác nhận lúc ${formatDateTime(recordTransfer.receivedAt)}.`
+        : "Bên nhận đã xác nhận gói chuyển hồ sơ.",
+      nextAction:
+        "Đối chiếu biên nhận tiếp nhận, audit trail và FHIR Task để đóng hồ sơ vận hành."
+    };
+  }
+
+  if (recordTransfer.status === "dead-lettered") {
+    return {
+      ...baseMetrics,
+      severity: "danger",
+      title: "Cần can thiệp thủ công",
+      description:
+        "Gói chuyển đã vượt quá số lần thử tự động hoặc được đưa vào hàng lỗi cuối.",
+      nextAction:
+        "Kiểm tra endpoint FHIR, consent, mạng, chứng thư/gateway bên nhận rồi tạo quy trình xử lý lại có kiểm soát."
+    };
+  }
+
+  if (recordTransfer.status === "failed") {
+    const retryDue = recordTransfer.nextRetryAt
+      ? Date.parse(recordTransfer.nextRetryAt) <= Date.now()
+      : false;
+
+    return {
+      ...baseMetrics,
+      severity: retryDue ? "warning" : "info",
+      title: retryDue ? "Đã đến hạn gửi lại" : "Đang chờ lịch gửi lại",
+      description:
+        recordTransfer.failureReason ??
+        "Worker hoặc người vận hành đã ghi nhận lỗi chuyển hồ sơ.",
+      nextAction: retryDue
+        ? "Đưa gói về hàng đợi gửi lại hoặc kiểm tra nguyên nhân trước khi retry."
+        : "Theo dõi mốc retry; nếu lỗi do cấu hình endpoint thì sửa trước khi gửi lại."
+    };
+  }
+
+  if (recordTransfer.status === "in-progress") {
+    if (latestAttempt?.status === "queued") {
+      return {
+        ...baseMetrics,
+        severity: "info",
+        title: "Đang chờ delivery worker",
+        description:
+          "Gói đã được đánh dấu gửi và có delivery attempt trong outbox, nhưng chưa có kết quả POST Bundle.",
+        nextAction:
+          "Kiểm tra delivery worker có đang bật, hàng đợi có được xử lý và endpoint đích có sẵn sàng."
+      };
+    }
+
+    if (latestAttempt?.status === "succeeded") {
+      return {
+        ...baseMetrics,
+        severity: "success",
+        title: "Đã gửi Bundle, chờ xác nhận nhận",
+        description:
+          "FHIR Bundle đã được endpoint đích phản hồi thành công; gói vẫn cần biên nhận hoặc mốc received để hoàn tất.",
+        nextAction:
+          "Chờ acknowledgement callback hoặc xác nhận tiếp nhận từ bệnh viện nhận."
+      };
+    }
+
+    if (latestAttempt?.status === "failed") {
+      return {
+        ...baseMetrics,
+        severity: "warning",
+        title: "Lần gửi gần nhất bị lỗi",
+        description: latestAttempt.errorMessage ?? "Endpoint đích chưa nhận thành công FHIR Bundle.",
+        nextAction:
+          "Xem lỗi của delivery attempt, sửa nguyên nhân và đưa gói vào lịch retry."
+      };
+    }
+
+    return {
+      ...baseMetrics,
+      severity: "info",
+      title: "Đã đánh dấu gửi",
+      description:
+        "Gói ở trạng thái đang xử lý nhưng chưa thấy delivery attempt tương ứng trên giao diện.",
+      nextAction:
+        "Tải lại lịch sử gửi; nếu vẫn trống, kiểm tra bước tạo outbox/delivery attempt."
+    };
+  }
+
+  if (recordTransfer.status === "cancelled") {
+    return {
+      ...baseMetrics,
+      severity: "warning",
+      title: "Gói đã hủy",
+      description: "Luồng chuyển hồ sơ này không còn được tiếp tục.",
+      nextAction:
+        "Nếu vẫn cần liên thông, tạo gói chuyển mới với consent và endpoint hợp lệ."
+    };
+  }
+
+  return {
+    ...baseMetrics,
+    severity: "info",
+    title:
+      recordTransfer.status === "ready"
+        ? "Sẵn sàng gửi"
+        : "Chưa gửi sang hệ thống nhận",
+    description:
+      "Gói đã có consent và thông tin đơn vị nhận; chưa phát sinh POST Bundle ra endpoint FHIR.",
+    nextAction:
+      "Kiểm tra consent, endpoint FHIR của đơn vị nhận và bấm gửi khi đủ điều kiện vận hành."
+  };
+}
+
+function getLatestRecordTransferAttempt(
+  attempts: readonly RecordTransferDeliveryAttempt[]
+): RecordTransferDeliveryAttempt | undefined {
+  return attempts.reduce<RecordTransferDeliveryAttempt | undefined>((latest, attempt) => {
+    if (!latest) {
+      return attempt;
+    }
+
+    if (attempt.attemptNumber !== latest.attemptNumber) {
+      return attempt.attemptNumber > latest.attemptNumber ? attempt : latest;
+    }
+
+    return Date.parse(attempt.updatedAt) > Date.parse(latest.updatedAt) ? attempt : latest;
+  }, undefined);
 }
 
 function formatConsentCategory(category: ConsentCategory): string {
