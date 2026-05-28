@@ -1236,7 +1236,7 @@ const defaultClinicalDocumentForm: NewClinicalDocumentForm = {
   storageUri: "s3://wiiicare-demo/patients/current/referral-letter.pdf",
   attachmentContentType: "application/pdf",
   attachmentSizeBytes: "131072",
-  attachmentHashSha1Base64: "u5+Zwd+MnqJUBDLusw8YfS9xX9Y=",
+  attachmentHashSha1Base64: "QExIY/y1FG989CjaoCo4NtNAlXQ=",
   attachmentCreatedAt: "2026-05-28T09:00",
   authorPractitionerId: "practitioner-demo-003"
 };

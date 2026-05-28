@@ -490,7 +490,7 @@ describe("API auth and RBAC boundary", () => {
             contentType: "application/pdf",
             url: "s3://wiiicare-demo/patients/patient-demo-001/discharge-summary.pdf",
             size: 245760,
-            hash: "Q2xpRG9jRGVtby1EaXNjaGFyZ2U=",
+            hash: "Kb0sBAJESyiK08beYsfPVMQp3xU=",
             title: "Tóm tắt ra viện - Nguyễn Văn An",
             creation: "2026-05-27T01:55:00.000Z"
           }
@@ -512,6 +512,34 @@ describe("API auth and RBAC boundary", () => {
     expect(response.statusCode).toBe(422);
     expect(response.json()).toMatchObject({
       error: "CLINICAL_DOCUMENT_PROVENANCE_ERROR"
+    });
+  });
+
+  it("rejects clinical document attachment metadata with invalid MIME type or SHA-1 hash", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/documents",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: "encounter-demo-001",
+        type: "lab-report",
+        title: "Tài liệu metadata lỗi",
+        storageUri: "s3://wiiicare-demo/patients/patient-demo-001/invalid.pdf",
+        attachmentContentType: "not-a-mime-type",
+        attachmentHashSha1Base64: "not-a-sha1-hash",
+        authorPractitionerId: "practitioner-demo-001"
+      }
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({
+      error: "INVALID_CLINICAL_DOCUMENT_PAYLOAD"
     });
   });
 

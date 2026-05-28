@@ -48,4 +48,29 @@ describe("ClinicalDocument", () => {
       })
     ).toThrow(DomainError);
   });
+
+  it("rejects invalid attachment MIME type and SHA-1 hash metadata", () => {
+    const baseDocument = {
+      id: "clinical-document-attachment-003",
+      patientId: "patient-attachment-001",
+      type: "lab-report" as const,
+      title: "Tài liệu lỗi metadata",
+      storageUri: "s3://wiiicare-demo/patients/patient-attachment-001/lab-report.pdf",
+      authorPractitionerId: "practitioner-attachment-001"
+    };
+
+    expect(() =>
+      ClinicalDocument.create({
+        ...baseDocument,
+        attachmentContentType: "not-a-mime-type"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      ClinicalDocument.create({
+        ...baseDocument,
+        attachmentHashSha1Base64: "not-a-sha1-hash"
+      })
+    ).toThrow(DomainError);
+  });
 });

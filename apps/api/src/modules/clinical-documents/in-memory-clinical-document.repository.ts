@@ -37,7 +37,7 @@ export function createSeedClinicalDocuments(): ClinicalDocument[] {
     storageUri: "s3://wiiicare-demo/patients/patient-demo-001/discharge-summary.pdf",
     attachmentContentType: "application/pdf",
     attachmentSizeBytes: 245760,
-    attachmentHashSha1Base64: "Q2xpRG9jRGVtby1EaXNjaGFyZ2U=",
+    attachmentHashSha1Base64: "Kb0sBAJESyiK08beYsfPVMQp3xU=",
     attachmentCreatedAt: "2026-05-27T01:55:00.000Z",
     authorPractitionerId: "practitioner-demo-001"
   });
@@ -55,7 +55,7 @@ export function createSeedClinicalDocuments(): ClinicalDocument[] {
       storageUri: "s3://wiiicare-demo/patients/patient-demo-001/lab-report.pdf",
       attachmentContentType: "application/pdf",
       attachmentSizeBytes: 98304,
-      attachmentHashSha1Base64: "Q2xpRG9jRGVtby1MYWJSZXBvcnQ=",
+      attachmentHashSha1Base64: "j9xB1pxfa1BIflIHJOu+LZKiaYE=",
       attachmentCreatedAt: "2026-05-27T03:20:00.000Z",
       authorPractitionerId: "practitioner-demo-002"
     }),
@@ -68,7 +68,7 @@ export function createSeedClinicalDocuments(): ClinicalDocument[] {
       storageUri: "s3://wiiicare-demo/patients/patient-demo-001/continuity-of-care-record.xml",
       attachmentContentType: "application/xml",
       attachmentSizeBytes: 65536,
-      attachmentHashSha1Base64: "Q2xpRG9jRGVtby1DQ1I=",
+      attachmentHashSha1Base64: "kfBteyihVDUWmV1BEx3BsImZcYc=",
       attachmentCreatedAt: "2026-05-27T04:00:00.000Z",
       authorPractitionerId: "practitioner-demo-002"
     })

@@ -1,6 +1,9 @@
 import { DomainError } from "../shared/domain-error.js";
 
 const maxFhirUnsignedInt = 4_294_967_295;
+const mimeTypePattern =
+  /^[A-Za-z0-9!#$&^_.+-]+\/[A-Za-z0-9!#$&^_.+-]+(?:\s*;\s*[A-Za-z0-9!#$&^_.+-]+=(?:"[^"]+"|[A-Za-z0-9!#$&^_.+-]+))*$/;
+const sha1Base64Pattern = /^[A-Za-z0-9+/]{27}=$/;
 
 export type ClinicalDocumentType =
   | "admission-note"
@@ -89,6 +92,18 @@ export class ClinicalDocument {
       throw new DomainError("Thời điểm tạo tệp đính kèm không hợp lệ.");
     }
 
+    const attachmentContentType = input.attachmentContentType?.trim() || undefined;
+
+    if (attachmentContentType && !mimeTypePattern.test(attachmentContentType)) {
+      throw new DomainError("Định dạng MIME của tài liệu không hợp lệ.");
+    }
+
+    const attachmentHashSha1Base64 = input.attachmentHashSha1Base64?.trim() || undefined;
+
+    if (attachmentHashSha1Base64 && !sha1Base64Pattern.test(attachmentHashSha1Base64)) {
+      throw new DomainError("Hash SHA-1 Base64 của tài liệu không hợp lệ.");
+    }
+
     return new ClinicalDocument({
       ...input,
       id: input.id.trim(),
@@ -96,9 +111,9 @@ export class ClinicalDocument {
       encounterId: input.encounterId?.trim() || undefined,
       title: input.title.trim(),
       storageUri: input.storageUri.trim(),
-      attachmentContentType: input.attachmentContentType?.trim() || undefined,
+      attachmentContentType,
       attachmentSizeBytes: input.attachmentSizeBytes,
-      attachmentHashSha1Base64: input.attachmentHashSha1Base64?.trim() || undefined,
+      attachmentHashSha1Base64,
       attachmentCreatedAt,
       authorPractitionerId: input.authorPractitionerId.trim(),
       status: "draft",
