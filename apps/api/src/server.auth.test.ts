@@ -434,7 +434,7 @@ describe("API auth and RBAC boundary", () => {
     expect(body.latencyMs).toEqual(expect.any(Number));
   });
 
-  it("returns runtime metadata for web compatibility checks", async () => {
+  it("returns redacted runtime metadata for unauthenticated web compatibility checks", async () => {
     app = await readyServer();
 
     const response = await app.inject({
@@ -448,16 +448,66 @@ describe("API auth and RBAC boundary", () => {
       service: "benh-vien-so-api",
       product: "WiiiCare Nexus",
       version: "0.2.0",
-      repository: "in-memory",
       publicApiBaseUrl: expect.stringContaining("/api/v1"),
-      httpBodyLimitBytes: 1_048_576,
+      operationalDiagnostics: {
+        available: false,
+        reason: expect.any(String)
+      },
       features: {
+        apiDocsEnabled: null,
+        recordTransferDeliveryAttempts: true,
+        recordTransferDeliveryWorkerEnabled: null,
+        recordTransferRetryWorkerEnabled: null
+      }
+    });
+    expect(body).not.toHaveProperty("repository");
+    expect(body).not.toHaveProperty("nodeEnv");
+    expect(body).not.toHaveProperty("httpBodyLimitBytes");
+    expect(Date.parse(body.checkedAt)).not.toBeNaN();
+  });
+
+  it("returns runtime diagnostics to operations and audit sessions", async () => {
+    app = await readyServer();
+    const adminToken = await loginForToken(app, "admin-demo", "admin");
+    const auditorToken = await loginForToken(app, "security-officer-demo", "auditor");
+
+    const operationsResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/runtime",
+      headers: operationsHeaders(adminToken)
+    });
+    const auditResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/runtime",
+      headers: auditHeaders(auditorToken)
+    });
+
+    expect(operationsResponse.statusCode).toBe(200);
+    const operationsBody = operationsResponse.json();
+    expect(operationsBody).toMatchObject({
+      repository: "in-memory",
+      nodeEnv: expect.any(String),
+      httpBodyLimitBytes: 1_048_576,
+      operationalDiagnostics: {
+        available: true
+      },
+      features: {
+        apiDocsEnabled: true,
         recordTransferDeliveryAttempts: true,
         recordTransferDeliveryWorkerEnabled: false,
         recordTransferRetryWorkerEnabled: false
       }
     });
-    expect(Date.parse(body.checkedAt)).not.toBeNaN();
+    expect(auditResponse.statusCode).toBe(200);
+    expect(auditResponse.json()).toMatchObject({
+      operationalDiagnostics: {
+        available: true
+      },
+      features: {
+        apiDocsEnabled: true
+      }
+    });
+    expect(Date.parse(operationsBody.checkedAt)).not.toBeNaN();
   });
 
   it("marks readiness as not ready when the login rate limit store is unhealthy", async () => {
@@ -545,9 +595,11 @@ describe("API auth and RBAC boundary", () => {
       method: "GET",
       url: "/docs/"
     });
+    const adminToken = await loginForToken(app, "admin-demo", "admin");
     const runtimeResponse = await app.inject({
       method: "GET",
-      url: "/api/v1/runtime"
+      url: "/api/v1/runtime",
+      headers: operationsHeaders(adminToken)
     });
 
     expect(docsResponse.statusCode).toBe(404);

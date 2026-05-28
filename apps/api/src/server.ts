@@ -10,6 +10,7 @@ import {
   buildWiiiCareCapabilityStatement
 } from "@benh-vien-so/domain";
 import type {
+  ActorContext,
   AuditEventRepository,
   AuditResourceType,
   AllergyIntoleranceRepository,
@@ -31,6 +32,7 @@ import type {
   ServiceRequestRepository,
   WorkflowTaskRepository
 } from "@benh-vien-so/domain";
+import { readActorContext } from "./modules/access-control/access-context.js";
 import { recordAuditEvent } from "./modules/audit-events/audit-context.js";
 import { createAuditEventRepository } from "./modules/audit-events/create-audit-event.repository.js";
 import { registerAuditEventRoutes } from "./modules/audit-events/audit-event-routes.js";
@@ -554,13 +556,14 @@ export async function buildServer(options: ServerOptions = {}) {
 
   await app.register(
     async (api) => {
-      api.get("/runtime", async () =>
+      api.get("/runtime", async (request) =>
         buildApiRuntimeInfo({
           publicApiBaseUrl,
           httpBodyLimitBytes,
           apiDocsEnabled,
           recordTransferDeliveryWorkerEnabled: Boolean(recordTransferDeliveryWorkerConfig),
-          recordTransferRetryWorkerEnabled: Boolean(recordTransferRetryWorkerConfig)
+          recordTransferRetryWorkerEnabled: Boolean(recordTransferRetryWorkerConfig),
+          actor: readActorContext(request)
         })
       );
 
@@ -753,23 +756,52 @@ function buildApiRuntimeInfo(input: {
   readonly apiDocsEnabled: boolean;
   readonly recordTransferDeliveryWorkerEnabled: boolean;
   readonly recordTransferRetryWorkerEnabled: boolean;
+  readonly actor: ActorContext | undefined;
 }) {
+  const canReadDiagnostics = canReadRuntimeDiagnostics(input.actor);
+
   return {
     service: "benh-vien-so-api",
     product: "WiiiCare Nexus",
     version: apiVersion,
-    repository: process.env.BVS_REPOSITORY ?? "in-memory",
-    nodeEnv: process.env.NODE_ENV ?? "development",
     publicApiBaseUrl: input.publicApiBaseUrl,
-    httpBodyLimitBytes: input.httpBodyLimitBytes,
     checkedAt: new Date().toISOString(),
+    operationalDiagnostics: canReadDiagnostics
+      ? { available: true }
+      : {
+          available: false,
+          reason: "Cần phiên admin/auditor với PurposeOfUse phù hợp để xem metadata vận hành."
+        },
     features: {
-      apiDocsEnabled: input.apiDocsEnabled,
+      apiDocsEnabled: canReadDiagnostics ? input.apiDocsEnabled : null,
       recordTransferDeliveryAttempts: true,
-      recordTransferDeliveryWorkerEnabled: input.recordTransferDeliveryWorkerEnabled,
-      recordTransferRetryWorkerEnabled: input.recordTransferRetryWorkerEnabled
-    }
+      recordTransferDeliveryWorkerEnabled: canReadDiagnostics
+        ? input.recordTransferDeliveryWorkerEnabled
+        : null,
+      recordTransferRetryWorkerEnabled: canReadDiagnostics
+        ? input.recordTransferRetryWorkerEnabled
+        : null
+    },
+    ...(canReadDiagnostics
+      ? {
+          repository: process.env.BVS_REPOSITORY ?? "in-memory",
+          nodeEnv: process.env.NODE_ENV ?? "development",
+          httpBodyLimitBytes: input.httpBodyLimitBytes
+        }
+      : {})
   };
+}
+
+function canReadRuntimeDiagnostics(actor: ActorContext | undefined): boolean {
+  if (!actor) {
+    return false;
+  }
+
+  if (actor.role === "admin") {
+    return actor.purposeOfUse === "OPERATIONS" || actor.purposeOfUse === "AUDIT";
+  }
+
+  return actor.role === "auditor" && actor.purposeOfUse === "AUDIT";
 }
 
 function isClosableRepository(repository: unknown): repository is ClosableRepository {

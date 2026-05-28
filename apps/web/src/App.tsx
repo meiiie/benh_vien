@@ -943,14 +943,20 @@ type ApiRuntimeInfo = {
   readonly service: string;
   readonly product: string;
   readonly version: string;
-  readonly repository: string;
-  readonly nodeEnv: string;
+  readonly repository?: string;
+  readonly nodeEnv?: string;
   readonly publicApiBaseUrl: string;
+  readonly httpBodyLimitBytes?: number;
   readonly checkedAt: string;
+  readonly operationalDiagnostics: {
+    readonly available: boolean;
+    readonly reason?: string;
+  };
   readonly features: {
+    readonly apiDocsEnabled: boolean | null;
     readonly recordTransferDeliveryAttempts: boolean;
-    readonly recordTransferDeliveryWorkerEnabled: boolean;
-    readonly recordTransferRetryWorkerEnabled: boolean;
+    readonly recordTransferDeliveryWorkerEnabled: boolean | null;
+    readonly recordTransferRetryWorkerEnabled: boolean | null;
   };
 };
 
@@ -2327,7 +2333,14 @@ export function App() {
 
   async function loadApiRuntimeInfo() {
     try {
-      const response = await fetch(`${apiBaseUrl}/runtime`);
+      const response = await fetch(
+        `${apiBaseUrl}/runtime`,
+        authSession
+          ? {
+              headers: buildHeaders(authSession.actor.role === "auditor" ? "AUDIT" : "OPERATIONS")
+            }
+          : undefined
+      );
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -5651,9 +5664,49 @@ export function App() {
                 <Info label="Sản phẩm" value={apiRuntimeInfo?.product ?? "Chưa xác định"} />
                 <Info label="Service" value={apiRuntimeInfo?.service ?? "Chưa xác định"} />
                 <Info label="Phiên bản API" value={apiRuntimeInfo?.version ?? "Chưa xác định"} />
-                <Info label="Repository" value={apiRuntimeInfo?.repository ?? "Chưa xác định"} />
-                <Info label="Môi trường" value={apiRuntimeInfo?.nodeEnv ?? "Chưa xác định"} />
+                <Info
+                  label="Diagnostics"
+                  value={
+                    apiRuntimeInfo?.operationalDiagnostics.available
+                      ? "Đã xác thực vận hành"
+                      : apiRuntimeInfo?.operationalDiagnostics.reason ?? "Chưa xác định"
+                  }
+                />
+                <Info
+                  label="Repository"
+                  value={
+                    apiRuntimeInfo
+                      ? apiRuntimeInfo.repository ?? "Chỉ dành cho vận hành"
+                      : "Chưa xác định"
+                  }
+                />
+                <Info
+                  label="Môi trường"
+                  value={
+                    apiRuntimeInfo
+                      ? apiRuntimeInfo.nodeEnv ?? "Chỉ dành cho vận hành"
+                      : "Chưa xác định"
+                  }
+                />
                 <Info label="Public API" value={apiRuntimeInfo?.publicApiBaseUrl ?? apiBaseUrl} />
+                <Info
+                  label="Giới hạn body"
+                  value={
+                    apiRuntimeInfo?.httpBodyLimitBytes
+                      ? `${apiRuntimeInfo.httpBodyLimitBytes.toLocaleString("vi-VN")} byte`
+                      : apiRuntimeInfo
+                        ? "Chỉ dành cho vận hành"
+                        : "Chưa xác định"
+                  }
+                />
+                <Info
+                  label="API docs"
+                  value={formatRuntimeFlag(
+                    apiRuntimeInfo?.features.apiDocsEnabled,
+                    "Đang bật",
+                    "Đang tắt"
+                  )}
+                />
                 <Info
                   label="Delivery attempts"
                   value={
@@ -5664,19 +5717,19 @@ export function App() {
                 />
                 <Info
                   label="Delivery worker"
-                  value={
-                    apiRuntimeInfo?.features.recordTransferDeliveryWorkerEnabled
-                      ? "Đang bật"
-                      : "Đang tắt hoặc chưa xác định"
-                  }
+                  value={formatRuntimeFlag(
+                    apiRuntimeInfo?.features.recordTransferDeliveryWorkerEnabled,
+                    "Đang bật",
+                    "Đang tắt"
+                  )}
                 />
                 <Info
                   label="Retry worker"
-                  value={
-                    apiRuntimeInfo?.features.recordTransferRetryWorkerEnabled
-                      ? "Đang bật"
-                      : "Đang tắt hoặc chưa xác định"
-                  }
+                  value={formatRuntimeFlag(
+                    apiRuntimeInfo?.features.recordTransferRetryWorkerEnabled,
+                    "Đang bật",
+                    "Đang tắt"
+                  )}
                 />
                 <Info
                   label="Kiểm tra lúc"
@@ -10092,6 +10145,22 @@ function Info({ label, value }: { readonly label: string; readonly value: string
       <strong>{value}</strong>
     </div>
   );
+}
+
+function formatRuntimeFlag(
+  value: boolean | null | undefined,
+  trueLabel: string,
+  falseLabel: string
+): string {
+  if (value === true) {
+    return trueLabel;
+  }
+
+  if (value === false) {
+    return falseLabel;
+  }
+
+  return "Chỉ dành cho vận hành";
 }
 
 function formatDemoRole(role: DemoRole): string {
