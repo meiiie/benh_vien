@@ -17,7 +17,9 @@ type TokenPayload = AuthenticatedActor & {
   readonly iat: number;
 };
 
-const tokenTtlSeconds = 60 * 60 * 8;
+const defaultTokenTtlSeconds = 60 * 60 * 8;
+const minTokenTtlSeconds = 60 * 5;
+const maxTokenTtlSeconds = 60 * 60 * 8;
 const issuer = "wiiicare-nexus";
 
 export function createAccessToken(actor: AuthenticatedActor, now = new Date()): AuthenticatedSession & {
@@ -27,7 +29,7 @@ export function createAccessToken(actor: AuthenticatedActor, now = new Date()): 
   const payload: TokenPayload = {
     ...actor,
     iat: issuedAt,
-    exp: issuedAt + tokenTtlSeconds
+    exp: issuedAt + getAuthTokenTtlSeconds()
   };
   const encodedPayload = base64UrlEncode(JSON.stringify(payload));
   const signature = sign(encodedPayload);
@@ -93,12 +95,35 @@ export function getAuthSecret(): string {
   return "wiiicare-dev-only-auth-secret-change-before-production";
 }
 
-export function assertAuthSecretConfigured(): void {
+export function assertAuthConfiguration(): void {
   getAuthSecret();
+  getAuthTokenTtlSeconds();
 }
 
 function sign(encodedPayload: string): string {
   return createHmac("sha256", getAuthSecret()).update(encodedPayload).digest("base64url");
+}
+
+function getAuthTokenTtlSeconds(): number {
+  const rawValue = process.env.BVS_AUTH_TOKEN_TTL_SECONDS;
+
+  if (!rawValue?.trim()) {
+    return defaultTokenTtlSeconds;
+  }
+
+  const parsed = Number(rawValue);
+
+  if (
+    !Number.isInteger(parsed) ||
+    parsed < minTokenTtlSeconds ||
+    parsed > maxTokenTtlSeconds
+  ) {
+    throw new Error(
+      `BVS_AUTH_TOKEN_TTL_SECONDS must be an integer between ${minTokenTtlSeconds} and ${maxTokenTtlSeconds}.`
+    );
+  }
+
+  return parsed;
 }
 
 function safeEqual(left: string, right: string): boolean {

@@ -55,6 +55,8 @@ Endpoint đăng nhập áp dụng rate limit theo IP + username đã băm SHA-25
 
 Các lỗi đăng nhập như payload sai, sai tài khoản/mật khẩu, sai vai trò hoặc phiên không hợp lệ đều trả `requestId` để đối chiếu log khi kiểm tra sự cố.
 
+Thời hạn token demo được điều khiển bằng `BVS_AUTH_TOKEN_TTL_SECONDS`, mặc định `28800` giây.
+
 Tài khoản demo:
 
 - `practitioner-demo-001` / `demo`: vai trò `clinician`, dùng cho luồng điều trị.

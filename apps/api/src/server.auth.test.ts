@@ -10,6 +10,7 @@ describe("API auth and RBAC boundary", () => {
   let app: FastifyInstance | undefined;
   const originalRepository = process.env.BVS_REPOSITORY;
   const originalAuthSecret = process.env.BVS_AUTH_SECRET;
+  const originalAuthTokenTtlSeconds = process.env.BVS_AUTH_TOKEN_TTL_SECONDS;
   const originalCorsOrigins = process.env.BVS_CORS_ORIGINS;
   const originalNodeEnv = process.env.NODE_ENV;
   const originalAuthLoginRateLimitMax = process.env.BVS_AUTH_LOGIN_RATE_LIMIT_MAX;
@@ -31,6 +32,7 @@ describe("API auth and RBAC boundary", () => {
 
     restoreEnv("BVS_REPOSITORY", originalRepository);
     restoreEnv("BVS_AUTH_SECRET", originalAuthSecret);
+    restoreEnv("BVS_AUTH_TOKEN_TTL_SECONDS", originalAuthTokenTtlSeconds);
     restoreEnv("BVS_CORS_ORIGINS", originalCorsOrigins);
     restoreEnv("NODE_ENV", originalNodeEnv);
     restoreEnv("BVS_AUTH_LOGIN_RATE_LIMIT_MAX", originalAuthLoginRateLimitMax);
@@ -59,6 +61,24 @@ describe("API auth and RBAC boundary", () => {
       displayName: "Bác sĩ điều trị",
       role: "clinician"
     });
+  });
+
+  it("uses the configured auth token TTL for demo sessions", async () => {
+    process.env.BVS_AUTH_TOKEN_TTL_SECONDS = "600";
+    app = await readyServer();
+
+    const issuedAt = Date.now();
+    const response = await login(app, {
+      username: "practitioner-demo-001",
+      password: "demo",
+      role: "clinician"
+    });
+    const body = response.json();
+    const ttlSeconds = Math.round((Date.parse(body.expiresAt) - issuedAt) / 1000);
+
+    expect(response.statusCode).toBe(200);
+    expect(ttlSeconds).toBeGreaterThanOrEqual(590);
+    expect(ttlSeconds).toBeLessThanOrEqual(610);
   });
 
   it("returns request ids for auth boundary errors", async () => {
@@ -379,6 +399,16 @@ describe("API auth and RBAC boundary", () => {
 
     await expect(buildServer({ logger: false })).rejects.toThrow(
       "BVS_AUTH_SECRET must be set to at least 32 characters in production."
+    );
+  });
+
+  it("requires a bounded auth token TTL at startup", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.BVS_CORS_ORIGINS = "https://wiiicare.example.vn";
+    process.env.BVS_AUTH_TOKEN_TTL_SECONDS = "60";
+
+    await expect(buildServer({ logger: false })).rejects.toThrow(
+      "BVS_AUTH_TOKEN_TTL_SECONDS must be an integer between 300 and 28800."
     );
   });
 

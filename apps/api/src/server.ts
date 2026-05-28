@@ -29,7 +29,7 @@ import { registerAuditEventRoutes } from "./modules/audit-events/audit-event-rou
 import { createAllergyIntoleranceRepository } from "./modules/allergy-intolerances/create-allergy-intolerance.repository.js";
 import { registerAllergyIntoleranceRoutes } from "./modules/allergy-intolerances/allergy-intolerance-routes.js";
 import { registerAuthRoutes } from "./modules/auth/auth-routes.js";
-import { assertAuthSecretConfigured } from "./modules/auth/auth-session.js";
+import { assertAuthConfiguration } from "./modules/auth/auth-session.js";
 import {
   createLoginRateLimiterFromEnv,
   type LoginRateLimiter
@@ -95,7 +95,7 @@ type ClosableRepository = {
 };
 
 export async function buildServer(options: ServerOptions = {}) {
-  assertAuthSecretConfigured();
+  assertAuthConfiguration();
 
   const app = Fastify({
     logger: options.logger ?? true,

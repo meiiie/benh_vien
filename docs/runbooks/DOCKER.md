@@ -24,6 +24,8 @@ API giới hạn tần suất `POST /api/v1/auth/login` bằng `BVS_AUTH_LOGIN_R
 
 Ở `NODE_ENV=production`, API cũng yêu cầu `BVS_AUTH_SECRET` tối thiểu 32 ký tự ngay khi khởi động. Nếu thiếu secret, container API sẽ dừng thay vì chờ tới request đăng nhập đầu tiên mới lỗi.
 
+`BVS_AUTH_TOKEN_TTL_SECONDS` kiểm soát thời hạn token demo, mặc định `28800` giây và chỉ nhận giá trị từ `300` đến `28800`. Nếu cấu hình ngoài khoảng này, API sẽ dừng khi khởi động để tránh phiên đăng nhập quá dài hoặc quá ngắn ngoài ý muốn.
+
 ## Bật FHIR và PACS khi cần
 
 Chỉ bật khi demo liên thông hoặc ảnh y khoa:
