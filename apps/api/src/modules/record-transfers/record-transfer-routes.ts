@@ -968,8 +968,18 @@ async function saveRecordTransferWithDeliveryAttempt(
     return;
   }
 
+  const previousRecordTransfer = await recordTransferRepository.findById(recordTransfer.id);
   await recordTransferRepository.save(recordTransfer);
-  await deliveryAttemptRepository.save(deliveryAttempt);
+
+  try {
+    await deliveryAttemptRepository.save(deliveryAttempt);
+  } catch (error) {
+    if (previousRecordTransfer) {
+      await recordTransferRepository.save(previousRecordTransfer);
+    }
+
+    throw error;
+  }
 }
 
 function isTransactionalRecordTransferRepository(

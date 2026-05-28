@@ -34,7 +34,16 @@ describe("record transfer endpoint policy", () => {
     "https://gateway.localhost/fhir",
     "https://127.0.0.1/fhir",
     "https://0.0.0.0/fhir",
-    "https://[::1]/fhir"
+    "https://[::1]/fhir",
+    "https://10.0.0.5/fhir",
+    "https://172.16.0.5/fhir",
+    "https://172.31.255.250/fhir",
+    "https://192.168.1.25/fhir",
+    "https://169.254.10.20/fhir",
+    "https://[fc00::1]/fhir",
+    "https://[fd12:3456::1]/fhir",
+    "https://[fe80::1]/fhir",
+    "https://[::ffff:192.168.1.25]/fhir"
   ])("rejects loopback and local-only endpoints in production: %s", (endpointAddress) => {
     expect(
       validateRecordTransferEndpointForDelivery({

@@ -1,4 +1,4 @@
-import { FormEvent, ReactNode, useEffect, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
 
 type AppRoute =
   | "landing"
@@ -1687,6 +1687,7 @@ export function App() {
   const [consents, setConsents] = useState<readonly Consent[]>([]);
   const [recordTransfers, setRecordTransfers] = useState<readonly RecordTransfer[]>([]);
   const [selectedRecordTransferId, setSelectedRecordTransferId] = useState<string>();
+  const selectedRecordTransferIdRef = useRef<string | undefined>(undefined);
   const [recordTransferDeliveryAttempts, setRecordTransferDeliveryAttempts] =
     useState<readonly RecordTransferDeliveryAttempt[]>([]);
   const [recordTransferDeliveryAttemptWarning, setRecordTransferDeliveryAttemptWarning] =
@@ -1873,6 +1874,7 @@ export function App() {
   const selectedRecordTransfer = recordTransfers.find(
     (recordTransfer) => recordTransfer.id === selectedRecordTransferId
   );
+  selectedRecordTransferIdRef.current = selectedRecordTransferId;
   const selectedEncounterDocuments = selectedEncounter
     ? clinicalDocuments.filter((document) => document.encounterId === selectedEncounter.id)
     : [];
@@ -2160,6 +2162,7 @@ export function App() {
       setRecordTransferFhirTaskPreview(undefined);
       setRecordTransferDeliveryAttempts([]);
       setRecordTransferDeliveryAttemptWarning(undefined);
+      setIsLoadingRecordTransferDeliveryAttempts(false);
       return;
     }
 
@@ -2167,6 +2170,7 @@ export function App() {
       setRecordTransferFhirTaskPreview(undefined);
       setRecordTransferDeliveryAttempts([]);
       setRecordTransferDeliveryAttemptWarning(undefined);
+      setIsLoadingRecordTransferDeliveryAttempts(false);
       return;
     }
 
@@ -3021,8 +3025,18 @@ export function App() {
         throw new Error(`API trả về HTTP ${response.status}`);
       }
 
-      setRecordTransferFhirTaskPreview(await response.json());
+      const preview = await response.json();
+
+      if (!isCurrentRecordTransferSelection(recordTransferId)) {
+        return;
+      }
+
+      setRecordTransferFhirTaskPreview(preview);
     } catch (error) {
+      if (!isCurrentRecordTransferSelection(recordTransferId)) {
+        return;
+      }
+
       setRecordTransferFhirTaskPreview({
         error:
           error instanceof Error
@@ -3033,6 +3047,10 @@ export function App() {
   }
 
   async function loadRecordTransferDeliveryAttempts(recordTransferId: string) {
+    if (!isCurrentRecordTransferSelection(recordTransferId)) {
+      return;
+    }
+
     setIsLoadingRecordTransferDeliveryAttempts(true);
     setRecordTransferDeliveryAttemptWarning(undefined);
 
@@ -3051,6 +3069,10 @@ export function App() {
           response.status === 404 &&
           isMissingRecordTransferDeliveryAttemptsRoute(payload)
         ) {
+          if (!isCurrentRecordTransferSelection(recordTransferId)) {
+            return;
+          }
+
           setRecordTransferDeliveryAttempts([]);
           setRecordTransferDeliveryAttemptWarning(
             "API lịch sử gửi chưa sẵn sàng trong runtime hiện tại. Gói chuyển vẫn hiển thị được, nhưng cần khởi động lại backend mới nhất để xem delivery attempt/outbox."
@@ -3062,9 +3084,18 @@ export function App() {
       }
 
       const data = (await response.json()) as RecordTransferDeliveryAttemptsResponse;
+
+      if (!isCurrentRecordTransferSelection(recordTransferId)) {
+        return;
+      }
+
       setRecordTransferDeliveryAttempts(data.items);
       setRecordTransferDeliveryAttemptWarning(undefined);
     } catch (error) {
+      if (!isCurrentRecordTransferSelection(recordTransferId)) {
+        return;
+      }
+
       setRecordTransferDeliveryAttempts([]);
       setStatusMessage(
         error instanceof Error
@@ -3072,8 +3103,14 @@ export function App() {
           : "Không thể tải lịch sử gửi hồ sơ."
       );
     } finally {
-      setIsLoadingRecordTransferDeliveryAttempts(false);
+      if (isCurrentRecordTransferSelection(recordTransferId)) {
+        setIsLoadingRecordTransferDeliveryAttempts(false);
+      }
     }
+  }
+
+  function isCurrentRecordTransferSelection(recordTransferId: string): boolean {
+    return selectedRecordTransferIdRef.current === recordTransferId;
   }
 
   async function loadConsentFhirPreview(consentId: string) {
