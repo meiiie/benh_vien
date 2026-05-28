@@ -81,7 +81,13 @@ function parseIpv4MappedIpv6Address(ipAddress: string): string | undefined {
     return undefined;
   }
 
-  const parts = ipAddress.slice(prefix.length).split(":");
+  const mappedAddress = ipAddress.slice(prefix.length);
+
+  if (isIP(mappedAddress) === 4) {
+    return mappedAddress;
+  }
+
+  const parts = mappedAddress.split(":");
 
   if (parts.length !== 2) {
     return undefined;
