@@ -38,14 +38,14 @@ export const CreateRecordTransferRequestSchema = z
 export const MarkRecordTransferSentRequestSchema = z.object({
   sentAt: z.string().datetime().optional(),
   note: z.string().min(1).optional()
-});
+}).strict();
 
 export const MarkRecordTransferReceivedRequestSchema = z.object({
   receivedAt: z.string().datetime().optional(),
   receivedByActorId: z.string().min(1).optional(),
   acknowledgementReference: z.string().min(1).optional(),
   note: z.string().min(1).optional()
-});
+}).strict();
 
 export const RecordTransferAcknowledgementCallbackRequestSchema = z.object({
   recipientOrganizationId: z.string().min(1),
@@ -55,19 +55,19 @@ export const RecordTransferAcknowledgementCallbackRequestSchema = z.object({
   targetEndpointId: z.string().min(1).optional(),
   deliveryIdempotencyKey: z.string().min(1).optional(),
   note: z.string().min(1).optional()
-});
+}).strict();
 
 export const MarkRecordTransferFailedRequestSchema = z.object({
   failedAt: z.string().datetime().optional(),
   failureReason: z.string().min(1),
   nextRetryAt: z.string().datetime().optional(),
   note: z.string().min(1).optional()
-});
+}).strict();
 
 export const RetryRecordTransferRequestSchema = z.object({
   retryAt: z.string().datetime().optional(),
   note: z.string().min(1).optional()
-});
+}).strict();
 
 export type RecordTransferStatus = z.infer<typeof RecordTransferStatusSchema>;
 export type RecordTransferPriority = z.infer<typeof RecordTransferPrioritySchema>;

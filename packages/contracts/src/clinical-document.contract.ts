@@ -37,7 +37,7 @@ export const CreateClinicalDocumentRequestSchema = z.object({
   attachmentHashSha1Base64: Sha1Base64Schema.optional(),
   attachmentCreatedAt: z.string().datetime().optional(),
   authorPractitionerId: z.string().min(1)
-});
+}).strict();
 
 export const PatientDocumentsParamsSchema = z.object({
   patientId: z.string().min(1)

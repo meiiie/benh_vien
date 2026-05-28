@@ -14,7 +14,7 @@ export const CreatePatientRequestSchema = z.object({
   address: z.string().optional(),
   phone: z.string().optional(),
   managingOrganizationId: z.string().min(1)
-});
+}).strict();
 
 export const PatientIdParamsSchema = z.object({
   id: z.string().min(1)
@@ -22,4 +22,3 @@ export const PatientIdParamsSchema = z.object({
 
 export type CreatePatientRequest = z.infer<typeof CreatePatientRequestSchema>;
 export type PatientIdParams = z.infer<typeof PatientIdParamsSchema>;
-

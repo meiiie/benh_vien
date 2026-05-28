@@ -75,7 +75,7 @@ export const CreateMedicationAdministrationRequestSchema = z.object({
   performers: z.array(MedicationAdministrationPerformerSchema).optional(),
   dosage: MedicationAdministrationDosageSchema.optional(),
   note: z.string().min(1).optional()
-});
+}).strict();
 
 export type MedicationAdministrationStatus = z.infer<
   typeof MedicationAdministrationStatusSchema

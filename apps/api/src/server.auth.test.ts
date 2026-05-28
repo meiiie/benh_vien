@@ -189,6 +189,26 @@ describe("API auth and RBAC boundary", () => {
       requestId: "auth-invalid-payload-001"
     });
 
+    const unknownFieldResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/auth/login",
+      headers: {
+        "content-type": "application/json",
+        "x-request-id": "auth-unknown-field-001"
+      },
+      payload: {
+        username: "practitioner-demo-001",
+        password: "demo",
+        role: "clinician",
+        actorId: "admin-demo"
+      }
+    });
+    expect(unknownFieldResponse.statusCode).toBe(400);
+    expect(unknownFieldResponse.json()).toMatchObject({
+      error: "VALIDATION_ERROR",
+      requestId: "auth-unknown-field-001"
+    });
+
     const invalidCredentialsResponse = await login(
       app,
       {
