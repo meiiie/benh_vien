@@ -288,6 +288,26 @@ await requestJson(`/record-transfers/${smokeTransfer.id}/send`, {
   }
 });
 
+const smokeTransferAttemptsAfterSend = await requestJson(
+  `/record-transfers/${smokeTransfer.id}/delivery-attempts`,
+  {
+    token: clinicianSession.accessToken,
+    headers: treatmentHeaders()
+  }
+);
+
+if (
+  smokeTransferAttemptsAfterSend.items?.length !== 1 ||
+  smokeTransferAttemptsAfterSend.items[0]?.status !== "queued" ||
+  smokeTransferAttemptsAfterSend.items[0]?.targetEndpointId !==
+    "endpoint-fhir-hai-phong-referral" ||
+  !/^wiiicare-record-transfer-[a-f0-9]{64}$/.test(
+    smokeTransferAttemptsAfterSend.items[0]?.idempotencyKey ?? ""
+  )
+) {
+  throw new Error("Expected record transfer send to queue one delivery attempt.");
+}
+
 const failedTransfer = await requestJson(`/record-transfers/${smokeTransfer.id}/fail`, {
   method: "POST",
   token: clinicianSession.accessToken,
@@ -322,6 +342,30 @@ if (
   "failedAt" in retriedTransfer
 ) {
   throw new Error("Expected record transfer retry endpoint to return ready state and clear failed attempt timestamps.");
+}
+
+await requestJson(`/record-transfers/${smokeTransfer.id}/send`, {
+  method: "POST",
+  token: clinicianSession.accessToken,
+  headers: treatmentHeaders(),
+  body: {
+    sentAt: new Date(Date.now() + 240_000).toISOString()
+  }
+});
+
+const smokeTransferAttemptsAfterRetry = await requestJson(
+  `/record-transfers/${smokeTransfer.id}/delivery-attempts`,
+  {
+    token: clinicianSession.accessToken,
+    headers: treatmentHeaders()
+  }
+);
+
+if (
+  smokeTransferAttemptsAfterRetry.items?.length !== 2 ||
+  smokeTransferAttemptsAfterRetry.items[1]?.attemptNumber !== 2
+) {
+  throw new Error("Expected retried record transfer send to queue a second delivery attempt.");
 }
 
 const globalAuditTrail = await waitForAuditTrail(
@@ -434,6 +478,7 @@ console.log(
       referralFhirEndpointId: referralFhirEndpoint.id,
       retriedRecordTransferId: retriedTransfer.id,
       retriedRecordTransferRetryCount: retriedTransfer.retryCount,
+      recordTransferDeliveryAttemptCount: smokeTransferAttemptsAfterRetry.items.length,
       globalAuditEventCount: globalAuditTrail.items.length,
       authAuditEventCount: authAuditEvents.length,
       deniedAuditEventCount: deniedAuditEvents.length,

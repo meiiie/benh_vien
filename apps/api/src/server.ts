@@ -26,6 +26,7 @@ import type {
   PatientRepository,
   ProcedureRepository,
   ProviderDirectoryRepository,
+  RecordTransferDeliveryAttemptRepository,
   RecordTransferRepository,
   ServiceRequestRepository,
   WorkflowTaskRepository
@@ -67,6 +68,7 @@ import { createProcedureRepository } from "./modules/procedures/create-procedure
 import { registerProcedureRoutes } from "./modules/procedures/procedure-routes.js";
 import { createProviderDirectoryRepository } from "./modules/provider-directory/create-provider-directory.repository.js";
 import { registerProviderDirectoryRoutes } from "./modules/provider-directory/provider-directory-routes.js";
+import { createRecordTransferDeliveryAttemptRepository } from "./modules/record-transfer-delivery-attempts/create-record-transfer-delivery-attempt.repository.js";
 import { createRecordTransferRepository } from "./modules/record-transfers/create-record-transfer.repository.js";
 import { registerRecordTransferRoutes } from "./modules/record-transfers/record-transfer-routes.js";
 import { startRecordTransferRetryWorker } from "./modules/record-transfers/record-transfer-retry-worker.js";
@@ -83,6 +85,7 @@ export type ServerOptions = {
   readonly observationRepository?: ObservationRepository;
   readonly providerDirectoryRepository?: ProviderDirectoryRepository;
   readonly recordTransferRepository?: RecordTransferRepository;
+  readonly recordTransferDeliveryAttemptRepository?: RecordTransferDeliveryAttemptRepository;
   readonly diagnosticReportRepository?: DiagnosticReportRepository;
   readonly imagingStudyRepository?: ImagingStudyRepository;
   readonly medicationAdministrationRepository?: MedicationAdministrationRepository;
@@ -367,6 +370,9 @@ export async function buildServer(options: ServerOptions = {}) {
     options.consentRepository ?? trackRepository(await createConsentRepository());
   const recordTransferRepository =
     options.recordTransferRepository ?? trackRepository(await createRecordTransferRepository());
+  const recordTransferDeliveryAttemptRepository =
+    options.recordTransferDeliveryAttemptRepository ??
+    trackRepository(await createRecordTransferDeliveryAttemptRepository());
   const auditEventRepository =
     options.auditEventRepository ?? trackRepository(await createAuditEventRepository());
   const recordTransferRetryWorkerConfig = resolveRecordTransferRetryWorkerConfig();
@@ -537,6 +543,7 @@ export async function buildServer(options: ServerOptions = {}) {
         patientRepository,
         consentRepository,
         recordTransferRepository,
+        recordTransferDeliveryAttemptRepository,
         providerDirectoryRepository,
         auditEventRepository
       );

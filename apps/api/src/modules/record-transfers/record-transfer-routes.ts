@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { nanoid } from "nanoid";
 import {
@@ -12,7 +13,8 @@ import {
 import {
   DomainError,
   mapRecordTransferToFhirTask,
-  RecordTransfer
+  RecordTransfer,
+  RecordTransferDeliveryAttempt
 } from "@benh-vien-so/domain";
 import type {
   AuditEventRepository,
@@ -21,6 +23,8 @@ import type {
   ProviderDirectory,
   ProviderEndpointSnapshot,
   ProviderDirectoryRepository,
+  RecordTransferDeliveryAttemptRepository,
+  RecordTransferDeliveryAttemptSnapshot,
   RecordTransferRepository,
   RecordTransferSnapshot
 } from "@benh-vien-so/domain";
@@ -36,6 +40,7 @@ export async function registerRecordTransferRoutes(
   patientRepository: PatientRepository,
   consentRepository: ConsentRepository,
   recordTransferRepository: RecordTransferRepository,
+  deliveryAttemptRepository: RecordTransferDeliveryAttemptRepository,
   providerDirectoryRepository: ProviderDirectoryRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
@@ -170,6 +175,54 @@ export async function registerRecordTransferRoutes(
     }
   });
 
+  app.get("/record-transfers/:id/delivery-attempts", async (request, reply) => {
+    const actor = requirePermission(request, reply, "record-transfer:read");
+
+    if (!actor) {
+      return;
+    }
+
+    const params = RecordTransferIdParamsSchema.parse(request.params);
+    const recordTransfer = await recordTransferRepository.findById(params.id);
+
+    if (!recordTransfer) {
+      return reply.status(404).send({
+        error: "RECORD_TRANSFER_NOT_FOUND"
+      });
+    }
+
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        recordTransfer.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
+    }
+
+    const attempts = await deliveryAttemptRepository.findByRecordTransferId(
+      recordTransfer.id
+    );
+    await recordAuditEvent(auditRepository, request, {
+      action: "record-transfer.read",
+      resourceType: "RecordTransfer",
+      resourceId: recordTransfer.id,
+      patientId: recordTransfer.patientId,
+      metadata: {
+        readModel: "delivery-attempts",
+        returnedCount: attempts.length
+      }
+    });
+
+    return {
+      items: attempts.map(toDeliveryAttemptResponse)
+    };
+  });
+
   app.get("/record-transfers/:id", async (request, reply) => {
     const actor = requirePermission(request, reply, "record-transfer:read");
 
@@ -260,7 +313,33 @@ export async function registerRecordTransferRoutes(
 
     try {
       recordTransfer.markSent(parsed.data);
+      const snapshot = recordTransfer.toSnapshot();
+      const existingAttempts = await deliveryAttemptRepository.findByRecordTransferId(
+        recordTransfer.id
+      );
+      const attemptNumber = existingAttempts.length + 1;
+      const queuedAt = snapshot.sentAt ?? new Date().toISOString();
+      const deliveryAttempt = RecordTransferDeliveryAttempt.queue({
+        id: `record-transfer-delivery-${nanoid(10)}`,
+        recordTransferId: snapshot.id,
+        patientId: snapshot.patientId,
+        targetEndpointId: targetEndpoint.id,
+        targetEndpointAddress: targetEndpoint.address,
+        bundleId: snapshot.bundleId,
+        bundleType: snapshot.bundleType,
+        idempotencyKey: buildDeliveryIdempotencyKey({
+          recordTransferId: snapshot.id,
+          attemptNumber,
+          bundleId: snapshot.bundleId,
+          targetEndpointId: targetEndpoint.id,
+          queuedAt
+        }),
+        attemptNumber,
+        queuedAt
+      });
+
       await recordTransferRepository.save(recordTransfer);
+      await deliveryAttemptRepository.save(deliveryAttempt);
       await recordAuditEvent(auditRepository, request, {
         action: "record-transfer.send",
         resourceType: "RecordTransfer",
@@ -271,7 +350,10 @@ export async function registerRecordTransferRoutes(
           sentAt: recordTransfer.toSnapshot().sentAt,
           recipientOrganizationId: recordTransfer.toSnapshot().recipientOrganizationId,
           targetEndpointId: targetEndpoint.id,
-          targetEndpointAddress: targetEndpoint.address
+          targetEndpointAddress: targetEndpoint.address,
+          deliveryAttemptId: deliveryAttempt.id,
+          deliveryAttemptNumber: deliveryAttempt.toSnapshot().attemptNumber,
+          deliveryIdempotencyKey: deliveryAttempt.toSnapshot().idempotencyKey
         }
       });
 
@@ -547,6 +629,12 @@ function toRecordTransferResponse(recordTransfer: RecordTransfer): RecordTransfe
   return recordTransfer.toSnapshot();
 }
 
+function toDeliveryAttemptResponse(
+  deliveryAttempt: RecordTransferDeliveryAttempt
+): RecordTransferDeliveryAttemptSnapshot {
+  return deliveryAttempt.toSnapshot();
+}
+
 async function resolveRecordTransferFhirEndpoint(
   providerDirectoryRepository: ProviderDirectoryRepository,
   recipientOrganizationId: string
@@ -572,4 +660,26 @@ function findRecordTransferFhirEndpoint(
             payloadType.code === "Bundle"
         )
     );
+}
+
+function buildDeliveryIdempotencyKey(input: {
+  readonly recordTransferId: string;
+  readonly attemptNumber: number;
+  readonly bundleId: string;
+  readonly targetEndpointId: string;
+  readonly queuedAt: string;
+}): string {
+  const hash = createHash("sha256")
+    .update(
+      [
+        input.recordTransferId,
+        String(input.attemptNumber),
+        input.bundleId,
+        input.targetEndpointId,
+        input.queuedAt
+      ].join("|")
+    )
+    .digest("hex");
+
+  return `wiiicare-record-transfer-${hash}`;
 }

@@ -3551,7 +3551,7 @@ describe("API auth and RBAC boundary", () => {
       },
       payload: {
         sentAt: "2026-05-28T04:00:00.000Z",
-        note: "Đã gửi gói hồ sơ qua gateway liên thông."
+        note: "Xếp gói hồ sơ vào hàng chờ gửi qua gateway liên thông."
       }
     });
 
@@ -3560,6 +3560,30 @@ describe("API auth and RBAC boundary", () => {
       id: "record-transfer-demo-001",
       status: "in-progress",
       sentAt: "2026-05-28T04:00:00.000Z"
+    });
+
+    const attemptsResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/delivery-attempts",
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(attemptsResponse.statusCode).toBe(200);
+    expect(attemptsResponse.json()).toMatchObject({
+      items: [
+        {
+          recordTransferId: "record-transfer-demo-001",
+          patientId: "patient-demo-001",
+          targetEndpointId: "endpoint-fhir-hai-phong-referral",
+          targetEndpointAddress: "https://fhir.referral.demo.wiiicare.vn/fhir",
+          bundleId: "patient-document-patient-demo-001",
+          bundleType: "document",
+          attemptNumber: 1,
+          status: "queued",
+          queuedAt: "2026-05-28T04:00:00.000Z",
+          idempotencyKey: expect.stringMatching(/^wiiicare-record-transfer-[a-f0-9]{64}$/)
+        }
+      ]
     });
 
     const receiveResponse = await app.inject({
@@ -3613,7 +3637,7 @@ describe("API auth and RBAC boundary", () => {
       },
       payload: {
         sentAt: "2026-05-28T05:00:00.000Z",
-        note: "Đã gửi gói hồ sơ qua gateway liên thông."
+        note: "Xếp gói hồ sơ vào hàng chờ gửi qua gateway liên thông."
       }
     });
 
@@ -3705,6 +3729,28 @@ describe("API auth and RBAC boundary", () => {
       status: "in-progress",
       sentAt: "2026-05-28T05:25:00.000Z",
       retryCount: 1
+    });
+
+    const attemptsResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/delivery-attempts",
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(attemptsResponse.statusCode).toBe(200);
+    expect(attemptsResponse.json()).toMatchObject({
+      items: [
+        {
+          attemptNumber: 1,
+          queuedAt: "2026-05-28T05:00:00.000Z",
+          status: "queued"
+        },
+        {
+          attemptNumber: 2,
+          queuedAt: "2026-05-28T05:25:00.000Z",
+          status: "queued"
+        }
+      ]
     });
   });
 
