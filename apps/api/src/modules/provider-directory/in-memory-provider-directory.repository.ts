@@ -158,6 +158,26 @@ export function createSeedProviderDirectory(): ProviderDirectory {
         ]
       },
       {
+        id: "endpoint-fhir-hai-phong-referral",
+        managingOrganizationId: "hospital-hai-phong-referral",
+        status: "active",
+        connectionType: "hl7-fhir-rest",
+        name: "FHIR Gateway bệnh viện tiếp nhận Hải Phòng",
+        address: "https://fhir.referral.demo.wiiicare.vn/fhir",
+        payloadTypes: [
+          {
+            system: "http://hl7.org/fhir/resource-types",
+            code: "Bundle",
+            display: "FHIR Bundle"
+          },
+          {
+            system: "http://hl7.org/fhir/resource-types",
+            code: "Task",
+            display: "FHIR Task"
+          }
+        ]
+      },
+      {
         id: "endpoint-pacs-hai-phong-demo",
         managingOrganizationId: "department-diagnostic-imaging",
         status: "active",

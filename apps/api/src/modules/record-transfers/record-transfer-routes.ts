@@ -18,6 +18,8 @@ import type {
   AuditEventRepository,
   ConsentRepository,
   PatientRepository,
+  ProviderDirectory,
+  ProviderEndpointSnapshot,
   ProviderDirectoryRepository,
   RecordTransferRepository,
   RecordTransferSnapshot
@@ -113,6 +115,19 @@ export async function registerRecordTransferRoutes(
         error: "CONSENT_DOES_NOT_ALLOW_RECORD_TRANSFER",
         message:
           "Không thể tạo yêu cầu chuyển hồ sơ nếu consent không tồn tại, hết hiệu lực hoặc không khớp đơn vị nhận."
+        });
+    }
+
+    const targetEndpoint = await resolveRecordTransferFhirEndpoint(
+      providerDirectoryRepository,
+      parsed.data.recipientOrganizationId
+    );
+
+    if (!targetEndpoint) {
+      return reply.status(422).send({
+        error: "RECORD_TRANSFER_ENDPOINT_NOT_FOUND",
+        message:
+          "Đơn vị nhận chưa có endpoint FHIR REST đang hoạt động và hỗ trợ Bundle trong Provider Directory."
       });
     }
 
@@ -136,7 +151,9 @@ export async function registerRecordTransferRoutes(
           bundleType: recordTransfer.toSnapshot().bundleType,
           bundleId: recordTransfer.toSnapshot().bundleId,
           consentReference: recordTransfer.toSnapshot().consentReference,
-          recipientOrganizationId: recordTransfer.toSnapshot().recipientOrganizationId
+          recipientOrganizationId: recordTransfer.toSnapshot().recipientOrganizationId,
+          targetEndpointId: targetEndpoint.id,
+          targetEndpointAddress: targetEndpoint.address
         }
       });
 
@@ -228,6 +245,19 @@ export async function registerRecordTransferRoutes(
       return;
     }
 
+    const targetEndpoint = await resolveRecordTransferFhirEndpoint(
+      providerDirectoryRepository,
+      recordTransfer.toSnapshot().recipientOrganizationId
+    );
+
+    if (!targetEndpoint) {
+      return reply.status(422).send({
+        error: "RECORD_TRANSFER_ENDPOINT_NOT_FOUND",
+        message:
+          "Không thể gửi gói hồ sơ vì đơn vị nhận chưa có endpoint FHIR REST đang hoạt động và hỗ trợ Bundle."
+      });
+    }
+
     try {
       recordTransfer.markSent(parsed.data);
       await recordTransferRepository.save(recordTransfer);
@@ -239,7 +269,9 @@ export async function registerRecordTransferRoutes(
         metadata: {
           status: recordTransfer.toSnapshot().status,
           sentAt: recordTransfer.toSnapshot().sentAt,
-          recipientOrganizationId: recordTransfer.toSnapshot().recipientOrganizationId
+          recipientOrganizationId: recordTransfer.toSnapshot().recipientOrganizationId,
+          targetEndpointId: targetEndpoint.id,
+          targetEndpointAddress: targetEndpoint.address
         }
       });
 
@@ -513,4 +545,31 @@ function buildBundleId(patientId: string, bundleType: "collection" | "document")
 
 function toRecordTransferResponse(recordTransfer: RecordTransfer): RecordTransferSnapshot {
   return recordTransfer.toSnapshot();
+}
+
+async function resolveRecordTransferFhirEndpoint(
+  providerDirectoryRepository: ProviderDirectoryRepository,
+  recipientOrganizationId: string
+): Promise<ProviderEndpointSnapshot | undefined> {
+  const providerDirectory = await providerDirectoryRepository.findDirectory();
+  return findRecordTransferFhirEndpoint(providerDirectory, recipientOrganizationId);
+}
+
+function findRecordTransferFhirEndpoint(
+  providerDirectory: ProviderDirectory,
+  recipientOrganizationId: string
+): ProviderEndpointSnapshot | undefined {
+  return providerDirectory
+    .toSnapshot()
+    .endpoints.find(
+      (endpoint) =>
+        endpoint.managingOrganizationId === recipientOrganizationId &&
+        endpoint.status === "active" &&
+        endpoint.connectionType === "hl7-fhir-rest" &&
+        endpoint.payloadTypes.some(
+          (payloadType) =>
+            payloadType.system === "http://hl7.org/fhir/resource-types" &&
+            payloadType.code === "Bundle"
+        )
+    );
 }

@@ -1912,7 +1912,7 @@ describe("API auth and RBAC boundary", () => {
         "DocumentReference"
       ])
     );
-    expect(body.entry).toHaveLength(44);
+    expect(body.entry).toHaveLength(45);
   });
 
   it("returns a patient-record FHIR document Bundle with Composition first", async () => {
@@ -1943,7 +1943,7 @@ describe("API auth and RBAC boundary", () => {
         }
       ]
     });
-    expect(body.entry).toHaveLength(45);
+    expect(body.entry).toHaveLength(46);
     expect(body.entry[0].resource.section).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -2305,6 +2305,11 @@ describe("API auth and RBAC boundary", () => {
         expect.objectContaining({
           id: "endpoint-pacs-hai-phong-demo",
           connectionType: "dicom-wado-rs"
+        }),
+        expect.objectContaining({
+          id: "endpoint-fhir-hai-phong-referral",
+          managingOrganizationId: "hospital-hai-phong-referral",
+          connectionType: "hl7-fhir-rest"
         })
       ])
     );
@@ -3726,6 +3731,49 @@ describe("API auth and RBAC boundary", () => {
     expect(response.statusCode).toBe(403);
     expect(response.json()).toMatchObject({
       error: "CONSENT_DOES_NOT_ALLOW_RECORD_TRANSFER"
+    });
+  });
+
+  it("requires a recipient FHIR Bundle endpoint before creating a record transfer", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const consentResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/consents",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        category: "record-sharing",
+        granteeOrganizationId: "department-laboratory",
+        validFrom: "2026-05-28T00:00:00.000Z",
+        validUntil: "2026-12-31T23:59:59.000Z"
+      }
+    });
+    expect(consentResponse.statusCode).toBe(201);
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/record-transfers",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        bundleType: "document",
+        sourceOrganizationId: "hospital-hai-phong-demo",
+        recipientOrganizationId: "department-laboratory",
+        consentReference: consentResponse.json().id,
+        reason: "Thử chuyển hồ sơ tới đơn vị chưa có FHIR Bundle endpoint."
+      }
+    });
+
+    expect(response.statusCode).toBe(422);
+    expect(response.json()).toMatchObject({
+      error: "RECORD_TRANSFER_ENDPOINT_NOT_FOUND",
+      requestId: expect.any(String)
     });
   });
 

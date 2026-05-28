@@ -239,6 +239,27 @@ if (
   throw new Error("Expected missing FHIR record transfer Task to return OperationOutcome not-found.");
 }
 
+const providerDirectory = await requestJson("/provider-directory", {
+  token: clinicianSession.accessToken,
+  headers: treatmentHeaders()
+});
+const referralFhirEndpoint = providerDirectory.endpoints?.find(
+  (endpoint) =>
+    endpoint.id === "endpoint-fhir-hai-phong-referral" &&
+    endpoint.managingOrganizationId === "hospital-hai-phong-referral" &&
+    endpoint.status === "active" &&
+    endpoint.connectionType === "hl7-fhir-rest" &&
+    endpoint.payloadTypes?.some(
+      (payloadType) =>
+        payloadType.system === "http://hl7.org/fhir/resource-types" &&
+        payloadType.code === "Bundle"
+    )
+);
+
+if (!referralFhirEndpoint) {
+  throw new Error("Expected referral hospital to expose an active FHIR Bundle endpoint.");
+}
+
 const smokeTransfer = await requestJson("/patients/patient-demo-001/record-transfers", {
   method: "POST",
   token: clinicianSession.accessToken,
@@ -410,6 +431,7 @@ console.log(
       deniedMedicationError: deniedMedicationExport.error,
       fhirValidationIssueCode: fhirValidationOutcome.issue[0]?.code,
       missingRecordTransferFhirIssueCode: missingTransferFhir.issue[0]?.code,
+      referralFhirEndpointId: referralFhirEndpoint.id,
       retriedRecordTransferId: retriedTransfer.id,
       retriedRecordTransferRetryCount: retriedTransfer.retryCount,
       globalAuditEventCount: globalAuditTrail.items.length,
