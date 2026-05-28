@@ -24,6 +24,8 @@ API giới hạn tần suất `POST /api/v1/auth/login` bằng `BVS_AUTH_LOGIN_R
 
 Ở `NODE_ENV=production`, API cũng yêu cầu `BVS_AUTH_SECRET` tối thiểu 32 ký tự ngay khi khởi động và không chấp nhận giá trị mẫu như `change-me...` hoặc secret dev-only. Nếu thiếu secret hoặc dùng placeholder, container API sẽ dừng thay vì chờ tới request đăng nhập đầu tiên mới lỗi.
 
+Ở `NODE_ENV=production`, `DATABASE_URL` cũng không được chứa mật khẩu mẫu/dev như `change-me...` hoặc `bvs_dev_password`. `.env.prod.example` cố ý dùng placeholder để nhắc thay secret trước khi vận hành thật; nếu dùng nguyên file này cho production, API sẽ dừng sớm thay vì mở pool PostgreSQL với thông tin đăng nhập yếu.
+
 `BVS_AUTH_TOKEN_TTL_SECONDS` kiểm soát thời hạn token demo, mặc định `28800` giây và chỉ nhận giá trị từ `300` đến `28800`. Nếu cấu hình ngoài khoảng này, API sẽ dừng khi khởi động để tránh phiên đăng nhập quá dài hoặc quá ngắn ngoài ý muốn.
 
 ## Bật FHIR và PACS khi cần
