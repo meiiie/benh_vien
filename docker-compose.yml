@@ -52,7 +52,7 @@ services:
 
   minio:
     <<: *service-defaults
-    image: minio/minio:latest
+    image: ${MINIO_IMAGE:-minio/minio:RELEASE.2025-09-07T16-13-09Z}
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-bvs_minio}
@@ -159,7 +159,7 @@ services:
 
   hapi-fhir:
     <<: *service-defaults
-    image: hapiproject/hapi:latest
+    image: ${HAPI_FHIR_IMAGE:-hapiproject/hapi:v8.10.0-1}
     profiles:
       - interop
     networks:
@@ -167,7 +167,7 @@ services:
 
   orthanc:
     <<: *service-defaults
-    image: orthancteam/orthanc:latest
+    image: ${ORTHANC_IMAGE:-orthancteam/orthanc:26.4.2}
     profiles:
       - imaging
     environment:
