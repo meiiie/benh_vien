@@ -2,6 +2,7 @@ import cors from "@fastify/cors";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import Fastify from "fastify";
+import { ZodError } from "zod";
 import { buildWiiiCareCapabilityStatement } from "@benh-vien-so/domain";
 import type {
   AuditEventRepository,
@@ -111,6 +112,34 @@ export async function buildServer(options: ServerOptions = {}) {
     reply.header("Referrer-Policy", "no-referrer");
     reply.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
     reply.header("Cross-Origin-Resource-Policy", "same-site");
+  });
+  app.setErrorHandler((error, request, reply) => {
+    if (error instanceof ZodError) {
+      return reply.status(400).send({
+        error: "VALIDATION_ERROR",
+        message: "Request validation failed.",
+        requestId: request.id,
+        issues: error.issues
+      });
+    }
+
+    const statusCode = readHttpStatusCode(error);
+
+    if (statusCode >= 400 && statusCode < 500) {
+      return reply.status(statusCode).send({
+        error: "REQUEST_ERROR",
+        message: "Request could not be processed.",
+        requestId: request.id
+      });
+    }
+
+    request.log.error({ err: error, requestId: request.id }, "Unhandled request error");
+
+    return reply.status(500).send({
+      error: "INTERNAL_SERVER_ERROR",
+      message: "Unexpected internal server error.",
+      requestId: request.id
+    });
   });
 
   await app.register(swagger, {
@@ -503,4 +532,10 @@ function resolveCorsOrigins(): boolean | string[] {
   }
 
   return true;
+}
+
+function readHttpStatusCode(error: unknown): number {
+  const statusCode = (error as { readonly statusCode?: unknown }).statusCode;
+
+  return typeof statusCode === "number" ? statusCode : 500;
 }

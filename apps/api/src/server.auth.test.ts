@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { ProviderDirectoryRepository } from "@benh-vien-so/domain";
 import { buildServer } from "./server.js";
 
 const testSecret = "wiiicare-test-secret-at-least-32-characters";
@@ -122,6 +123,67 @@ describe("API auth and RBAC boundary", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.headers["x-request-id"]).toBe("trace-demo-001");
+  });
+
+  it("returns a safe validation error envelope with request id", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/provider-directory/InvalidResource/provider-demo/fhir",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "x-request-id": "validation-trace-demo-001"
+      }
+    });
+    const body = response.json();
+
+    expect(response.statusCode).toBe(400);
+    expect(body).toMatchObject({
+      error: "VALIDATION_ERROR",
+      message: "Request validation failed.",
+      requestId: "validation-trace-demo-001",
+      issues: expect.any(Array)
+    });
+    expect(JSON.stringify(body)).not.toContain("stack");
+  });
+
+  it("returns a safe internal error envelope without leaking implementation details", async () => {
+    const throwingProviderDirectoryRepository: ProviderDirectoryRepository = {
+      async findDirectory() {
+        throw new Error("database credential path leaked");
+      },
+      async save() {
+        return undefined;
+      }
+    };
+    app = await buildServer({
+      logger: false,
+      providerDirectoryRepository: throwingProviderDirectoryRepository
+    });
+    await app.ready();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/provider-directory",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "x-request-id": "internal-trace-demo-001"
+      }
+    });
+    const body = response.json();
+    const serializedBody = JSON.stringify(body);
+
+    expect(response.statusCode).toBe(500);
+    expect(body).toMatchObject({
+      error: "INTERNAL_SERVER_ERROR",
+      message: "Unexpected internal server error.",
+      requestId: "internal-trace-demo-001"
+    });
+    expect(serializedBody).not.toContain("database credential path leaked");
+    expect(serializedBody).not.toContain("stack");
   });
 
   it("requires explicit CORS origins in production", async () => {
