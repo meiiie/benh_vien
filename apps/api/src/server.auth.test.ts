@@ -14,6 +14,8 @@ describe("API auth and RBAC boundary", () => {
   const originalAuthLoginRateLimitMax = process.env.BVS_AUTH_LOGIN_RATE_LIMIT_MAX;
   const originalAuthLoginRateLimitWindowSeconds =
     process.env.BVS_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS;
+  const originalRateLimitStore = process.env.BVS_RATE_LIMIT_STORE;
+  const originalValkeyUrl = process.env.BVS_VALKEY_URL;
 
   beforeEach(() => {
     process.env.BVS_REPOSITORY = "in-memory";
@@ -35,6 +37,8 @@ describe("API auth and RBAC boundary", () => {
       "BVS_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS",
       originalAuthLoginRateLimitWindowSeconds
     );
+    restoreEnv("BVS_RATE_LIMIT_STORE", originalRateLimitStore);
+    restoreEnv("BVS_VALKEY_URL", originalValkeyUrl);
   });
 
   it("returns a signed demo session for valid credentials", async () => {

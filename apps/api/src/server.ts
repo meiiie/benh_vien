@@ -29,6 +29,7 @@ import { registerAuditEventRoutes } from "./modules/audit-events/audit-event-rou
 import { createAllergyIntoleranceRepository } from "./modules/allergy-intolerances/create-allergy-intolerance.repository.js";
 import { registerAllergyIntoleranceRoutes } from "./modules/allergy-intolerances/allergy-intolerance-routes.js";
 import { registerAuthRoutes } from "./modules/auth/auth-routes.js";
+import type { LoginRateLimiter } from "./modules/auth/login-rate-limit.js";
 import { createClinicalDocumentRepository } from "./modules/clinical-documents/create-clinical-document.repository.js";
 import { registerClinicalDocumentRoutes } from "./modules/clinical-documents/clinical-document-routes.js";
 import { createConditionRepository } from "./modules/conditions/create-condition.repository.js";
@@ -81,6 +82,7 @@ export type ServerOptions = {
   readonly clinicalDocumentRepository?: ClinicalDocumentRepository;
   readonly consentRepository?: ConsentRepository;
   readonly auditEventRepository?: AuditEventRepository;
+  readonly loginRateLimiter?: LoginRateLimiter;
   readonly logger?: boolean;
 };
 
@@ -353,7 +355,9 @@ export async function buildServer(options: ServerOptions = {}) {
         })
       );
 
-      await registerAuthRoutes(api);
+      await registerAuthRoutes(api, {
+        loginRateLimiter: options.loginRateLimiter
+      });
       await registerPatientRoutes(
         api,
         patientRepository,
