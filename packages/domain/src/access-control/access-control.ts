@@ -1,3 +1,6 @@
+import type { PatientSnapshot } from "../patient/patient.js";
+import type { ProviderDirectorySnapshot } from "../provider-directory/provider-directory.js";
+
 export type ActorRole = "clinician" | "nurse" | "auditor" | "admin";
 
 export type PurposeOfUse = "TREATMENT" | "AUDIT" | "OPERATIONS";
@@ -314,10 +317,130 @@ export function canAccess(actor: ActorContext, permission: Permission): boolean 
   return true;
 }
 
+export function canAccessPatientRecord(
+  actor: ActorContext,
+  patient: Pick<PatientSnapshot, "managingOrganizationId">,
+  providerDirectory: Pick<ProviderDirectorySnapshot, "organizations" | "practitionerRoles">
+): boolean {
+  if (actor.role === "admin") {
+    return true;
+  }
+
+  if (actor.role === "auditor") {
+    return actor.purposeOfUse === "AUDIT";
+  }
+
+  if (actor.purposeOfUse !== "TREATMENT") {
+    return false;
+  }
+
+  return getActivePractitionerOrganizationIds(actor.actorId, providerDirectory).has(
+    patient.managingOrganizationId
+  );
+}
+
+export function filterAccessiblePatientRecords<
+  Patient extends Pick<PatientSnapshot, "managingOrganizationId">
+>(
+  actor: ActorContext,
+  patients: readonly Patient[],
+  providerDirectory: Pick<ProviderDirectorySnapshot, "organizations" | "practitionerRoles">
+): Patient[] {
+  return patients.filter((patient) => canAccessPatientRecord(actor, patient, providerDirectory));
+}
+
 export function isActorRole(value: string): value is ActorRole {
   return value === "clinician" || value === "nurse" || value === "auditor" || value === "admin";
 }
 
 export function isPurposeOfUse(value: string): value is PurposeOfUse {
   return value === "TREATMENT" || value === "AUDIT" || value === "OPERATIONS";
+}
+
+function getActivePractitionerOrganizationIds(
+  actorId: string,
+  providerDirectory: Pick<ProviderDirectorySnapshot, "organizations" | "practitionerRoles">
+): Set<string> {
+  const organizationIds = new Set<string>();
+
+  for (const role of providerDirectory.practitionerRoles) {
+    if (role.active && role.practitionerId === actorId) {
+      addOrganizationScope(organizationIds, role.organizationId, providerDirectory);
+    }
+  }
+
+  return organizationIds;
+}
+
+function addOrganizationScope(
+  organizationIds: Set<string>,
+  organizationId: string,
+  providerDirectory: Pick<ProviderDirectorySnapshot, "organizations">
+): void {
+  organizationIds.add(organizationId);
+
+  for (const ancestorId of findAncestorOrganizationIds(organizationId, providerDirectory)) {
+    organizationIds.add(ancestorId);
+  }
+
+  for (const descendantId of findDescendantOrganizationIds(organizationId, providerDirectory)) {
+    organizationIds.add(descendantId);
+  }
+}
+
+function findAncestorOrganizationIds(
+  organizationId: string,
+  providerDirectory: Pick<ProviderDirectorySnapshot, "organizations">
+): string[] {
+  const organizationsById = new Map(
+    providerDirectory.organizations.map((organization) => [organization.id, organization])
+  );
+  const ancestorIds: string[] = [];
+  const seenOrganizationIds = new Set<string>([organizationId]);
+  let currentOrganization = organizationsById.get(organizationId);
+
+  while (
+    currentOrganization?.partOfOrganizationId &&
+    !seenOrganizationIds.has(currentOrganization.partOfOrganizationId)
+  ) {
+    const parentOrganizationId = currentOrganization.partOfOrganizationId;
+    ancestorIds.push(parentOrganizationId);
+    seenOrganizationIds.add(parentOrganizationId);
+    currentOrganization = organizationsById.get(parentOrganizationId);
+  }
+
+  return ancestorIds;
+}
+
+function findDescendantOrganizationIds(
+  organizationId: string,
+  providerDirectory: Pick<ProviderDirectorySnapshot, "organizations">
+): string[] {
+  const descendantIds: string[] = [];
+  const pendingIds = [organizationId];
+  const seenOrganizationIds = new Set<string>([organizationId]);
+
+  while (pendingIds.length > 0) {
+    const currentId = pendingIds.pop();
+
+    if (!currentId) {
+      continue;
+    }
+
+    const children = providerDirectory.organizations.filter(
+      (organization) => organization.partOfOrganizationId === currentId
+    );
+
+    for (const child of children) {
+      if (seenOrganizationIds.has(child.id)) {
+        continue;
+      }
+
+      descendantIds.push(child.id);
+      seenOrganizationIds.add(child.id);
+      pendingIds.push(child.id);
+    }
+  }
+
+  return descendantIds;
 }

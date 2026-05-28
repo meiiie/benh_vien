@@ -36,7 +36,7 @@
 
 ## Giai đoạn 4: Bảo mật, vận hành và chuẩn hóa
 
-- Tích hợp IAM/SSO, phân quyền theo vai trò và ngữ cảnh điều trị.
+- Tích hợp IAM/SSO, mở rộng RBAC/ABAC từ lát cắt Patient Registry hiện có sang toàn bộ tài nguyên lâm sàng, bao gồm vai trò, khoa phòng, ca trực, quan hệ điều trị và mục đích truy cập.
 - Hoàn thiện audit trail, FHIR `AuditEvent`, kiểm tra toàn vẹn chuỗi băm, báo cáo tuân thủ, retention policy và cảnh báo khi phát hiện sai lệch.
 - Bổ sung kiểm thử bảo mật API theo OWASP.
 - Chuẩn hóa backup, restore, retention và disaster recovery.

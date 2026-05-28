@@ -702,6 +702,83 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("filters treatment patient access by the actor provider organization", async () => {
+    app = await readyServer();
+    const adminToken = await loginForToken(app, "admin-demo", "admin");
+    const clinicianToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const auditorToken = await loginForToken(app, "security-officer-demo", "auditor");
+
+    const createResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients",
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        identifiers: [
+          {
+            system: "urn:benh-vien-so:mrn",
+            value: "MRN-OUTSIDE-TEST",
+            type: "hospital-mrn"
+          }
+        ],
+        fullName: "Outside Hospital Patient",
+        gender: "unknown",
+        managingOrganizationId: "hospital-outside-demo"
+      }
+    });
+    const outsidePatientId = createResponse.json().id as string;
+
+    expect(createResponse.statusCode).toBe(201);
+
+    const clinicianListResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients",
+      headers: treatmentHeaders(clinicianToken)
+    });
+    const clinicianPatientIds = clinicianListResponse
+      .json()
+      .items.map((patient: { readonly id: string }) => patient.id);
+
+    expect(clinicianListResponse.statusCode).toBe(200);
+    expect(clinicianPatientIds).toContain("patient-demo-001");
+    expect(clinicianPatientIds).not.toContain(outsidePatientId);
+
+    const clinicianReadResponse = await app.inject({
+      method: "GET",
+      url: `/api/v1/patients/${outsidePatientId}`,
+      headers: {
+        ...treatmentHeaders(clinicianToken),
+        "x-request-id": "patient-abac-denied-001"
+      }
+    });
+
+    expect(clinicianReadResponse.statusCode).toBe(403);
+    expect(clinicianReadResponse.json()).toMatchObject({
+      error: "PATIENT_ACCESS_DENIED",
+      requestId: "patient-abac-denied-001",
+      patientId: outsidePatientId,
+      actor: {
+        id: "practitioner-demo-001",
+        role: "clinician",
+        purposeOfUse: "TREATMENT"
+      }
+    });
+
+    const auditorListResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients",
+      headers: auditHeaders(auditorToken)
+    });
+    const auditorPatientIds = auditorListResponse
+      .json()
+      .items.map((patient: { readonly id: string }) => patient.id);
+
+    expect(auditorListResponse.statusCode).toBe(200);
+    expect(auditorPatientIds).toContain(outsidePatientId);
+  });
+
   it("allows auditor audit-purpose patient registry context", async () => {
     app = await readyServer();
     const accessToken = await loginForToken(app, "security-officer-demo", "auditor");

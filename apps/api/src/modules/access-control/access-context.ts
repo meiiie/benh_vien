@@ -1,6 +1,15 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { canAccess, isPurposeOfUse } from "@benh-vien-so/domain";
-import type { ActorContext, Permission } from "@benh-vien-so/domain";
+import {
+  canAccess,
+  canAccessPatientRecord,
+  isPurposeOfUse
+} from "@benh-vien-so/domain";
+import type {
+  ActorContext,
+  Patient,
+  Permission,
+  ProviderDirectoryRepository
+} from "@benh-vien-so/domain";
 import { verifyAccessToken } from "../auth/auth-session.js";
 
 export function readActorContext(request: FastifyRequest): ActorContext | undefined {
@@ -55,6 +64,48 @@ export function requirePermission(
   });
 
   return undefined;
+}
+
+export async function requirePatientRecordAccess(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  actor: ActorContext,
+  patient: Patient,
+  providerDirectoryRepository: ProviderDirectoryRepository
+): Promise<boolean> {
+  const providerDirectory = await providerDirectoryRepository.findDirectory();
+
+  if (canAccessPatientRecord(actor, patient.toSnapshot(), providerDirectory.toSnapshot())) {
+    return true;
+  }
+
+  reply.status(403).send({
+    error: "PATIENT_ACCESS_DENIED",
+    message:
+      "Actor không có quan hệ điều trị, quyền kiểm toán hoặc quyền quản trị phù hợp với hồ sơ bệnh nhân này.",
+    requestId: request.id,
+    patientId: patient.id,
+    actor: {
+      id: actor.actorId,
+      role: actor.role,
+      purposeOfUse: actor.purposeOfUse
+    }
+  });
+
+  return false;
+}
+
+export async function filterPatientsByAccess(
+  actor: ActorContext,
+  patients: readonly Patient[],
+  providerDirectoryRepository: ProviderDirectoryRepository
+): Promise<Patient[]> {
+  const providerDirectory = await providerDirectoryRepository.findDirectory();
+  const providerDirectorySnapshot = providerDirectory.toSnapshot();
+
+  return patients.filter((patient) =>
+    canAccessPatientRecord(actor, patient.toSnapshot(), providerDirectorySnapshot)
+  );
 }
 
 function readHeader(value: string | string[] | undefined): string | undefined {

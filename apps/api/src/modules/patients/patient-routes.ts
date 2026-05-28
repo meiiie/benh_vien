@@ -31,7 +31,11 @@ import type {
   ServiceRequestRepository,
   WorkflowTaskRepository
 } from "@benh-vien-so/domain";
-import { requirePermission } from "../access-control/access-context.js";
+import {
+  filterPatientsByAccess,
+  requirePatientRecordAccess,
+  requirePermission
+} from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
 
@@ -63,17 +67,23 @@ export async function registerPatientRoutes(
     }
 
     const patients = await repository.findAll();
+    const accessiblePatients = await filterPatientsByAccess(
+      actor,
+      patients,
+      providerDirectoryRepository
+    );
     await recordAuditEvent(auditRepository, request, {
       action: "patient.list",
       resourceType: "Patient",
       resourceId: "collection",
       metadata: {
-        returnedCount: patients.length
+        returnedCount: accessiblePatients.length,
+        totalCount: patients.length
       }
     });
 
     return {
-      items: patients.map(toPatientResponse)
+      items: accessiblePatients.map(toPatientResponse)
     };
   });
 
@@ -95,6 +105,18 @@ export async function registerPatientRoutes(
         id: `patient-${nanoid(10)}`,
         ...parsed.data
       });
+
+      if (
+        !(await requirePatientRecordAccess(
+          request,
+          reply,
+          actor,
+          patient,
+          providerDirectoryRepository
+        ))
+      ) {
+        return;
+      }
 
       await repository.save(patient);
       await recordAuditEvent(auditRepository, request, {
@@ -144,6 +166,18 @@ export async function registerPatientRoutes(
       });
     }
 
+    if (
+      !(await requirePatientRecordAccess(
+        request,
+        reply,
+        actor,
+        patient,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
+    }
+
     await recordAuditEvent(auditRepository, request, {
       action: "patient.read",
       resourceType: "Patient",
@@ -178,6 +212,18 @@ export async function registerPatientRoutes(
       });
     }
 
+    if (
+      !(await requirePatientRecordAccess(
+        request,
+        reply,
+        actor,
+        patient,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
+    }
+
     await recordAuditEvent(auditRepository, request, {
       action: "patient.fhir-export",
       resourceType: "Patient",
@@ -206,6 +252,18 @@ export async function registerPatientRoutes(
       return reply.status(404).send({
         error: "PATIENT_NOT_FOUND"
       });
+    }
+
+    if (
+      !(await requirePatientRecordAccess(
+        request,
+        reply,
+        actor,
+        patient,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const transferContext = readBundleTransferContext(request.headers);
@@ -354,6 +412,18 @@ export async function registerPatientRoutes(
           text: "Không tìm thấy hồ sơ bệnh nhân cần đóng gói document Bundle."
         }
       });
+    }
+
+    if (
+      !(await requirePatientRecordAccess(
+        request,
+        reply,
+        actor,
+        patient,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const transferContext = readBundleTransferContext(request.headers);
