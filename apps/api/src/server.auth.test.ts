@@ -61,6 +61,76 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("returns request ids for auth boundary errors", async () => {
+    app = await readyServer();
+
+    const invalidPayloadResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/auth/login",
+      headers: {
+        "content-type": "application/json",
+        "x-request-id": "auth-invalid-payload-001"
+      },
+      payload: {
+        username: "practitioner-demo-001"
+      }
+    });
+    expect(invalidPayloadResponse.statusCode).toBe(400);
+    expect(invalidPayloadResponse.json()).toMatchObject({
+      error: "INVALID_LOGIN_PAYLOAD",
+      requestId: "auth-invalid-payload-001"
+    });
+
+    const invalidCredentialsResponse = await login(
+      app,
+      {
+        username: "practitioner-demo-001",
+        password: "wrong-password",
+        role: "clinician"
+      },
+      {
+        "x-request-id": "auth-invalid-credentials-001"
+      }
+    );
+    expect(invalidCredentialsResponse.statusCode).toBe(401);
+    expect(invalidCredentialsResponse.json()).toMatchObject({
+      error: "INVALID_CREDENTIALS",
+      requestId: "auth-invalid-credentials-001"
+    });
+
+    const roleMismatchResponse = await login(
+      app,
+      {
+        username: "practitioner-demo-001",
+        password: "demo",
+        role: "auditor"
+      },
+      {
+        "x-request-id": "auth-role-mismatch-001"
+      }
+    );
+    expect(roleMismatchResponse.statusCode).toBe(403);
+    expect(roleMismatchResponse.json()).toMatchObject({
+      error: "ROLE_MISMATCH",
+      requestId: "auth-role-mismatch-001",
+      expectedRole: "clinician"
+    });
+
+    const invalidSessionResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/auth/session",
+      headers: {
+        authorization: "Bearer invalid-token",
+        "x-request-id": "auth-invalid-session-001"
+      }
+    });
+    expect(invalidSessionResponse.statusCode).toBe(401);
+    expect(invalidSessionResponse.json()).toMatchObject({
+      error: "UNAUTHENTICATED",
+      requestId: "auth-invalid-session-001"
+    });
+  });
+
   it("rate limits repeated login attempts for the same identity and client", async () => {
     process.env.BVS_AUTH_LOGIN_RATE_LIMIT_MAX = "2";
     process.env.BVS_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS = "60";

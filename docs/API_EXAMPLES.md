@@ -53,6 +53,8 @@ TOKEN=$(curl -s -X POST http://localhost:7310/api/v1/auth/login \
 
 Endpoint đăng nhập áp dụng rate limit theo IP + username đã băm SHA-256, mặc định `20` lần trong `60` giây. Docker/dev-prod dùng Valkey để chia sẻ bộ đếm giữa nhiều replica. Khi vượt ngưỡng, API trả `429 AUTH_RATE_LIMITED`, header `Retry-After`, `requestId` và `retryAfterSeconds` để client biết thời gian cần chờ trước khi thử lại.
 
+Các lỗi đăng nhập như payload sai, sai tài khoản/mật khẩu, sai vai trò hoặc phiên không hợp lệ đều trả `requestId` để đối chiếu log khi kiểm tra sự cố.
+
 Tài khoản demo:
 
 - `practitioner-demo-001` / `demo`: vai trò `clinician`, dùng cho luồng điều trị.

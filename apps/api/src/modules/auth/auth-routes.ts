@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { LoginRequestSchema } from "@benh-vien-so/contracts";
 import type { ActorRole } from "@benh-vien-so/domain";
+import { demoPasswordHash, dummyPasswordHash, verifyPassword } from "./auth-password.js";
 import { createAccessToken, verifyAccessToken } from "./auth-session.js";
 import {
   createLoginRateLimitKey,
@@ -10,7 +11,7 @@ import {
 
 type DemoAccount = {
   readonly username: string;
-  readonly password: string;
+  readonly passwordHash: string;
   readonly actorId: string;
   readonly displayName: string;
   readonly role: ActorRole;
@@ -19,28 +20,28 @@ type DemoAccount = {
 const demoAccounts: readonly DemoAccount[] = [
   {
     username: "practitioner-demo-001",
-    password: "demo",
+    passwordHash: demoPasswordHash,
     actorId: "practitioner-demo-001",
     displayName: "Bác sĩ điều trị",
     role: "clinician"
   },
   {
     username: "nurse-demo-001",
-    password: "demo",
+    passwordHash: demoPasswordHash,
     actorId: "nurse-demo-001",
     displayName: "Điều dưỡng tiếp nhận",
     role: "nurse"
   },
   {
     username: "security-officer-demo",
-    password: "demo",
+    passwordHash: demoPasswordHash,
     actorId: "security-officer-demo",
     displayName: "Kiểm toán viên",
     role: "auditor"
   },
   {
     username: "admin-demo",
-    password: "demo",
+    passwordHash: demoPasswordHash,
     actorId: "admin-demo",
     displayName: "Quản trị hệ thống",
     role: "admin"
@@ -65,6 +66,8 @@ export async function registerAuthRoutes(
     if (!parsed.success) {
       return reply.status(400).send({
         error: "INVALID_LOGIN_PAYLOAD",
+        message: "Thông tin đăng nhập không hợp lệ.",
+        requestId: request.id,
         issues: parsed.error.issues
       });
     }
@@ -85,11 +88,16 @@ export async function registerAuthRoutes(
     }
 
     const account = demoAccounts.find((item) => item.username === parsed.data.username);
+    const passwordMatches = await verifyPassword(
+      parsed.data.password,
+      account?.passwordHash ?? dummyPasswordHash
+    );
 
-    if (!account || account.password !== parsed.data.password) {
+    if (!account || !passwordMatches) {
       return reply.status(401).send({
         error: "INVALID_CREDENTIALS",
-        message: "Tài khoản hoặc mật khẩu không hợp lệ."
+        message: "Tài khoản hoặc mật khẩu không hợp lệ.",
+        requestId: request.id
       });
     }
 
@@ -97,6 +105,7 @@ export async function registerAuthRoutes(
       return reply.status(403).send({
         error: "ROLE_MISMATCH",
         message: "Vai trò yêu cầu không khớp với tài khoản đăng nhập.",
+        requestId: request.id,
         expectedRole: account.role
       });
     }
@@ -115,7 +124,8 @@ export async function registerAuthRoutes(
     if (!session) {
       return reply.status(401).send({
         error: "UNAUTHENTICATED",
-        message: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn."
+        message: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.",
+        requestId: request.id
       });
     }
 
