@@ -5,6 +5,7 @@ const requestTag = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 const adminSession = await login("admin-demo", "admin");
 const clinicianSession = await login("practitioner-demo-001", "clinician");
+const auditorSession = await login("security-officer-demo", "auditor");
 
 const clinicianPatients = await requestJson("/patients", {
   token: clinicianSession.accessToken,
@@ -157,6 +158,49 @@ if (deniedMedicationExport.error !== "PATIENT_ACCESS_DENIED") {
   );
 }
 
+const outsideAuditTrail = await requestJson(
+  `/patients/${outsidePatient.id}/audit-events`,
+  {
+    token: auditorSession.accessToken,
+    headers: auditHeaders()
+  }
+);
+const deniedAuditEvents = outsideAuditTrail.items.filter(
+  (event) => event.action === "access.denied"
+);
+
+if (
+  !deniedAuditEvents.some(
+    (event) =>
+      event.patientId === outsidePatient.id &&
+      event.metadata?.requestId === "postgres-smoke-medication-list-denied" &&
+      event.metadata?.denialCode === "PATIENT_ACCESS_DENIED"
+  )
+) {
+  throw new Error("Expected denied medication list access to be captured in audit trail.");
+}
+
+const outsideAuditBundle = await requestJson(
+  `/patients/${outsidePatient.id}/audit-events/fhir-bundle`,
+  {
+    token: auditorSession.accessToken,
+    headers: auditHeaders()
+  }
+);
+const deniedFhirAuditEvents = outsideAuditBundle.entry
+  .map((entry) => entry.resource)
+  .filter((resource) =>
+    resource.subtype?.some((subtype) => subtype.code === "access.denied")
+  );
+
+if (
+  !deniedFhirAuditEvents.some(
+    (resource) => resource.action === "E" && resource.outcome === "4"
+  )
+) {
+  throw new Error("Expected denied access audit to export as a failed FHIR AuditEvent.");
+}
+
 console.log(
   JSON.stringify(
     {
@@ -168,7 +212,9 @@ console.log(
       outsideMedicationRequestId: outsideMedicationRequest.id,
       deniedMedicationListStatus: 403,
       deniedMedicationExportStatus: 403,
-      deniedMedicationError: deniedMedicationExport.error
+      deniedMedicationError: deniedMedicationExport.error,
+      deniedAuditEventCount: deniedAuditEvents.length,
+      deniedFhirAuditEventCount: deniedFhirAuditEvents.length
     },
     null,
     2
@@ -230,6 +276,12 @@ async function requestJson(
 function treatmentHeaders() {
   return {
     "x-purpose-of-use": "TREATMENT"
+  };
+}
+
+function auditHeaders() {
+  return {
+    "x-purpose-of-use": "AUDIT"
   };
 }
 

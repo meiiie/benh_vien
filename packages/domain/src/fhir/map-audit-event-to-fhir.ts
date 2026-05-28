@@ -11,6 +11,7 @@ type FhirAuditEventEntityDetail = NonNullable<
 >[number];
 
 const auditActionLabels: Record<AuditAction, string> = {
+  "access.denied": "Truy cập bị từ chối",
   "patient.list": "Tải danh sách bệnh nhân",
   "patient.create": "Tạo bệnh nhân",
   "patient.read": "Đọc bệnh nhân",
@@ -133,8 +134,8 @@ export function mapAuditEventToFhir(event: AuditEvent): FhirAuditEvent {
     ],
     action: mapAuditAction(snapshot.action),
     recorded: snapshot.occurredAt,
-    outcome: "0",
-    outcomeDesc: "Success",
+    outcome: mapAuditOutcome(snapshot.action),
+    outcomeDesc: mapAuditOutcomeDescription(snapshot.action),
     agent: [
       {
         who: {
@@ -219,11 +220,19 @@ function mapAuditAction(action: AuditAction): FhirAuditEvent["action"] {
     return "U";
   }
 
-  if (action.endsWith(".integrity-verify")) {
+  if (action.endsWith(".integrity-verify") || action === "access.denied") {
     return "E";
   }
 
   return "R";
+}
+
+function mapAuditOutcome(action: AuditAction): FhirAuditEvent["outcome"] {
+  return action === "access.denied" ? "4" : "0";
+}
+
+function mapAuditOutcomeDescription(action: AuditAction): string {
+  return action === "access.denied" ? "Access denied" : "Success";
 }
 
 function mapPurposeOfUse(purposeOfUse: string) {

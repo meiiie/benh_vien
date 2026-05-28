@@ -21,6 +21,8 @@ Hồ sơ bệnh án là dữ liệu đặc biệt nhạy cảm. Dự án chưa t
 
 ## Trạng thái hiện tại
 
+- Các phản hồi `403 FORBIDDEN` và `403 PATIENT_ACCESS_DENIED` được ghi thành audit event `access.denied`; với lỗi theo hồ sơ bệnh nhân, sự kiện được gắn vào audit trail của bệnh nhân và khi xuất FHIR sẽ có `AuditEvent.outcome = 4` để thể hiện lần truy cập bị chặn.
+
 - API đã yêu cầu `Authorization: Bearer <token>` cho endpoint nghiệp vụ.
 - Ở `NODE_ENV=production`, API bắt buộc `BVS_REPOSITORY=postgres`; in-memory repository chỉ dành cho dev/test và không được dùng cho dữ liệu bệnh án thật.
 - Ở `NODE_ENV=production`, API bắt buộc cấu hình `BVS_PUBLIC_API_BASE_URL` bằng URL HTTPS public, không dùng `localhost`/loopback, để FHIR metadata không công bố nhầm địa chỉ nội bộ.

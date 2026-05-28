@@ -3,10 +3,12 @@ import cors from "@fastify/cors";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import Fastify from "fastify";
+import type { FastifyRequest } from "fastify";
 import { ZodError } from "zod";
 import { buildWiiiCareCapabilityStatement } from "@benh-vien-so/domain";
 import type {
   AuditEventRepository,
+  AuditResourceType,
   AllergyIntoleranceRepository,
   ClinicalDocumentRepository,
   ConditionRepository,
@@ -25,6 +27,7 @@ import type {
   ServiceRequestRepository,
   WorkflowTaskRepository
 } from "@benh-vien-so/domain";
+import { recordAuditEvent } from "./modules/audit-events/audit-context.js";
 import { createAuditEventRepository } from "./modules/audit-events/create-audit-event.repository.js";
 import { registerAuditEventRoutes } from "./modules/audit-events/audit-event-routes.js";
 import { createAllergyIntoleranceRepository } from "./modules/allergy-intolerances/create-allergy-intolerance.repository.js";
@@ -93,6 +96,39 @@ export type ServerOptions = {
 
 type ClosableRepository = {
   close(): Promise<void>;
+};
+
+type DeniedAccessPayload = {
+  readonly error: "FORBIDDEN" | "PATIENT_ACCESS_DENIED";
+  readonly requestId?: string;
+  readonly permission?: string;
+  readonly patientId?: string;
+  readonly actor?: {
+    readonly id?: string;
+    readonly role?: string;
+    readonly purposeOfUse?: string;
+  };
+};
+
+const auditResourceByPermissionPrefix: Record<string, AuditResourceType> = {
+  "patient:": "Patient",
+  "provider-directory:": "ProviderDirectory",
+  "record-transfer:": "RecordTransfer",
+  "encounter:": "Encounter",
+  "allergy-intolerance:": "AllergyIntolerance",
+  "condition:": "Condition",
+  "medication-request:": "MedicationRequest",
+  "medication-dispense:": "MedicationDispense",
+  "medication-administration:": "MedicationAdministration",
+  "observation:": "Observation",
+  "service-request:": "ServiceRequest",
+  "workflow-task:": "Task",
+  "procedure:": "Procedure",
+  "diagnostic-report:": "DiagnosticReport",
+  "imaging-study:": "ImagingStudy",
+  "clinical-document:": "ClinicalDocument",
+  "consent:": "Consent",
+  "audit-event:": "AuditEvent"
 };
 
 const requestIdHeaderName = "x-request-id";
@@ -315,6 +351,33 @@ export async function buildServer(options: ServerOptions = {}) {
     options.recordTransferRepository ?? trackRepository(await createRecordTransferRepository());
   const auditEventRepository =
     options.auditEventRepository ?? trackRepository(await createAuditEventRepository());
+  const deniedAccessPayloads = new WeakMap<FastifyRequest, DeniedAccessPayload>();
+
+  app.addHook("onSend", (request, reply, payload, done) => {
+    rememberDeniedAccessForAudit(
+      deniedAccessPayloads,
+      request,
+      reply.statusCode,
+      payload
+    );
+
+    done(null, payload);
+  });
+  app.addHook("onResponse", async (request, reply) => {
+    const deniedAccess = deniedAccessPayloads.get(request);
+
+    if (!deniedAccess) {
+      return;
+    }
+
+    deniedAccessPayloads.delete(request);
+    await recordDeniedAccessAuditEvent(
+      auditEventRepository,
+      request,
+      reply.statusCode,
+      deniedAccess
+    );
+  });
 
   app.addHook("onClose", async () => {
     for (const repository of [...managedRepositories].reverse()) {
@@ -695,6 +758,106 @@ function readHttpStatusCode(error: unknown): number {
   const statusCode = (error as { readonly statusCode?: unknown }).statusCode;
 
   return typeof statusCode === "number" ? statusCode : 500;
+}
+
+async function recordDeniedAccessAuditEvent(
+  auditEventRepository: AuditEventRepository,
+  request: FastifyRequest,
+  statusCode: number,
+  deniedAccess: DeniedAccessPayload
+): Promise<void> {
+  if (statusCode !== 403) {
+    return;
+  }
+
+  const resourceType = inferDeniedAuditResourceType(deniedAccess);
+  const resourceId =
+    deniedAccess.error === "PATIENT_ACCESS_DENIED" && deniedAccess.patientId
+      ? deniedAccess.patientId
+      : deniedAccess.permission ?? request.id;
+
+  try {
+    await recordAuditEvent(auditEventRepository, request, {
+      action: "access.denied",
+      resourceType,
+      resourceId,
+      patientId: deniedAccess.patientId,
+      metadata: {
+        denialCode: deniedAccess.error,
+        deniedPermission: deniedAccess.permission,
+        deniedActorId: deniedAccess.actor?.id,
+        deniedActorRole: deniedAccess.actor?.role,
+        deniedActorPurposeOfUse: deniedAccess.actor?.purposeOfUse,
+        route: `${request.method} ${request.url}`,
+        statusCode
+      }
+    });
+  } catch (error) {
+    request.log.error(
+      { err: error, requestId: request.id },
+      "Failed to record denied access audit event"
+    );
+  }
+}
+
+function rememberDeniedAccessForAudit(
+  deniedAccessPayloads: WeakMap<FastifyRequest, DeniedAccessPayload>,
+  request: FastifyRequest,
+  statusCode: number,
+  payload: unknown
+): void {
+  if (statusCode !== 403) {
+    return;
+  }
+
+  const payloadText = readPayloadText(payload);
+  const deniedAccess = payloadText
+    ? parseDeniedAccessPayload(payloadText)
+    : undefined;
+
+  if (deniedAccess) {
+    deniedAccessPayloads.set(request, deniedAccess);
+  }
+}
+
+function parseDeniedAccessPayload(payload: string): DeniedAccessPayload | undefined {
+  try {
+    const parsedPayload = JSON.parse(payload) as unknown;
+
+    if (!isDeniedAccessPayload(parsedPayload)) {
+      return undefined;
+    }
+
+    return parsedPayload;
+  } catch {
+    return undefined;
+  }
+}
+
+function isDeniedAccessPayload(value: unknown): value is DeniedAccessPayload {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const error = (value as { readonly error?: unknown }).error;
+
+  return error === "FORBIDDEN" || error === "PATIENT_ACCESS_DENIED";
+}
+
+function inferDeniedAuditResourceType(payload: DeniedAccessPayload): AuditResourceType {
+  if (payload.error === "PATIENT_ACCESS_DENIED") {
+    return "Patient";
+  }
+
+  if (payload.permission) {
+    for (const [prefix, resourceType] of Object.entries(auditResourceByPermissionPrefix)) {
+      if (payload.permission.startsWith(prefix)) {
+        return resourceType;
+      }
+    }
+  }
+
+  return "AuditEvent";
 }
 
 function createRequestId(request: {

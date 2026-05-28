@@ -186,4 +186,58 @@ describe("AuditEvent integrity chain", () => {
       ]
     });
   });
+
+  it("maps denied access audit events as failed execution events in FHIR", () => {
+    const deniedAccess = sealAuditEvent(
+      AuditEvent.record({
+        id: "audit-event-test-006",
+        occurredAt: new Date("2026-05-28T00:04:00.000Z"),
+        actorId: "clinician-test",
+        action: "access.denied",
+        resourceType: "Patient",
+        resourceId: "patient-test-001",
+        patientId: "patient-test-001",
+        purposeOfUse: "TREATMENT",
+        metadata: {
+          denialCode: "PATIENT_ACCESS_DENIED",
+          statusCode: 403
+        }
+      })
+    );
+
+    expect(mapAuditEventToFhir(deniedAccess)).toMatchObject({
+      resourceType: "AuditEvent",
+      id: "audit-event-test-006",
+      subtype: [
+        {
+          code: "access.denied"
+        }
+      ],
+      action: "E",
+      recorded: "2026-05-28T00:04:00.000Z",
+      outcome: "4",
+      outcomeDesc: "Access denied",
+      agent: [
+        {
+          who: {
+            reference: "Practitioner/clinician-test"
+          },
+          requestor: true,
+          purposeOfUse: [
+            {
+              code: "TREAT"
+            }
+          ]
+        }
+      ],
+      entity: [
+        {
+          what: {
+            reference: "Patient/patient-test-001"
+          },
+          name: "access.denied"
+        }
+      ]
+    });
+  });
 });

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { DomainError } from "../shared/domain-error.js";
 
 export type AuditAction =
+  | "access.denied"
   | "patient.list"
   | "patient.create"
   | "patient.read"
