@@ -85,1623 +85,181 @@ import {
 import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 
-type AppRoute =
-  | "landing"
-  | "login"
-  | "dashboard"
-  | "workspace"
-  | "documents"
-  | "audit"
-  | "interop"
-  | "settings";
-type PatientIdentifierType = "national-id" | "insurance-id" | "hospital-mrn" | "legacy-id";
-type PatientGender = "male" | "female" | "other" | "unknown";
-type EncounterClass = "ambulatory" | "inpatient" | "emergency" | "virtual";
-type EncounterStatus = "planned" | "in-progress" | "finished" | "cancelled" | "entered-in-error";
-type ClinicalDocumentType =
-  | "admission-note"
-  | "discharge-summary"
-  | "lab-report"
-  | "imaging-report"
-  | "referral-letter"
-  | "consent-form"
-  | "advance-directive"
-  | "ccda"
-  | "ccr"
-  | "medical-record"
-  | "patient-information";
-type ClinicalDocumentStatus = "draft" | "signed" | "superseded" | "entered-in-error";
-type ConditionClinicalStatus =
-  | "active"
-  | "recurrence"
-  | "relapse"
-  | "inactive"
-  | "remission"
-  | "resolved";
-type ConditionVerificationStatus =
-  | "unconfirmed"
-  | "provisional"
-  | "differential"
-  | "confirmed"
-  | "refuted"
-  | "entered-in-error";
-type ConditionCategory = "problem-list-item" | "encounter-diagnosis";
-type ConditionSeverity = "mild" | "moderate" | "severe";
-type AllergyClinicalStatus = "active" | "inactive" | "resolved";
-type AllergyVerificationStatus = "unconfirmed" | "confirmed" | "refuted" | "entered-in-error";
-type AllergyType = "allergy" | "intolerance";
-type AllergyCategory = "food" | "medication" | "environment" | "biologic";
-type AllergyCriticality = "low" | "high" | "unable-to-assess";
-type AllergyReactionSeverity = "mild" | "moderate" | "severe";
-type ObservationStatus =
-  | "registered"
-  | "preliminary"
-  | "final"
-  | "amended"
-  | "cancelled"
-  | "entered-in-error";
-type ObservationCategory = "vital-signs" | "laboratory";
-type MedicationRequestStatus =
-  | "active"
-  | "on-hold"
-  | "cancelled"
-  | "completed"
-  | "entered-in-error"
-  | "stopped"
-  | "draft"
-  | "unknown";
-type MedicationRequestIntent =
-  | "proposal"
-  | "plan"
-  | "order"
-  | "original-order"
-  | "reflex-order"
-  | "filler-order"
-  | "instance-order"
-  | "option";
-type MedicationRequestCategory = "inpatient" | "outpatient" | "community" | "discharge";
-type MedicationRequestPriority = "routine" | "urgent" | "asap" | "stat";
-type MedicationTimingUnit = "h" | "d" | "wk";
-type MedicationDispenseStatus =
-  | "preparation"
-  | "in-progress"
-  | "cancelled"
-  | "on-hold"
-  | "completed"
-  | "entered-in-error"
-  | "stopped"
-  | "declined"
-  | "unknown";
-type MedicationDispenseCategory = "inpatient" | "outpatient" | "community" | "discharge";
-type MedicationAdministrationStatus =
-  | "in-progress"
-  | "not-done"
-  | "on-hold"
-  | "completed"
-  | "entered-in-error"
-  | "stopped"
-  | "unknown";
-type MedicationAdministrationCategory =
-  | "inpatient"
-  | "outpatient"
-  | "community"
-  | "patient-specified";
-type MedicationAdministrationPerformerActorType =
-  | "Practitioner"
-  | "PractitionerRole"
-  | "Patient"
-  | "RelatedPerson"
-  | "Device";
-type ServiceRequestStatus =
-  | "draft"
-  | "active"
-  | "on-hold"
-  | "revoked"
-  | "completed"
-  | "entered-in-error"
-  | "unknown";
-type ServiceRequestIntent =
-  | "proposal"
-  | "plan"
-  | "directive"
-  | "order"
-  | "original-order"
-  | "reflex-order"
-  | "filler-order"
-  | "instance-order"
-  | "option";
-type ServiceRequestCategory = "laboratory" | "imaging" | "procedure" | "consultation" | "therapy";
-type ServiceRequestPriority = "routine" | "urgent" | "asap" | "stat";
-type WorkflowTaskStatus =
-  | "draft"
-  | "requested"
-  | "received"
-  | "accepted"
-  | "rejected"
-  | "ready"
-  | "cancelled"
-  | "in-progress"
-  | "on-hold"
-  | "failed"
-  | "completed"
-  | "entered-in-error";
-type WorkflowTaskIntent =
-  | "unknown"
-  | "proposal"
-  | "plan"
-  | "order"
-  | "original-order"
-  | "reflex-order"
-  | "filler-order"
-  | "instance-order"
-  | "option";
-type WorkflowTaskPriority = "routine" | "urgent" | "asap" | "stat";
-type WorkflowTaskReferenceResourceType =
-  | "ServiceRequest"
-  | "Observation"
-  | "DiagnosticReport"
-  | "ImagingStudy"
-  | "DocumentReference";
-type ProcedureStatus =
-  | "preparation"
-  | "in-progress"
-  | "not-done"
-  | "on-hold"
-  | "stopped"
-  | "completed"
-  | "entered-in-error"
-  | "unknown";
-type ProcedureCategory =
-  | "surgical"
-  | "diagnostic"
-  | "therapeutic"
-  | "counseling"
-  | "rehabilitation"
-  | "other";
-type ProcedurePerformerActorType = "Practitioner" | "PractitionerRole" | "Organization";
-type ProcedureReportReferenceResourceType = "DiagnosticReport" | "DocumentReference" | "Composition";
-type DiagnosticReportStatus =
-  | "registered"
-  | "partial"
-  | "preliminary"
-  | "final"
-  | "amended"
-  | "corrected"
-  | "appended"
-  | "cancelled"
-  | "entered-in-error"
-  | "unknown";
-type DiagnosticReportCategory = "laboratory" | "imaging" | "pathology" | "other";
-type ImagingStudyStatus =
-  | "registered"
-  | "available"
-  | "cancelled"
-  | "entered-in-error"
-  | "unknown";
-type PurposeOfUse = "TREATMENT" | "AUDIT" | "OPERATIONS";
-type ConsentStatus = "active" | "revoked" | "expired";
-type ConsentCategory = "record-sharing";
-type RecordTransferStatus =
-  | "draft"
-  | "requested"
-  | "ready"
-  | "in-progress"
-  | "completed"
-  | "cancelled"
-  | "failed"
-  | "dead-lettered";
-type RecordTransferPriority = "routine" | "urgent" | "asap" | "stat";
-type RecordTransferBundleType = "collection" | "document";
-type RecordTransferDeliveryAttemptStatus = "queued" | "succeeded" | "failed";
-type ProviderOrganizationType =
-  | "hospital"
-  | "department"
-  | "laboratory"
-  | "imaging"
-  | "payer"
-  | "government"
-  | "other";
-type ProviderEndpointConnectionType =
-  | "hl7-fhir-rest"
-  | "dicom-wado-rs"
-  | "hl7v2-mllp"
-  | "direct-project"
-  | "ihe-xds"
-  | "other";
-
-type ProviderIdentifier = {
-  readonly system: string;
-  readonly value: string;
-  readonly type?: string;
-};
-
-type ProviderTelecom = {
-  readonly system: "phone" | "email" | "url";
-  readonly value: string;
-  readonly use?: "work" | "mobile" | "home";
-};
-
-type ProviderCoding = {
-  readonly system: string;
-  readonly code: string;
-  readonly display: string;
-};
-
-type ProviderOrganization = {
-  readonly id: string;
-  readonly identifiers: readonly ProviderIdentifier[];
-  readonly active: boolean;
-  readonly type: ProviderOrganizationType;
-  readonly name: string;
-  readonly alias?: readonly string[];
-  readonly address?: string;
-  readonly telecom?: readonly ProviderTelecom[];
-  readonly partOfOrganizationId?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-type ProviderPractitioner = {
-  readonly id: string;
-  readonly identifiers: readonly ProviderIdentifier[];
-  readonly active: boolean;
-  readonly fullName: string;
-  readonly telecom?: readonly ProviderTelecom[];
-  readonly qualification?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-type ProviderEndpoint = {
-  readonly id: string;
-  readonly managingOrganizationId: string;
-  readonly status: "active" | "suspended" | "error" | "off" | "entered-in-error" | "test";
-  readonly connectionType: ProviderEndpointConnectionType;
-  readonly name: string;
-  readonly address: string;
-  readonly payloadTypes: readonly ProviderCoding[];
-  readonly contact?: readonly ProviderTelecom[];
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-type ProviderPractitionerRole = {
-  readonly id: string;
-  readonly practitionerId?: string;
-  readonly organizationId: string;
-  readonly active: boolean;
-  readonly code: ProviderCoding;
-  readonly specialty?: ProviderCoding;
-  readonly endpointIds?: readonly string[];
-  readonly telecom?: readonly ProviderTelecom[];
-  readonly periodStart?: string;
-  readonly periodEnd?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-type ProviderDirectory = {
-  readonly organizations: readonly ProviderOrganization[];
-  readonly practitioners: readonly ProviderPractitioner[];
-  readonly practitionerRoles: readonly ProviderPractitionerRole[];
-  readonly endpoints: readonly ProviderEndpoint[];
-  readonly generatedAt: string;
-};
-
-type PatientIdentifier = {
-  readonly system: string;
-  readonly value: string;
-  readonly type: PatientIdentifierType;
-};
-
-type Patient = {
-  readonly id: string;
-  readonly identifiers: readonly PatientIdentifier[];
-  readonly fullName: string;
-  readonly birthDate?: string;
-  readonly gender: PatientGender;
-  readonly address?: string;
-  readonly phone?: string;
-  readonly managingOrganizationId: string;
-  readonly status: "active" | "merged" | "inactive";
-  readonly mergedIntoPatientId?: string;
-  readonly mergedAt?: string;
-  readonly mergedByActorId?: string;
-  readonly mergeReason?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-type PatientStatusFilter = "all" | Patient["status"];
-
-type Encounter = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly status: EncounterStatus;
-  readonly class: EncounterClass;
-  readonly serviceType: string;
-  readonly reasonText: string;
-  readonly departmentId?: string;
-  readonly attendingPractitionerId: string;
-  readonly startedAt: string;
-  readonly endedAt?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-type ClinicalDocument = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly encounterId?: string;
-  readonly type: ClinicalDocumentType;
-  readonly title: string;
-  readonly status: ClinicalDocumentStatus;
-  readonly storageUri: string;
-  readonly attachmentContentType?: string;
-  readonly attachmentSizeBytes?: number;
-  readonly attachmentHashSha1Base64?: string;
-  readonly attachmentCreatedAt?: string;
-  readonly authorPractitionerId: string;
-  readonly signedAt?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-type ObservationCode = {
-  readonly system: string;
-  readonly code: string;
-  readonly display: string;
-};
-
-type ConditionCode = {
-  readonly system: string;
-  readonly code: string;
-  readonly display: string;
-};
-
-type AllergyCode = {
-  readonly system: string;
-  readonly code: string;
-  readonly display: string;
-};
-
-type AllergyReaction = {
-  readonly manifestation: AllergyCode;
-  readonly severity?: AllergyReactionSeverity;
-  readonly description?: string;
-};
-
-type AllergyIntolerance = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly encounterId?: string;
-  readonly clinicalStatus: AllergyClinicalStatus;
-  readonly verificationStatus: AllergyVerificationStatus;
-  readonly type: AllergyType;
-  readonly category: AllergyCategory;
-  readonly criticality?: AllergyCriticality;
-  readonly code: AllergyCode;
-  readonly reaction?: AllergyReaction;
-  readonly recordedAt: string;
-  readonly recorderPractitionerId: string;
-  readonly note?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-type Condition = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly encounterId?: string;
-  readonly clinicalStatus: ConditionClinicalStatus;
-  readonly verificationStatus: ConditionVerificationStatus;
-  readonly category: ConditionCategory;
-  readonly code: ConditionCode;
-  readonly severity?: ConditionSeverity;
-  readonly onsetAt?: string;
-  readonly recordedAt: string;
-  readonly recorderPractitionerId: string;
-  readonly note?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-type ObservationQuantity = {
-  readonly value: number;
-  readonly unit: string;
-  readonly system?: string;
-  readonly code?: string;
-};
-
-type Observation = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly encounterId?: string;
-  readonly status: ObservationStatus;
-  readonly category: ObservationCategory;
-  readonly code: ObservationCode;
-  readonly effectiveAt: string;
-  readonly valueQuantity?: ObservationQuantity;
-  readonly valueText?: string;
-  readonly performerPractitionerId?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-type MedicationCode = {
-  readonly system: string;
-  readonly code: string;
-  readonly display: string;
-};
-
-type MedicationQuantity = {
-  readonly value: number;
-  readonly unit: string;
-  readonly system?: string;
-  readonly code?: string;
-};
-
-type DosageInstruction = {
-  readonly text: string;
-  readonly route?: string;
-  readonly doseQuantity?: MedicationQuantity;
-  readonly frequency?: number;
-  readonly period?: number;
-  readonly periodUnit?: MedicationTimingUnit;
-};
-
-type MedicationRequest = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly encounterId?: string;
-  readonly reasonConditionId?: string;
-  readonly status: MedicationRequestStatus;
-  readonly intent: MedicationRequestIntent;
-  readonly category: MedicationRequestCategory;
-  readonly priority: MedicationRequestPriority;
-  readonly medicationCode: MedicationCode;
-  readonly dosageInstruction: DosageInstruction;
-  readonly authoredOn: string;
-  readonly requesterPractitionerId: string;
-  readonly expectedSupplyDurationDays?: number;
-  readonly note?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-type MedicationDispense = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly encounterId?: string;
-  readonly medicationRequestId?: string;
-  readonly status: MedicationDispenseStatus;
-  readonly statusReason?: MedicationCode;
-  readonly category: MedicationDispenseCategory;
-  readonly medicationCode: MedicationCode;
-  readonly quantity?: MedicationQuantity;
-  readonly daysSupply?: MedicationQuantity;
-  readonly whenPrepared?: string;
-  readonly whenHandedOver?: string;
-  readonly dispenserPractitionerId?: string;
-  readonly destinationLocationId?: string;
-  readonly receiverPractitionerId?: string;
-  readonly dosageInstruction?: DosageInstruction;
-  readonly note?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-type MedicationAdministrationPerformer = {
-  readonly actorType: MedicationAdministrationPerformerActorType;
-  readonly actorId: string;
-  readonly function?: MedicationCode;
-};
-
-type MedicationAdministrationEffectivePeriod = {
-  readonly start?: string;
-  readonly end?: string;
-};
-
-type MedicationAdministrationDosage = {
-  readonly text?: string;
-  readonly route?: MedicationCode;
-  readonly doseQuantity?: MedicationQuantity;
-};
-
-type MedicationAdministration = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly encounterId?: string;
-  readonly medicationRequestId?: string;
-  readonly reasonConditionId?: string;
-  readonly status: MedicationAdministrationStatus;
-  readonly statusReason?: MedicationCode;
-  readonly category: MedicationAdministrationCategory;
-  readonly medicationCode: MedicationCode;
-  readonly effectivePeriod: MedicationAdministrationEffectivePeriod;
-  readonly performers: readonly MedicationAdministrationPerformer[];
-  readonly dosage?: MedicationAdministrationDosage;
-  readonly note?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-type ServiceRequestCode = {
-  readonly system: string;
-  readonly code: string;
-  readonly display: string;
-};
-
-type ServiceRequest = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly encounterId?: string;
-  readonly reasonConditionId?: string;
-  readonly status: ServiceRequestStatus;
-  readonly intent: ServiceRequestIntent;
-  readonly category: ServiceRequestCategory;
-  readonly priority: ServiceRequestPriority;
-  readonly code: ServiceRequestCode;
-  readonly occurrenceAt?: string;
-  readonly authoredOn: string;
-  readonly requesterPractitionerId: string;
-  readonly performerOrganizationId?: string;
-  readonly patientInstruction?: string;
-  readonly note?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-type WorkflowTaskCode = {
-  readonly system: string;
-  readonly code: string;
-  readonly display: string;
-};
-
-type WorkflowTaskBusinessStatus = {
-  readonly code: string;
-  readonly display: string;
-};
-
-type WorkflowTaskReference = {
-  readonly resourceType: WorkflowTaskReferenceResourceType;
-  readonly id: string;
-  readonly label?: string;
-};
-
-type WorkflowTaskExecutionPeriod = {
-  readonly start?: string;
-  readonly end?: string;
-};
-
-type WorkflowTask = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly encounterId?: string;
-  readonly basedOnServiceRequestId?: string;
-  readonly status: WorkflowTaskStatus;
-  readonly intent: WorkflowTaskIntent;
-  readonly priority: WorkflowTaskPriority;
-  readonly code: WorkflowTaskCode;
-  readonly description?: string;
-  readonly businessStatus?: WorkflowTaskBusinessStatus;
-  readonly requesterPractitionerId?: string;
-  readonly ownerOrganizationId?: string;
-  readonly ownerPractitionerId?: string;
-  readonly authoredOn: string;
-  readonly lastModified: string;
-  readonly executionPeriod?: WorkflowTaskExecutionPeriod;
-  readonly inputReferences: readonly WorkflowTaskReference[];
-  readonly outputReferences: readonly WorkflowTaskReference[];
-  readonly note?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-type ProcedureCoding = {
-  readonly system: string;
-  readonly code: string;
-  readonly display: string;
-};
-
-type ProcedurePerformedPeriod = {
-  readonly start?: string;
-  readonly end?: string;
-};
-
-type ProcedurePerformer = {
-  readonly actorType: ProcedurePerformerActorType;
-  readonly actorId: string;
-  readonly function?: ProcedureCoding;
-  readonly onBehalfOfOrganizationId?: string;
-};
-
-type ProcedureReportReference = {
-  readonly resourceType: ProcedureReportReferenceResourceType;
-  readonly id: string;
-};
-
-type Procedure = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly encounterId?: string;
-  readonly basedOnServiceRequestId?: string;
-  readonly partOfProcedureId?: string;
-  readonly status: ProcedureStatus;
-  readonly statusReason?: ProcedureCoding;
-  readonly category: ProcedureCategory;
-  readonly code: ProcedureCoding;
-  readonly performedPeriod?: ProcedurePerformedPeriod;
-  readonly recorderPractitionerId?: string;
-  readonly asserterPractitionerId?: string;
-  readonly performers: readonly ProcedurePerformer[];
-  readonly reasonConditionId?: string;
-  readonly bodySite?: ProcedureCoding;
-  readonly outcome?: ProcedureCoding;
-  readonly reportReferences: readonly ProcedureReportReference[];
-  readonly note?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-type DiagnosticReportCode = {
-  readonly system: string;
-  readonly code: string;
-  readonly display: string;
-};
-
-type DiagnosticReport = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly encounterId?: string;
-  readonly basedOnServiceRequestId?: string;
-  readonly status: DiagnosticReportStatus;
-  readonly category: DiagnosticReportCategory;
-  readonly code: DiagnosticReportCode;
-  readonly effectiveAt: string;
-  readonly issuedAt: string;
-  readonly performerOrganizationId?: string;
-  readonly resultsInterpreterPractitionerId?: string;
-  readonly resultObservationIds: readonly string[];
-  readonly conclusion?: string;
-  readonly presentedFormUrl?: string;
-  readonly presentedFormTitle?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-type ImagingStudyCoding = {
-  readonly system: string;
-  readonly code: string;
-  readonly display: string;
-};
-
-type ImagingStudySeries = {
-  readonly uid: string;
-  readonly number?: number;
-  readonly modality: ImagingStudyCoding;
-  readonly description?: string;
-  readonly numberOfInstances: number;
-  readonly bodySite?: ImagingStudyCoding;
-  readonly startedAt?: string;
-};
-
-type ImagingStudy = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly encounterId?: string;
-  readonly basedOnServiceRequestId?: string;
-  readonly diagnosticReportId?: string;
-  readonly status: ImagingStudyStatus;
-  readonly studyInstanceUid: string;
-  readonly accessionNumber?: string;
-  readonly description?: string;
-  readonly startedAt?: string;
-  readonly referrerPractitionerId?: string;
-  readonly interpreterPractitionerId?: string;
-  readonly endpointId?: string;
-  readonly numberOfSeries: number;
-  readonly numberOfInstances: number;
-  readonly series: readonly ImagingStudySeries[];
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-type AuditAction =
-  | "auth.login.success"
-  | "auth.login.failure"
-  | "access.denied"
-  | "patient.list"
-  | "patient.create"
-  | "patient.identifier-conflict"
-  | "patient.merge"
-  | "patient.read"
-  | "patient.fhir-export"
-  | "patient.fhir-bundle-export"
-  | "patient.fhir-document-bundle-export"
-  | "provider-directory.read"
-  | "provider-directory.fhir-export"
-  | "record-transfer.list"
-  | "record-transfer.create"
-  | "record-transfer.read"
-  | "record-transfer.send"
-  | "record-transfer.fail"
-  | "record-transfer.retry"
-  | "record-transfer.dead-letter"
-  | "record-transfer.receive"
-  | "record-transfer.acknowledgement-callback"
-  | "record-transfer.fhir-export"
-  | "encounter.list"
-  | "encounter.create"
-  | "encounter.read"
-  | "encounter.finish"
-  | "encounter.fhir-export"
-  | "allergy-intolerance.list"
-  | "allergy-intolerance.create"
-  | "allergy-intolerance.read"
-  | "allergy-intolerance.fhir-export"
-  | "condition.list"
-  | "condition.create"
-  | "condition.read"
-  | "condition.fhir-export"
-  | "medication-request.list"
-  | "medication-request.create"
-  | "medication-request.read"
-  | "medication-request.fhir-export"
-  | "medication-dispense.list"
-  | "medication-dispense.create"
-  | "medication-dispense.read"
-  | "medication-dispense.fhir-export"
-  | "medication-administration.list"
-  | "medication-administration.create"
-  | "medication-administration.read"
-  | "medication-administration.fhir-export"
-  | "observation.list"
-  | "observation.create"
-  | "observation.read"
-  | "observation.fhir-export"
-  | "service-request.list"
-  | "service-request.create"
-  | "service-request.read"
-  | "service-request.fhir-export"
-  | "workflow-task.list"
-  | "workflow-task.create"
-  | "workflow-task.read"
-  | "workflow-task.fhir-export"
-  | "procedure.list"
-  | "procedure.create"
-  | "procedure.read"
-  | "procedure.fhir-export"
-  | "diagnostic-report.list"
-  | "diagnostic-report.create"
-  | "diagnostic-report.read"
-  | "diagnostic-report.fhir-export"
-  | "imaging-study.list"
-  | "imaging-study.create"
-  | "imaging-study.read"
-  | "imaging-study.fhir-export"
-  | "clinical-document.list"
-  | "clinical-document.create"
-  | "clinical-document.sign"
-  | "clinical-document.fhir-export"
-  | "clinical-document.provenance-export"
-  | "consent.list"
-  | "consent.create"
-  | "consent.revoke"
-  | "consent.fhir-export"
-  | "audit-event.list"
-  | "audit-event.fhir-export"
-  | "audit-event.integrity-verify";
-
-type AuditResourceType =
-  | "Patient"
-  | "ProviderDirectory"
-  | "RecordTransfer"
-  | "Encounter"
-  | "AllergyIntolerance"
-  | "Condition"
-  | "MedicationRequest"
-  | "MedicationDispense"
-  | "MedicationAdministration"
-  | "Observation"
-  | "ServiceRequest"
-  | "Task"
-  | "Procedure"
-  | "DiagnosticReport"
-  | "ImagingStudy"
-  | "ClinicalDocument"
-  | "Consent"
-  | "AuditEvent";
-
-type AuditEvent = {
-  readonly id?: string;
-  readonly occurredAt: string;
-  readonly actorId: string;
-  readonly action: AuditAction;
-  readonly resourceType: AuditResourceType;
-  readonly resourceId: string;
-  readonly patientId?: string;
-  readonly purposeOfUse?: string;
-  readonly ipAddress?: string;
-  readonly userAgent?: string;
-  readonly metadata: Record<string, unknown>;
-  readonly hashAlgorithm?: "sha256";
-  readonly previousHash?: string;
-  readonly payloadHash?: string;
-  readonly integrityHash?: string;
-};
-
-type AuditIntegrityStatus = "verified" | "unsealed" | "broken";
-
-type AuditIntegrityReport = {
-  readonly patientId: string;
-  readonly checkedAt: string;
-  readonly status: AuditIntegrityStatus;
-  readonly verified: boolean;
-  readonly totalEvents: number;
-  readonly sealedEvents: number;
-  readonly latestHash?: string;
-  readonly brokenAtEventId?: string;
-  readonly brokenReason?: string;
-};
-
-type Consent = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly status: ConsentStatus;
-  readonly category: ConsentCategory;
-  readonly granteeOrganizationId: string;
-  readonly grantorActorId: string;
-  readonly evidenceDocumentId?: string;
-  readonly revokedByActorId?: string;
-  readonly revokedAt?: string;
-  readonly revocationReason?: string;
-  readonly validFrom: string;
-  readonly validUntil?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-type RecordTransfer = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly status: RecordTransferStatus;
-  readonly priority: RecordTransferPriority;
-  readonly bundleType: RecordTransferBundleType;
-  readonly bundleId: string;
-  readonly sourceOrganizationId: string;
-  readonly recipientOrganizationId: string;
-  readonly consentReference: string;
-  readonly requestedByActorId: string;
-  readonly reason: string;
-  readonly requestedAt: string;
-  readonly sentAt?: string;
-  readonly receivedAt?: string;
-  readonly receivedByActorId?: string;
-  readonly acknowledgementReference?: string;
-  readonly failedAt?: string;
-  readonly failureReason?: string;
-  readonly nextRetryAt?: string;
-  readonly retryCount?: number;
-  readonly deadLetteredAt?: string;
-  readonly note?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-type RecordTransferDeliveryAttempt = {
-  readonly id: string;
-  readonly recordTransferId: string;
-  readonly patientId: string;
-  readonly targetEndpointId: string;
-  readonly targetEndpointAddress: string;
-  readonly bundleId: string;
-  readonly bundleType: RecordTransferBundleType;
-  readonly idempotencyKey: string;
-  readonly attemptNumber: number;
-  readonly status: RecordTransferDeliveryAttemptStatus;
-  readonly queuedAt: string;
-  readonly completedAt?: string;
-  readonly httpStatus?: number;
-  readonly responseBodyPreview?: string;
-  readonly errorMessage?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-type RecordTransferOperationalSeverity = "info" | "success" | "warning" | "danger";
-
-type RecordTransferOperationalSummary = {
-  readonly severity: RecordTransferOperationalSeverity;
-  readonly title: string;
-  readonly description: string;
-  readonly nextAction: string;
-  readonly technicalSignal: string;
-  readonly attemptCount: number;
-  readonly failedAttemptCount: number;
-  readonly lastHttpStatus: string;
-  readonly nextRetry: string;
-};
-
-type ApiRuntimeInfo = {
-  readonly service: string;
-  readonly product: string;
-  readonly version: string;
-  readonly repository?: string;
-  readonly nodeEnv?: string;
-  readonly publicApiBaseUrl: string;
-  readonly httpBodyLimitBytes?: number;
-  readonly checkedAt: string;
-  readonly operationalDiagnostics: {
-    readonly available: boolean;
-    readonly reason?: string;
-  };
-  readonly features: {
-    readonly apiDocsEnabled: boolean | null;
-    readonly recordTransferDeliveryAttempts: boolean;
-    readonly recordTransferDeliveryWorkerEnabled: boolean | null;
-    readonly recordTransferRetryWorkerEnabled: boolean | null;
-  };
-};
-
-type PatientsResponse = {
-  readonly items: readonly Patient[];
-};
-
-type EncountersResponse = {
-  readonly items: readonly Encounter[];
-};
-
-type ClinicalDocumentsResponse = {
-  readonly items: readonly ClinicalDocument[];
-};
-
-type ConditionsResponse = {
-  readonly items: readonly Condition[];
-};
-
-type AllergyIntolerancesResponse = {
-  readonly items: readonly AllergyIntolerance[];
-};
-
-type ObservationsResponse = {
-  readonly items: readonly Observation[];
-};
-
-type MedicationRequestsResponse = {
-  readonly items: readonly MedicationRequest[];
-};
-
-type MedicationDispensesResponse = {
-  readonly items: readonly MedicationDispense[];
-};
-
-type MedicationAdministrationsResponse = {
-  readonly items: readonly MedicationAdministration[];
-};
-
-type ServiceRequestsResponse = {
-  readonly items: readonly ServiceRequest[];
-};
-
-type WorkflowTasksResponse = {
-  readonly items: readonly WorkflowTask[];
-};
-
-type ProceduresResponse = {
-  readonly items: readonly Procedure[];
-};
-
-type DiagnosticReportsResponse = {
-  readonly items: readonly DiagnosticReport[];
-};
-
-type ImagingStudiesResponse = {
-  readonly items: readonly ImagingStudy[];
-};
-
-type AuditEventsResponse = {
-  readonly items: readonly AuditEvent[];
-};
-
-type AuditIntegrityReportResponse = AuditIntegrityReport;
-
-type ConsentsResponse = {
-  readonly items: readonly Consent[];
-};
-
-type RecordTransfersResponse = {
-  readonly items: readonly RecordTransfer[];
-};
-
-type RecordTransferDeliveryAttemptsResponse = {
-  readonly items: readonly RecordTransferDeliveryAttempt[];
-};
-
-type NewPatientForm = {
-  fullName: string;
-  birthDate: string;
-  gender: PatientGender;
-  nationalId: string;
-  hospitalMrn: string;
-  phone: string;
-  address: string;
-  managingOrganizationId: string;
-};
-
-type PatientMergeForm = {
-  targetPatientId: string;
-  reason: string;
-  confirmationText: string;
-};
-
-type NewRecordTransferForm = {
-  priority: RecordTransferPriority;
-  bundleType: RecordTransferBundleType;
-  sourceOrganizationId: string;
-  recipientOrganizationId: string;
-  consentReference: string;
-  reason: string;
-  note: string;
-};
-
-type GatewayAcknowledgementForm = {
-  recordTransferId: string;
-  recipientOrganizationId: string;
-  acknowledgementReference: string;
-  receivedAt: string;
-  receivedByActorId: string;
-  targetEndpointId: string;
-  deliveryIdempotencyKey: string;
-  note: string;
-};
-
-type NewEncounterForm = {
-  class: EncounterClass;
-  serviceType: string;
-  reasonText: string;
-  departmentId: string;
-  attendingPractitionerId: string;
-  startedAt: string;
-};
-
-type NewClinicalDocumentForm = {
-  encounterId: string;
-  type: ClinicalDocumentType;
-  title: string;
-  storageUri: string;
-  attachmentContentType: string;
-  attachmentSizeBytes: string;
-  attachmentHashSha1Base64: string;
-  attachmentCreatedAt: string;
-  authorPractitionerId: string;
-};
-
-type NewConditionForm = {
-  encounterId: string;
-  category: ConditionCategory;
-  clinicalStatus: ConditionClinicalStatus;
-  verificationStatus: ConditionVerificationStatus;
-  codeSystem: string;
-  code: string;
-  codeDisplay: string;
-  severity: "" | ConditionSeverity;
-  onsetAt: string;
-  recorderPractitionerId: string;
-  note: string;
-};
-
-type NewAllergyIntoleranceForm = {
-  encounterId: string;
-  type: AllergyType;
-  category: AllergyCategory;
-  clinicalStatus: AllergyClinicalStatus;
-  verificationStatus: AllergyVerificationStatus;
-  criticality: "" | AllergyCriticality;
-  codeSystem: string;
-  code: string;
-  codeDisplay: string;
-  manifestationSystem: string;
-  manifestationCode: string;
-  manifestationDisplay: string;
-  reactionSeverity: "" | AllergyReactionSeverity;
-  reactionDescription: string;
-  recordedAt: string;
-  recorderPractitionerId: string;
-  note: string;
-};
-
-type NewObservationForm = {
-  encounterId: string;
-  category: ObservationCategory;
-  codeSystem: string;
-  code: string;
-  codeDisplay: string;
-  value: string;
-  unit: string;
-  unitSystem: string;
-  unitCode: string;
-  effectiveAt: string;
-  performerPractitionerId: string;
-};
-
-type NewMedicationRequestForm = {
-  encounterId: string;
-  reasonConditionId: string;
-  category: MedicationRequestCategory;
-  priority: MedicationRequestPriority;
-  medicationSystem: string;
-  medicationCode: string;
-  medicationDisplay: string;
-  dosageText: string;
-  route: string;
-  doseValue: string;
-  doseUnit: string;
-  frequency: string;
-  period: string;
-  periodUnit: MedicationTimingUnit;
-  authoredOn: string;
-  requesterPractitionerId: string;
-  expectedSupplyDurationDays: string;
-  note: string;
-};
-
-type NewMedicationDispenseForm = {
-  encounterId: string;
-  medicationRequestId: string;
-  category: MedicationDispenseCategory;
-  medicationSystem: string;
-  medicationCode: string;
-  medicationDisplay: string;
-  quantityValue: string;
-  quantityUnit: string;
-  daysSupplyValue: string;
-  whenPrepared: string;
-  whenHandedOver: string;
-  dispenserPractitionerId: string;
-  receiverPractitionerId: string;
-  dosageText: string;
-  route: string;
-  doseValue: string;
-  doseUnit: string;
-  frequency: string;
-  period: string;
-  periodUnit: MedicationTimingUnit;
-  note: string;
-};
-
-type NewMedicationAdministrationForm = {
-  encounterId: string;
-  medicationRequestId: string;
-  reasonConditionId: string;
-  category: MedicationAdministrationCategory;
-  medicationSystem: string;
-  medicationCode: string;
-  medicationDisplay: string;
-  effectiveStart: string;
-  performerActorType: MedicationAdministrationPerformerActorType;
-  performerActorId: string;
-  performerFunctionDisplay: string;
-  dosageText: string;
-  routeSystem: string;
-  routeCode: string;
-  routeDisplay: string;
-  doseValue: string;
-  doseUnit: string;
-  note: string;
-};
-
-type NewServiceRequestForm = {
-  encounterId: string;
-  reasonConditionId: string;
-  category: ServiceRequestCategory;
-  priority: ServiceRequestPriority;
-  codeSystem: string;
-  code: string;
-  codeDisplay: string;
-  occurrenceAt: string;
-  authoredOn: string;
-  requesterPractitionerId: string;
-  performerOrganizationId: string;
-  patientInstruction: string;
-  note: string;
-};
-
-type NewProcedureForm = {
-  encounterId: string;
-  basedOnServiceRequestId: string;
-  reasonConditionId: string;
-  category: ProcedureCategory;
-  status: ProcedureStatus;
-  codeSystem: string;
-  code: string;
-  codeDisplay: string;
-  performedStart: string;
-  performedEnd: string;
-  performerActorType: ProcedurePerformerActorType;
-  performerActorId: string;
-  performerFunctionSystem: string;
-  performerFunctionCode: string;
-  performerFunctionDisplay: string;
-  onBehalfOfOrganizationId: string;
-  recorderPractitionerId: string;
-  asserterPractitionerId: string;
-  bodySiteSystem: string;
-  bodySiteCode: string;
-  bodySiteDisplay: string;
-  outcomeSystem: string;
-  outcomeCode: string;
-  outcomeDisplay: string;
-  reportReferenceType: ProcedureReportReferenceResourceType;
-  reportReferenceId: string;
-  note: string;
-};
-
-type NewDiagnosticReportForm = {
-  encounterId: string;
-  basedOnServiceRequestId: string;
-  category: DiagnosticReportCategory;
-  codeSystem: string;
-  code: string;
-  codeDisplay: string;
-  effectiveAt: string;
-  issuedAt: string;
-  performerOrganizationId: string;
-  resultsInterpreterPractitionerId: string;
-  resultObservationIds: string[];
-  conclusion: string;
-  presentedFormUrl: string;
-  presentedFormTitle: string;
-};
-
-type NewImagingStudyForm = {
-  encounterId: string;
-  basedOnServiceRequestId: string;
-  diagnosticReportId: string;
-  studyInstanceUid: string;
-  accessionNumber: string;
-  description: string;
-  startedAt: string;
-  referrerPractitionerId: string;
-  interpreterPractitionerId: string;
-  endpointId: string;
-  seriesUid: string;
-  seriesNumber: string;
-  modalitySystem: string;
-  modalityCode: string;
-  modalityDisplay: string;
-  seriesDescription: string;
-  numberOfInstances: string;
-  bodySiteSystem: string;
-  bodySiteCode: string;
-  bodySiteDisplay: string;
-};
-
-type AuthSession = {
-  readonly accessToken: string;
-  readonly expiresAt: string;
-  readonly actor: {
-    readonly actorId: string;
-    readonly displayName: string;
-    readonly role: DemoRole;
-  };
-};
-
-const defaultPatientForm: NewPatientForm = {
-  fullName: "Trần Minh Hải",
-  birthDate: "1992-09-18",
-  gender: "male",
-  nationalId: "031092000002",
-  hospitalMrn: "MRN-HP-0002",
-  phone: "0912345678",
-  address: "Hải Phòng, Việt Nam",
-  managingOrganizationId: "hospital-hai-phong-demo"
-};
-
-const defaultPatientMergeForm: PatientMergeForm = {
-  targetPatientId: "patient-demo-001",
-  reason: "Đối soát MPI xác nhận hồ sơ nguồn bị đăng ký trùng với hồ sơ đích.",
-  confirmationText: ""
-};
-
-const defaultEncounterForm: NewEncounterForm = {
-  class: "ambulatory",
-  serviceType: "Khám ngoại trú",
-  reasonText: "Tiếp nhận hồ sơ và đánh giá tình trạng ban đầu.",
-  departmentId: "department-outpatient",
-  attendingPractitionerId: "practitioner-demo-002",
-  startedAt: "2026-05-27T10:00"
-};
-
-const defaultClinicalDocumentForm: NewClinicalDocumentForm = {
-  encounterId: "",
-  type: "referral-letter",
-  title: "Giấy chuyển tuyến điện tử - Hải Phòng",
-  storageUri: "s3://wiiicare-demo/patients/current/referral-letter.pdf",
-  attachmentContentType: "application/pdf",
-  attachmentSizeBytes: "131072",
-  attachmentHashSha1Base64: "QExIY/y1FG989CjaoCo4NtNAlXQ=",
-  attachmentCreatedAt: "2026-05-28T09:00",
-  authorPractitionerId: "practitioner-demo-003"
-};
-
-const defaultConditionForm: NewConditionForm = {
-  encounterId: "",
-  category: "encounter-diagnosis",
-  clinicalStatus: "active",
-  verificationStatus: "confirmed",
-  codeSystem: "http://hl7.org/fhir/sid/icd-10",
-  code: "R50.9",
-  codeDisplay: "Sốt chưa rõ nguyên nhân",
-  severity: "mild",
-  onsetAt: "2026-05-27T09:30",
-  recorderPractitionerId: "practitioner-demo-001",
-  note: "Chẩn đoán làm việc trong quá trình khám."
-};
-
-const defaultAllergyIntoleranceForm: NewAllergyIntoleranceForm = {
-  encounterId: "",
-  type: "allergy",
-  category: "medication",
-  clinicalStatus: "active",
-  verificationStatus: "confirmed",
-  criticality: "high",
-  codeSystem: "http://snomed.info/sct",
-  code: "91936005",
-  codeDisplay: "Allergy to penicillin",
-  manifestationSystem: "http://snomed.info/sct",
-  manifestationCode: "271807003",
-  manifestationDisplay: "Skin rash",
-  reactionSeverity: "moderate",
-  reactionDescription: "Phát ban sau khi dùng nhóm penicillin theo khai thác bệnh sử.",
-  recordedAt: "2026-05-27T10:20",
-  recorderPractitionerId: "practitioner-demo-001",
-  note: "Cảnh báo dị ứng cần được xem trước khi kê thuốc."
-};
-
-const defaultObservationForm: NewObservationForm = {
-  encounterId: "",
-  category: "laboratory",
-  codeSystem: "http://loinc.org",
-  code: "718-7",
-  codeDisplay: "Hemoglobin",
-  value: "13.8",
-  unit: "g/dL",
-  unitSystem: "http://unitsofmeasure.org",
-  unitCode: "g/dL",
-  effectiveAt: "2026-05-27T10:15",
-  performerPractitionerId: "practitioner-demo-002"
-};
-
-const defaultMedicationRequestForm: NewMedicationRequestForm = {
-  encounterId: "",
-  reasonConditionId: "",
-  category: "outpatient",
-  priority: "routine",
-  medicationSystem: "http://www.whocc.no/atc",
-  medicationCode: "C08CA01",
-  medicationDisplay: "Amlodipine",
-  dosageText: "Uống 5 mg mỗi ngày vào buổi tối",
-  route: "Đường uống",
-  doseValue: "5",
-  doseUnit: "mg",
-  frequency: "1",
-  period: "1",
-  periodUnit: "d",
-  authoredOn: "2026-05-27T10:30",
-  requesterPractitionerId: "practitioner-demo-001",
-  expectedSupplyDurationDays: "30",
-  note: "Chỉ định thuốc dùng cho quản lý điều trị ngoại trú."
-};
-
-const defaultMedicationDispenseForm: NewMedicationDispenseForm = {
-  encounterId: "",
-  medicationRequestId: "",
-  category: "outpatient",
-  medicationSystem: "http://www.whocc.no/atc",
-  medicationCode: "C09AA05",
-  medicationDisplay: "Ramipril",
-  quantityValue: "30",
-  quantityUnit: "viên",
-  daysSupplyValue: "30",
-  whenPrepared: "2026-05-27T12:30",
-  whenHandedOver: "2026-05-27T12:45",
-  dispenserPractitionerId: "nurse-demo-001",
-  receiverPractitionerId: "nurse-demo-001",
-  dosageText: "Uống 5 mg mỗi ngày vào buổi sáng",
-  route: "Đường uống",
-  doseValue: "5",
-  doseUnit: "mg",
-  frequency: "1",
-  period: "1",
-  periodUnit: "d",
-  note: "Ghi nhận cấp phát thuốc sau khi chỉ định đã được duyệt."
-};
-
-const defaultMedicationAdministrationForm: NewMedicationAdministrationForm = {
-  encounterId: "",
-  medicationRequestId: "",
-  reasonConditionId: "",
-  category: "outpatient",
-  medicationSystem: "http://www.whocc.no/atc",
-  medicationCode: "C09AA05",
-  medicationDisplay: "Ramipril",
-  effectiveStart: "2026-05-27T13:00",
-  performerActorType: "Practitioner",
-  performerActorId: "nurse-demo-001",
-  performerFunctionDisplay: "Nhân sự xác nhận dùng thuốc",
-  dosageText: "Uống 5 mg vào buổi sáng",
-  routeSystem: "http://snomed.info/sct",
-  routeCode: "26643006",
-  routeDisplay: "Oral route",
-  doseValue: "5",
-  doseUnit: "mg",
-  note: "Ghi nhận dùng thuốc thực tế theo chỉ định đã có."
-};
-
-const defaultServiceRequestForm: NewServiceRequestForm = {
-  encounterId: "",
-  reasonConditionId: "",
-  category: "laboratory",
-  priority: "urgent",
-  codeSystem: "http://loinc.org",
-  code: "58410-2",
-  codeDisplay: "Complete blood count panel",
-  occurrenceAt: "2026-05-27T11:00",
-  authoredOn: "2026-05-27T10:40",
-  requesterPractitionerId: "practitioner-demo-001",
-  performerOrganizationId: "department-laboratory",
-  patientInstruction: "Lấy mẫu theo hướng dẫn của khoa xét nghiệm.",
-  note: "Chỉ định xét nghiệm/hình ảnh dùng để nối EMR với LIS/PACS."
-};
-
-const defaultProcedureForm: NewProcedureForm = {
-  encounterId: "",
-  basedOnServiceRequestId: "",
-  reasonConditionId: "",
-  category: "diagnostic",
-  status: "completed",
-  codeSystem: "http://snomed.info/sct",
-  code: "168537006",
-  codeDisplay: "Chest X-ray",
-  performedStart: "2026-05-27T12:15",
-  performedEnd: "2026-05-27T12:30",
-  performerActorType: "Practitioner",
-  performerActorId: "practitioner-demo-001",
-  performerFunctionSystem: "urn:wiiicare:nexus:procedure-performer-function",
-  performerFunctionCode: "clinical-performer",
-  performerFunctionDisplay: "Người thực hiện lâm sàng",
-  onBehalfOfOrganizationId: "department-diagnostic-imaging",
-  recorderPractitionerId: "practitioner-demo-001",
-  asserterPractitionerId: "practitioner-demo-001",
-  bodySiteSystem: "http://snomed.info/sct",
-  bodySiteCode: "51185008",
-  bodySiteDisplay: "Thoracic structure",
-  outcomeSystem: "urn:wiiicare:nexus:procedure-outcome",
-  outcomeCode: "completed",
-  outcomeDisplay: "Hoàn tất thủ thuật",
-  reportReferenceType: "DiagnosticReport",
-  reportReferenceId: "",
-  note: "Procedure ghi nhận hành động y tế đã thực hiện, khác với ServiceRequest là y lệnh và Task là hàng đợi thực thi."
-};
-
-const defaultDiagnosticReportForm: NewDiagnosticReportForm = {
-  encounterId: "",
-  basedOnServiceRequestId: "",
-  category: "laboratory",
-  codeSystem: "http://loinc.org",
-  code: "58410-2",
-  codeDisplay: "Complete blood count panel",
-  effectiveAt: "2026-05-27T11:30",
-  issuedAt: "2026-05-27T12:00",
-  performerOrganizationId: "department-laboratory",
-  resultsInterpreterPractitionerId: "practitioner-demo-002",
-  resultObservationIds: [],
-  conclusion: "Kết quả phù hợp với bối cảnh lâm sàng hiện tại.",
-  presentedFormUrl: "",
-  presentedFormTitle: ""
-};
-
-const defaultImagingStudyForm: NewImagingStudyForm = {
-  encounterId: "",
-  basedOnServiceRequestId: "",
-  diagnosticReportId: "",
-  studyInstanceUid: "1.2.826.0.1.3680043.10.543.202605270002",
-  accessionNumber: "HP-CXR-20260527-0002",
-  description: "Chest X-ray follow-up study",
-  startedAt: "2026-05-27T12:10",
-  referrerPractitionerId: "practitioner-demo-001",
-  interpreterPractitionerId: "practitioner-demo-001",
-  endpointId: "endpoint-pacs-hai-phong-demo",
-  seriesUid: "1.2.826.0.1.3680043.10.543.202605270002.1",
-  seriesNumber: "1",
-  modalitySystem: "http://dicom.nema.org/resources/ontology/DCM",
-  modalityCode: "DX",
-  modalityDisplay: "Digital Radiography",
-  seriesDescription: "PA and lateral chest radiographs",
-  numberOfInstances: "2",
-  bodySiteSystem: "http://snomed.info/sct",
-  bodySiteCode: "51185008",
-  bodySiteDisplay: "Thoracic structure"
-};
+import {
+  defaultAllergyIntoleranceForm,
+  defaultClinicalDocumentForm,
+  defaultConditionForm,
+  defaultDiagnosticReportForm,
+  defaultEncounterForm,
+  defaultGatewayAcknowledgementForm,
+  defaultImagingStudyForm,
+  defaultMedicationAdministrationForm,
+  defaultMedicationDispenseForm,
+  defaultMedicationRequestForm,
+  defaultObservationForm,
+  defaultPatientForm,
+  defaultPatientMergeForm,
+  defaultProcedureForm,
+  defaultRecordTransferForm,
+  defaultServiceRequestForm,
+  defaultTransferContext,
+  documentTaxonomy,
+  referenceSignals,
+  workflowSteps
+} from "./config/demoClinicalDefaults.js";
+import type {
+  AppRoute,
+  PatientIdentifierType,
+  PatientGender,
+  EncounterClass,
+  EncounterStatus,
+  ClinicalDocumentType,
+  ClinicalDocumentStatus,
+  ConditionClinicalStatus,
+  ConditionVerificationStatus,
+  ConditionCategory,
+  ConditionSeverity,
+  AllergyClinicalStatus,
+  AllergyVerificationStatus,
+  AllergyType,
+  AllergyCategory,
+  AllergyCriticality,
+  AllergyReactionSeverity,
+  ObservationStatus,
+  ObservationCategory,
+  MedicationRequestStatus,
+  MedicationRequestIntent,
+  MedicationRequestCategory,
+  MedicationRequestPriority,
+  MedicationTimingUnit,
+  MedicationDispenseStatus,
+  MedicationDispenseCategory,
+  MedicationAdministrationStatus,
+  MedicationAdministrationCategory,
+  MedicationAdministrationPerformerActorType,
+  ServiceRequestStatus,
+  ServiceRequestIntent,
+  ServiceRequestCategory,
+  ServiceRequestPriority,
+  WorkflowTaskStatus,
+  WorkflowTaskIntent,
+  WorkflowTaskPriority,
+  WorkflowTaskReferenceResourceType,
+  ProcedureStatus,
+  ProcedureCategory,
+  ProcedurePerformerActorType,
+  ProcedureReportReferenceResourceType,
+  DiagnosticReportStatus,
+  DiagnosticReportCategory,
+  ImagingStudyStatus,
+  PurposeOfUse,
+  ConsentStatus,
+  ConsentCategory,
+  RecordTransferStatus,
+  RecordTransferPriority,
+  RecordTransferBundleType,
+  RecordTransferDeliveryAttemptStatus,
+  ProviderOrganizationType,
+  ProviderEndpointConnectionType,
+  ProviderIdentifier,
+  ProviderTelecom,
+  ProviderCoding,
+  ProviderOrganization,
+  ProviderPractitioner,
+  ProviderEndpoint,
+  ProviderPractitionerRole,
+  ProviderDirectory,
+  PatientIdentifier,
+  Patient,
+  PatientStatusFilter,
+  Encounter,
+  ClinicalDocument,
+  ObservationCode,
+  ConditionCode,
+  AllergyCode,
+  AllergyReaction,
+  AllergyIntolerance,
+  Condition,
+  ObservationQuantity,
+  Observation,
+  MedicationCode,
+  MedicationQuantity,
+  DosageInstruction,
+  MedicationRequest,
+  MedicationDispense,
+  MedicationAdministrationPerformer,
+  MedicationAdministrationEffectivePeriod,
+  MedicationAdministrationDosage,
+  MedicationAdministration,
+  ServiceRequestCode,
+  ServiceRequest,
+  WorkflowTaskCode,
+  WorkflowTaskBusinessStatus,
+  WorkflowTaskReference,
+  WorkflowTaskExecutionPeriod,
+  WorkflowTask,
+  ProcedureCoding,
+  ProcedurePerformedPeriod,
+  ProcedurePerformer,
+  ProcedureReportReference,
+  Procedure,
+  DiagnosticReportCode,
+  DiagnosticReport,
+  ImagingStudyCoding,
+  ImagingStudySeries,
+  ImagingStudy,
+  AuditAction,
+  AuditResourceType,
+  AuditEvent,
+  AuditIntegrityStatus,
+  AuditIntegrityReport,
+  Consent,
+  RecordTransfer,
+  RecordTransferDeliveryAttempt,
+  RecordTransferOperationalSeverity,
+  RecordTransferOperationalSummary,
+  ApiRuntimeInfo,
+  PatientsResponse,
+  EncountersResponse,
+  ClinicalDocumentsResponse,
+  ConditionsResponse,
+  AllergyIntolerancesResponse,
+  ObservationsResponse,
+  MedicationRequestsResponse,
+  MedicationDispensesResponse,
+  MedicationAdministrationsResponse,
+  ServiceRequestsResponse,
+  WorkflowTasksResponse,
+  ProceduresResponse,
+  DiagnosticReportsResponse,
+  ImagingStudiesResponse,
+  AuditEventsResponse,
+  AuditIntegrityReportResponse,
+  ConsentsResponse,
+  RecordTransfersResponse,
+  RecordTransferDeliveryAttemptsResponse,
+  NewPatientForm,
+  PatientMergeForm,
+  NewRecordTransferForm,
+  GatewayAcknowledgementForm,
+  NewEncounterForm,
+  NewClinicalDocumentForm,
+  NewConditionForm,
+  NewAllergyIntoleranceForm,
+  NewObservationForm,
+  NewMedicationRequestForm,
+  NewMedicationDispenseForm,
+  NewMedicationAdministrationForm,
+  NewServiceRequestForm,
+  NewProcedureForm,
+  NewDiagnosticReportForm,
+  NewImagingStudyForm,
+  AuthSession
+} from "./types/clinical.js";
 
 const apiBaseUrl =
   import.meta.env.VITE_API_BASE_URL ??
   (window.location.port === "7311" ? "http://localhost:7310/api/v1" : "/api/v1");
-
-const defaultTransferContext = {
-  consentReference: "consent-demo-transfer-001",
-  recipientOrganizationId: "hospital-hai-phong-referral"
-};
-
-const defaultRecordTransferForm: NewRecordTransferForm = {
-  priority: "urgent",
-  bundleType: "document",
-  sourceOrganizationId: "hospital-hai-phong-demo",
-  recipientOrganizationId: defaultTransferContext.recipientOrganizationId,
-  consentReference: defaultTransferContext.consentReference,
-  reason: "Chuyển hồ sơ sang bệnh viện tiếp nhận để theo dõi sau cấp cứu.",
-  note: "Dùng FHIR document Bundle có Composition làm mục lục lâm sàng."
-};
-
-const defaultGatewayAcknowledgementForm: GatewayAcknowledgementForm = {
-  recordTransferId: "record-transfer-demo-001",
-  recipientOrganizationId: defaultTransferContext.recipientOrganizationId,
-  acknowledgementReference: "ack-record-transfer-callback-demo-001",
-  receivedAt: "",
-  receivedByActorId: "system-hai-phong-referral-gateway",
-  targetEndpointId: "endpoint-fhir-hai-phong-referral",
-  deliveryIdempotencyKey: "wiiicare-record-transfer-callback-demo-001",
-  note: "Bệnh viện nhận xác nhận đã tiếp nhận gói hồ sơ qua gateway liên thông."
-};
-
-const workflowSteps = [
-  "Tiếp nhận bệnh nhân",
-  "Mở lượt khám",
-  "Kiểm tra dị ứng",
-  "Ghi nhận chẩn đoán",
-  "Chỉ định dịch vụ",
-  "Theo dõi Task thực thi",
-  "Ghi nhận Procedure",
-  "Nhận kết quả",
-  "Gắn siêu dữ liệu PACS",
-  "Định danh cơ sở/endpoint",
-  "Ghi nhận chỉ số",
-  "Kê đơn/thuốc",
-  "Cấp phát thuốc",
-  "Xác nhận dùng thuốc",
-  "Gắn tài liệu",
-  "Ký/xác thực",
-  "Xuất FHIR"
-];
-
-const documentTaxonomy = [
-  "Advance Directive",
-  "CCD/CCDA/CCR",
-  "Lab Report",
-  "Medical Record",
-  "Patient Information",
-  "FHIR Export Document"
-];
-
-const referenceSignals = [
-  {
-    name: "OpenEMR",
-    value: "Workbench bệnh viện: lịch khám, hồ sơ bệnh nhân, encounter, tài liệu, audit và API."
-  },
-  {
-    name: "HL7 FHIR R4",
-    value: "Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, MedicationDispense, MedicationAdministration, DocumentReference, Provenance cùng Organization/Practitioner/Endpoint là lõi trao đổi dữ liệu; RecordTransfer xuất thành Task để điều phối chuyển hồ sơ."
-  },
-  {
-    name: "Bối cảnh Việt Nam",
-    value: "Ưu tiên Hải Phòng, định danh nội bộ, BHYT/CCCD ở lớp dữ liệu; chưa giả lập HIS/LIS/PACS khi chưa tích hợp thật."
-  },
-  {
-    name: "Product direction",
-    value: "Không làm landing page đẹp trước; xây bàn làm việc nghiệp vụ cho nhân viên y tế trước."
-  }
-];
 
 export function App() {
   const [appRoute, setAppRoute] = useState<AppRoute>("landing");
