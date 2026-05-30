@@ -15,12 +15,12 @@ import {
   listPatientAuditEvents,
   verifyPatientAuditIntegrity
 } from "./features/audit/auditApi.js";
+import { buildAuditPanelRenderers } from "./features/audit/auditPanelRenderers.js";
 import {
   AuthenticatedLayout,
   Info,
   PageHeader
 } from "./components/AppShell.js";
-import { GlobalAuditPanel, PatientAuditPanel } from "./features/audit/AuditPanels.js";
 import {
   createClinicalDocument,
   exportClinicalDocumentFhir,
@@ -536,6 +536,22 @@ export function App() {
     onRevokeConsent: handleRevokeConsent,
     onSelectRecordTransfer: setSelectedRecordTransferId,
     onSendRecordTransfer: handleSendRecordTransfer
+  });
+  const auditPanels = buildAuditPanelRenderers({
+    auditEvents,
+    auditFhirBundlePreview,
+    auditIntegrityReport,
+    canReadAudit,
+    globalAuditEvents,
+    isExportingAuditFhir,
+    isLoadingAuditEvents,
+    isLoadingGlobalAuditEvents,
+    isVerifyingAuditIntegrity,
+    selectedPatientId: selectedPatient?.id,
+    onExportAuditFhir: loadAuditFhirBundle,
+    onLoadAuditEvents: loadAuditEvents,
+    onReloadGlobalAuditEvents: loadGlobalAuditEvents,
+    onVerifyAuditIntegrity: verifyAuditIntegrity
   });
 
   useEffect(() => {
@@ -2627,14 +2643,14 @@ export function App() {
         loginForm={loginForm}
         panels={{
           allergyIntolerance: renderAllergyIntolerancePanel,
-          audit: renderAuditPanel,
+          audit: auditPanels.audit,
           clinicalDocument: renderDocumentPanel,
           condition: renderConditionPanel,
           consentInterop: interopPanels.consentInterop,
           createPatient: patientPanels.createPatient,
           diagnosticReport: renderDiagnosticReportPanel,
           encounter: renderEncounterPanel,
-          globalAudit: renderGlobalAuditPanel,
+          globalAudit: auditPanels.globalAudit,
           imagingStudy: renderImagingStudyPanel,
           medicationAdministration: renderMedicationAdministrationPanel,
           medicationDispense: renderMedicationDispensePanel,
@@ -2913,32 +2929,4 @@ export function App() {
     );
   }
 
-  function renderGlobalAuditPanel(): ReactNode {
-    return (
-      <GlobalAuditPanel
-        auditEvents={globalAuditEvents}
-        canReadAudit={canReadAudit}
-        isLoading={isLoadingGlobalAuditEvents}
-        onReload={() => void loadGlobalAuditEvents()}
-      />
-    );
-  }
-
-  function renderAuditPanel(): ReactNode {
-    return (
-      <PatientAuditPanel
-        auditEvents={auditEvents}
-        auditFhirBundlePreview={auditFhirBundlePreview}
-        auditIntegrityReport={auditIntegrityReport}
-        canReadAudit={canReadAudit}
-        hasSelectedPatient={Boolean(selectedPatient)}
-        isExportingAuditFhir={isExportingAuditFhir}
-        isLoadingAuditEvents={isLoadingAuditEvents}
-        isVerifyingAuditIntegrity={isVerifyingAuditIntegrity}
-        onExportAuditFhir={() => selectedPatient && void loadAuditFhirBundle(selectedPatient.id)}
-        onLoadAuditEvents={() => selectedPatient && void loadAuditEvents(selectedPatient.id)}
-        onVerifyAuditIntegrity={() => selectedPatient && void verifyAuditIntegrity(selectedPatient.id)}
-      />
-    );
-  }
 }
