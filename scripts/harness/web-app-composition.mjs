@@ -45,6 +45,7 @@ const requiredModules = [
   "apps/web/src/pages/AuditLogPage.tsx",
   "apps/web/src/pages/DashboardPage.tsx",
   "apps/web/src/pages/DocumentsPage.tsx",
+  "apps/web/src/pages/dashboardMetrics.ts",
   "apps/web/src/pages/GatewayAcknowledgementPage.tsx",
   "apps/web/src/pages/InteropPage.tsx",
   "apps/web/src/pages/LandingPage.tsx",
@@ -53,7 +54,7 @@ const requiredModules = [
   "apps/web/src/pages/WorkspacePage.tsx",
   "apps/web/src/types/clinical.ts"
 ];
-const maxAppLines = 3_620;
+const maxAppLines = 3_610;
 
 const appSource = await readFile(appPath, "utf8");
 const appLineCount = appSource.split(/\r?\n/).length;

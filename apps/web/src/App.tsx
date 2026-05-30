@@ -131,6 +131,7 @@ import {
 import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { AppRouteRenderer } from "./pages/AppRouteRenderer.js";
+import { buildDashboardMetrics } from "./pages/dashboardMetrics.js";
 
 import {
   defaultAllergyIntoleranceForm,
@@ -521,29 +522,24 @@ export function App() {
   const selectedEncounterImagingStudies = selectedEncounter
     ? imagingStudies.filter((imagingStudy) => imagingStudy.encounterId === selectedEncounter.id)
     : [];
-  const openEncounters = encounters.filter((encounter) => encounter.status === "in-progress");
-  const signedDocuments = clinicalDocuments.filter((document) => document.status === "signed");
-  const draftDocuments = clinicalDocuments.filter((document) => document.status === "draft");
-  const dashboardMetrics = {
-    allergyIntolerances: allergyIntolerances.length,
-    clinicalDocuments: clinicalDocuments.length,
-    conditions: conditions.length,
-    diagnosticReports: diagnosticReports.length,
-    draftDocuments: draftDocuments.length,
-    imagingStudies: imagingStudies.length,
-    medicationAdministrations: medicationAdministrations.length,
-    medicationDispenses: medicationDispenses.length,
-    medicationRequests: medicationRequests.length,
-    observations: observations.length,
-    openEncounters: openEncounters.length,
-    patients: patients.length,
-    procedures: procedures.length,
-    providerEndpoints: providerDirectory?.endpoints.length ?? 0,
-    providerOrganizations: providerDirectory?.organizations.length ?? 0,
-    recordTransfers: recordTransfers.length,
-    serviceRequests: serviceRequests.length,
-    workflowTasks: workflowTasks.length
-  };
+  const dashboardMetrics = buildDashboardMetrics({
+    allergyIntolerances,
+    clinicalDocuments,
+    conditions,
+    diagnosticReports,
+    encounters,
+    imagingStudies,
+    medicationAdministrations,
+    medicationDispenses,
+    medicationRequests,
+    observations,
+    patients,
+    procedures,
+    providerDirectory,
+    recordTransfers,
+    serviceRequests,
+    workflowTasks
+  });
   const canReadAudit = authSession?.actor.role === "auditor" || authSession?.actor.role === "admin";
   const canViewRuntimeInfo = canReadAudit;
   const isAuditOnlySession = authSession?.actor.role === "auditor";

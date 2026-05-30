@@ -1,27 +1,7 @@
 import { Info, MetricCard, PageHeader } from "../components/AppShell.js";
 import { formatDateTime } from "../lib/clinicalFormatters.js";
 import type { AppRoute, Patient } from "../types/clinical.js";
-
-export type DashboardMetrics = {
-  readonly allergyIntolerances: number;
-  readonly clinicalDocuments: number;
-  readonly conditions: number;
-  readonly diagnosticReports: number;
-  readonly draftDocuments: number;
-  readonly imagingStudies: number;
-  readonly medicationAdministrations: number;
-  readonly medicationDispenses: number;
-  readonly medicationRequests: number;
-  readonly observations: number;
-  readonly openEncounters: number;
-  readonly patients: number;
-  readonly procedures: number;
-  readonly providerEndpoints: number;
-  readonly providerOrganizations: number;
-  readonly recordTransfers: number;
-  readonly serviceRequests: number;
-  readonly workflowTasks: number;
-};
+import type { DashboardMetrics } from "./dashboardMetrics.js";
 
 type DashboardPageProps = {
   readonly latestEncounterServiceType?: string;
