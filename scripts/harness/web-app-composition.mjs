@@ -9,6 +9,7 @@ const requiredModules = [
   "apps/web/src/auth/demoLogin.ts",
   "apps/web/src/components/AppShell.tsx",
   "apps/web/src/config/demoClinicalDefaults.ts",
+  "apps/web/src/features/record-transfers/recordTransferApi.ts",
   "apps/web/src/lib/auditFormatters.ts",
   "apps/web/src/lib/clinicalFormatters.ts",
   "apps/web/src/pages/LandingPage.tsx",
@@ -20,11 +21,24 @@ const maxAppLines = 9_000;
 const appSource = await readFile(appPath, "utf8");
 const appLineCount = appSource.split(/\r?\n/).length;
 const directFetchPattern = /\bfetch\s*\(/;
+const forbiddenAppApiPathPatterns = [
+  {
+    pattern: /[`'"]\/(?:record-transfers\b|patients\/[^`'"]+\/record-transfers\b)/,
+    message:
+      "apps/web/src/App.tsx must use apps/web/src/features/record-transfers/recordTransferApi.ts for record-transfer HTTP routes."
+  }
+];
 
 if (appLineCount > maxAppLines) {
   throw new Error(
     `apps/web/src/App.tsx has ${appLineCount} lines; keep it at or below ${maxAppLines} by extracting pages, shell components, types, config, and pure helpers.`
   );
+}
+
+for (const forbidden of forbiddenAppApiPathPatterns) {
+  if (forbidden.pattern.test(appSource)) {
+    throw new Error(forbidden.message);
+  }
 }
 
 const webSourceFiles = await collectSourceFiles(webSrcPath);

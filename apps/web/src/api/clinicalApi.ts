@@ -80,6 +80,8 @@ export function createClinicalApiClient(config: ClinicalApiClientConfig) {
   };
 }
 
+export type ClinicalApiClient = ReturnType<typeof createClinicalApiClient>;
+
 export function isApiHttpError(error: unknown): error is ApiHttpError {
   return error instanceof ApiHttpError;
 }

@@ -17,6 +17,17 @@ import {
   PageHeader
 } from "./components/AppShell.js";
 import {
+  acknowledgeRecordTransfer,
+  createRecordTransfer,
+  exportRecordTransferFhirTask,
+  failRecordTransfer,
+  listRecordTransferDeliveryAttempts,
+  listRecordTransfers,
+  receiveRecordTransfer,
+  retryRecordTransfer,
+  sendRecordTransfer
+} from "./features/record-transfers/recordTransferApi.js";
+import {
   formatAuditAction,
   formatAuditIntegrityReason,
   formatAuditIntegrityStatus,
@@ -239,8 +250,6 @@ import type {
   AuditEventsResponse,
   AuditIntegrityReportResponse,
   ConsentsResponse,
-  RecordTransfersResponse,
-  RecordTransferDeliveryAttemptsResponse,
   NewPatientForm,
   PatientMergeForm,
   NewRecordTransferForm,
@@ -1521,12 +1530,7 @@ export function App() {
     setIsLoadingRecordTransfers(true);
 
     try {
-      const data = await clinicalApi.requestJson<RecordTransfersResponse>(
-        `/patients/${patientId}/record-transfers`,
-        {
-          purposeOfUse: "TREATMENT"
-        }
-      );
+      const data = await listRecordTransfers(clinicalApi, patientId);
       setRecordTransfers(data.items);
       setSelectedRecordTransferId(
         resolveSelectedRecordTransferId({
@@ -1552,12 +1556,7 @@ export function App() {
 
   async function loadRecordTransferFhirTaskPreview(recordTransferId: string) {
     try {
-      const preview = await clinicalApi.requestJson<unknown>(
-        `/record-transfers/${recordTransferId}/fhir-task`,
-        {
-          purposeOfUse: "TREATMENT"
-        }
-      );
+      const preview = await exportRecordTransferFhirTask(clinicalApi, recordTransferId);
 
       if (!isCurrentRecordTransferSelection(recordTransferId)) {
         return;
@@ -1587,12 +1586,7 @@ export function App() {
     setRecordTransferDeliveryAttemptWarning(undefined);
 
     try {
-      const data = await clinicalApi.requestJson<RecordTransferDeliveryAttemptsResponse>(
-        `/record-transfers/${recordTransferId}/delivery-attempts`,
-        {
-          purposeOfUse: "TREATMENT"
-        }
-      );
+      const data = await listRecordTransferDeliveryAttempts(clinicalApi, recordTransferId);
 
       if (!isCurrentRecordTransferSelection(recordTransferId)) {
         return;
@@ -2219,21 +2213,10 @@ export function App() {
     setIsSubmittingRecordTransfer(true);
 
     try {
-      const createdTransfer = await clinicalApi.requestJson<RecordTransfer>(
-        `/patients/${selectedPatient.id}/record-transfers`,
-        {
-          method: "POST",
-          purposeOfUse: "TREATMENT",
-          json: {
-            priority: recordTransferForm.priority,
-            bundleType: recordTransferForm.bundleType,
-            sourceOrganizationId: recordTransferForm.sourceOrganizationId,
-            recipientOrganizationId: recordTransferForm.recipientOrganizationId,
-            consentReference: recordTransferForm.consentReference,
-            reason: recordTransferForm.reason,
-            note: recordTransferForm.note || undefined
-          }
-        }
+      const createdTransfer = await createRecordTransfer(
+        clinicalApi,
+        selectedPatient.id,
+        recordTransferForm
       );
       await loadRecordTransfers(selectedPatient.id, createdTransfer.id);
       setStatusMessage(
@@ -2263,16 +2246,9 @@ export function App() {
     setTransitioningRecordTransferId(recordTransfer.id);
 
     try {
-      const updatedTransfer = await clinicalApi.requestJson<RecordTransfer>(
-        `/record-transfers/${recordTransfer.id}/send`,
-        {
-          method: "POST",
-          purposeOfUse: "TREATMENT",
-          json: {
-            note: "Đã gửi gói hồ sơ qua gateway liên thông demo."
-          }
-        }
-      );
+      const updatedTransfer = await sendRecordTransfer(clinicalApi, recordTransfer.id, {
+        note: "Đã gửi gói hồ sơ qua gateway liên thông demo."
+      });
       await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
       await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
       await loadRecordTransferDeliveryAttempts(updatedTransfer.id);
@@ -2301,16 +2277,9 @@ export function App() {
     setTransitioningRecordTransferId(recordTransfer.id);
 
     try {
-      const updatedTransfer = await clinicalApi.requestJson<RecordTransfer>(
-        `/record-transfers/${recordTransfer.id}/receive`,
-        {
-          method: "POST",
-          purposeOfUse: "TREATMENT",
-          json: {
-            note: "Bệnh viện nhận đã xác nhận tiếp nhận qua giao diện demo."
-          }
-        }
-      );
+      const updatedTransfer = await receiveRecordTransfer(clinicalApi, recordTransfer.id, {
+        note: "Bệnh viện nhận đã xác nhận tiếp nhận qua giao diện demo."
+      });
       await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
       await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
       await loadRecordTransferDeliveryAttempts(updatedTransfer.id);
@@ -2346,33 +2315,17 @@ export function App() {
     setGatewayAcknowledgementResult(undefined);
 
     try {
-      const acknowledgedTransfer = await clinicalApi.requestJson<RecordTransfer>(
-        `/record-transfers/${recordTransferId}/acknowledgement-callback`,
+      const acknowledgedTransfer = await acknowledgeRecordTransfer(
+        clinicalApi,
+        recordTransferId,
         {
-          method: "POST",
-          purposeOfUse: "OPERATIONS",
-          json: {
-            recipientOrganizationId,
-            acknowledgementReference,
-            ...(gatewayAcknowledgementForm.receivedAt.trim()
-              ? { receivedAt: toApiDateTime(gatewayAcknowledgementForm.receivedAt) }
-              : {}),
-            ...(gatewayAcknowledgementForm.receivedByActorId.trim()
-              ? { receivedByActorId: gatewayAcknowledgementForm.receivedByActorId.trim() }
-              : {}),
-            ...(gatewayAcknowledgementForm.targetEndpointId.trim()
-              ? { targetEndpointId: gatewayAcknowledgementForm.targetEndpointId.trim() }
-              : {}),
-            ...(gatewayAcknowledgementForm.deliveryIdempotencyKey.trim()
-              ? {
-                  deliveryIdempotencyKey:
-                    gatewayAcknowledgementForm.deliveryIdempotencyKey.trim()
-                }
-              : {}),
-            ...(gatewayAcknowledgementForm.note.trim()
-              ? { note: gatewayAcknowledgementForm.note.trim() }
-              : {})
-          }
+          recipientOrganizationId,
+          acknowledgementReference,
+          receivedAt: gatewayAcknowledgementForm.receivedAt,
+          receivedByActorId: gatewayAcknowledgementForm.receivedByActorId,
+          targetEndpointId: gatewayAcknowledgementForm.targetEndpointId,
+          deliveryIdempotencyKey: gatewayAcknowledgementForm.deliveryIdempotencyKey,
+          note: gatewayAcknowledgementForm.note
         }
       );
       setGatewayAcknowledgementResult(acknowledgedTransfer);
@@ -2403,17 +2356,10 @@ export function App() {
     setTransitioningRecordTransferId(recordTransfer.id);
 
     try {
-      const updatedTransfer = await clinicalApi.requestJson<RecordTransfer>(
-        `/record-transfers/${recordTransfer.id}/fail`,
-        {
-          method: "POST",
-          purposeOfUse: "TREATMENT",
-          json: {
-            failureReason: "Gateway liên thông demo tạm thời không phản hồi.",
-            note: "Đã ghi nhận lỗi gửi để thử lại sau."
-          }
-        }
-      );
+      const updatedTransfer = await failRecordTransfer(clinicalApi, recordTransfer.id, {
+        failureReason: "Gateway liên thông demo tạm thời không phản hồi.",
+        note: "Đã ghi nhận lỗi gửi để thử lại sau."
+      });
       await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
       await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
       await loadRecordTransferDeliveryAttempts(updatedTransfer.id);
@@ -2442,16 +2388,9 @@ export function App() {
     setTransitioningRecordTransferId(recordTransfer.id);
 
     try {
-      const updatedTransfer = await clinicalApi.requestJson<RecordTransfer>(
-        `/record-transfers/${recordTransfer.id}/retry`,
-        {
-          method: "POST",
-          purposeOfUse: "TREATMENT",
-          json: {
-            note: "Đưa lại gói hồ sơ vào hàng đợi gửi."
-          }
-        }
-      );
+      const updatedTransfer = await retryRecordTransfer(clinicalApi, recordTransfer.id, {
+        note: "Đưa lại gói hồ sơ vào hàng đợi gửi."
+      });
       await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
       await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
       await loadRecordTransferDeliveryAttempts(updatedTransfer.id);
