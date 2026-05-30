@@ -67,6 +67,7 @@ import {
   listServiceRequests,
   listWorkflowTasks
 } from "./features/clinical-records/clinicalRecordApi.js";
+import { buildClinicalRecordPanelRenderers } from "./features/clinical-records/clinicalRecordPanelRenderers.js";
 import {
   buildMedicationAdministrationCommand,
   buildMedicationDispenseCommand,
@@ -84,18 +85,6 @@ import {
   buildEncounterCommand,
   buildObservationCommand
 } from "./features/clinical-records/clinicalEntryCommandBuilders.js";
-import { AllergyIntolerancePanel } from "./features/clinical-records/AllergyIntolerancePanel.js";
-import { ConditionPanel } from "./features/clinical-records/ConditionPanel.js";
-import { DiagnosticReportPanel } from "./features/clinical-records/DiagnosticReportPanel.js";
-import { EncounterPanel } from "./features/clinical-records/EncounterPanel.js";
-import { ImagingStudyPanel } from "./features/clinical-records/ImagingStudyPanel.js";
-import { MedicationAdministrationPanel } from "./features/clinical-records/MedicationAdministrationPanel.js";
-import { MedicationDispensePanel } from "./features/clinical-records/MedicationDispensePanel.js";
-import { MedicationRequestPanel } from "./features/clinical-records/MedicationRequestPanel.js";
-import { ObservationPanel } from "./features/clinical-records/ObservationPanel.js";
-import { ProcedurePanel } from "./features/clinical-records/ProcedurePanel.js";
-import { ServiceRequestPanel } from "./features/clinical-records/ServiceRequestPanel.js";
-import { WorkflowTaskPanel } from "./features/clinical-records/WorkflowTaskPanel.js";
 import {
   exportConsentFhir,
   listPatientConsents,
@@ -552,6 +541,117 @@ export function App() {
     onLoadAuditEvents: loadAuditEvents,
     onReloadGlobalAuditEvents: loadGlobalAuditEvents,
     onVerifyAuditIntegrity: verifyAuditIntegrity
+  });
+  const clinicalRecordPanels = buildClinicalRecordPanelRenderers({
+    collections: patientWorkspaceCollections,
+    forms: {
+      allergyIntolerance: allergyIntoleranceForm,
+      condition: conditionForm,
+      diagnosticReport: diagnosticReportForm,
+      encounter: encounterForm,
+      imagingStudy: imagingStudyForm,
+      medicationAdministration: medicationAdministrationForm,
+      medicationDispense: medicationDispenseForm,
+      medicationRequest: medicationRequestForm,
+      observation: observationForm,
+      procedure: procedureForm,
+      serviceRequest: serviceRequestForm
+    },
+    handlers: {
+      onCreateAllergyIntolerance: handleCreateAllergyIntolerance,
+      onCreateCondition: handleCreateCondition,
+      onCreateDiagnosticReport: handleCreateDiagnosticReport,
+      onCreateEncounter: handleCreateEncounter,
+      onCreateImagingStudy: handleCreateImagingStudy,
+      onCreateMedicationAdministration: handleCreateMedicationAdministration,
+      onCreateMedicationDispense: handleCreateMedicationDispense,
+      onCreateMedicationRequest: handleCreateMedicationRequest,
+      onCreateObservation: handleCreateObservation,
+      onCreateProcedure: handleCreateProcedure,
+      onCreateServiceRequest: handleCreateServiceRequest,
+      onFinishEncounter: handleFinishEncounter,
+      onAllergyIntoleranceFormChange: setAllergyIntoleranceForm,
+      onConditionFormChange: setConditionForm,
+      onDiagnosticReportFormChange: setDiagnosticReportForm,
+      onEncounterFormChange: setEncounterForm,
+      onImagingStudyFormChange: setImagingStudyForm,
+      onMedicationAdministrationFormChange: setMedicationAdministrationForm,
+      onMedicationDispenseFormChange: setMedicationDispenseForm,
+      onMedicationRequestFormChange: setMedicationRequestForm,
+      onObservationFormChange: setObservationForm,
+      onProcedureFormChange: setProcedureForm,
+      onServiceRequestFormChange: setServiceRequestForm,
+      onSelectAllergyIntolerance: setSelectedAllergyIntoleranceId,
+      onSelectCondition: setSelectedConditionId,
+      onSelectDiagnosticReport: setSelectedDiagnosticReportId,
+      onSelectEncounter: setSelectedEncounterId,
+      onSelectImagingStudy: setSelectedImagingStudyId,
+      onSelectMedicationAdministration: setSelectedMedicationAdministrationId,
+      onSelectMedicationDispense: setSelectedMedicationDispenseId,
+      onSelectMedicationRequest: setSelectedMedicationRequestId,
+      onSelectObservation: setSelectedObservationId,
+      onSelectProcedure: setSelectedProcedureId,
+      onSelectServiceRequest: setSelectedServiceRequestId,
+      onSelectWorkflowTask: setSelectedWorkflowTaskId
+    },
+    isFinishingEncounter,
+    isWriteDisabled: selectedPatientWriteDisabled,
+    loading: {
+      allergyIntolerances: isLoadingAllergyIntolerances,
+      conditions: isLoadingConditions,
+      diagnosticReports: isLoadingDiagnosticReports,
+      encounters: isLoadingEncounters,
+      imagingStudies: isLoadingImagingStudies,
+      medicationAdministrations: isLoadingMedicationAdministrations,
+      medicationDispenses: isLoadingMedicationDispenses,
+      medicationRequests: isLoadingMedicationRequests,
+      observations: isLoadingObservations,
+      procedures: isLoadingProcedures,
+      serviceRequests: isLoadingServiceRequests,
+      workflowTasks: isLoadingWorkflowTasks
+    },
+    selectedIds: {
+      allergyIntolerance: selectedAllergyIntoleranceId,
+      condition: selectedConditionId,
+      diagnosticReport: selectedDiagnosticReportId,
+      encounter: selectedEncounterId,
+      imagingStudy: selectedImagingStudyId,
+      medicationAdministration: selectedMedicationAdministrationId,
+      medicationDispense: selectedMedicationDispenseId,
+      medicationRequest: selectedMedicationRequestId,
+      observation: selectedObservationId,
+      procedure: selectedProcedureId,
+      serviceRequest: selectedServiceRequestId,
+      workflowTask: selectedWorkflowTaskId
+    },
+    selections: {
+      selectedAllergyIntolerance: workspaceSelection.selectedAllergyIntolerance,
+      selectedCondition: workspaceSelection.selectedCondition,
+      selectedDiagnosticReport: workspaceSelection.selectedDiagnosticReport,
+      selectedEncounter: workspaceSelection.selectedEncounter,
+      selectedEncounterCounts: workspaceSelection.selectedEncounterCounts,
+      selectedImagingStudy: workspaceSelection.selectedImagingStudy,
+      selectedMedicationAdministration: workspaceSelection.selectedMedicationAdministration,
+      selectedMedicationDispense: workspaceSelection.selectedMedicationDispense,
+      selectedMedicationRequest: workspaceSelection.selectedMedicationRequest,
+      selectedObservation: workspaceSelection.selectedObservation,
+      selectedProcedure: workspaceSelection.selectedProcedure,
+      selectedServiceRequest: workspaceSelection.selectedServiceRequest,
+      selectedWorkflowTask: workspaceSelection.selectedWorkflowTask
+    },
+    submitting: {
+      allergyIntolerance: isSubmittingAllergyIntolerance,
+      condition: isSubmittingCondition,
+      diagnosticReport: isSubmittingDiagnosticReport,
+      encounter: isSubmittingEncounter,
+      imagingStudy: isSubmittingImagingStudy,
+      medicationAdministration: isSubmittingMedicationAdministration,
+      medicationDispense: isSubmittingMedicationDispense,
+      medicationRequest: isSubmittingMedicationRequest,
+      observation: isSubmittingObservation,
+      procedure: isSubmittingProcedure,
+      serviceRequest: isSubmittingServiceRequest
+    }
   });
 
   useEffect(() => {
@@ -2642,28 +2742,28 @@ export function App() {
         latestEncounterServiceType={encounters[0]?.serviceType}
         loginForm={loginForm}
         panels={{
-          allergyIntolerance: renderAllergyIntolerancePanel,
+          allergyIntolerance: clinicalRecordPanels.allergyIntolerance,
           audit: auditPanels.audit,
           clinicalDocument: renderDocumentPanel,
-          condition: renderConditionPanel,
+          condition: clinicalRecordPanels.condition,
           consentInterop: interopPanels.consentInterop,
           createPatient: patientPanels.createPatient,
-          diagnosticReport: renderDiagnosticReportPanel,
-          encounter: renderEncounterPanel,
+          diagnosticReport: clinicalRecordPanels.diagnosticReport,
+          encounter: clinicalRecordPanels.encounter,
           globalAudit: auditPanels.globalAudit,
-          imagingStudy: renderImagingStudyPanel,
-          medicationAdministration: renderMedicationAdministrationPanel,
-          medicationDispense: renderMedicationDispensePanel,
-          medicationRequest: renderMedicationRequestPanel,
-          observation: renderObservationPanel,
+          imagingStudy: clinicalRecordPanels.imagingStudy,
+          medicationAdministration: clinicalRecordPanels.medicationAdministration,
+          medicationDispense: clinicalRecordPanels.medicationDispense,
+          medicationRequest: clinicalRecordPanels.medicationRequest,
+          observation: clinicalRecordPanels.observation,
           patientDetail: patientPanels.patientDetail,
           patientList: patientPanels.patientList,
           patientMerge: patientPanels.patientMerge,
-          procedure: renderProcedurePanel,
+          procedure: clinicalRecordPanels.procedure,
           providerDirectory: interopPanels.providerDirectory,
           recordTransferInterop: interopPanels.recordTransferInterop,
-          serviceRequest: renderServiceRequestPanel,
-          workflowTask: renderWorkflowTaskPanel
+          serviceRequest: clinicalRecordPanels.serviceRequest,
+          workflowTask: clinicalRecordPanels.workflowTask
         }}
         referenceSignals={referenceSignals}
         selectedPatient={selectedPatient}
@@ -2681,230 +2781,6 @@ export function App() {
   function clearPatientFilters() {
     setPatientSearchTerm("");
     setPatientStatusFilter("all");
-  }
-
-  function renderEncounterPanel(): ReactNode {
-    return (
-      <EncounterPanel
-        encounters={encounters}
-        form={encounterForm}
-        isFinishing={isFinishingEncounter}
-        isLoading={isLoadingEncounters}
-        isSubmitting={isSubmittingEncounter}
-        isWriteDisabled={selectedPatientWriteDisabled}
-        selectedEncounter={workspaceSelection.selectedEncounter}
-        selectedEncounterCounts={workspaceSelection.selectedEncounterCounts}
-        selectedEncounterId={selectedEncounterId}
-        onCreateEncounter={handleCreateEncounter}
-        onFinishEncounter={handleFinishEncounter}
-        onFormChange={setEncounterForm}
-        onSelectEncounter={setSelectedEncounterId}
-      />
-    );
-  }
-
-  function renderAllergyIntolerancePanel(): ReactNode {
-    return (
-      <AllergyIntolerancePanel
-        allergyIntolerances={allergyIntolerances}
-        encounters={encounters}
-        form={allergyIntoleranceForm}
-        isLoading={isLoadingAllergyIntolerances}
-        isSubmitting={isSubmittingAllergyIntolerance}
-        isWriteDisabled={selectedPatientWriteDisabled}
-        selectedAllergyIntolerance={workspaceSelection.selectedAllergyIntolerance}
-        selectedAllergyIntoleranceId={selectedAllergyIntoleranceId}
-        onCreateAllergyIntolerance={handleCreateAllergyIntolerance}
-        onFormChange={setAllergyIntoleranceForm}
-        onSelectAllergyIntolerance={setSelectedAllergyIntoleranceId}
-      />
-    );
-  }
-
-  function renderConditionPanel(): ReactNode {
-    return (
-      <ConditionPanel
-        conditions={conditions}
-        encounters={encounters}
-        form={conditionForm}
-        isLoading={isLoadingConditions}
-        isSubmitting={isSubmittingCondition}
-        isWriteDisabled={selectedPatientWriteDisabled}
-        selectedCondition={workspaceSelection.selectedCondition}
-        selectedConditionId={selectedConditionId}
-        onCreateCondition={handleCreateCondition}
-        onFormChange={setConditionForm}
-        onSelectCondition={setSelectedConditionId}
-      />
-    );
-  }
-
-  function renderServiceRequestPanel(): ReactNode {
-    return (
-      <ServiceRequestPanel
-        conditions={conditions}
-        encounters={encounters}
-        form={serviceRequestForm}
-        isLoading={isLoadingServiceRequests}
-        isSubmitting={isSubmittingServiceRequest}
-        isWriteDisabled={selectedPatientWriteDisabled}
-        selectedServiceRequest={workspaceSelection.selectedServiceRequest}
-        selectedServiceRequestId={selectedServiceRequestId}
-        serviceRequests={serviceRequests}
-        onCreateServiceRequest={handleCreateServiceRequest}
-        onFormChange={setServiceRequestForm}
-        onSelectServiceRequest={setSelectedServiceRequestId}
-      />
-    );
-  }
-
-  function renderWorkflowTaskPanel(): ReactNode {
-    return (
-      <WorkflowTaskPanel
-        isLoading={isLoadingWorkflowTasks}
-        selectedWorkflowTask={workspaceSelection.selectedWorkflowTask}
-        selectedWorkflowTaskId={selectedWorkflowTaskId}
-        workflowTasks={workflowTasks}
-        onSelectWorkflowTask={setSelectedWorkflowTaskId}
-      />
-    );
-  }
-
-  function renderProcedurePanel(): ReactNode {
-    return (
-      <ProcedurePanel
-        conditions={conditions}
-        diagnosticReports={diagnosticReports}
-        encounters={encounters}
-        form={procedureForm}
-        isLoading={isLoadingProcedures}
-        isSubmitting={isSubmittingProcedure}
-        isWriteDisabled={selectedPatientWriteDisabled}
-        procedures={procedures}
-        selectedProcedure={workspaceSelection.selectedProcedure}
-        selectedProcedureId={selectedProcedureId}
-        serviceRequests={serviceRequests}
-        onCreateProcedure={handleCreateProcedure}
-        onFormChange={setProcedureForm}
-        onSelectProcedure={setSelectedProcedureId}
-      />
-    );
-  }
-
-  function renderObservationPanel(): ReactNode {
-    return (
-      <ObservationPanel
-        encounters={encounters}
-        form={observationForm}
-        isLoading={isLoadingObservations}
-        isSubmitting={isSubmittingObservation}
-        isWriteDisabled={selectedPatientWriteDisabled}
-        observations={observations}
-        selectedObservation={workspaceSelection.selectedObservation}
-        selectedObservationId={selectedObservationId}
-        onCreateObservation={handleCreateObservation}
-        onFormChange={setObservationForm}
-        onSelectObservation={setSelectedObservationId}
-      />
-    );
-  }
-
-  function renderDiagnosticReportPanel(): ReactNode {
-    return (
-      <DiagnosticReportPanel
-        diagnosticReports={diagnosticReports}
-        encounters={encounters}
-        form={diagnosticReportForm}
-        isLoading={isLoadingDiagnosticReports}
-        isSubmitting={isSubmittingDiagnosticReport}
-        isWriteDisabled={selectedPatientWriteDisabled}
-        observations={observations}
-        selectedDiagnosticReport={workspaceSelection.selectedDiagnosticReport}
-        selectedDiagnosticReportId={selectedDiagnosticReportId}
-        serviceRequests={serviceRequests}
-        onCreateDiagnosticReport={handleCreateDiagnosticReport}
-        onFormChange={setDiagnosticReportForm}
-        onSelectDiagnosticReport={setSelectedDiagnosticReportId}
-      />
-    );
-  }
-
-  function renderImagingStudyPanel(): ReactNode {
-    return (
-      <ImagingStudyPanel
-        diagnosticReports={diagnosticReports}
-        encounters={encounters}
-        form={imagingStudyForm}
-        imagingStudies={imagingStudies}
-        isLoading={isLoadingImagingStudies}
-        isSubmitting={isSubmittingImagingStudy}
-        isWriteDisabled={selectedPatientWriteDisabled}
-        selectedImagingStudy={workspaceSelection.selectedImagingStudy}
-        selectedImagingStudyId={selectedImagingStudyId}
-        serviceRequests={serviceRequests}
-        onCreateImagingStudy={handleCreateImagingStudy}
-        onFormChange={setImagingStudyForm}
-        onSelectImagingStudy={setSelectedImagingStudyId}
-      />
-    );
-  }
-
-  function renderMedicationRequestPanel(): ReactNode {
-    return (
-      <MedicationRequestPanel
-        conditions={conditions}
-        encounters={encounters}
-        form={medicationRequestForm}
-        isLoading={isLoadingMedicationRequests}
-        isSubmitting={isSubmittingMedicationRequest}
-        isWriteDisabled={selectedPatientWriteDisabled}
-        medicationRequests={medicationRequests}
-        selectedMedicationRequest={workspaceSelection.selectedMedicationRequest}
-        selectedMedicationRequestId={selectedMedicationRequestId}
-        onCreateMedicationRequest={handleCreateMedicationRequest}
-        onFormChange={setMedicationRequestForm}
-        onSelectMedicationRequest={setSelectedMedicationRequestId}
-      />
-    );
-  }
-
-  function renderMedicationDispensePanel(): ReactNode {
-    return (
-      <MedicationDispensePanel
-        encounters={encounters}
-        form={medicationDispenseForm}
-        isLoading={isLoadingMedicationDispenses}
-        isSubmitting={isSubmittingMedicationDispense}
-        isWriteDisabled={selectedPatientWriteDisabled}
-        medicationDispenses={medicationDispenses}
-        medicationRequests={medicationRequests}
-        selectedMedicationDispense={workspaceSelection.selectedMedicationDispense}
-        selectedMedicationDispenseId={selectedMedicationDispenseId}
-        onCreateMedicationDispense={handleCreateMedicationDispense}
-        onFormChange={setMedicationDispenseForm}
-        onSelectMedicationDispense={setSelectedMedicationDispenseId}
-      />
-    );
-  }
-
-  function renderMedicationAdministrationPanel(): ReactNode {
-    return (
-      <MedicationAdministrationPanel
-        conditions={conditions}
-        encounters={encounters}
-        form={medicationAdministrationForm}
-        isLoading={isLoadingMedicationAdministrations}
-        isSubmitting={isSubmittingMedicationAdministration}
-        isWriteDisabled={selectedPatientWriteDisabled}
-        medicationAdministrations={medicationAdministrations}
-        medicationRequests={medicationRequests}
-        selectedMedicationAdministration={workspaceSelection.selectedMedicationAdministration}
-        selectedMedicationAdministrationId={selectedMedicationAdministrationId}
-        onCreateMedicationAdministration={handleCreateMedicationAdministration}
-        onFormChange={setMedicationAdministrationForm}
-        onSelectMedicationAdministration={setSelectedMedicationAdministrationId}
-      />
-    );
   }
 
   function renderDocumentPanel(): ReactNode {
