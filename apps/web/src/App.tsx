@@ -110,10 +110,7 @@ import {
   listPatients,
   mergePatient
 } from "./features/patient-registry/patientRegistryApi.js";
-import { CreatePatientPanel } from "./features/patient-registry/CreatePatientPanel.js";
-import { PatientDetailPanel } from "./features/patient-registry/PatientDetailPanel.js";
-import { PatientListPanel } from "./features/patient-registry/PatientListPanel.js";
-import { PatientMergePanel } from "./features/patient-registry/PatientMergePanel.js";
+import { buildPatientPanelRenderers } from "./features/patient-registry/patientPanelRenderers.js";
 import { buildPatientRegistrySelection } from "./features/patient-registry/patientRegistrySelectors.js";
 import {
   getApiRuntimeInfo,
@@ -482,6 +479,35 @@ export function App() {
   const canReadAudit = authSession?.actor.role === "auditor" || authSession?.actor.role === "admin";
   const canViewRuntimeInfo = canReadAudit;
   const isAuditOnlySession = authSession?.actor.role === "auditor";
+  const patientPanels = buildPatientPanelRenderers({
+    patients,
+    visiblePatients,
+    selectedPatient,
+    selectedPatientId,
+    selectedPatientMergeTarget,
+    patientMergeCandidates,
+    patientMergeConfirmationCode,
+    patientMergeForm,
+    patientMergeTargetId,
+    patientForm,
+    searchTerm: patientSearchTerm,
+    statusFilter: patientStatusFilter,
+    hasFilter: hasPatientListFilter,
+    isLoadingPatients,
+    isMergingPatient,
+    isPatientMergeConfirmationValid,
+    isSelectedPatientMerged,
+    isSubmittingPatient,
+    onClearPatientFilters: clearPatientFilters,
+    onCreatePatient: handleCreatePatient,
+    onMergePatient: handleMergeSelectedPatient,
+    onPatientFormChange: setPatientForm,
+    onPatientMergeFormChange: setPatientMergeForm,
+    onPatientRefresh: loadPatients,
+    onPatientSearchTermChange: setPatientSearchTerm,
+    onPatientSelect: setSelectedPatientId,
+    onPatientStatusFilterChange: setPatientStatusFilter
+  });
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -2576,7 +2602,7 @@ export function App() {
           clinicalDocument: renderDocumentPanel,
           condition: renderConditionPanel,
           consentInterop: renderConsentInteropPanel,
-          createPatient: renderCreatePatientPanel,
+          createPatient: patientPanels.createPatient,
           diagnosticReport: renderDiagnosticReportPanel,
           encounter: renderEncounterPanel,
           globalAudit: renderGlobalAuditPanel,
@@ -2585,9 +2611,9 @@ export function App() {
           medicationDispense: renderMedicationDispensePanel,
           medicationRequest: renderMedicationRequestPanel,
           observation: renderObservationPanel,
-          patientDetail: renderPatientDetailPanel,
-          patientList: renderPatientListPanel,
-          patientMerge: renderPatientMergePanel,
+          patientDetail: patientPanels.patientDetail,
+          patientList: patientPanels.patientList,
+          patientMerge: patientPanels.patientMerge,
           procedure: renderProcedurePanel,
           providerDirectory: renderProviderDirectoryPanel,
           recordTransferInterop: renderRecordTransferInteropPanel,
@@ -2607,26 +2633,9 @@ export function App() {
     </AuthenticatedLayout>
   );
 
-  function renderPatientListPanel(): ReactNode {
-    return (
-      <PatientListPanel
-        patients={patients}
-        visiblePatients={visiblePatients}
-        selectedPatientId={selectedPatientId}
-        searchTerm={patientSearchTerm}
-        statusFilter={patientStatusFilter}
-        hasFilter={hasPatientListFilter}
-        isLoading={isLoadingPatients}
-        onClearFilters={() => {
-          setPatientSearchTerm("");
-          setPatientStatusFilter("all");
-        }}
-        onRefresh={loadPatients}
-        onSearchTermChange={setPatientSearchTerm}
-        onSelectPatient={setSelectedPatientId}
-        onStatusFilterChange={setPatientStatusFilter}
-      />
-    );
+  function clearPatientFilters() {
+    setPatientSearchTerm("");
+    setPatientStatusFilter("all");
   }
 
   function renderConsentInteropPanel(): ReactNode {
@@ -2676,32 +2685,6 @@ export function App() {
         directory={providerDirectory}
         isLoading={isLoadingProviderDirectory}
         onRefresh={loadProviderDirectory}
-      />
-    );
-  }
-
-  function renderPatientDetailPanel(): ReactNode {
-    return (
-      <PatientDetailPanel
-        isMerged={isSelectedPatientMerged}
-        patient={selectedPatient}
-        mergeTarget={selectedPatientMergeTarget}
-      />
-    );
-  }
-
-  function renderPatientMergePanel(): ReactNode {
-    return (
-      <PatientMergePanel
-        candidates={patientMergeCandidates}
-        confirmationCode={patientMergeConfirmationCode}
-        form={patientMergeForm}
-        isConfirmationValid={isPatientMergeConfirmationValid}
-        isMerging={isMergingPatient}
-        selectedPatient={selectedPatient}
-        targetPatientId={patientMergeTargetId}
-        onFormChange={setPatientMergeForm}
-        onMergePatient={handleMergeSelectedPatient}
       />
     );
   }
@@ -2977,16 +2960,6 @@ export function App() {
         onExportAuditFhir={() => selectedPatient && void loadAuditFhirBundle(selectedPatient.id)}
         onLoadAuditEvents={() => selectedPatient && void loadAuditEvents(selectedPatient.id)}
         onVerifyAuditIntegrity={() => selectedPatient && void verifyAuditIntegrity(selectedPatient.id)}
-      />
-    );
-  }
-  function renderCreatePatientPanel(): ReactNode {
-    return (
-      <CreatePatientPanel
-        form={patientForm}
-        isSubmitting={isSubmittingPatient}
-        onCreatePatient={handleCreatePatient}
-        onFormChange={setPatientForm}
       />
     );
   }
