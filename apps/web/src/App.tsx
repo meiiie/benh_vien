@@ -17,6 +17,13 @@ import {
   PageHeader
 } from "./components/AppShell.js";
 import {
+  createClinicalDocument,
+  exportClinicalDocumentFhir,
+  exportClinicalDocumentProvenanceFhir,
+  listClinicalDocuments,
+  signClinicalDocument
+} from "./features/clinical-documents/clinicalDocumentApi.js";
+import {
   acknowledgeRecordTransfer,
   createRecordTransfer,
   exportRecordTransferFhirTask,
@@ -235,7 +242,6 @@ import type {
   ApiRuntimeInfo,
   PatientsResponse,
   EncountersResponse,
-  ClinicalDocumentsResponse,
   ConditionsResponse,
   AllergyIntolerancesResponse,
   ObservationsResponse,
@@ -999,12 +1005,7 @@ export function App() {
     setIsLoadingDocuments(true);
 
     try {
-      const data = await clinicalApi.requestJson<ClinicalDocumentsResponse>(
-        `/patients/${patientId}/documents`,
-        {
-          purposeOfUse: "TREATMENT"
-        }
-      );
+      const data = await listClinicalDocuments(clinicalApi, patientId);
       setClinicalDocuments(data.items);
       setSelectedDocumentId(nextSelectedDocumentId ?? data.items[0]?.id);
     } catch (error) {
@@ -1739,11 +1740,7 @@ export function App() {
 
   async function loadDocumentFhirPreview(documentId: string) {
     try {
-      setDocumentFhirPreview(
-        await clinicalApi.requestJson<unknown>(`/clinical-documents/${documentId}/fhir`, {
-          purposeOfUse: "TREATMENT"
-        })
-      );
+      setDocumentFhirPreview(await exportClinicalDocumentFhir(clinicalApi, documentId));
     } catch (error) {
       setDocumentFhirPreview({
         error:
@@ -1757,12 +1754,7 @@ export function App() {
   async function loadDocumentProvenanceFhirPreview(documentId: string) {
     try {
       setDocumentProvenanceFhirPreview(
-        await clinicalApi.requestJson<unknown>(
-          `/clinical-documents/${documentId}/provenance/fhir`,
-          {
-            purposeOfUse: "TREATMENT"
-          }
-        )
+        await exportClinicalDocumentProvenanceFhir(clinicalApi, documentId)
       );
     } catch (error) {
       setDocumentProvenanceFhirPreview({
@@ -3325,27 +3317,10 @@ export function App() {
     setIsSubmittingDocument(true);
 
     try {
-      const createdDocument = await clinicalApi.requestJson<ClinicalDocument>(
-        `/patients/${selectedPatient.id}/documents`,
-        {
-          method: "POST",
-          purposeOfUse: "TREATMENT",
-          json: {
-            encounterId: documentForm.encounterId || undefined,
-            type: documentForm.type,
-            title: documentForm.title,
-            storageUri: documentForm.storageUri.replace("/current/", `/${selectedPatient.id}/`),
-            attachmentContentType: documentForm.attachmentContentType || undefined,
-            attachmentSizeBytes: documentForm.attachmentSizeBytes
-              ? Number(documentForm.attachmentSizeBytes)
-              : undefined,
-            attachmentHashSha1Base64: documentForm.attachmentHashSha1Base64 || undefined,
-            attachmentCreatedAt: documentForm.attachmentCreatedAt
-              ? toApiDateTime(documentForm.attachmentCreatedAt)
-              : undefined,
-            authorPractitionerId: documentForm.authorPractitionerId
-          }
-        }
+      const createdDocument = await createClinicalDocument(
+        clinicalApi,
+        selectedPatient.id,
+        documentForm
       );
       await loadClinicalDocuments(selectedPatient.id, createdDocument.id);
       await loadAuditEvents(selectedPatient.id, { silent: true });
@@ -3370,13 +3345,7 @@ export function App() {
     setIsSigningDocument(true);
 
     try {
-      const signedDocument = await clinicalApi.requestJson<ClinicalDocument>(
-        `/clinical-documents/${documentId}/sign`,
-        {
-          method: "POST",
-          purposeOfUse: "TREATMENT"
-        }
-      );
+      const signedDocument = await signClinicalDocument(clinicalApi, documentId);
       await loadClinicalDocuments(signedDocument.patientId, signedDocument.id);
       await loadDocumentFhirPreview(signedDocument.id);
       await loadDocumentProvenanceFhirPreview(signedDocument.id);
