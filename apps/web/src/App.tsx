@@ -68,6 +68,11 @@ import {
   listWorkflowTasks
 } from "./features/clinical-records/clinicalRecordApi.js";
 import { buildEncounterRecordCounts } from "./features/clinical-records/encounterSelectors.js";
+import {
+  buildMedicationAdministrationCommand,
+  buildMedicationDispenseCommand,
+  buildMedicationRequestCommand
+} from "./features/clinical-records/medicationCommandBuilders.js";
 import { AllergyIntolerancePanel } from "./features/clinical-records/AllergyIntolerancePanel.js";
 import { ConditionPanel } from "./features/clinical-records/ConditionPanel.js";
 import { DiagnosticReportPanel } from "./features/clinical-records/DiagnosticReportPanel.js";
@@ -2198,38 +2203,12 @@ export function App() {
       const createdMedicationRequest = await createMedicationRequest(
         clinicalApi,
         selectedPatient.id,
-        {
-          encounterId: medicationRequestForm.encounterId || undefined,
-          reasonConditionId: medicationRequestForm.reasonConditionId || undefined,
-          category: medicationRequestForm.category,
-          priority: medicationRequestForm.priority,
-          medicationCode: {
-            system: medicationRequestForm.medicationSystem,
-            code: medicationRequestForm.medicationCode,
-            display: medicationRequestForm.medicationDisplay
-          },
-          dosageInstruction: {
-            text: medicationRequestForm.dosageText,
-            route: medicationRequestForm.route || undefined,
-            doseQuantity: {
-              value: doseValue,
-              unit: medicationRequestForm.doseUnit,
-              system: "http://unitsofmeasure.org",
-              code: medicationRequestForm.doseUnit
-            },
-            frequency,
-            period,
-            periodUnit: medicationRequestForm.periodUnit
-          },
-          authoredOn: medicationRequestForm.authoredOn
-            ? toApiDateTime(medicationRequestForm.authoredOn)
-            : undefined,
-          requesterPractitionerId: medicationRequestForm.requesterPractitionerId,
-          expectedSupplyDurationDays: medicationRequestForm.expectedSupplyDurationDays
-            ? expectedSupplyDurationDays
-            : undefined,
-          note: medicationRequestForm.note || undefined
-        }
+        buildMedicationRequestCommand(medicationRequestForm, {
+          doseValue,
+          expectedSupplyDurationDays,
+          frequency,
+          period
+        })
       );
       await loadMedicationRequests(selectedPatient.id, createdMedicationRequest.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
@@ -2298,51 +2277,13 @@ export function App() {
       const createdMedicationDispense = await createMedicationDispense(
         clinicalApi,
         selectedPatient.id,
-        {
-          encounterId: medicationDispenseForm.encounterId || undefined,
-          medicationRequestId: medicationDispenseForm.medicationRequestId || undefined,
-          status: "completed",
-          category: medicationDispenseForm.category,
-          medicationCode: {
-            system: medicationDispenseForm.medicationSystem,
-            code: medicationDispenseForm.medicationCode,
-            display: medicationDispenseForm.medicationDisplay
-          },
-          quantity: {
-            value: quantityValue,
-            unit: medicationDispenseForm.quantityUnit,
-            system: "http://unitsofmeasure.org",
-            code: medicationDispenseForm.quantityUnit
-          },
-          daysSupply: {
-            value: daysSupplyValue,
-            unit: "ngày",
-            system: "http://unitsofmeasure.org",
-            code: "d"
-          },
-          whenPrepared: medicationDispenseForm.whenPrepared
-            ? toApiDateTime(medicationDispenseForm.whenPrepared)
-            : undefined,
-          whenHandedOver: toApiDateTime(medicationDispenseForm.whenHandedOver),
-          dispenserPractitionerId:
-            medicationDispenseForm.dispenserPractitionerId || undefined,
-          receiverPractitionerId:
-            medicationDispenseForm.receiverPractitionerId || undefined,
-          dosageInstruction: {
-            text: medicationDispenseForm.dosageText,
-            route: medicationDispenseForm.route || undefined,
-            doseQuantity: {
-              value: doseValue,
-              unit: medicationDispenseForm.doseUnit,
-              system: "http://unitsofmeasure.org",
-              code: medicationDispenseForm.doseUnit
-            },
-            frequency,
-            period,
-            periodUnit: medicationDispenseForm.periodUnit
-          },
-          note: medicationDispenseForm.note || undefined
-        }
+        buildMedicationDispenseCommand(medicationDispenseForm, {
+          daysSupplyValue,
+          doseValue,
+          frequency,
+          period,
+          quantityValue
+        })
       );
       await loadMedicationDispenses(selectedPatient.id, createdMedicationDispense.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
@@ -2398,53 +2339,9 @@ export function App() {
       const createdMedicationAdministration = await createMedicationAdministration(
         clinicalApi,
         selectedPatient.id,
-        {
-          encounterId: medicationAdministrationForm.encounterId || undefined,
-          medicationRequestId:
-            medicationAdministrationForm.medicationRequestId || undefined,
-          reasonConditionId: medicationAdministrationForm.reasonConditionId || undefined,
-          status: "completed",
-          category: medicationAdministrationForm.category,
-          medicationCode: {
-            system: medicationAdministrationForm.medicationSystem,
-            code: medicationAdministrationForm.medicationCode,
-            display: medicationAdministrationForm.medicationDisplay
-          },
-          effectivePeriod: {
-            start: toApiDateTime(medicationAdministrationForm.effectiveStart)
-          },
-          performers: [
-            {
-              actorType: medicationAdministrationForm.performerActorType,
-              actorId: medicationAdministrationForm.performerActorId,
-              function: medicationAdministrationForm.performerFunctionDisplay
-                ? {
-                    system:
-                      "urn:wiiicare:nexus:medication-admin-performer-function",
-                    code: "medication-administration-recorder",
-                    display: medicationAdministrationForm.performerFunctionDisplay
-                  }
-                : undefined
-            }
-          ],
-          dosage: {
-            text: medicationAdministrationForm.dosageText || undefined,
-            route: medicationAdministrationForm.routeCode
-              ? {
-                  system: medicationAdministrationForm.routeSystem,
-                  code: medicationAdministrationForm.routeCode,
-                  display: medicationAdministrationForm.routeDisplay
-                }
-              : undefined,
-            doseQuantity: {
-              value: doseValue,
-              unit: medicationAdministrationForm.doseUnit,
-              system: "http://unitsofmeasure.org",
-              code: medicationAdministrationForm.doseUnit
-            }
-          },
-          note: medicationAdministrationForm.note || undefined
-        }
+        buildMedicationAdministrationCommand(medicationAdministrationForm, {
+          doseValue
+        })
       );
       await loadMedicationAdministrations(
         selectedPatient.id,
