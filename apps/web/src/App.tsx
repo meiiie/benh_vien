@@ -130,13 +130,7 @@ import {
 } from "./lib/clinicalFormatters.js";
 import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
-import { AuditLogPage } from "./pages/AuditLogPage.js";
-import { DashboardPage } from "./pages/DashboardPage.js";
-import { DocumentsPage } from "./pages/DocumentsPage.js";
-import { GatewayAcknowledgementPage } from "./pages/GatewayAcknowledgementPage.js";
-import { InteropPage } from "./pages/InteropPage.js";
-import { SettingsPage } from "./pages/SettingsPage.js";
-import { WorkspacePage } from "./pages/WorkspacePage.js";
+import { AppRouteRenderer } from "./pages/AppRouteRenderer.js";
 
 import {
   defaultAllergyIntoleranceForm,
@@ -530,6 +524,26 @@ export function App() {
   const openEncounters = encounters.filter((encounter) => encounter.status === "in-progress");
   const signedDocuments = clinicalDocuments.filter((document) => document.status === "signed");
   const draftDocuments = clinicalDocuments.filter((document) => document.status === "draft");
+  const dashboardMetrics = {
+    allergyIntolerances: allergyIntolerances.length,
+    clinicalDocuments: clinicalDocuments.length,
+    conditions: conditions.length,
+    diagnosticReports: diagnosticReports.length,
+    draftDocuments: draftDocuments.length,
+    imagingStudies: imagingStudies.length,
+    medicationAdministrations: medicationAdministrations.length,
+    medicationDispenses: medicationDispenses.length,
+    medicationRequests: medicationRequests.length,
+    observations: observations.length,
+    openEncounters: openEncounters.length,
+    patients: patients.length,
+    procedures: procedures.length,
+    providerEndpoints: providerDirectory?.endpoints.length ?? 0,
+    providerOrganizations: providerDirectory?.organizations.length ?? 0,
+    recordTransfers: recordTransfers.length,
+    serviceRequests: serviceRequests.length,
+    workflowTasks: workflowTasks.length
+  };
   const canReadAudit = authSession?.actor.role === "auditor" || authSession?.actor.role === "admin";
   const canViewRuntimeInfo = canReadAudit;
   const isAuditOnlySession = authSession?.actor.role === "auditor";
@@ -3103,143 +3117,80 @@ export function App() {
       onNavigate={isIntegrationSession ? () => setAppRoute("interop") : setAppRoute}
       statusMessage={statusMessage}
     >
-      {renderCurrentRoute()}
+      <AppRouteRenderer
+        apiBaseUrl={apiBaseUrl}
+        apiRuntimeInfo={apiRuntimeInfo}
+        apiRuntimeWarning={apiRuntimeWarning}
+        appRoute={appRoute}
+        authSession={authSession}
+        canMergePatients={canMergePatients}
+        canViewRuntimeInfo={canViewRuntimeInfo}
+        dashboardMetrics={dashboardMetrics}
+        fhirPreviews={{
+          allergyIntolerance: allergyIntoleranceFhirPreview,
+          capabilityStatement: capabilityStatementPreview,
+          condition: conditionFhirPreview,
+          consent: consentFhirPreview,
+          diagnosticReport: diagnosticReportFhirPreview,
+          document: documentFhirPreview,
+          documentProvenance: documentProvenanceFhirPreview,
+          encounter: encounterFhirPreview,
+          imagingStudy: imagingStudyFhirPreview,
+          medicationAdministration: medicationAdministrationFhirPreview,
+          medicationDispense: medicationDispenseFhirPreview,
+          medicationRequest: medicationRequestFhirPreview,
+          observation: observationFhirPreview,
+          patient: patientFhirPreview,
+          patientBundle: patientFhirBundlePreview,
+          patientDocumentBundle: patientFhirDocumentBundlePreview,
+          procedure: procedureFhirPreview,
+          providerDirectory: providerDirectoryFhirPreview,
+          recordTransferTask: recordTransferFhirTaskPreview,
+          serviceRequest: serviceRequestFhirPreview,
+          workflowTask: workflowTaskFhirPreview
+        }}
+        gatewayAcknowledgementForm={gatewayAcknowledgementForm}
+        gatewayAcknowledgementResult={gatewayAcknowledgementResult}
+        isIntegrationSession={isIntegrationSession}
+        isSubmittingGatewayAcknowledgement={isSubmittingGatewayAcknowledgement}
+        latestEncounterServiceType={encounters[0]?.serviceType}
+        loginForm={loginForm}
+        panels={{
+          allergyIntolerance: renderAllergyIntolerancePanel,
+          audit: renderAuditPanel,
+          clinicalDocument: renderDocumentPanel,
+          condition: renderConditionPanel,
+          consentInterop: renderConsentInteropPanel,
+          createPatient: renderCreatePatientPanel,
+          diagnosticReport: renderDiagnosticReportPanel,
+          encounter: renderEncounterPanel,
+          globalAudit: renderGlobalAuditPanel,
+          imagingStudy: renderImagingStudyPanel,
+          medicationAdministration: renderMedicationAdministrationPanel,
+          medicationDispense: renderMedicationDispensePanel,
+          medicationRequest: renderMedicationRequestPanel,
+          observation: renderObservationPanel,
+          patientDetail: renderPatientDetailPanel,
+          patientList: renderPatientListPanel,
+          patientMerge: renderPatientMergePanel,
+          procedure: renderProcedurePanel,
+          providerDirectory: renderProviderDirectoryPanel,
+          recordTransferInterop: renderRecordTransferInteropPanel,
+          serviceRequest: renderServiceRequestPanel,
+          workflowTask: renderWorkflowTaskPanel
+        }}
+        referenceSignals={referenceSignals}
+        selectedPatient={selectedPatient}
+        workflowSteps={workflowSteps}
+        onGatewayAcknowledgementFormChange={setGatewayAcknowledgementForm}
+        onGatewayAcknowledgementSubmit={(event) =>
+          void handleGatewayAcknowledgementSubmit(event)
+        }
+        onNavigate={setAppRoute}
+        onReloadRuntimeInfo={() => void loadApiRuntimeInfo()}
+      />
     </AuthenticatedLayout>
   );
-
-  function renderCurrentRoute(): ReactNode {
-    if (isIntegrationSession) {
-      return (
-        <GatewayAcknowledgementPage
-          apiBaseUrl={apiBaseUrl}
-          authSession={authSession}
-          form={gatewayAcknowledgementForm}
-          isSubmitting={isSubmittingGatewayAcknowledgement}
-          onFormChange={setGatewayAcknowledgementForm}
-          onSubmit={(event) => void handleGatewayAcknowledgementSubmit(event)}
-          result={gatewayAcknowledgementResult}
-        />
-      );
-    }
-
-    if (appRoute === "workspace") {
-      return (
-        <WorkspacePage
-          allergyIntolerancePanel={renderAllergyIntolerancePanel()}
-          conditionPanel={renderConditionPanel()}
-          createPatientPanel={renderCreatePatientPanel()}
-          diagnosticReportPanel={renderDiagnosticReportPanel()}
-          encounterPanel={renderEncounterPanel()}
-          imagingStudyPanel={renderImagingStudyPanel()}
-          medicationAdministrationPanel={renderMedicationAdministrationPanel()}
-          medicationDispensePanel={renderMedicationDispensePanel()}
-          medicationRequestPanel={renderMedicationRequestPanel()}
-          observationPanel={renderObservationPanel()}
-          patientDetailPanel={renderPatientDetailPanel()}
-          patientListPanel={renderPatientListPanel()}
-          patientMergePanel={canMergePatients ? renderPatientMergePanel() : undefined}
-          procedurePanel={renderProcedurePanel()}
-          serviceRequestPanel={renderServiceRequestPanel()}
-          workflowTaskPanel={renderWorkflowTaskPanel()}
-        />
-      );
-    }
-
-    if (appRoute === "documents") {
-      return (
-        <DocumentsPage
-          documentFhirPreview={documentFhirPreview}
-          documentPanel={renderDocumentPanel()}
-          documentProvenanceFhirPreview={documentProvenanceFhirPreview}
-          patientListPanel={renderPatientListPanel()}
-        />
-      );
-    }
-
-    if (appRoute === "audit") {
-      return (
-        <AuditLogPage
-          auditPanel={renderAuditPanel()}
-          globalAuditPanel={renderGlobalAuditPanel()}
-        />
-      );
-    }
-
-    if (appRoute === "interop") {
-      return (
-        <InteropPage
-          allergyIntoleranceFhirPreview={allergyIntoleranceFhirPreview}
-          capabilityStatementPreview={capabilityStatementPreview}
-          conditionFhirPreview={conditionFhirPreview}
-          consentFhirPreview={consentFhirPreview}
-          consentInteropPanel={renderConsentInteropPanel()}
-          diagnosticReportFhirPreview={diagnosticReportFhirPreview}
-          documentFhirPreview={documentFhirPreview}
-          documentProvenanceFhirPreview={documentProvenanceFhirPreview}
-          encounterFhirPreview={encounterFhirPreview}
-          imagingStudyFhirPreview={imagingStudyFhirPreview}
-          medicationAdministrationFhirPreview={medicationAdministrationFhirPreview}
-          medicationDispenseFhirPreview={medicationDispenseFhirPreview}
-          medicationRequestFhirPreview={medicationRequestFhirPreview}
-          observationFhirPreview={observationFhirPreview}
-          patientFhirBundlePreview={patientFhirBundlePreview}
-          patientFhirDocumentBundlePreview={patientFhirDocumentBundlePreview}
-          patientFhirPreview={patientFhirPreview}
-          procedureFhirPreview={procedureFhirPreview}
-          providerDirectoryFhirPreview={providerDirectoryFhirPreview}
-          providerDirectoryPanel={renderProviderDirectoryPanel()}
-          recordTransferFhirTaskPreview={recordTransferFhirTaskPreview}
-          recordTransferInteropPanel={renderRecordTransferInteropPanel()}
-          referenceSignals={referenceSignals}
-          serviceRequestFhirPreview={serviceRequestFhirPreview}
-          workflowSteps={workflowSteps}
-          workflowTaskFhirPreview={workflowTaskFhirPreview}
-        />
-      );
-    }
-
-    if (appRoute === "settings") {
-      return (
-        <SettingsPage
-          apiBaseUrl={apiBaseUrl}
-          apiRuntimeInfo={apiRuntimeInfo}
-          apiRuntimeWarning={apiRuntimeWarning}
-          authSession={authSession}
-          canViewRuntimeInfo={canViewRuntimeInfo}
-          loginForm={loginForm}
-          onReloadRuntimeInfo={() => void loadApiRuntimeInfo()}
-        />
-      );
-    }
-
-    return (
-      <DashboardPage
-        latestEncounterServiceType={encounters[0]?.serviceType}
-        metrics={{
-          allergyIntolerances: allergyIntolerances.length,
-          clinicalDocuments: clinicalDocuments.length,
-          conditions: conditions.length,
-          diagnosticReports: diagnosticReports.length,
-          draftDocuments: draftDocuments.length,
-          imagingStudies: imagingStudies.length,
-          medicationAdministrations: medicationAdministrations.length,
-          medicationDispenses: medicationDispenses.length,
-          medicationRequests: medicationRequests.length,
-          observations: observations.length,
-          openEncounters: openEncounters.length,
-          patients: patients.length,
-          procedures: procedures.length,
-          providerEndpoints: providerDirectory?.endpoints.length ?? 0,
-          providerOrganizations: providerDirectory?.organizations.length ?? 0,
-          recordTransfers: recordTransfers.length,
-          serviceRequests: serviceRequests.length,
-          workflowTasks: workflowTasks.length
-        }}
-        onNavigate={setAppRoute}
-        selectedPatient={selectedPatient}
-      />
-    );
-  }
 
   function renderPatientListPanel(): ReactNode {
     return (

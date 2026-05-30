@@ -2,7 +2,7 @@ import { Info, MetricCard, PageHeader } from "../components/AppShell.js";
 import { formatDateTime } from "../lib/clinicalFormatters.js";
 import type { AppRoute, Patient } from "../types/clinical.js";
 
-type DashboardMetrics = {
+export type DashboardMetrics = {
   readonly allergyIntolerances: number;
   readonly clinicalDocuments: number;
   readonly conditions: number;
