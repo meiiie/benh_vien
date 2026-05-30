@@ -80,7 +80,9 @@ import {
   listPatients,
   mergePatient
 } from "./features/patient-registry/patientRegistryApi.js";
+import { PatientDetailPanel } from "./features/patient-registry/PatientDetailPanel.js";
 import { PatientListPanel } from "./features/patient-registry/PatientListPanel.js";
+import { PatientMergePanel } from "./features/patient-registry/PatientMergePanel.js";
 import {
   getApiRuntimeInfo,
   getFhirCapabilityStatement
@@ -127,7 +129,6 @@ import {
   formatDosageInstruction,
   formatEncounterClass,
   formatEncounterStatus,
-  formatGender,
   formatIdentifierType,
   formatImagingStudyStatus,
   formatMedicationAdministrationCategory,
@@ -3401,181 +3402,27 @@ export function App() {
 
   function renderPatientDetailPanel(): ReactNode {
     return (
-      <article className="panel patient-detail">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Patient chart</p>
-            <h2>Hồ sơ đang chọn</h2>
-          </div>
-          {selectedPatient ? (
-            <span className={`pill ${isSelectedPatientMerged ? "gold" : ""}`}>
-              {formatPatientRecordStatus(selectedPatient.status)}
-            </span>
-          ) : null}
-        </div>
-
-        {selectedPatient && isSelectedPatientMerged ? (
-          <div className="merged-patient-banner" role="status">
-            <p className="eyebrow">Master Patient Index</p>
-            <h3>Hồ sơ đã được merge và chuyển sang chế độ chỉ đọc</h3>
-            <p>
-              Không ghi thêm dữ liệu lâm sàng vào hồ sơ nguồn này. Các lượt khám, chỉ định,
-              kết quả, thuốc và tài liệu mới cần được tạo trên hồ sơ đích để tránh phân mảnh
-              bệnh án điện tử.
-            </p>
-            <div className="detail-grid compact">
-              <Info
-                label="Hồ sơ đích"
-                value={
-                  selectedPatientMergeTarget
-                    ? `${selectedPatientMergeTarget.fullName} (${selectedPatient.mergedIntoPatientId})`
-                    : selectedPatient.mergedIntoPatientId ?? "Chưa ghi nhận"
-                }
-              />
-              <Info
-                label="Thời điểm merge"
-                value={selectedPatient.mergedAt ? formatDateTime(selectedPatient.mergedAt) : "Chưa ghi nhận"}
-              />
-              <Info label="Người thực hiện" value={selectedPatient.mergedByActorId ?? "Chưa ghi nhận"} />
-              <Info label="Lý do" value={selectedPatient.mergeReason ?? "Chưa ghi nhận"} />
-            </div>
-          </div>
-        ) : null}
-
-        {selectedPatient ? (
-          <div className="detail-grid">
-            <Info label="Họ tên" value={selectedPatient.fullName} />
-            <Info label="Ngày sinh" value={selectedPatient.birthDate ?? "Chưa có"} />
-            <Info label="Giới tính" value={formatGender(selectedPatient.gender)} />
-            <Info label="Điện thoại" value={selectedPatient.phone ?? "Chưa có"} />
-            <Info label="Cơ sở quản lý" value={selectedPatient.managingOrganizationId} />
-            <Info label="Cập nhật" value={formatDateTime(selectedPatient.updatedAt)} />
-            <div className="identifiers">
-              <span>Định danh</span>
-              {selectedPatient.identifiers.map((identifier) => (
-                <code key={`${identifier.system}:${identifier.value}`}>
-                  {formatIdentifierType(identifier.type)} · {identifier.value}
-                </code>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <p className="empty-state">Chưa có bệnh nhân nào để hiển thị.</p>
-        )}
-      </article>
+      <PatientDetailPanel
+        isMerged={isSelectedPatientMerged}
+        patient={selectedPatient}
+        mergeTarget={selectedPatientMergeTarget}
+      />
     );
   }
 
   function renderPatientMergePanel(): ReactNode {
-    const canMergeSelectedPatient = Boolean(selectedPatient && selectedPatient.status === "active");
-
     return (
-      <article className="panel patient-merge-panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">MPI Governance</p>
-            <h2>Đối soát và merge hồ sơ</h2>
-          </div>
-          <span className="pill gold">Admin-only</span>
-        </div>
-
-        <p className="empty-state">
-          Dùng khi phát hiện hồ sơ đăng ký trùng. Hệ thống giữ lại hồ sơ nguồn để kiểm toán,
-          đánh dấu chỉ đọc và ghi liên kết tới hồ sơ đích theo hướng Master Patient Index.
-        </p>
-
-        {selectedPatient ? (
-          <div className="detail-grid compact">
-            <Info
-              label="Hồ sơ nguồn"
-              value={`${selectedPatient.fullName} (${selectedPatient.identifiers[0]?.value ?? selectedPatient.id})`}
-            />
-            <Info label="Trạng thái nguồn" value={formatPatientRecordStatus(selectedPatient.status)} />
-            <Info label="Mã xác nhận merge" value={patientMergeConfirmationCode} />
-          </div>
-        ) : null}
-
-        <form className="patient-form" onSubmit={(event) => void handleMergeSelectedPatient(event)}>
-          <label>
-            Hồ sơ đích
-            <select
-              value={patientMergeTargetId}
-              onChange={(event) =>
-                setPatientMergeForm({
-                  ...patientMergeForm,
-                  targetPatientId: event.target.value
-                })
-              }
-              disabled={!canMergeSelectedPatient || isMergingPatient || patientMergeCandidates.length === 0}
-            >
-              {patientMergeCandidates.length === 0 ? (
-                <option value="">Không có hồ sơ đích khả dụng</option>
-              ) : (
-                patientMergeCandidates.map((patient) => (
-                  <option key={patient.id} value={patient.id}>
-                    {patient.fullName} · {patient.identifiers[0]?.value ?? patient.id}
-                  </option>
-                ))
-              )}
-            </select>
-          </label>
-
-          <label className="wide-field">
-            Lý do merge
-            <input
-              value={patientMergeForm.reason}
-              onChange={(event) =>
-                setPatientMergeForm({
-                  ...patientMergeForm,
-                  reason: event.target.value
-                })
-              }
-              placeholder="Ví dụ: Trùng CCCD/BHYT sau khi đối soát MPI."
-            />
-          </label>
-
-          <label className="wide-field">
-            Nhập lại mã xác nhận của hồ sơ nguồn
-            <input
-              value={patientMergeForm.confirmationText}
-              onChange={(event) =>
-                setPatientMergeForm({
-                  ...patientMergeForm,
-                  confirmationText: event.target.value
-                })
-              }
-              placeholder={patientMergeConfirmationCode || "Chọn hồ sơ nguồn trước"}
-            />
-          </label>
-
-          {selectedPatient && patientMergeForm.confirmationText.trim() && !isPatientMergeConfirmationValid ? (
-            <p className="transfer-alert wide-field">
-              Mã xác nhận chưa khớp. Để tránh merge nhầm bệnh án, hãy nhập đúng{" "}
-              <strong>{patientMergeConfirmationCode}</strong>.
-            </p>
-          ) : null}
-
-          {selectedPatient && selectedPatient.status !== "active" ? (
-            <p className="transfer-alert wide-field">
-              Hồ sơ đang chọn không còn ở trạng thái hoạt động nên không thể dùng làm hồ sơ nguồn để merge.
-            </p>
-          ) : null}
-
-          <button
-            className="primary-button"
-            type="submit"
-            disabled={
-              !canMergeSelectedPatient ||
-              !patientMergeTargetId ||
-              !patientMergeForm.reason.trim() ||
-              !isPatientMergeConfirmationValid ||
-              isMergingPatient
-            }
-          >
-            {isMergingPatient ? "Đang merge..." : "Merge hồ sơ nguồn"}
-          </button>
-        </form>
-      </article>
+      <PatientMergePanel
+        candidates={patientMergeCandidates}
+        confirmationCode={patientMergeConfirmationCode}
+        form={patientMergeForm}
+        isConfirmationValid={isPatientMergeConfirmationValid}
+        isMerging={isMergingPatient}
+        selectedPatient={selectedPatient}
+        targetPatientId={patientMergeTargetId}
+        onFormChange={setPatientMergeForm}
+        onMergePatient={handleMergeSelectedPatient}
+      />
     );
   }
 
