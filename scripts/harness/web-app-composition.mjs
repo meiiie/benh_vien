@@ -11,6 +11,7 @@ const requiredModules = [
   "apps/web/src/components/AppShell.tsx",
   "apps/web/src/config/demoClinicalDefaults.ts",
   "apps/web/src/features/audit/auditApi.ts",
+  "apps/web/src/features/clinical-documents/ClinicalDocumentPanel.tsx",
   "apps/web/src/features/clinical-documents/clinicalDocumentApi.ts",
   "apps/web/src/features/clinical-records/AllergyIntolerancePanel.tsx",
   "apps/web/src/features/clinical-records/ConditionPanel.tsx",
@@ -50,7 +51,7 @@ const requiredModules = [
   "apps/web/src/pages/WorkspacePage.tsx",
   "apps/web/src/types/clinical.ts"
 ];
-const maxAppLines = 4_050;
+const maxAppLines = 3_850;
 
 const appSource = await readFile(appPath, "utf8");
 const appLineCount = appSource.split(/\r?\n/).length;

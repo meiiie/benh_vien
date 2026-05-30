@@ -28,6 +28,7 @@ import {
   listClinicalDocuments,
   signClinicalDocument
 } from "./features/clinical-documents/clinicalDocumentApi.js";
+import { ClinicalDocumentPanel } from "./features/clinical-documents/ClinicalDocumentPanel.js";
 import {
   createAllergyIntolerance,
   createCondition,
@@ -126,8 +127,6 @@ import {
 } from "./lib/auditFormatters.js";
 import {
   formatDateTime,
-  formatDocumentStatus,
-  formatDocumentType,
   formatIdentifierType,
   formatPatientRecordStatus,
   isMissingRecordTransferDeliveryAttemptsRoute,
@@ -170,8 +169,6 @@ import {
 import type {
   AppRoute,
   PatientIdentifierType,
-  ClinicalDocumentType,
-  ClinicalDocumentStatus,
   MedicationTimingUnit,
   MedicationDispenseStatus,
   ConsentStatus,
@@ -3588,189 +3585,26 @@ export function App() {
       />
     );
   }
+
   function renderDocumentPanel(): ReactNode {
     return (
-      <article className="panel document-panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Document center</p>
-            <h2>Tài liệu bệnh án</h2>
-          </div>
-          <span className="pill cyan">{isLoadingDocuments ? "đang tải" : `${clinicalDocuments.length} tài liệu`}</span>
-        </div>
-
-        <div className="taxonomy-strip" aria-label="Phân loại tài liệu tham chiếu OpenEMR">
-          {documentTaxonomy.map((item) => (
-            <span key={item}>{item}</span>
-          ))}
-        </div>
-
-        <div className="document-layout">
-          <div className="document-cards">
-            {clinicalDocuments.map((document) => (
-              <button
-                className={document.id === selectedDocumentId ? "document-card selected" : "document-card"}
-                key={document.id}
-                type="button"
-                onClick={() => setSelectedDocumentId(document.id)}
-              >
-                <span>{formatDocumentType(document.type)}</span>
-                <strong>{document.title}</strong>
-                <small>
-                  {formatDocumentStatus(document.status)} ·{" "}
-                  {document.encounterId ? `Encounter ${document.encounterId}` : "Chưa gắn encounter"}
-                </small>
-              </button>
-            ))}
-            {clinicalDocuments.length === 0 ? (
-              <p className="empty-state">Bệnh nhân này chưa có tài liệu bệnh án.</p>
-            ) : null}
-          </div>
-
-          <div className="document-summary">
-            {selectedDocument ? (
-              <>
-                <div className="document-meta">
-                  <Info label="Loại tài liệu" value={formatDocumentType(selectedDocument.type)} />
-                  <Info label="Trạng thái" value={formatDocumentStatus(selectedDocument.status)} />
-                  <Info label="Encounter" value={selectedDocument.encounterId ?? "Chưa gắn"} />
-                  <Info label="Người tạo" value={selectedDocument.authorPractitionerId} />
-                  <Info label="Định dạng" value={selectedDocument.attachmentContentType ?? "Chưa có"} />
-                  <Info
-                    label="Dung lượng"
-                    value={
-                      selectedDocument.attachmentSizeBytes !== undefined
-                        ? `${selectedDocument.attachmentSizeBytes.toLocaleString("vi-VN")} byte`
-                        : "Chưa có"
-                    }
-                  />
-                  <Info
-                    label="Hash SHA-1"
-                    value={selectedDocument.attachmentHashSha1Base64 ?? "Chưa có"}
-                  />
-                </div>
-                <code>{selectedDocument.storageUri}</code>
-                <div className="action-row">
-                  <button
-                    className="primary-button"
-                    type="button"
-                    disabled={isSelectedPatientMerged || selectedDocument.status !== "draft" || isSigningDocument}
-                    onClick={() => void handleSignClinicalDocument(selectedDocument.id)}
-                  >
-                    {isSigningDocument ? "Đang ký..." : "Ký tài liệu nháp"}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <p className="empty-state">Chọn một tài liệu để xem siêu dữ liệu và thao tác ký.</p>
-            )}
-          </div>
-        </div>
-
-        <form className="document-form" onSubmit={(event) => void handleCreateClinicalDocument(event)}>
-          <label>
-            Loại tài liệu
-            <select
-              value={documentForm.type}
-              onChange={(event) =>
-                setDocumentForm({ ...documentForm, type: event.target.value as ClinicalDocumentType })
-              }
-            >
-              <option value="referral-letter">Giấy chuyển tuyến</option>
-              <option value="discharge-summary">Tóm tắt ra viện</option>
-              <option value="lab-report">Kết quả xét nghiệm</option>
-              <option value="imaging-report">Kết quả chẩn đoán hình ảnh</option>
-              <option value="admission-note">Phiếu nhập viện</option>
-              <option value="consent-form">Phiếu đồng ý điều trị</option>
-              <option value="advance-directive">Chỉ dẫn chăm sóc trước</option>
-              <option value="ccda">CCDA</option>
-              <option value="ccr">CCR</option>
-              <option value="medical-record">Hồ sơ bệnh án</option>
-              <option value="patient-information">Thông tin bệnh nhân</option>
-            </select>
-          </label>
-          <label>
-            Gắn với lượt khám
-            <select
-              value={documentForm.encounterId}
-              onChange={(event) => setDocumentForm({ ...documentForm, encounterId: event.target.value })}
-            >
-              <option value="">Không gắn</option>
-              {encounters.map((encounter) => (
-                <option key={encounter.id} value={encounter.id}>
-                  {encounter.serviceType} · {formatDateTime(encounter.startedAt)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="wide-field">
-            Tiêu đề tài liệu
-            <input
-              value={documentForm.title}
-              onChange={(event) => setDocumentForm({ ...documentForm, title: event.target.value })}
-            />
-          </label>
-          <label className="wide-field">
-            URI lưu trữ
-            <input
-              value={documentForm.storageUri}
-              onChange={(event) => setDocumentForm({ ...documentForm, storageUri: event.target.value })}
-            />
-          </label>
-          <label>
-            Định dạng MIME
-            <input
-              value={documentForm.attachmentContentType}
-              onChange={(event) =>
-                setDocumentForm({ ...documentForm, attachmentContentType: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Dung lượng byte
-            <input
-              inputMode="numeric"
-              min="0"
-              type="number"
-              value={documentForm.attachmentSizeBytes}
-              onChange={(event) =>
-                setDocumentForm({ ...documentForm, attachmentSizeBytes: event.target.value })
-              }
-            />
-          </label>
-          <label className="wide-field">
-            Hash SHA-1 Base64
-            <input
-              value={documentForm.attachmentHashSha1Base64}
-              onChange={(event) =>
-                setDocumentForm({ ...documentForm, attachmentHashSha1Base64: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Thời điểm tạo tệp
-            <input
-              type="datetime-local"
-              value={documentForm.attachmentCreatedAt}
-              onChange={(event) =>
-                setDocumentForm({ ...documentForm, attachmentCreatedAt: event.target.value })
-              }
-            />
-          </label>
-          <label className="wide-field">
-            Mã bác sĩ/người tạo
-            <input
-              value={documentForm.authorPractitionerId}
-              onChange={(event) =>
-                setDocumentForm({ ...documentForm, authorPractitionerId: event.target.value })
-              }
-            />
-          </label>
-          <button className="primary-button" type="submit" disabled={selectedPatientWriteDisabled || isSubmittingDocument}>
-            {isSubmittingDocument ? "Đang tạo..." : "Tạo tài liệu bệnh án"}
-          </button>
-        </form>
-      </article>
+      <ClinicalDocumentPanel
+        clinicalDocuments={clinicalDocuments}
+        documentTaxonomy={documentTaxonomy}
+        encounters={encounters}
+        form={documentForm}
+        isLoading={isLoadingDocuments}
+        isSelectedPatientMerged={isSelectedPatientMerged}
+        isSigningDocument={isSigningDocument}
+        isSubmitting={isSubmittingDocument}
+        isWriteDisabled={selectedPatientWriteDisabled}
+        selectedDocument={selectedDocument}
+        selectedDocumentId={selectedDocumentId}
+        onCreateDocument={handleCreateClinicalDocument}
+        onFormChange={setDocumentForm}
+        onSelectDocument={setSelectedDocumentId}
+        onSignDocument={handleSignClinicalDocument}
+      />
     );
   }
 
