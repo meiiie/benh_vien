@@ -15,6 +15,7 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/AllergyIntolerancePanel.tsx",
   "apps/web/src/features/clinical-records/ConditionPanel.tsx",
   "apps/web/src/features/clinical-records/EncounterPanel.tsx",
+  "apps/web/src/features/clinical-records/ServiceRequestPanel.tsx",
   "apps/web/src/features/clinical-records/clinicalRecordApi.ts",
   "apps/web/src/features/consents/ConsentInteropPanel.tsx",
   "apps/web/src/features/consents/consentApi.ts",
@@ -41,7 +42,7 @@ const requiredModules = [
   "apps/web/src/pages/WorkspacePage.tsx",
   "apps/web/src/types/clinical.ts"
 ];
-const maxAppLines = 6_190;
+const maxAppLines = 5_985;
 
 const appSource = await readFile(appPath, "utf8");
 const appLineCount = appSource.split(/\r?\n/).length;
