@@ -101,7 +101,7 @@ import {
   listPatientConsents,
   revokePatientConsent
 } from "./features/consents/consentApi.js";
-import { ConsentInteropPanel } from "./features/consents/ConsentInteropPanel.js";
+import { buildInteropPanelRenderers } from "./features/interoperability/interopPanelRenderers.js";
 import {
   createPatient,
   exportPatientFhir,
@@ -120,7 +120,6 @@ import {
   exportProviderDirectoryFhir,
   getProviderDirectory
 } from "./features/provider-directory/providerDirectoryApi.js";
-import { ProviderDirectoryPanel } from "./features/provider-directory/ProviderDirectoryPanel.js";
 import {
   acknowledgeRecordTransfer,
   createRecordTransfer,
@@ -132,7 +131,6 @@ import {
   retryRecordTransfer,
   sendRecordTransfer
 } from "./features/record-transfers/recordTransferApi.js";
-import { RecordTransferInteropPanel } from "./features/record-transfers/RecordTransferInteropPanel.js";
 import { formatAuditIntegrityReason } from "./lib/auditFormatters.js";
 import {
   formatDateTime,
@@ -507,6 +505,37 @@ export function App() {
     onPatientSearchTermChange: setPatientSearchTerm,
     onPatientSelect: setSelectedPatientId,
     onPatientStatusFilterChange: setPatientStatusFilter
+  });
+  const interopPanels = buildInteropPanelRenderers({
+    consentReference: defaultTransferContext.consentReference,
+    consents,
+    deliveryAttemptWarning: recordTransferDeliveryAttemptWarning,
+    deliveryAttempts: recordTransferDeliveryAttempts,
+    form: recordTransferForm,
+    isLoadingConsents,
+    isLoadingDeliveryAttempts: isLoadingRecordTransferDeliveryAttempts,
+    isLoadingProviderDirectory,
+    isLoadingRecordTransfers,
+    isPatientMerged: isSelectedPatientMerged,
+    isSubmittingRecordTransfer,
+    isWriteDisabled: selectedPatientWriteDisabled,
+    providerDirectory,
+    recipientOrganizationId: defaultTransferContext.recipientOrganizationId,
+    recordTransfers,
+    revokingConsentId,
+    selectedRecordTransfer: workspaceSelection.selectedRecordTransfer,
+    selectedRecordTransferId,
+    transitioningRecordTransferId,
+    onCreateRecordTransfer: handleCreateRecordTransfer,
+    onFailRecordTransfer: handleFailRecordTransfer,
+    onLoadConsentFhirPreview: loadConsentFhirPreview,
+    onProviderDirectoryRefresh: loadProviderDirectory,
+    onReceiveRecordTransfer: handleReceiveRecordTransfer,
+    onRecordTransferFormChange: setRecordTransferForm,
+    onRetryRecordTransfer: handleRetryRecordTransfer,
+    onRevokeConsent: handleRevokeConsent,
+    onSelectRecordTransfer: setSelectedRecordTransferId,
+    onSendRecordTransfer: handleSendRecordTransfer
   });
 
   useEffect(() => {
@@ -2601,7 +2630,7 @@ export function App() {
           audit: renderAuditPanel,
           clinicalDocument: renderDocumentPanel,
           condition: renderConditionPanel,
-          consentInterop: renderConsentInteropPanel,
+          consentInterop: interopPanels.consentInterop,
           createPatient: patientPanels.createPatient,
           diagnosticReport: renderDiagnosticReportPanel,
           encounter: renderEncounterPanel,
@@ -2615,8 +2644,8 @@ export function App() {
           patientList: patientPanels.patientList,
           patientMerge: patientPanels.patientMerge,
           procedure: renderProcedurePanel,
-          providerDirectory: renderProviderDirectoryPanel,
-          recordTransferInterop: renderRecordTransferInteropPanel,
+          providerDirectory: interopPanels.providerDirectory,
+          recordTransferInterop: interopPanels.recordTransferInterop,
           serviceRequest: renderServiceRequestPanel,
           workflowTask: renderWorkflowTaskPanel
         }}
@@ -2636,57 +2665,6 @@ export function App() {
   function clearPatientFilters() {
     setPatientSearchTerm("");
     setPatientStatusFilter("all");
-  }
-
-  function renderConsentInteropPanel(): ReactNode {
-    return (
-      <ConsentInteropPanel
-        consents={consents}
-        consentReference={defaultTransferContext.consentReference}
-        isLoading={isLoadingConsents}
-        isWriteDisabled={selectedPatientWriteDisabled}
-        recipientOrganizationId={defaultTransferContext.recipientOrganizationId}
-        revokingConsentId={revokingConsentId}
-        onLoadFhirPreview={loadConsentFhirPreview}
-        onRevokeConsent={handleRevokeConsent}
-      />
-    );
-  }
-
-  function renderRecordTransferInteropPanel(): ReactNode {
-    return (
-      <RecordTransferInteropPanel
-        deliveryAttemptWarning={recordTransferDeliveryAttemptWarning}
-        deliveryAttempts={recordTransferDeliveryAttempts}
-        form={recordTransferForm}
-        isLoadingDeliveryAttempts={isLoadingRecordTransferDeliveryAttempts}
-        isLoadingRecordTransfers={isLoadingRecordTransfers}
-        isPatientMerged={isSelectedPatientMerged}
-        isSubmitting={isSubmittingRecordTransfer}
-        isWriteDisabled={selectedPatientWriteDisabled}
-        recordTransfers={recordTransfers}
-        selectedRecordTransfer={workspaceSelection.selectedRecordTransfer}
-        selectedRecordTransferId={selectedRecordTransferId}
-        transitioningRecordTransferId={transitioningRecordTransferId}
-        onCreateRecordTransfer={handleCreateRecordTransfer}
-        onFailRecordTransfer={handleFailRecordTransfer}
-        onFormChange={setRecordTransferForm}
-        onReceiveRecordTransfer={handleReceiveRecordTransfer}
-        onRetryRecordTransfer={handleRetryRecordTransfer}
-        onSelectRecordTransfer={setSelectedRecordTransferId}
-        onSendRecordTransfer={handleSendRecordTransfer}
-      />
-    );
-  }
-
-  function renderProviderDirectoryPanel(): ReactNode {
-    return (
-      <ProviderDirectoryPanel
-        directory={providerDirectory}
-        isLoading={isLoadingProviderDirectory}
-        onRefresh={loadProviderDirectory}
-      />
-    );
   }
 
   function renderEncounterPanel(): ReactNode {
