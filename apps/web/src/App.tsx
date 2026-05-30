@@ -88,6 +88,7 @@ import {
   exportProviderDirectoryFhir,
   getProviderDirectory
 } from "./features/provider-directory/providerDirectoryApi.js";
+import { ProviderDirectoryPanel } from "./features/provider-directory/ProviderDirectoryPanel.js";
 import {
   acknowledgeRecordTransfer,
   createRecordTransfer,
@@ -151,7 +152,6 @@ import {
   formatProcedurePerformers,
   formatProcedureReferences,
   formatProcedureStatus,
-  formatProviderEndpointConnectionType,
   formatRecordTransferBundleType,
   formatRecordTransferDeliveryAttemptStatus,
   formatRecordTransferPriority,
@@ -3784,49 +3784,11 @@ export function App() {
 
   function renderProviderDirectoryPanel(): ReactNode {
     return (
-      <article className="panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Provider Directory</p>
-            <h2>Cơ sở, nhân sự và endpoint liên thông</h2>
-          </div>
-          <button
-            className="ghost-button"
-            type="button"
-            onClick={() => void loadProviderDirectory()}
-            disabled={isLoadingProviderDirectory}
-          >
-            {isLoadingProviderDirectory ? "Đang tải..." : "Tải lại"}
-          </button>
-        </div>
-
-        <div className="detail-grid compact">
-          <Info label="Cơ sở/khoa phòng" value={`${providerDirectory?.organizations.length ?? 0}`} />
-          <Info label="Nhân sự" value={`${providerDirectory?.practitioners.length ?? 0}`} />
-          <Info label="Vai trò" value={`${providerDirectory?.practitionerRoles.length ?? 0}`} />
-          <Info label="Endpoint" value={`${providerDirectory?.endpoints.length ?? 0}`} />
-        </div>
-
-        <div className="reference-list">
-          {providerDirectory?.endpoints.map((endpoint) => (
-            <div key={endpoint.id}>
-              <strong>
-                {endpoint.name} · {formatProviderEndpointConnectionType(endpoint.connectionType)}
-              </strong>
-              <span>
-                {endpoint.id}; quản lý bởi {endpoint.managingOrganizationId}; payload{" "}
-                {endpoint.payloadTypes.map((payloadType) => payloadType.display).join(", ")}.
-              </span>
-            </div>
-          ))}
-          {!providerDirectory ? (
-            <p className="empty-state">
-              Provider Directory chưa tải được. Bundle liên thông vẫn nên có Organization, Practitioner,
-              PractitionerRole và Endpoint để bên nhận hiểu đúng các reference trong hồ sơ.
-            </p>
-          ) : null}
-        </div>
-      </article>
+      <ProviderDirectoryPanel
+        directory={providerDirectory}
+        isLoading={isLoadingProviderDirectory}
+        onRefresh={loadProviderDirectory}
+      />
     );
   }
 

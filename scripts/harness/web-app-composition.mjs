@@ -17,6 +17,7 @@ const requiredModules = [
   "apps/web/src/features/patient-registry/PatientListPanel.tsx",
   "apps/web/src/features/patient-registry/patientRegistryApi.ts",
   "apps/web/src/features/platform/platformApi.ts",
+  "apps/web/src/features/provider-directory/ProviderDirectoryPanel.tsx",
   "apps/web/src/features/provider-directory/providerDirectoryApi.ts",
   "apps/web/src/features/record-transfers/recordTransferApi.ts",
   "apps/web/src/lib/auditFormatters.ts",
@@ -32,7 +33,7 @@ const requiredModules = [
   "apps/web/src/pages/WorkspacePage.tsx",
   "apps/web/src/types/clinical.ts"
 ];
-const maxAppLines = 7_400;
+const maxAppLines = 7_360;
 
 const appSource = await readFile(appPath, "utf8");
 const appLineCount = appSource.split(/\r?\n/).length;
