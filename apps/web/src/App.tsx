@@ -66,6 +66,7 @@ import {
   listServiceRequests,
   listWorkflowTasks
 } from "./features/clinical-records/clinicalRecordApi.js";
+import { EncounterPanel } from "./features/clinical-records/EncounterPanel.js";
 import {
   exportConsentFhir,
   listPatientConsents,
@@ -128,8 +129,6 @@ import {
   formatDocumentStatus,
   formatDocumentType,
   formatDosageInstruction,
-  formatEncounterClass,
-  formatEncounterStatus,
   formatIdentifierType,
   formatImagingStudyStatus,
   formatMedicationAdministrationCategory,
@@ -199,8 +198,6 @@ import {
 import type {
   AppRoute,
   PatientIdentifierType,
-  EncounterClass,
-  EncounterStatus,
   ClinicalDocumentType,
   ClinicalDocumentStatus,
   ConditionClinicalStatus,
@@ -3428,135 +3425,34 @@ export function App() {
 
   function renderEncounterPanel(): ReactNode {
     return (
-      <article className="panel encounter-panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Encounter timeline</p>
-            <h2>Lượt khám và đợt điều trị</h2>
-          </div>
-          <span className="pill cyan">{isLoadingEncounters ? "đang tải" : `${encounters.length} lượt`}</span>
-        </div>
-
-        <div className="encounter-layout">
-          <div className="timeline">
-            {encounters.map((encounter) => (
-              <button
-                className={encounter.id === selectedEncounterId ? "timeline-item selected" : "timeline-item"}
-                key={encounter.id}
-                type="button"
-                onClick={() => setSelectedEncounterId(encounter.id)}
-              >
-                <span>{formatDateTime(encounter.startedAt)}</span>
-                <strong>{encounter.serviceType}</strong>
-                <small>
-                  {formatEncounterClass(encounter.class)} · {formatEncounterStatus(encounter.status)}
-                </small>
-              </button>
-            ))}
-            {encounters.length === 0 ? (
-              <p className="empty-state">Chưa có lượt khám nào cho bệnh nhân này.</p>
-            ) : null}
-          </div>
-
-          <div className="encounter-summary">
-            {selectedEncounter ? (
-              <>
-                <div className="document-meta">
-                  <Info label="Lý do khám" value={selectedEncounter.reasonText} />
-                  <Info label="Khoa/phòng" value={selectedEncounter.departmentId ?? "Chưa gắn"} />
-                  <Info label="Nhân sự phụ trách" value={selectedEncounter.attendingPractitionerId} />
-                  <Info label="Dị ứng gắn lượt khám" value={`${selectedEncounterAllergyIntolerances.length}`} />
-                  <Info label="Chẩn đoán gắn lượt khám" value={`${selectedEncounterConditions.length}`} />
-                  <Info label="Chỉ định dịch vụ gắn lượt khám" value={`${selectedEncounterServiceRequests.length}`} />
-                  <Info label="Công việc thực thi gắn lượt khám" value={`${selectedEncounterWorkflowTasks.length}`} />
-                  <Info label="Thủ thuật/hoạt động gắn lượt khám" value={`${selectedEncounterProcedures.length}`} />
-                  <Info label="Chỉ số gắn lượt khám" value={`${selectedEncounterObservations.length}`} />
-                  <Info label="Báo cáo kết quả gắn lượt khám" value={`${selectedEncounterDiagnosticReports.length}`} />
-                  <Info label="Ảnh y khoa gắn lượt khám" value={`${selectedEncounterImagingStudies.length}`} />
-                  <Info label="Thuốc gắn lượt khám" value={`${selectedEncounterMedicationRequests.length}`} />
-                  <Info label="Cấp phát thuốc gắn lượt khám" value={`${selectedEncounterMedicationDispenses.length}`} />
-                  <Info label="Dùng thuốc gắn lượt khám" value={`${selectedEncounterMedicationAdministrations.length}`} />
-                  <Info label="Tài liệu gắn lượt khám" value={`${selectedEncounterDocuments.length}`} />
-                </div>
-                <div className="action-row">
-                  <button
-                    className="primary-button"
-                    type="button"
-                    disabled={
-                      isSelectedPatientMerged ||
-                      selectedEncounter.status !== "in-progress" ||
-                      isFinishingEncounter
-                    }
-                    onClick={() => void handleFinishEncounter(selectedEncounter.id)}
-                  >
-                    {isFinishingEncounter ? "Đang kết thúc..." : "Kết thúc lượt khám"}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <p className="empty-state">Chọn một lượt khám để xem chi tiết và xuất FHIR Encounter.</p>
-            )}
-          </div>
-        </div>
-
-        <form className="encounter-form" onSubmit={(event) => void handleCreateEncounter(event)}>
-          <label>
-            Loại lượt khám
-            <select
-              value={encounterForm.class}
-              onChange={(event) =>
-                setEncounterForm({ ...encounterForm, class: event.target.value as EncounterClass })
-              }
-            >
-              <option value="ambulatory">Ngoại trú</option>
-              <option value="inpatient">Nội trú</option>
-              <option value="emergency">Cấp cứu</option>
-              <option value="virtual">Khám từ xa</option>
-            </select>
-          </label>
-          <label>
-            Dịch vụ/khoa khám
-            <input
-              value={encounterForm.serviceType}
-              onChange={(event) => setEncounterForm({ ...encounterForm, serviceType: event.target.value })}
-            />
-          </label>
-          <label className="wide-field">
-            Lý do khám
-            <input
-              value={encounterForm.reasonText}
-              onChange={(event) => setEncounterForm({ ...encounterForm, reasonText: event.target.value })}
-            />
-          </label>
-          <label>
-            Khoa/phòng
-            <input
-              value={encounterForm.departmentId}
-              onChange={(event) => setEncounterForm({ ...encounterForm, departmentId: event.target.value })}
-            />
-          </label>
-          <label>
-            Nhân sự phụ trách
-            <input
-              value={encounterForm.attendingPractitionerId}
-              onChange={(event) =>
-                setEncounterForm({ ...encounterForm, attendingPractitionerId: event.target.value })
-              }
-            />
-          </label>
-          <label className="wide-field">
-            Thời điểm bắt đầu
-            <input
-              type="datetime-local"
-              value={encounterForm.startedAt}
-              onChange={(event) => setEncounterForm({ ...encounterForm, startedAt: event.target.value })}
-            />
-          </label>
-          <button className="primary-button" type="submit" disabled={selectedPatientWriteDisabled || isSubmittingEncounter}>
-            {isSubmittingEncounter ? "Đang mở..." : "Mở lượt khám"}
-          </button>
-        </form>
-      </article>
+      <EncounterPanel
+        encounters={encounters}
+        form={encounterForm}
+        isFinishing={isFinishingEncounter}
+        isLoading={isLoadingEncounters}
+        isSubmitting={isSubmittingEncounter}
+        isWriteDisabled={selectedPatientWriteDisabled}
+        selectedEncounter={selectedEncounter}
+        selectedEncounterCounts={{
+          allergyIntolerances: selectedEncounterAllergyIntolerances.length,
+          conditions: selectedEncounterConditions.length,
+          serviceRequests: selectedEncounterServiceRequests.length,
+          workflowTasks: selectedEncounterWorkflowTasks.length,
+          procedures: selectedEncounterProcedures.length,
+          observations: selectedEncounterObservations.length,
+          diagnosticReports: selectedEncounterDiagnosticReports.length,
+          imagingStudies: selectedEncounterImagingStudies.length,
+          medicationRequests: selectedEncounterMedicationRequests.length,
+          medicationDispenses: selectedEncounterMedicationDispenses.length,
+          medicationAdministrations: selectedEncounterMedicationAdministrations.length,
+          documents: selectedEncounterDocuments.length
+        }}
+        selectedEncounterId={selectedEncounterId}
+        onCreateEncounter={handleCreateEncounter}
+        onFinishEncounter={handleFinishEncounter}
+        onFormChange={setEncounterForm}
+        onSelectEncounter={setSelectedEncounterId}
+      />
     );
   }
 
