@@ -1,6 +1,5 @@
 import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
 import {
-  formatDemoRole,
   loginPresets,
   type DemoRole,
   type LoginForm
@@ -171,6 +170,7 @@ import {
 import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { DashboardPage } from "./pages/DashboardPage.js";
+import { GatewayAcknowledgementPage } from "./pages/GatewayAcknowledgementPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
 
 import {
@@ -3200,7 +3200,17 @@ export function App() {
 
   function renderCurrentRoute(): ReactNode {
     if (isIntegrationSession) {
-      return renderGatewayAcknowledgementPage();
+      return (
+        <GatewayAcknowledgementPage
+          apiBaseUrl={apiBaseUrl}
+          authSession={authSession}
+          form={gatewayAcknowledgementForm}
+          isSubmitting={isSubmittingGatewayAcknowledgement}
+          onFormChange={setGatewayAcknowledgementForm}
+          onSubmit={(event) => void handleGatewayAcknowledgementSubmit(event)}
+          result={gatewayAcknowledgementResult}
+        />
+      );
     }
 
     if (appRoute === "workspace") {
@@ -3259,161 +3269,6 @@ export function App() {
         onNavigate={setAppRoute}
         selectedPatient={selectedPatient}
       />
-    );
-  }
-
-  function renderGatewayAcknowledgementPage(): ReactNode {
-    return (
-      <div className="page-stack">
-        <PageHeader
-          eyebrow="Integration Gateway"
-          title="Callback tiếp nhận hồ sơ liên viện"
-          description="Màn này dành riêng cho tài khoản gateway của bệnh viện nhận. Nó chỉ gửi biên nhận kỹ thuật với mục đích OPERATIONS, không mở workspace lâm sàng của bác sĩ."
-        />
-
-        <section className="settings-grid">
-          <article className="panel">
-            <p className="eyebrow">Gateway context</p>
-            <h2>Phiên vận hành</h2>
-            <div className="detail-grid compact">
-              <Info label="Actor" value={authSession?.actor.actorId ?? "Chưa xác thực"} />
-              <Info label="Vai trò" value={formatDemoRole(authSession?.actor.role ?? "integration")} />
-              <Info label="PurposeOfUse" value="OPERATIONS" />
-              <Info label="API" value={apiBaseUrl} />
-            </div>
-            <p className="empty-state">
-              Luồng demo chuẩn: bác sĩ gửi gói chuyển hồ sơ trước, sau đó đăng nhập bằng gateway để xác nhận bệnh viện nhận đã tiếp nhận. Callback hợp lệ sẽ ghi audit `record-transfer.acknowledgement-callback` và đưa gói sang `completed`.
-            </p>
-          </article>
-
-          <article className="panel">
-            <div className="panel-heading">
-              <div>
-                <p className="eyebrow">Acknowledgement callback</p>
-                <h2>Gửi biên nhận tiếp nhận</h2>
-              </div>
-              <span className="pill cyan">OPERATIONS</span>
-            </div>
-
-            <form className="medication-form" onSubmit={(event) => void handleGatewayAcknowledgementSubmit(event)}>
-              <label>
-                Mã gói chuyển
-                <input
-                  value={gatewayAcknowledgementForm.recordTransferId}
-                  onChange={(event) =>
-                    setGatewayAcknowledgementForm({
-                      ...gatewayAcknowledgementForm,
-                      recordTransferId: event.target.value
-                    })
-                  }
-                />
-              </label>
-              <label>
-                Cơ sở nhận
-                <input
-                  value={gatewayAcknowledgementForm.recipientOrganizationId}
-                  onChange={(event) =>
-                    setGatewayAcknowledgementForm({
-                      ...gatewayAcknowledgementForm,
-                      recipientOrganizationId: event.target.value
-                    })
-                  }
-                />
-              </label>
-              <label>
-                Mã biên nhận
-                <input
-                  value={gatewayAcknowledgementForm.acknowledgementReference}
-                  onChange={(event) =>
-                    setGatewayAcknowledgementForm({
-                      ...gatewayAcknowledgementForm,
-                      acknowledgementReference: event.target.value
-                    })
-                  }
-                />
-              </label>
-              <label>
-                Thời điểm nhận
-                <input
-                  type="datetime-local"
-                  value={gatewayAcknowledgementForm.receivedAt}
-                  onChange={(event) =>
-                    setGatewayAcknowledgementForm({
-                      ...gatewayAcknowledgementForm,
-                      receivedAt: event.target.value
-                    })
-                  }
-                />
-              </label>
-              <label>
-                Actor xác nhận
-                <input
-                  value={gatewayAcknowledgementForm.receivedByActorId}
-                  onChange={(event) =>
-                    setGatewayAcknowledgementForm({
-                      ...gatewayAcknowledgementForm,
-                      receivedByActorId: event.target.value
-                    })
-                  }
-                />
-              </label>
-              <label>
-                Endpoint nhận
-                <input
-                  value={gatewayAcknowledgementForm.targetEndpointId}
-                  onChange={(event) =>
-                    setGatewayAcknowledgementForm({
-                      ...gatewayAcknowledgementForm,
-                      targetEndpointId: event.target.value
-                    })
-                  }
-                />
-              </label>
-              <label className="wide-field">
-                Idempotency key lần gửi
-                <input
-                  value={gatewayAcknowledgementForm.deliveryIdempotencyKey}
-                  onChange={(event) =>
-                    setGatewayAcknowledgementForm({
-                      ...gatewayAcknowledgementForm,
-                      deliveryIdempotencyKey: event.target.value
-                    })
-                  }
-                />
-              </label>
-              <label className="wide-field">
-                Ghi chú callback
-                <textarea
-                  value={gatewayAcknowledgementForm.note}
-                  onChange={(event) =>
-                    setGatewayAcknowledgementForm({
-                      ...gatewayAcknowledgementForm,
-                      note: event.target.value
-                    })
-                  }
-                />
-              </label>
-              <button className="primary-button" type="submit" disabled={isSubmittingGatewayAcknowledgement}>
-                {isSubmittingGatewayAcknowledgement ? "Đang gửi callback..." : "Gửi callback tiếp nhận"}
-              </button>
-            </form>
-          </article>
-
-          {gatewayAcknowledgementResult ? (
-            <article className="panel">
-              <p className="eyebrow">Callback result</p>
-              <h2>Gói đã được xác nhận</h2>
-              <div className="detail-grid compact">
-                <Info label="Mã gói" value={gatewayAcknowledgementResult.id} />
-                <Info label="Trạng thái" value={formatRecordTransferStatus(gatewayAcknowledgementResult.status)} />
-                <Info label="Thời điểm nhận" value={gatewayAcknowledgementResult.receivedAt ? formatDateTime(gatewayAcknowledgementResult.receivedAt) : "Chưa có"} />
-                <Info label="Người xác nhận" value={gatewayAcknowledgementResult.receivedByActorId ?? "Chưa có"} />
-                <Info label="Biên nhận" value={gatewayAcknowledgementResult.acknowledgementReference ?? "Chưa có"} />
-              </div>
-            </article>
-          ) : null}
-        </section>
-      </div>
     );
   }
 

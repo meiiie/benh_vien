@@ -21,12 +21,13 @@ const requiredModules = [
   "apps/web/src/lib/auditFormatters.ts",
   "apps/web/src/lib/clinicalFormatters.ts",
   "apps/web/src/pages/DashboardPage.tsx",
+  "apps/web/src/pages/GatewayAcknowledgementPage.tsx",
   "apps/web/src/pages/LandingPage.tsx",
   "apps/web/src/pages/LoginPage.tsx",
   "apps/web/src/pages/SettingsPage.tsx",
   "apps/web/src/types/clinical.ts"
 ];
-const maxAppLines = 7_800;
+const maxAppLines = 7_650;
 
 const appSource = await readFile(appPath, "utf8");
 const appLineCount = appSource.split(/\r?\n/).length;
