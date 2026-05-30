@@ -69,6 +69,7 @@ import {
 import { AllergyIntolerancePanel } from "./features/clinical-records/AllergyIntolerancePanel.js";
 import { ConditionPanel } from "./features/clinical-records/ConditionPanel.js";
 import { EncounterPanel } from "./features/clinical-records/EncounterPanel.js";
+import { ObservationPanel } from "./features/clinical-records/ObservationPanel.js";
 import { ProcedurePanel } from "./features/clinical-records/ProcedurePanel.js";
 import { ServiceRequestPanel } from "./features/clinical-records/ServiceRequestPanel.js";
 import { WorkflowTaskPanel } from "./features/clinical-records/WorkflowTaskPanel.js";
@@ -140,8 +141,6 @@ import {
   formatMedicationRequestIntent,
   formatMedicationRequestPriority,
   formatMedicationRequestStatus,
-  formatObservationCategory,
-  formatObservationStatus,
   formatObservationValue,
   formatPatientRecordStatus,
   isMissingRecordTransferDeliveryAttemptsRoute,
@@ -186,8 +185,6 @@ import type {
   PatientIdentifierType,
   ClinicalDocumentType,
   ClinicalDocumentStatus,
-  ObservationStatus,
-  ObservationCategory,
   MedicationRequestStatus,
   MedicationRequestIntent,
   MedicationRequestCategory,
@@ -3502,160 +3499,19 @@ export function App() {
 
   function renderObservationPanel(): ReactNode {
     return (
-      <article className="panel observation-panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Clinical observations</p>
-            <h2>Chỉ số lâm sàng và xét nghiệm</h2>
-          </div>
-          <span className="pill cyan">{isLoadingObservations ? "đang tải" : `${observations.length} chỉ số`}</span>
-        </div>
-
-        <div className="document-layout">
-          <div className="observation-cards">
-            {observations.map((observation) => (
-              <button
-                className={observation.id === selectedObservationId ? "observation-card selected" : "observation-card"}
-                key={observation.id}
-                type="button"
-                onClick={() => setSelectedObservationId(observation.id)}
-              >
-                <span>{formatObservationCategory(observation.category)}</span>
-                <strong>{observation.code.display}</strong>
-                <small>
-                  {formatObservationValue(observation)} · {formatDateTime(observation.effectiveAt)}
-                </small>
-              </button>
-            ))}
-            {observations.length === 0 ? (
-              <p className="empty-state">
-                Bệnh nhân này chưa có chỉ số có cấu trúc. Hãy ghi nhận sinh hiệu hoặc kết quả xét nghiệm đầu tiên.
-              </p>
-            ) : null}
-          </div>
-
-          <div className="observation-summary">
-            {selectedObservation ? (
-              <>
-                <div className="document-meta">
-                  <Info label="Nhóm" value={formatObservationCategory(selectedObservation.category)} />
-                  <Info label="Trạng thái" value={formatObservationStatus(selectedObservation.status)} />
-                  <Info label="Mã chuẩn" value={`${selectedObservation.code.system} · ${selectedObservation.code.code}`} />
-                  <Info label="Giá trị" value={formatObservationValue(selectedObservation)} />
-                  <Info label="Encounter" value={selectedObservation.encounterId ?? "Chưa gắn"} />
-                  <Info label="Người ghi nhận" value={selectedObservation.performerPractitionerId ?? "Chưa gắn"} />
-                </div>
-                <p className="empty-state">
-                  Observation là dữ liệu lâm sàng có cấu trúc; khi xuất Bundle sẽ đi cùng Patient, Encounter và
-                  DocumentReference để bên nhận có thể xử lý máy đọc được.
-                </p>
-              </>
-            ) : (
-              <p className="empty-state">Chọn một chỉ số để xem siêu dữ liệu và xuất FHIR Observation.</p>
-            )}
-          </div>
-        </div>
-
-        <form className="observation-form" onSubmit={(event) => void handleCreateObservation(event)}>
-          <label>
-            Gắn với lượt khám
-            <select
-              value={observationForm.encounterId}
-              onChange={(event) => setObservationForm({ ...observationForm, encounterId: event.target.value })}
-            >
-              <option value="">Không gắn</option>
-              {encounters.map((encounter) => (
-                <option key={encounter.id} value={encounter.id}>
-                  {encounter.serviceType} · {formatDateTime(encounter.startedAt)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Nhóm chỉ số
-            <select
-              value={observationForm.category}
-              onChange={(event) =>
-                setObservationForm({ ...observationForm, category: event.target.value as ObservationCategory })
-              }
-            >
-              <option value="laboratory">Xét nghiệm</option>
-              <option value="vital-signs">Sinh hiệu</option>
-            </select>
-          </label>
-          <label>
-            Hệ mã
-            <input
-              value={observationForm.codeSystem}
-              onChange={(event) => setObservationForm({ ...observationForm, codeSystem: event.target.value })}
-            />
-          </label>
-          <label>
-            Mã chỉ số
-            <input
-              value={observationForm.code}
-              onChange={(event) => setObservationForm({ ...observationForm, code: event.target.value })}
-            />
-          </label>
-          <label className="wide-field">
-            Tên chỉ số
-            <input
-              value={observationForm.codeDisplay}
-              onChange={(event) => setObservationForm({ ...observationForm, codeDisplay: event.target.value })}
-            />
-          </label>
-          <label>
-            Giá trị
-            <input
-              type="number"
-              step="any"
-              value={observationForm.value}
-              onChange={(event) => setObservationForm({ ...observationForm, value: event.target.value })}
-            />
-          </label>
-          <label>
-            Đơn vị
-            <input
-              value={observationForm.unit}
-              onChange={(event) => setObservationForm({ ...observationForm, unit: event.target.value })}
-            />
-          </label>
-          <label>
-            Hệ đơn vị
-            <input
-              value={observationForm.unitSystem}
-              onChange={(event) => setObservationForm({ ...observationForm, unitSystem: event.target.value })}
-            />
-          </label>
-          <label>
-            Mã đơn vị
-            <input
-              value={observationForm.unitCode}
-              onChange={(event) => setObservationForm({ ...observationForm, unitCode: event.target.value })}
-            />
-          </label>
-          <label>
-            Thời điểm ghi nhận
-            <input
-              type="datetime-local"
-              value={observationForm.effectiveAt}
-              onChange={(event) => setObservationForm({ ...observationForm, effectiveAt: event.target.value })}
-            />
-          </label>
-          <label>
-            Nhân sự ghi nhận
-            <input
-              value={observationForm.performerPractitionerId}
-              onChange={(event) =>
-                setObservationForm({ ...observationForm, performerPractitionerId: event.target.value })
-              }
-            />
-          </label>
-          <button className="primary-button" type="submit" disabled={selectedPatientWriteDisabled || isSubmittingObservation}>
-            {isSubmittingObservation ? "Đang ghi nhận..." : "Ghi nhận chỉ số"}
-          </button>
-        </form>
-      </article>
+      <ObservationPanel
+        encounters={encounters}
+        form={observationForm}
+        isLoading={isLoadingObservations}
+        isSubmitting={isSubmittingObservation}
+        isWriteDisabled={selectedPatientWriteDisabled}
+        observations={observations}
+        selectedObservation={selectedObservation}
+        selectedObservationId={selectedObservationId}
+        onCreateObservation={handleCreateObservation}
+        onFormChange={setObservationForm}
+        onSelectObservation={setSelectedObservationId}
+      />
     );
   }
 
