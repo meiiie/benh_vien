@@ -67,6 +67,7 @@ import {
   listServiceRequests,
   listWorkflowTasks
 } from "./features/clinical-records/clinicalRecordApi.js";
+import { buildEncounterRecordCounts } from "./features/clinical-records/encounterSelectors.js";
 import { AllergyIntolerancePanel } from "./features/clinical-records/AllergyIntolerancePanel.js";
 import { ConditionPanel } from "./features/clinical-records/ConditionPanel.js";
 import { DiagnosticReportPanel } from "./features/clinical-records/DiagnosticReportPanel.js";
@@ -97,6 +98,7 @@ import { CreatePatientPanel } from "./features/patient-registry/CreatePatientPan
 import { PatientDetailPanel } from "./features/patient-registry/PatientDetailPanel.js";
 import { PatientListPanel } from "./features/patient-registry/PatientListPanel.js";
 import { PatientMergePanel } from "./features/patient-registry/PatientMergePanel.js";
+import { buildPatientRegistrySelection } from "./features/patient-registry/patientRegistrySelectors.js";
 import {
   getApiRuntimeInfo,
   getFhirCapabilityStatement
@@ -121,10 +123,7 @@ import { RecordTransferInteropPanel } from "./features/record-transfers/RecordTr
 import { formatAuditIntegrityReason } from "./lib/auditFormatters.js";
 import {
   formatDateTime,
-  formatIdentifierType,
-  formatPatientRecordStatus,
   isMissingRecordTransferDeliveryAttemptsRoute,
-  normalizeSearchText,
   resolveSelectedRecordTransferId,
   toApiDateTime
 } from "./lib/clinicalFormatters.js";
@@ -402,53 +401,26 @@ export function App() {
   const [isSigningDocument, setIsSigningDocument] = useState(false);
   const [isFinishingEncounter, setIsFinishingEncounter] = useState(false);
 
-  const selectedPatient = patients.find((patient) => patient.id === selectedPatientId);
-  const selectedPatientMergeTarget = selectedPatient?.mergedIntoPatientId
-    ? patients.find((patient) => patient.id === selectedPatient.mergedIntoPatientId)
-    : undefined;
-  const isSelectedPatientMerged = selectedPatient?.status === "merged";
-  const selectedPatientWriteDisabled = !selectedPatient || isSelectedPatientMerged;
   const canMergePatients = authSession?.actor.role === "admin";
   const isIntegrationSession = authSession?.actor.role === "integration";
-  const patientMergeCandidates = selectedPatient
-    ? patients.filter((patient) => patient.id !== selectedPatient.id && patient.status === "active")
-    : [];
-  const patientMergeTargetId = patientMergeCandidates.some(
-    (patient) => patient.id === patientMergeForm.targetPatientId
-  )
-    ? patientMergeForm.targetPatientId
-    : patientMergeCandidates[0]?.id ?? "";
-  const patientMergeConfirmationCode =
-    selectedPatient?.identifiers[0]?.value ?? selectedPatient?.id ?? "";
-  const isPatientMergeConfirmationValid =
-    Boolean(selectedPatient) &&
-    patientMergeForm.confirmationText.trim() === patientMergeConfirmationCode;
-  const normalizedPatientSearchTerm = normalizeSearchText(patientSearchTerm);
-  const visiblePatients = patients.filter((patient) => {
-    if (patientStatusFilter !== "all" && patient.status !== patientStatusFilter) {
-      return false;
-    }
-
-    if (!normalizedPatientSearchTerm) {
-      return true;
-    }
-
-    return [
-      patient.id,
-      patient.fullName,
-      patient.address ?? "",
-      patient.phone ?? "",
-      patient.managingOrganizationId,
-      formatPatientRecordStatus(patient.status),
-      ...patient.identifiers.flatMap((identifier) => [
-        identifier.value,
-        identifier.system,
-        formatIdentifierType(identifier.type)
-      ])
-    ].some((value) => normalizeSearchText(value).includes(normalizedPatientSearchTerm));
+  const {
+    hasPatientListFilter,
+    isPatientMergeConfirmationValid,
+    isSelectedPatientMerged,
+    patientMergeCandidates,
+    patientMergeConfirmationCode,
+    patientMergeTargetId,
+    selectedPatient,
+    selectedPatientMergeTarget,
+    selectedPatientWriteDisabled,
+    visiblePatients
+  } = buildPatientRegistrySelection({
+    patientMergeForm,
+    patientSearchTerm,
+    patientStatusFilter,
+    patients,
+    selectedPatientId
   });
-  const hasPatientListFilter =
-    Boolean(normalizedPatientSearchTerm) || patientStatusFilter !== "all";
   const selectedEncounter = encounters.find((encounter) => encounter.id === selectedEncounterId);
   const selectedDocument = clinicalDocuments.find((document) => document.id === selectedDocumentId);
   const selectedAllergyIntolerance = allergyIntolerances.find(
@@ -481,47 +453,21 @@ export function App() {
     (recordTransfer) => recordTransfer.id === selectedRecordTransferId
   );
   selectedRecordTransferIdRef.current = selectedRecordTransferId;
-  const selectedEncounterDocuments = selectedEncounter
-    ? clinicalDocuments.filter((document) => document.encounterId === selectedEncounter.id)
-    : [];
-  const selectedEncounterAllergyIntolerances = selectedEncounter
-    ? allergyIntolerances.filter((allergyIntolerance) => allergyIntolerance.encounterId === selectedEncounter.id)
-    : [];
-  const selectedEncounterObservations = selectedEncounter
-    ? observations.filter((observation) => observation.encounterId === selectedEncounter.id)
-    : [];
-  const selectedEncounterConditions = selectedEncounter
-    ? conditions.filter((condition) => condition.encounterId === selectedEncounter.id)
-    : [];
-  const selectedEncounterMedicationRequests = selectedEncounter
-    ? medicationRequests.filter((medicationRequest) => medicationRequest.encounterId === selectedEncounter.id)
-    : [];
-  const selectedEncounterMedicationDispenses = selectedEncounter
-    ? medicationDispenses.filter(
-        (medicationDispense) => medicationDispense.encounterId === selectedEncounter.id
-      )
-    : [];
-  const selectedEncounterMedicationAdministrations = selectedEncounter
-    ? medicationAdministrations.filter(
-        (medicationAdministration) =>
-          medicationAdministration.encounterId === selectedEncounter.id
-      )
-    : [];
-  const selectedEncounterServiceRequests = selectedEncounter
-    ? serviceRequests.filter((serviceRequest) => serviceRequest.encounterId === selectedEncounter.id)
-    : [];
-  const selectedEncounterWorkflowTasks = selectedEncounter
-    ? workflowTasks.filter((task) => task.encounterId === selectedEncounter.id)
-    : [];
-  const selectedEncounterProcedures = selectedEncounter
-    ? procedures.filter((procedure) => procedure.encounterId === selectedEncounter.id)
-    : [];
-  const selectedEncounterDiagnosticReports = selectedEncounter
-    ? diagnosticReports.filter((diagnosticReport) => diagnosticReport.encounterId === selectedEncounter.id)
-    : [];
-  const selectedEncounterImagingStudies = selectedEncounter
-    ? imagingStudies.filter((imagingStudy) => imagingStudy.encounterId === selectedEncounter.id)
-    : [];
+  const selectedEncounterCounts = buildEncounterRecordCounts({
+    allergyIntolerances,
+    clinicalDocuments,
+    conditions,
+    diagnosticReports,
+    imagingStudies,
+    medicationAdministrations,
+    medicationDispenses,
+    medicationRequests,
+    observations,
+    procedures,
+    selectedEncounter,
+    serviceRequests,
+    workflowTasks
+  });
   const dashboardMetrics = buildDashboardMetrics({
     allergyIntolerances,
     clinicalDocuments,
@@ -3297,20 +3243,7 @@ export function App() {
         isSubmitting={isSubmittingEncounter}
         isWriteDisabled={selectedPatientWriteDisabled}
         selectedEncounter={selectedEncounter}
-        selectedEncounterCounts={{
-          allergyIntolerances: selectedEncounterAllergyIntolerances.length,
-          conditions: selectedEncounterConditions.length,
-          serviceRequests: selectedEncounterServiceRequests.length,
-          workflowTasks: selectedEncounterWorkflowTasks.length,
-          procedures: selectedEncounterProcedures.length,
-          observations: selectedEncounterObservations.length,
-          diagnosticReports: selectedEncounterDiagnosticReports.length,
-          imagingStudies: selectedEncounterImagingStudies.length,
-          medicationRequests: selectedEncounterMedicationRequests.length,
-          medicationDispenses: selectedEncounterMedicationDispenses.length,
-          medicationAdministrations: selectedEncounterMedicationAdministrations.length,
-          documents: selectedEncounterDocuments.length
-        }}
+        selectedEncounterCounts={selectedEncounterCounts}
         selectedEncounterId={selectedEncounterId}
         onCreateEncounter={handleCreateEncounter}
         onFinishEncounter={handleFinishEncounter}

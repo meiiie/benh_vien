@@ -18,6 +18,7 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/ConditionPanel.tsx",
   "apps/web/src/features/clinical-records/DiagnosticReportPanel.tsx",
   "apps/web/src/features/clinical-records/EncounterPanel.tsx",
+  "apps/web/src/features/clinical-records/encounterSelectors.ts",
   "apps/web/src/features/clinical-records/ImagingStudyPanel.tsx",
   "apps/web/src/features/clinical-records/MedicationAdministrationPanel.tsx",
   "apps/web/src/features/clinical-records/MedicationDispensePanel.tsx",
@@ -34,6 +35,7 @@ const requiredModules = [
   "apps/web/src/features/patient-registry/PatientListPanel.tsx",
   "apps/web/src/features/patient-registry/PatientMergePanel.tsx",
   "apps/web/src/features/patient-registry/patientRegistryApi.ts",
+  "apps/web/src/features/patient-registry/patientRegistrySelectors.ts",
   "apps/web/src/features/platform/platformApi.ts",
   "apps/web/src/features/provider-directory/ProviderDirectoryPanel.tsx",
   "apps/web/src/features/provider-directory/providerDirectoryApi.ts",
@@ -54,7 +56,7 @@ const requiredModules = [
   "apps/web/src/pages/WorkspacePage.tsx",
   "apps/web/src/types/clinical.ts"
 ];
-const maxAppLines = 3_610;
+const maxAppLines = 3_550;
 
 const appSource = await readFile(appPath, "utf8");
 const appLineCount = appSource.split(/\r?\n/).length;
