@@ -10,6 +10,12 @@ import {
   isApiHttpError
 } from "./api/clinicalApi.js";
 import {
+  exportPatientAuditFhirBundle,
+  listGlobalAuditEvents,
+  listPatientAuditEvents,
+  verifyPatientAuditIntegrity
+} from "./features/audit/auditApi.js";
+import {
   AuthenticatedLayout,
   FhirPanel,
   Info,
@@ -258,8 +264,6 @@ import type {
   ProceduresResponse,
   DiagnosticReportsResponse,
   ImagingStudiesResponse,
-  AuditEventsResponse,
-  AuditIntegrityReportResponse,
   NewPatientForm,
   PatientMergeForm,
   NewRecordTransferForm,
@@ -1338,12 +1342,7 @@ export function App() {
     setIsLoadingAuditEvents(true);
 
     try {
-      const data = await clinicalApi.requestJson<AuditEventsResponse>(
-        `/patients/${patientId}/audit-events`,
-        {
-          purposeOfUse: "AUDIT"
-        }
-      );
+      const data = await listPatientAuditEvents(clinicalApi, patientId);
       setAuditEvents(data.items);
     } catch (error) {
       setAuditEvents([]);
@@ -1371,12 +1370,7 @@ export function App() {
     setIsLoadingGlobalAuditEvents(true);
 
     try {
-      const data = await clinicalApi.requestJson<AuditEventsResponse>(
-        "/audit-events?limit=100",
-        {
-          purposeOfUse: "AUDIT"
-        }
-      );
+      const data = await listGlobalAuditEvents(clinicalApi);
       setGlobalAuditEvents(data.items);
 
       if (!options.silent) {
@@ -1411,12 +1405,7 @@ export function App() {
     setIsVerifyingAuditIntegrity(true);
 
     try {
-      const data = await clinicalApi.requestJson<AuditIntegrityReportResponse>(
-        `/patients/${patientId}/audit-integrity`,
-        {
-          purposeOfUse: "AUDIT"
-        }
-      );
+      const data = await verifyPatientAuditIntegrity(clinicalApi, patientId);
       setAuditIntegrityReport(data);
 
       if (!options.silent) {
@@ -1448,14 +1437,7 @@ export function App() {
     setIsExportingAuditFhir(true);
 
     try {
-      setAuditFhirBundlePreview(
-        await clinicalApi.requestJson<unknown>(
-          `/patients/${patientId}/audit-events/fhir-bundle`,
-          {
-            purposeOfUse: "AUDIT"
-          }
-        )
-      );
+      setAuditFhirBundlePreview(await exportPatientAuditFhirBundle(clinicalApi, patientId));
       setStatusMessage("Đã xuất FHIR AuditEvent Bundle cho nhật ký kiểm toán.");
     } catch (error) {
       setAuditFhirBundlePreview({

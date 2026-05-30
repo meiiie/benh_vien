@@ -9,6 +9,7 @@ const requiredModules = [
   "apps/web/src/auth/demoLogin.ts",
   "apps/web/src/components/AppShell.tsx",
   "apps/web/src/config/demoClinicalDefaults.ts",
+  "apps/web/src/features/audit/auditApi.ts",
   "apps/web/src/features/clinical-documents/clinicalDocumentApi.ts",
   "apps/web/src/features/consents/consentApi.ts",
   "apps/web/src/features/record-transfers/recordTransferApi.ts",
@@ -24,6 +25,11 @@ const appSource = await readFile(appPath, "utf8");
 const appLineCount = appSource.split(/\r?\n/).length;
 const directFetchPattern = /\bfetch\s*\(/;
 const forbiddenAppApiPathPatterns = [
+  {
+    pattern: /[`'"]\/(?:audit-events\b|patients\/[^`'"]+\/audit-(?:events|integrity)\b)/,
+    message:
+      "apps/web/src/App.tsx must use apps/web/src/features/audit/auditApi.ts for audit HTTP routes."
+  },
   {
     pattern: /[`'"]\/(?:consents\b|patients\/[^`'"]+\/consents\b)/,
     message:
