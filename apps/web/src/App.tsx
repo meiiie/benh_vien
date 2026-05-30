@@ -127,6 +127,7 @@ import {
   resolveSelectedRecordTransferId,
   toApiDateTime
 } from "./lib/clinicalFormatters.js";
+import { loadFhirPreview } from "./lib/fhirPreviewLoader.js";
 import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { AppRouteRenderer } from "./pages/AppRouteRenderer.js";
@@ -1442,16 +1443,11 @@ export function App() {
   }
 
   async function loadConsentFhirPreview(consentId: string) {
-    try {
-      setConsentFhirPreview(await exportConsentFhir(clinicalApi, consentId));
-    } catch (error) {
-      setConsentFhirPreview({
-        error:
-          error instanceof Error
-            ? `Không thể xuất FHIR Consent: ${error.message}`
-            : "Không thể xuất FHIR Consent."
-      });
-    }
+    await loadFhirPreview({
+      errorMessage: "Không thể xuất FHIR Consent",
+      exportPreview: () => exportConsentFhir(clinicalApi, consentId),
+      setPreview: setConsentFhirPreview
+    });
   }
 
   function buildSelectedPatientMergedReadOnlyMessage(): string {
@@ -1476,246 +1472,148 @@ export function App() {
   }
 
   async function loadPatientFhirPreview(patientId: string) {
-    try {
-      setPatientFhirPreview(
-        await exportPatientFhir(clinicalApi, patientId, isAuditOnlySession ? "AUDIT" : "TREATMENT")
-      );
-    } catch (error) {
-      setPatientFhirPreview({
-        error:
-          error instanceof Error
-            ? `Không thể xuất FHIR Patient: ${error.message}`
-            : "Không thể xuất FHIR Patient."
-      });
-    }
+    await loadFhirPreview({
+      errorMessage: "Không thể xuất FHIR Patient",
+      exportPreview: () =>
+        exportPatientFhir(
+          clinicalApi,
+          patientId,
+          isAuditOnlySession ? "AUDIT" : "TREATMENT"
+        ),
+      setPreview: setPatientFhirPreview
+    });
   }
 
   async function loadPatientFhirBundlePreview(patientId: string) {
-    try {
-      setPatientFhirBundlePreview(await exportPatientFhirBundle(clinicalApi, patientId));
-    } catch (error) {
-      setPatientFhirBundlePreview({
-        error:
-          error instanceof Error
-            ? `Không thể xuất FHIR Bundle: ${error.message}`
-            : "Không thể xuất FHIR Bundle."
-      });
-    }
+    await loadFhirPreview({
+      errorMessage: "Không thể xuất FHIR Bundle",
+      exportPreview: () => exportPatientFhirBundle(clinicalApi, patientId),
+      setPreview: setPatientFhirBundlePreview
+    });
   }
 
   async function loadPatientFhirDocumentBundlePreview(patientId: string) {
-    try {
-      setPatientFhirDocumentBundlePreview(
-        await exportPatientFhirDocumentBundle(clinicalApi, patientId)
-      );
-    } catch (error) {
-      setPatientFhirDocumentBundlePreview({
-        error:
-          error instanceof Error
-            ? `Không thể xuất FHIR document Bundle: ${error.message}`
-            : "Không thể xuất FHIR document Bundle."
-      });
-    }
+    await loadFhirPreview({
+      errorMessage: "Không thể xuất FHIR document Bundle",
+      exportPreview: () => exportPatientFhirDocumentBundle(clinicalApi, patientId),
+      setPreview: setPatientFhirDocumentBundlePreview
+    });
   }
 
   async function loadEncounterFhirPreview(encounterId: string) {
-    try {
-      setEncounterFhirPreview(await exportEncounterFhir(clinicalApi, encounterId));
-    } catch (error) {
-      setEncounterFhirPreview({
-        error:
-          error instanceof Error
-            ? `Không thể xuất FHIR Encounter: ${error.message}`
-            : "Không thể xuất FHIR Encounter."
-      });
-    }
+    await loadFhirPreview({
+      errorMessage: "Không thể xuất FHIR Encounter",
+      exportPreview: () => exportEncounterFhir(clinicalApi, encounterId),
+      setPreview: setEncounterFhirPreview
+    });
   }
 
   async function loadDocumentFhirPreview(documentId: string) {
-    try {
-      setDocumentFhirPreview(await exportClinicalDocumentFhir(clinicalApi, documentId));
-    } catch (error) {
-      setDocumentFhirPreview({
-        error:
-          error instanceof Error
-            ? `Không thể xuất FHIR DocumentReference: ${error.message}`
-            : "Không thể xuất FHIR DocumentReference."
-      });
-    }
+    await loadFhirPreview({
+      errorMessage: "Không thể xuất FHIR DocumentReference",
+      exportPreview: () => exportClinicalDocumentFhir(clinicalApi, documentId),
+      setPreview: setDocumentFhirPreview
+    });
   }
 
   async function loadDocumentProvenanceFhirPreview(documentId: string) {
-    try {
-      setDocumentProvenanceFhirPreview(
-        await exportClinicalDocumentProvenanceFhir(clinicalApi, documentId)
-      );
-    } catch (error) {
-      setDocumentProvenanceFhirPreview({
-        error:
-          error instanceof Error
-            ? `Không thể xuất FHIR Provenance: ${error.message}`
-            : "Không thể xuất FHIR Provenance."
-      });
-    }
+    await loadFhirPreview({
+      errorMessage: "Không thể xuất FHIR Provenance",
+      exportPreview: () => exportClinicalDocumentProvenanceFhir(clinicalApi, documentId),
+      setPreview: setDocumentProvenanceFhirPreview
+    });
   }
 
   async function loadConditionFhirPreview(conditionId: string) {
-    try {
-      setConditionFhirPreview(await exportConditionFhir(clinicalApi, conditionId));
-    } catch (error) {
-      setConditionFhirPreview({
-        error:
-          error instanceof Error
-            ? `Không thể xuất FHIR Condition: ${error.message}`
-            : "Không thể xuất FHIR Condition."
-      });
-    }
+    await loadFhirPreview({
+      errorMessage: "Không thể xuất FHIR Condition",
+      exportPreview: () => exportConditionFhir(clinicalApi, conditionId),
+      setPreview: setConditionFhirPreview
+    });
   }
 
   async function loadAllergyIntoleranceFhirPreview(allergyIntoleranceId: string) {
-    try {
-      setAllergyIntoleranceFhirPreview(
-        await exportAllergyIntoleranceFhir(clinicalApi, allergyIntoleranceId)
-      );
-    } catch (error) {
-      setAllergyIntoleranceFhirPreview({
-        error:
-          error instanceof Error
-            ? `Không thể xuất FHIR AllergyIntolerance: ${error.message}`
-            : "Không thể xuất FHIR AllergyIntolerance."
-      });
-    }
+    await loadFhirPreview({
+      errorMessage: "Không thể xuất FHIR AllergyIntolerance",
+      exportPreview: () =>
+        exportAllergyIntoleranceFhir(clinicalApi, allergyIntoleranceId),
+      setPreview: setAllergyIntoleranceFhirPreview
+    });
   }
 
   async function loadObservationFhirPreview(observationId: string) {
-    try {
-      setObservationFhirPreview(await exportObservationFhir(clinicalApi, observationId));
-    } catch (error) {
-      setObservationFhirPreview({
-        error:
-          error instanceof Error
-            ? `Không thể xuất FHIR Observation: ${error.message}`
-            : "Không thể xuất FHIR Observation."
-      });
-    }
+    await loadFhirPreview({
+      errorMessage: "Không thể xuất FHIR Observation",
+      exportPreview: () => exportObservationFhir(clinicalApi, observationId),
+      setPreview: setObservationFhirPreview
+    });
   }
 
   async function loadMedicationRequestFhirPreview(medicationRequestId: string) {
-    try {
-      setMedicationRequestFhirPreview(
-        await exportMedicationRequestFhir(clinicalApi, medicationRequestId)
-      );
-    } catch (error) {
-      setMedicationRequestFhirPreview({
-        error:
-          error instanceof Error
-            ? `Không thể xuất FHIR MedicationRequest: ${error.message}`
-            : "Không thể xuất FHIR MedicationRequest."
-      });
-    }
+    await loadFhirPreview({
+      errorMessage: "Không thể xuất FHIR MedicationRequest",
+      exportPreview: () => exportMedicationRequestFhir(clinicalApi, medicationRequestId),
+      setPreview: setMedicationRequestFhirPreview
+    });
   }
 
   async function loadMedicationDispenseFhirPreview(medicationDispenseId: string) {
-    try {
-      setMedicationDispenseFhirPreview(
-        await exportMedicationDispenseFhir(clinicalApi, medicationDispenseId)
-      );
-    } catch (error) {
-      setMedicationDispenseFhirPreview({
-        error:
-          error instanceof Error
-            ? `Không thể xuất FHIR MedicationDispense: ${error.message}`
-            : "Không thể xuất FHIR MedicationDispense."
-      });
-    }
+    await loadFhirPreview({
+      errorMessage: "Không thể xuất FHIR MedicationDispense",
+      exportPreview: () => exportMedicationDispenseFhir(clinicalApi, medicationDispenseId),
+      setPreview: setMedicationDispenseFhirPreview
+    });
   }
 
   async function loadMedicationAdministrationFhirPreview(
     medicationAdministrationId: string
   ) {
-    try {
-      setMedicationAdministrationFhirPreview(
-        await exportMedicationAdministrationFhir(clinicalApi, medicationAdministrationId)
-      );
-    } catch (error) {
-      setMedicationAdministrationFhirPreview({
-        error:
-          error instanceof Error
-            ? `Không thể xuất FHIR MedicationAdministration: ${error.message}`
-            : "Không thể xuất FHIR MedicationAdministration."
-      });
-    }
+    await loadFhirPreview({
+      errorMessage: "Không thể xuất FHIR MedicationAdministration",
+      exportPreview: () =>
+        exportMedicationAdministrationFhir(clinicalApi, medicationAdministrationId),
+      setPreview: setMedicationAdministrationFhirPreview
+    });
   }
 
   async function loadServiceRequestFhirPreview(serviceRequestId: string) {
-    try {
-      setServiceRequestFhirPreview(
-        await exportServiceRequestFhir(clinicalApi, serviceRequestId)
-      );
-    } catch (error) {
-      setServiceRequestFhirPreview({
-        error:
-          error instanceof Error
-            ? `Không thể xuất FHIR ServiceRequest: ${error.message}`
-            : "Không thể xuất FHIR ServiceRequest."
-      });
-    }
+    await loadFhirPreview({
+      errorMessage: "Không thể xuất FHIR ServiceRequest",
+      exportPreview: () => exportServiceRequestFhir(clinicalApi, serviceRequestId),
+      setPreview: setServiceRequestFhirPreview
+    });
   }
 
   async function loadWorkflowTaskFhirPreview(taskId: string) {
-    try {
-      setWorkflowTaskFhirPreview(await exportWorkflowTaskFhir(clinicalApi, taskId));
-    } catch (error) {
-      setWorkflowTaskFhirPreview({
-        error:
-          error instanceof Error
-            ? `Không thể xuất FHIR Task: ${error.message}`
-            : "Không thể xuất FHIR Task."
-      });
-    }
+    await loadFhirPreview({
+      errorMessage: "Không thể xuất FHIR Task",
+      exportPreview: () => exportWorkflowTaskFhir(clinicalApi, taskId),
+      setPreview: setWorkflowTaskFhirPreview
+    });
   }
 
   async function loadProcedureFhirPreview(procedureId: string) {
-    try {
-      setProcedureFhirPreview(await exportProcedureFhir(clinicalApi, procedureId));
-    } catch (error) {
-      setProcedureFhirPreview({
-        error:
-          error instanceof Error
-            ? `Không thể xuất FHIR Procedure: ${error.message}`
-            : "Không thể xuất FHIR Procedure."
-      });
-    }
+    await loadFhirPreview({
+      errorMessage: "Không thể xuất FHIR Procedure",
+      exportPreview: () => exportProcedureFhir(clinicalApi, procedureId),
+      setPreview: setProcedureFhirPreview
+    });
   }
 
   async function loadDiagnosticReportFhirPreview(diagnosticReportId: string) {
-    try {
-      setDiagnosticReportFhirPreview(
-        await exportDiagnosticReportFhir(clinicalApi, diagnosticReportId)
-      );
-    } catch (error) {
-      setDiagnosticReportFhirPreview({
-        error:
-          error instanceof Error
-            ? `Không thể xuất FHIR DiagnosticReport: ${error.message}`
-            : "Không thể xuất FHIR DiagnosticReport."
-      });
-    }
+    await loadFhirPreview({
+      errorMessage: "Không thể xuất FHIR DiagnosticReport",
+      exportPreview: () => exportDiagnosticReportFhir(clinicalApi, diagnosticReportId),
+      setPreview: setDiagnosticReportFhirPreview
+    });
   }
 
   async function loadImagingStudyFhirPreview(imagingStudyId: string) {
-    try {
-      setImagingStudyFhirPreview(
-        await exportImagingStudyFhir(clinicalApi, imagingStudyId)
-      );
-    } catch (error) {
-      setImagingStudyFhirPreview({
-        error:
-          error instanceof Error
-            ? `Không thể xuất FHIR ImagingStudy: ${error.message}`
-            : "Không thể xuất FHIR ImagingStudy."
-      });
-    }
+    await loadFhirPreview({
+      errorMessage: "Không thể xuất FHIR ImagingStudy",
+      exportPreview: () => exportImagingStudyFhir(clinicalApi, imagingStudyId),
+      setPreview: setImagingStudyFhirPreview
+    });
   }
 
   async function handleLogin(event?: FormEvent<HTMLFormElement>) {
