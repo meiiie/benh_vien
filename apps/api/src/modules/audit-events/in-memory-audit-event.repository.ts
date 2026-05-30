@@ -5,6 +5,15 @@ export class InMemoryAuditEventRepository implements AuditEventRepository {
   private readonly events = new Map<string, AuditEvent>();
   private sequence = 1;
 
+  async findRecent(limit = 50): Promise<AuditEvent[]> {
+    return [...this.events.values()]
+      .sort((left, right) =>
+        right.toSnapshot().occurredAt.localeCompare(left.toSnapshot().occurredAt)
+      )
+      .slice(0, limit)
+      .map(cloneAuditEvent);
+  }
+
   async findByPatientId(patientId: string, limit = 50): Promise<AuditEvent[]> {
     return [...this.events.values()]
       .filter((event) => event.patientId === patientId)

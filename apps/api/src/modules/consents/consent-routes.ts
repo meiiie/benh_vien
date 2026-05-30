@@ -12,9 +12,13 @@ import type {
   AuditEventRepository,
   ConsentRepository,
   ConsentSnapshot,
-  PatientRepository
+  PatientRepository,
+  ProviderDirectoryRepository
 } from "@benh-vien-so/domain";
-import { requirePermission } from "../access-control/access-context.js";
+import {
+  requirePatientRecordAccessByPatientId,
+  requirePermission
+} from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
 
@@ -22,6 +26,7 @@ export async function registerConsentRoutes(
   app: FastifyInstance,
   patientRepository: PatientRepository,
   consentRepository: ConsentRepository,
+  providerDirectoryRepository: ProviderDirectoryRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
   app.get("/patients/:patientId/consents", async (request, reply) => {
@@ -32,12 +37,17 @@ export async function registerConsentRoutes(
     }
 
     const params = PatientConsentsParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const consents = await consentRepository.findByPatientId(params.patientId);
@@ -64,12 +74,17 @@ export async function registerConsentRoutes(
     }
 
     const params = PatientConsentsParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const parsed = CreateConsentRequestSchema.safeParse(request.body);
@@ -120,12 +135,17 @@ export async function registerConsentRoutes(
     }
 
     const params = PatientConsentParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const consent = await consentRepository.findById(params.consentId);
@@ -198,6 +218,19 @@ export async function registerConsentRoutes(
           text: "Không tìm thấy consent cần xuất FHIR."
         }
       });
+    }
+
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        consent.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     await recordAuditEvent(auditRepository, request, {

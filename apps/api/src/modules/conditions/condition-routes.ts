@@ -15,9 +15,13 @@ import type {
   ConditionRepository,
   ConditionSnapshot,
   EncounterRepository,
-  PatientRepository
+  PatientRepository,
+  ProviderDirectoryRepository
 } from "@benh-vien-so/domain";
-import { requirePermission } from "../access-control/access-context.js";
+import {
+  requirePatientRecordAccessByPatientId,
+  requirePermission
+} from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 
 export async function registerConditionRoutes(
@@ -25,6 +29,7 @@ export async function registerConditionRoutes(
   patientRepository: PatientRepository,
   encounterRepository: EncounterRepository,
   conditionRepository: ConditionRepository,
+  providerDirectoryRepository: ProviderDirectoryRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
   app.get("/patients/:patientId/conditions", async (request, reply) => {
@@ -35,12 +40,17 @@ export async function registerConditionRoutes(
     }
 
     const params = PatientConditionsParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const conditions = await conditionRepository.findByPatientId(params.patientId);
@@ -67,12 +77,17 @@ export async function registerConditionRoutes(
     }
 
     const params = PatientConditionsParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const parsed = CreateConditionRequestSchema.safeParse(request.body);
@@ -140,6 +155,19 @@ export async function registerConditionRoutes(
       });
     }
 
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        condition.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
+    }
+
     await recordAuditEvent(auditRepository, request, {
       action: "condition.read",
       resourceType: "Condition",
@@ -164,6 +192,19 @@ export async function registerConditionRoutes(
       return reply.status(404).send({
         error: "CONDITION_NOT_FOUND"
       });
+    }
+
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        condition.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     await recordAuditEvent(auditRepository, request, {

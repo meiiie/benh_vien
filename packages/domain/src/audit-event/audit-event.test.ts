@@ -186,4 +186,192 @@ describe("AuditEvent integrity chain", () => {
       ]
     });
   });
+
+  it("maps denied access audit events as failed execution events in FHIR", () => {
+    const deniedAccess = sealAuditEvent(
+      AuditEvent.record({
+        id: "audit-event-test-006",
+        occurredAt: new Date("2026-05-28T00:04:00.000Z"),
+        actorId: "clinician-test",
+        action: "access.denied",
+        resourceType: "Patient",
+        resourceId: "patient-test-001",
+        patientId: "patient-test-001",
+        purposeOfUse: "TREATMENT",
+        metadata: {
+          denialCode: "PATIENT_ACCESS_DENIED",
+          statusCode: 403
+        }
+      })
+    );
+
+    expect(mapAuditEventToFhir(deniedAccess)).toMatchObject({
+      resourceType: "AuditEvent",
+      id: "audit-event-test-006",
+      subtype: [
+        {
+          code: "access.denied"
+        }
+      ],
+      action: "E",
+      recorded: "2026-05-28T00:04:00.000Z",
+      outcome: "4",
+      outcomeDesc: "Access denied",
+      agent: [
+        {
+          who: {
+            reference: "Practitioner/clinician-test"
+          },
+          requestor: true,
+          purposeOfUse: [
+            {
+              code: "TREAT"
+            }
+          ]
+        }
+      ],
+      entity: [
+        {
+          what: {
+            reference: "Patient/patient-test-001"
+          },
+          name: "access.denied"
+        }
+      ]
+    });
+  });
+
+  it("maps patient identifier conflicts as failed execution events in FHIR", () => {
+    const identifierConflict = sealAuditEvent(
+      AuditEvent.record({
+        id: "audit-event-test-identifier-conflict",
+        occurredAt: new Date("2026-05-28T00:04:30.000Z"),
+        actorId: "admin-test",
+        action: "patient.identifier-conflict",
+        resourceType: "Patient",
+        resourceId: "patient-test-001",
+        patientId: "patient-test-001",
+        purposeOfUse: "TREATMENT",
+        metadata: {
+          identifierSystem: "urn:gov:vietnam:national-id",
+          identifierType: "national-id"
+        }
+      })
+    );
+
+    expect(mapAuditEventToFhir(identifierConflict)).toMatchObject({
+      resourceType: "AuditEvent",
+      id: "audit-event-test-identifier-conflict",
+      subtype: [
+        {
+          code: "patient.identifier-conflict"
+        }
+      ],
+      action: "E",
+      recorded: "2026-05-28T00:04:30.000Z",
+      outcome: "4",
+      outcomeDesc: "Patient identifier conflict",
+      entity: [
+        {
+          what: {
+            reference: "Patient/patient-test-001"
+          },
+          name: "patient.identifier-conflict"
+        }
+      ]
+    });
+  });
+
+  it("maps patient merge audit events as successful update events in FHIR", () => {
+    const mergeEvent = sealAuditEvent(
+      AuditEvent.record({
+        id: "audit-event-test-patient-merge",
+        occurredAt: new Date("2026-05-28T00:04:45.000Z"),
+        actorId: "admin-test",
+        action: "patient.merge",
+        resourceType: "Patient",
+        resourceId: "patient-duplicate-001",
+        patientId: "patient-duplicate-001",
+        purposeOfUse: "TREATMENT",
+        metadata: {
+          targetPatientId: "patient-canonical-001"
+        }
+      })
+    );
+
+    expect(mapAuditEventToFhir(mergeEvent)).toMatchObject({
+      resourceType: "AuditEvent",
+      id: "audit-event-test-patient-merge",
+      subtype: [
+        {
+          code: "patient.merge"
+        }
+      ],
+      action: "U",
+      recorded: "2026-05-28T00:04:45.000Z",
+      outcome: "0",
+      outcomeDesc: "Success",
+      entity: [
+        {
+          what: {
+            reference: "Patient/patient-duplicate-001"
+          },
+          name: "patient.merge"
+        }
+      ]
+    });
+  });
+
+  it("maps failed login audit events as failed execution events in FHIR", () => {
+    const failedLogin = sealAuditEvent(
+      AuditEvent.record({
+        id: "audit-event-test-007",
+        occurredAt: new Date("2026-05-28T00:05:00.000Z"),
+        actorId: "anonymous",
+        action: "auth.login.failure",
+        resourceType: "AuditEvent",
+        resourceId: "auth/login",
+        purposeOfUse: "OPERATIONS",
+        metadata: {
+          reason: "INVALID_CREDENTIALS",
+          usernameHash: "a".repeat(64)
+        }
+      })
+    );
+
+    expect(mapAuditEventToFhir(failedLogin)).toMatchObject({
+      resourceType: "AuditEvent",
+      id: "audit-event-test-007",
+      subtype: [
+        {
+          code: "auth.login.failure"
+        }
+      ],
+      action: "E",
+      recorded: "2026-05-28T00:05:00.000Z",
+      outcome: "4",
+      outcomeDesc: "Authentication failed",
+      agent: [
+        {
+          who: {
+            reference: "Practitioner/anonymous"
+          },
+          requestor: true,
+          purposeOfUse: [
+            {
+              code: "HOPERAT"
+            }
+          ]
+        }
+      ],
+      entity: [
+        {
+          what: {
+            reference: "AuditEvent/auth/login"
+          },
+          name: "auth.login.failure"
+        }
+      ]
+    });
+  });
 });

@@ -44,7 +44,7 @@ export const CreateAllergyIntoleranceRequestSchema = z.object({
   recordedAt: z.string().datetime().optional(),
   recorderPractitionerId: z.string().min(1),
   note: z.string().min(1).optional()
-});
+}).strict();
 
 export type AllergyClinicalStatus = z.infer<typeof AllergyClinicalStatusSchema>;
 export type AllergyVerificationStatus = z.infer<typeof AllergyVerificationStatusSchema>;

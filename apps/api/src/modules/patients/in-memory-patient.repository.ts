@@ -1,4 +1,4 @@
-import { Patient } from "@benh-vien-so/domain";
+import { Patient, PatientIdentifierConflictError } from "@benh-vien-so/domain";
 import type { PatientRepository } from "@benh-vien-so/domain";
 
 export class InMemoryPatientRepository implements PatientRepository {
@@ -19,7 +19,39 @@ export class InMemoryPatientRepository implements PatientRepository {
     return patient ? clonePatient(patient) : undefined;
   }
 
+  async findByIdentifier(identifier: {
+    readonly system: string;
+    readonly value: string;
+  }): Promise<Patient | undefined> {
+    for (const patient of this.patients.values()) {
+      const snapshot = patient.toSnapshot();
+      const matched = snapshot.identifiers.some(
+        (current) =>
+          current.system === identifier.system && current.value === identifier.value
+      );
+
+      if (matched) {
+        return clonePatient(patient);
+      }
+    }
+
+    return undefined;
+  }
+
   async save(patient: Patient): Promise<void> {
+    const snapshot = patient.toSnapshot();
+
+    for (const identifier of snapshot.identifiers) {
+      const existing = await this.findByIdentifier(identifier);
+
+      if (existing && existing.id !== snapshot.id) {
+        throw new PatientIdentifierConflictError({
+          existingPatientId: existing.id,
+          identifier
+        });
+      }
+    }
+
     this.patients.set(patient.id, clonePatient(patient));
   }
 }
@@ -53,4 +85,3 @@ export function createSeedPatients(): Patient[] {
 function clonePatient(patient: Patient): Patient {
   return Patient.rehydrate(patient.toSnapshot());
 }
-

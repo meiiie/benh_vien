@@ -49,6 +49,7 @@ export const CreateImagingStudyRequestSchema = z
     numberOfInstances: z.number().int().nonnegative().optional(),
     series: z.array(ImagingStudySeriesSchema).min(1)
   })
+  .strict()
   .refine((value) => value.numberOfSeries === undefined || value.numberOfSeries >= value.series.length, {
     message: "Số chuỗi ảnh không được nhỏ hơn số series đã khai báo.",
     path: ["numberOfSeries"]

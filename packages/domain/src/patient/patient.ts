@@ -26,6 +26,10 @@ export type PatientSnapshot = {
   readonly phone?: string;
   readonly managingOrganizationId: string;
   readonly status: PatientRecordStatus;
+  readonly mergedIntoPatientId?: string;
+  readonly mergedAt?: string;
+  readonly mergedByActorId?: string;
+  readonly mergeReason?: string;
   readonly createdAt: string;
   readonly updatedAt: string;
 };
@@ -51,6 +55,10 @@ type PatientProps = {
   phone?: string;
   managingOrganizationId: string;
   status: PatientRecordStatus;
+  mergedIntoPatientId?: string;
+  mergedAt?: Date;
+  mergedByActorId?: string;
+  mergeReason?: string;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -78,9 +86,12 @@ export class Patient {
       throw new DomainError("Cơ sở quản lý hồ sơ không được để trống.");
     }
 
+    const identifiers = input.identifiers.map(normalizeIdentifier);
+    assertUniqueIdentifiers(identifiers);
+
     return new Patient({
       id: input.id.trim(),
-      identifiers: input.identifiers.map(normalizeIdentifier),
+      identifiers,
       fullName,
       birthDate: input.birthDate,
       gender: input.gender ?? "unknown",
@@ -104,6 +115,10 @@ export class Patient {
       phone: snapshot.phone,
       managingOrganizationId: snapshot.managingOrganizationId,
       status: snapshot.status,
+      mergedIntoPatientId: snapshot.mergedIntoPatientId,
+      mergedAt: snapshot.mergedAt ? new Date(snapshot.mergedAt) : undefined,
+      mergedByActorId: snapshot.mergedByActorId,
+      mergeReason: snapshot.mergeReason,
       createdAt: new Date(snapshot.createdAt),
       updatedAt: new Date(snapshot.updatedAt)
     });
@@ -120,6 +135,8 @@ export class Patient {
     readonly address?: string;
     readonly phone?: string;
   }): void {
+    this.ensureMutable();
+
     if (input.fullName !== undefined) {
       const fullName = normalizeText(input.fullName);
       if (!fullName) {
@@ -148,6 +165,8 @@ export class Patient {
   }
 
   addIdentifier(identifier: PatientIdentifier): void {
+    this.ensureMutable();
+
     const normalized = normalizeIdentifier(identifier);
     const existed = this.props.identifiers.some(
       (current) =>
@@ -160,8 +179,38 @@ export class Patient {
     }
   }
 
-  markMerged(): void {
+  markMerged(input: {
+    readonly targetPatientId: string;
+    readonly mergedByActorId: string;
+    readonly reason: string;
+    readonly mergedAt?: Date;
+  }): void {
+    const targetPatientId = normalizeRequiredText(
+      input.targetPatientId,
+      "Hồ sơ đích khi merge không được để trống."
+    );
+    const mergedByActorId = normalizeRequiredText(
+      input.mergedByActorId,
+      "Người thực hiện merge hồ sơ không được để trống."
+    );
+    const reason = normalizeRequiredText(
+      input.reason,
+      "Lý do merge hồ sơ không được để trống."
+    );
+
+    if (targetPatientId === this.props.id) {
+      throw new DomainError("Hồ sơ bệnh nhân không thể merge vào chính nó.");
+    }
+
+    if (this.props.status === "merged") {
+      throw new DomainError("Hồ sơ bệnh nhân đã được merge trước đó.");
+    }
+
     this.props.status = "merged";
+    this.props.mergedIntoPatientId = targetPatientId;
+    this.props.mergedAt = input.mergedAt ?? new Date();
+    this.props.mergedByActorId = mergedByActorId;
+    this.props.mergeReason = reason;
     this.touch();
   }
 
@@ -176,9 +225,19 @@ export class Patient {
       phone: this.props.phone,
       managingOrganizationId: this.props.managingOrganizationId,
       status: this.props.status,
+      mergedIntoPatientId: this.props.mergedIntoPatientId,
+      mergedAt: this.props.mergedAt?.toISOString(),
+      mergedByActorId: this.props.mergedByActorId,
+      mergeReason: this.props.mergeReason,
       createdAt: this.props.createdAt.toISOString(),
       updatedAt: this.props.updatedAt.toISOString()
     };
+  }
+
+  private ensureMutable(): void {
+    if (this.props.status === "merged") {
+      throw new DomainError("Hồ sơ bệnh nhân đã merge không được cập nhật trực tiếp.");
+    }
   }
 
   private touch(): void {
@@ -201,12 +260,35 @@ function normalizeIdentifier(identifier: PatientIdentifier): PatientIdentifier {
   };
 }
 
+function assertUniqueIdentifiers(identifiers: readonly PatientIdentifier[]): void {
+  const seen = new Set<string>();
+
+  for (const identifier of identifiers) {
+    const key = `${identifier.system}\u0000${identifier.value}`;
+
+    if (seen.has(key)) {
+      throw new DomainError("Định danh bệnh nhân bị trùng trong cùng một hồ sơ.");
+    }
+
+    seen.add(key);
+  }
+}
+
 function normalizeText(value: string): string {
   return value.trim().replace(/\s+/g, " ");
+}
+
+function normalizeRequiredText(value: string, message: string): string {
+  const normalized = normalizeText(value);
+
+  if (!normalized) {
+    throw new DomainError(message);
+  }
+
+  return normalized;
 }
 
 function normalizeOptionalText(value: string | undefined): string | undefined {
   const normalized = value?.trim().replace(/\s+/g, " ");
   return normalized || undefined;
 }
-

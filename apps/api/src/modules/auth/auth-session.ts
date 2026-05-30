@@ -202,5 +202,11 @@ function base64UrlDecode(value: string): string {
 }
 
 function isTokenRole(value: unknown): value is ActorRole {
-  return value === "clinician" || value === "nurse" || value === "auditor" || value === "admin";
+  return (
+    value === "clinician" ||
+    value === "nurse" ||
+    value === "auditor" ||
+    value === "admin" ||
+    value === "integration"
+  );
 }

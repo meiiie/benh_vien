@@ -2,8 +2,13 @@ import { createHash } from "node:crypto";
 import { DomainError } from "../shared/domain-error.js";
 
 export type AuditAction =
+  | "auth.login.success"
+  | "auth.login.failure"
+  | "access.denied"
   | "patient.list"
   | "patient.create"
+  | "patient.identifier-conflict"
+  | "patient.merge"
   | "patient.read"
   | "patient.fhir-export"
   | "patient.fhir-bundle-export"
@@ -14,7 +19,11 @@ export type AuditAction =
   | "record-transfer.create"
   | "record-transfer.read"
   | "record-transfer.send"
+  | "record-transfer.fail"
+  | "record-transfer.retry"
+  | "record-transfer.dead-letter"
   | "record-transfer.receive"
+  | "record-transfer.acknowledgement-callback"
   | "record-transfer.fhir-export"
   | "encounter.list"
   | "encounter.create"

@@ -16,9 +16,13 @@ import type {
   MedicationDispenseRepository,
   MedicationDispenseSnapshot,
   MedicationRequestRepository,
-  PatientRepository
+  PatientRepository,
+  ProviderDirectoryRepository
 } from "@benh-vien-so/domain";
-import { requirePermission } from "../access-control/access-context.js";
+import {
+  requirePatientRecordAccessByPatientId,
+  requirePermission
+} from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 
 export async function registerMedicationDispenseRoutes(
@@ -27,6 +31,7 @@ export async function registerMedicationDispenseRoutes(
   encounterRepository: EncounterRepository,
   medicationRequestRepository: MedicationRequestRepository,
   medicationDispenseRepository: MedicationDispenseRepository,
+  providerDirectoryRepository: ProviderDirectoryRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
   app.get("/patients/:patientId/medication-dispenses", async (request, reply) => {
@@ -37,12 +42,17 @@ export async function registerMedicationDispenseRoutes(
     }
 
     const params = PatientMedicationDispensesParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const medicationDispenses =
@@ -70,12 +80,17 @@ export async function registerMedicationDispenseRoutes(
     }
 
     const params = PatientMedicationDispensesParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const parsed = CreateMedicationDispenseRequestSchema.safeParse(request.body);
@@ -146,6 +161,19 @@ export async function registerMedicationDispenseRoutes(
       });
     }
 
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        medicationDispense.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
+    }
+
     await recordAuditEvent(auditRepository, request, {
       action: "medication-dispense.read",
       resourceType: "MedicationDispense",
@@ -170,6 +198,19 @@ export async function registerMedicationDispenseRoutes(
       return reply.status(404).send({
         error: "MEDICATION_DISPENSE_NOT_FOUND"
       });
+    }
+
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        medicationDispense.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     await recordAuditEvent(auditRepository, request, {

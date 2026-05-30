@@ -1,12 +1,24 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { ProviderDirectoryRepository } from "@benh-vien-so/domain";
+import type {
+  ProviderDirectoryRepository,
+  RecordTransferDeliveryAttempt,
+  RecordTransferDeliveryAttemptRepository
+} from "@benh-vien-so/domain";
 import { registerAuthRoutes } from "./modules/auth/auth-routes.js";
 import { createMemoryLoginRateLimiter } from "./modules/auth/login-rate-limit.js";
 import type { LoginRateLimiter } from "./modules/auth/login-rate-limit.js";
+import {
+  buildRecordTransferCallbackSignature,
+  recordTransferCallbackKeyIdHeader,
+  recordTransferCallbackSignatureHeader,
+  recordTransferCallbackTimestampHeader
+} from "./modules/record-transfers/record-transfer-callback-signature.js";
 import { buildServer } from "./server.js";
 
 const testSecret = "wiiicare-test-secret-at-least-32-characters";
+const callbackSecret = "wiiicare-record-transfer-callback-secret-for-tests";
+const callbackKeyId = "gateway-hai-phong-referral";
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 describe("API auth and RBAC boundary", () => {
@@ -24,10 +36,22 @@ describe("API auth and RBAC boundary", () => {
   const originalRateLimitStore = process.env.BVS_RATE_LIMIT_STORE;
   const originalValkeyUrl = process.env.BVS_VALKEY_URL;
   const originalDemoAuthEnabled = process.env.BVS_DEMO_AUTH_ENABLED;
+  const originalRecordTransferRetryWorkerEnabled =
+    process.env.BVS_RECORD_TRANSFER_RETRY_WORKER_ENABLED;
+  const originalRecordTransferDeliveryWorkerEnabled =
+    process.env.BVS_RECORD_TRANSFER_DELIVERY_WORKER_ENABLED;
+  const originalRecordTransferCallbackSecret =
+    process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRET;
+  const originalRecordTransferCallbackSecretsJson =
+    process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON;
+  const originalApiDocsEnabled = process.env.BVS_API_DOCS_ENABLED;
+  const originalHttpBodyLimitBytes = process.env.BVS_HTTP_BODY_LIMIT_BYTES;
 
   beforeEach(() => {
     process.env.BVS_REPOSITORY = "in-memory";
     process.env.BVS_AUTH_SECRET = testSecret;
+    process.env.BVS_RECORD_TRANSFER_RETRY_WORKER_ENABLED = "false";
+    process.env.BVS_RECORD_TRANSFER_DELIVERY_WORKER_ENABLED = "false";
   });
 
   afterEach(async () => {
@@ -51,6 +75,24 @@ describe("API auth and RBAC boundary", () => {
     restoreEnv("BVS_RATE_LIMIT_STORE", originalRateLimitStore);
     restoreEnv("BVS_VALKEY_URL", originalValkeyUrl);
     restoreEnv("BVS_DEMO_AUTH_ENABLED", originalDemoAuthEnabled);
+    restoreEnv(
+      "BVS_RECORD_TRANSFER_RETRY_WORKER_ENABLED",
+      originalRecordTransferRetryWorkerEnabled
+    );
+    restoreEnv(
+      "BVS_RECORD_TRANSFER_DELIVERY_WORKER_ENABLED",
+      originalRecordTransferDeliveryWorkerEnabled
+    );
+    restoreEnv(
+      "BVS_RECORD_TRANSFER_CALLBACK_SECRET",
+      originalRecordTransferCallbackSecret
+    );
+    restoreEnv(
+      "BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON",
+      originalRecordTransferCallbackSecretsJson
+    );
+    restoreEnv("BVS_API_DOCS_ENABLED", originalApiDocsEnabled);
+    restoreEnv("BVS_HTTP_BODY_LIMIT_BYTES", originalHttpBodyLimitBytes);
   });
 
   it("returns a signed demo session for valid credentials", async () => {
@@ -155,6 +197,26 @@ describe("API auth and RBAC boundary", () => {
       requestId: "auth-invalid-payload-001"
     });
 
+    const unknownFieldResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/auth/login",
+      headers: {
+        "content-type": "application/json",
+        "x-request-id": "auth-unknown-field-001"
+      },
+      payload: {
+        username: "practitioner-demo-001",
+        password: "demo",
+        role: "clinician",
+        actorId: "admin-demo"
+      }
+    });
+    expect(unknownFieldResponse.statusCode).toBe(400);
+    expect(unknownFieldResponse.json()).toMatchObject({
+      error: "VALIDATION_ERROR",
+      requestId: "auth-unknown-field-001"
+    });
+
     const invalidCredentialsResponse = await login(
       app,
       {
@@ -204,6 +266,79 @@ describe("API auth and RBAC boundary", () => {
       error: "UNAUTHENTICATED",
       requestId: "auth-invalid-session-001"
     });
+  });
+
+  it("records successful and failed login attempts in the global audit trail", async () => {
+    app = await readyServer();
+
+    const invalidLoginResponse = await login(
+      app,
+      {
+        username: "unknown-login-audit-user",
+        password: "wrong-password",
+        role: "clinician"
+      },
+      {
+        "x-request-id": "auth-audit-invalid-001"
+      }
+    );
+    expect(invalidLoginResponse.statusCode).toBe(401);
+
+    const clinicianLoginResponse = await login(
+      app,
+      {
+        username: "practitioner-demo-001",
+        password: "demo",
+        role: "clinician"
+      },
+      {
+        "x-request-id": "auth-audit-success-001"
+      }
+    );
+    expect(clinicianLoginResponse.statusCode).toBe(200);
+
+    const auditorToken = await loginForToken(app, "security-officer-demo", "auditor");
+    const auditResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/audit-events?limit=25",
+      headers: auditHeaders(auditorToken)
+    });
+    const auditBody = auditResponse.json();
+    const failedLoginEvent = auditBody.items.find(
+      (event: { readonly metadata?: { readonly requestId?: string } }) =>
+        event.metadata?.requestId === "auth-audit-invalid-001"
+    );
+    const successfulLoginEvent = auditBody.items.find(
+      (event: { readonly metadata?: { readonly requestId?: string } }) =>
+        event.metadata?.requestId === "auth-audit-success-001"
+    );
+
+    expect(auditResponse.statusCode).toBe(200);
+    expect(failedLoginEvent).toMatchObject({
+      actorId: "anonymous",
+      action: "auth.login.failure",
+      resourceType: "AuditEvent",
+      resourceId: "auth/login",
+      purposeOfUse: "OPERATIONS",
+      metadata: expect.objectContaining({
+        reason: "INVALID_CREDENTIALS",
+        requestedRole: "clinician",
+        usernameHash: expect.stringMatching(/^[a-f0-9]{64}$/)
+      })
+    });
+    expect(failedLoginEvent.metadata).not.toHaveProperty("username");
+    expect(successfulLoginEvent).toMatchObject({
+      actorId: "practitioner-demo-001",
+      action: "auth.login.success",
+      resourceType: "AuditEvent",
+      resourceId: "auth/login",
+      purposeOfUse: "OPERATIONS",
+      metadata: expect.objectContaining({
+        actorRole: "clinician",
+        usernameHash: expect.stringMatching(/^[a-f0-9]{64}$/)
+      })
+    });
+    expect(successfulLoginEvent.metadata).not.toHaveProperty("username");
   });
 
   it("rate limits repeated login attempts for the same identity and client", async () => {
@@ -303,6 +438,82 @@ describe("API auth and RBAC boundary", () => {
     expect(body.latencyMs).toEqual(expect.any(Number));
   });
 
+  it("returns redacted runtime metadata for unauthenticated web compatibility checks", async () => {
+    app = await readyServer();
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/runtime"
+    });
+    const body = response.json();
+
+    expect(response.statusCode).toBe(200);
+    expect(body).toMatchObject({
+      service: "benh-vien-so-api",
+      product: "WiiiCare Nexus",
+      version: "0.2.0",
+      publicApiBaseUrl: expect.stringContaining("/api/v1"),
+      operationalDiagnostics: {
+        available: false,
+        reason: expect.any(String)
+      },
+      features: {
+        apiDocsEnabled: null,
+        recordTransferDeliveryAttempts: true,
+        recordTransferDeliveryWorkerEnabled: null,
+        recordTransferRetryWorkerEnabled: null
+      }
+    });
+    expect(body).not.toHaveProperty("repository");
+    expect(body).not.toHaveProperty("nodeEnv");
+    expect(body).not.toHaveProperty("httpBodyLimitBytes");
+    expect(Date.parse(body.checkedAt)).not.toBeNaN();
+  });
+
+  it("returns runtime diagnostics to operations and audit sessions", async () => {
+    app = await readyServer();
+    const adminToken = await loginForToken(app, "admin-demo", "admin");
+    const auditorToken = await loginForToken(app, "security-officer-demo", "auditor");
+
+    const operationsResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/runtime",
+      headers: operationsHeaders(adminToken)
+    });
+    const auditResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/runtime",
+      headers: auditHeaders(auditorToken)
+    });
+
+    expect(operationsResponse.statusCode).toBe(200);
+    const operationsBody = operationsResponse.json();
+    expect(operationsBody).toMatchObject({
+      repository: "in-memory",
+      nodeEnv: expect.any(String),
+      httpBodyLimitBytes: 1_048_576,
+      operationalDiagnostics: {
+        available: true
+      },
+      features: {
+        apiDocsEnabled: true,
+        recordTransferDeliveryAttempts: true,
+        recordTransferDeliveryWorkerEnabled: false,
+        recordTransferRetryWorkerEnabled: false
+      }
+    });
+    expect(auditResponse.statusCode).toBe(200);
+    expect(auditResponse.json()).toMatchObject({
+      operationalDiagnostics: {
+        available: true
+      },
+      features: {
+        apiDocsEnabled: true
+      }
+    });
+    expect(Date.parse(operationsBody.checkedAt)).not.toBeNaN();
+  });
+
   it("marks readiness as not ready when the login rate limit store is unhealthy", async () => {
     const unhealthyLoginRateLimiter: LoginRateLimiter = {
       async consume() {
@@ -365,6 +576,86 @@ describe("API auth and RBAC boundary", () => {
     expect(response.headers["cross-origin-resource-policy"]).toBe("same-site");
     expect(response.headers["cache-control"]).toBe("no-store");
     expect(response.headers.pragma).toBe("no-cache");
+  });
+
+  it("serves API documentation outside production by default", async () => {
+    delete process.env.BVS_API_DOCS_ENABLED;
+    app = await readyServer();
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/docs/"
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(String(response.headers["content-type"])).toContain("text/html");
+  });
+
+  it("can disable API documentation through runtime configuration", async () => {
+    process.env.BVS_API_DOCS_ENABLED = "false";
+    app = await readyServer();
+
+    const docsResponse = await app.inject({
+      method: "GET",
+      url: "/docs/"
+    });
+    const adminToken = await loginForToken(app, "admin-demo", "admin");
+    const runtimeResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/runtime",
+      headers: operationsHeaders(adminToken)
+    });
+
+    expect(docsResponse.statusCode).toBe(404);
+    expect(runtimeResponse.statusCode).toBe(200);
+    expect(runtimeResponse.json()).toMatchObject({
+      features: {
+        apiDocsEnabled: false
+      }
+    });
+  });
+
+  it("rejects invalid API documentation feature flag values", async () => {
+    process.env.BVS_API_DOCS_ENABLED = "sometimes";
+
+    await expect(buildServer({ logger: false })).rejects.toThrow(
+      "BVS_API_DOCS_ENABLED must be either 'true' or 'false'."
+    );
+  });
+
+  it("rejects invalid HTTP body limit configuration", async () => {
+    for (const value of ["512", "10485761", "1.5", "not-a-number"]) {
+      process.env.BVS_HTTP_BODY_LIMIT_BYTES = value;
+
+      await expect(buildServer({ logger: false })).rejects.toThrow(
+        "BVS_HTTP_BODY_LIMIT_BYTES must be an integer between 1024 and 10485760."
+      );
+    }
+  });
+
+  it("rejects oversized JSON request bodies with a safe request error", async () => {
+    process.env.BVS_HTTP_BODY_LIMIT_BYTES = "1024";
+    app = await readyServer();
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/auth/login",
+      headers: {
+        "content-type": "application/json",
+        "x-request-id": "body-too-large-001"
+      },
+      payload: {
+        username: "practitioner-demo-001",
+        password: "x".repeat(2_000),
+        role: "clinician"
+      }
+    });
+
+    expect(response.statusCode).toBe(413);
+    expect(response.json()).toMatchObject({
+      error: "REQUEST_ERROR",
+      requestId: "body-too-large-001"
+    });
   });
 
   it("echoes the request id header for trace correlation", async () => {
@@ -527,6 +818,26 @@ describe("API auth and RBAC boundary", () => {
       [
         "https://wiiicare.example.vn/app",
         "BVS_CORS_ORIGINS must contain canonical HTTPS origins in production."
+      ],
+      [
+        "https://localhost",
+        "BVS_CORS_ORIGINS must not contain localhost, loopback, private or link-local origins in production."
+      ],
+      [
+        "https://127.0.0.1",
+        "BVS_CORS_ORIGINS must not contain localhost, loopback, private or link-local origins in production."
+      ],
+      [
+        "https://10.0.0.5",
+        "BVS_CORS_ORIGINS must not contain localhost, loopback, private or link-local origins in production."
+      ],
+      [
+        "https://192.168.1.25",
+        "BVS_CORS_ORIGINS must not contain localhost, loopback, private or link-local origins in production."
+      ],
+      [
+        "https://[fd12:3456::1]",
+        "BVS_CORS_ORIGINS must not contain localhost, loopback, private or link-local origins in production."
       ]
     ] as const) {
       process.env.BVS_CORS_ORIGINS = origin;
@@ -626,20 +937,43 @@ describe("API auth and RBAC boundary", () => {
     );
   });
 
-  it("rejects loopback public API base URLs in production", async () => {
+  it("requires callback signature secrets at startup in production", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.BVS_REPOSITORY = "postgres";
+    process.env.BVS_PUBLIC_API_BASE_URL = "https://api.wiiicare.example.vn/api/v1";
+    process.env.BVS_CORS_ORIGINS = "https://wiiicare.example.vn";
+    delete process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRET;
+    delete process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON;
+
+    await expect(buildServer({ logger: false })).rejects.toThrow(
+      "BVS_RECORD_TRANSFER_CALLBACK_SECRET hoặc BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON phải được cấu hình tối thiểu 32 ký tự trong production."
+    );
+  });
+
+  it("rejects local-only public API base URLs in production", async () => {
     process.env.NODE_ENV = "production";
     process.env.BVS_REPOSITORY = "postgres";
 
     for (const publicApiBaseUrl of [
       "https://localhost/api/v1",
+      "https://gateway.localhost/api/v1",
       "https://127.0.0.1/api/v1",
       "https://0.0.0.0/api/v1",
-      "https://[::1]/api/v1"
+      "https://10.0.0.5/api/v1",
+      "https://172.16.0.5/api/v1",
+      "https://172.31.255.250/api/v1",
+      "https://192.168.1.25/api/v1",
+      "https://169.254.10.20/api/v1",
+      "https://[::1]/api/v1",
+      "https://[fc00::1]/api/v1",
+      "https://[fd12:3456::1]/api/v1",
+      "https://[fe80::1]/api/v1",
+      "https://[::ffff:192.168.1.25]/api/v1"
     ]) {
       process.env.BVS_PUBLIC_API_BASE_URL = publicApiBaseUrl;
 
       await expect(buildServer({ logger: false })).rejects.toThrow(
-        "BVS_PUBLIC_API_BASE_URL must not use localhost or loopback hosts in production."
+        "BVS_PUBLIC_API_BASE_URL must not use localhost, loopback, private or link-local hosts in production."
       );
     }
   });
@@ -699,6 +1033,220 @@ describe("API auth and RBAC boundary", () => {
     expect(body.items[0]).toMatchObject({
       id: "patient-demo-001",
       fullName: "Nguyễn Văn An"
+    });
+  });
+
+  it("blocks duplicate patient identifiers before creating a new record", async () => {
+    app = await readyServer();
+    const adminToken = await loginForToken(app, "admin-demo", "admin");
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients",
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json",
+        "x-request-id": "patient-identifier-conflict-001"
+      },
+      payload: {
+        identifiers: [
+          {
+            system: "urn:gov:vietnam:national-id",
+            value: "000000000001",
+            type: "national-id"
+          }
+        ],
+        fullName: "Duplicate Identity Patient",
+        gender: "unknown",
+        managingOrganizationId: "hospital-hai-phong-demo"
+      }
+    });
+    const body = response.json();
+
+    expect(response.statusCode).toBe(409);
+    expect(body).toMatchObject({
+      error: "PATIENT_IDENTIFIER_CONFLICT",
+      requestId: "patient-identifier-conflict-001",
+      identifier: {
+        system: "urn:gov:vietnam:national-id",
+        type: "national-id"
+      }
+    });
+    expect(JSON.stringify(body)).not.toContain("patient-demo-001");
+
+    const patientsResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients",
+      headers: treatmentHeaders(adminToken)
+    });
+    expect(patientsResponse.json().items).toHaveLength(1);
+
+    const auditorToken = await loginForToken(app, "security-officer-demo", "auditor");
+    const auditResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/audit-events?limit=10",
+      headers: auditHeaders(auditorToken)
+    });
+    const conflictEvent = auditResponse
+      .json()
+      .items.find(
+        (event: { readonly metadata?: { readonly requestId?: string } }) =>
+          event.metadata?.requestId === "patient-identifier-conflict-001"
+      );
+
+    expect(conflictEvent).toMatchObject({
+      action: "patient.identifier-conflict",
+      resourceType: "Patient",
+      resourceId: "patient-demo-001",
+      patientId: "patient-demo-001",
+      metadata: expect.objectContaining({
+        identifierSystem: "urn:gov:vietnam:national-id",
+        identifierType: "national-id"
+      })
+    });
+  });
+
+  it("merges a duplicate patient record into the canonical patient", async () => {
+    app = await readyServer();
+    const adminToken = await loginForToken(app, "admin-demo", "admin");
+    const clinicianToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const createResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients",
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        identifiers: [
+          {
+            system: "urn:benh-vien-so:mrn",
+            value: "MRN-MERGE-TEST",
+            type: "hospital-mrn"
+          }
+        ],
+        fullName: "Duplicate Patient For Merge",
+        gender: "unknown",
+        managingOrganizationId: "hospital-hai-phong-demo"
+      }
+    });
+    const sourcePatientId = createResponse.json().id as string;
+
+    expect(createResponse.statusCode).toBe(201);
+
+    const clinicianMergeResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${sourcePatientId}/merge`,
+      headers: {
+        ...treatmentHeaders(clinicianToken),
+        "content-type": "application/json",
+        "x-request-id": "patient-merge-clinician-denied-001"
+      },
+      payload: {
+        targetPatientId: "patient-demo-001",
+        reason: "Clinician should not merge patient registry records."
+      }
+    });
+
+    expect(clinicianMergeResponse.statusCode).toBe(403);
+    expect(clinicianMergeResponse.json()).toMatchObject({
+      error: "FORBIDDEN",
+      permission: "patient:merge",
+      requestId: "patient-merge-clinician-denied-001"
+    });
+
+    const mergeResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${sourcePatientId}/merge`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json",
+        "x-request-id": "patient-merge-001"
+      },
+      payload: {
+        targetPatientId: "patient-demo-001",
+        reason: "Duplicate registration found during MPI review."
+      }
+    });
+    const merged = mergeResponse.json();
+
+    expect(mergeResponse.statusCode).toBe(200);
+    expect(merged).toMatchObject({
+      id: sourcePatientId,
+      status: "merged",
+      mergedIntoPatientId: "patient-demo-001",
+      mergedByActorId: "admin-demo",
+      mergeReason: "Duplicate registration found during MPI review."
+    });
+    expect(Date.parse(merged.mergedAt)).not.toBeNaN();
+
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: `/api/v1/patients/${sourcePatientId}/fhir`,
+      headers: treatmentHeaders(adminToken)
+    });
+    expect(fhirResponse.statusCode).toBe(200);
+    expect(fhirResponse.json()).toMatchObject({
+      resourceType: "Patient",
+      id: sourcePatientId,
+      active: false,
+      link: [
+        {
+          other: {
+            reference: "Patient/patient-demo-001"
+          },
+          type: "replaced-by"
+        }
+      ]
+    });
+
+    const writeAfterMergeResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${sourcePatientId}/encounters`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json",
+        "x-request-id": "patient-merge-write-denied-001"
+      },
+      payload: {
+        class: "ambulatory",
+        serviceType: "Should not write to merged patient",
+        reasonText: "Merged source patient must stay read-only.",
+        attendingPractitionerId: "practitioner-demo-001",
+        startedAt: "2026-05-28T05:00:00.000Z"
+      }
+    });
+
+    expect(writeAfterMergeResponse.statusCode).toBe(409);
+    expect(writeAfterMergeResponse.json()).toMatchObject({
+      error: "PATIENT_RECORD_MERGED",
+      requestId: "patient-merge-write-denied-001",
+      patientId: sourcePatientId,
+      mergedIntoPatientId: "patient-demo-001"
+    });
+
+    const auditorToken = await loginForToken(app, "security-officer-demo", "auditor");
+    const auditResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/audit-events?limit=20",
+      headers: auditHeaders(auditorToken)
+    });
+    const mergeAuditEvent = auditResponse
+      .json()
+      .items.find(
+        (event: { readonly metadata?: { readonly requestId?: string } }) =>
+          event.metadata?.requestId === "patient-merge-001"
+      );
+
+    expect(mergeAuditEvent).toMatchObject({
+      action: "patient.merge",
+      resourceType: "Patient",
+      resourceId: sourcePatientId,
+      patientId: sourcePatientId,
+      metadata: expect.objectContaining({
+        targetPatientId: "patient-demo-001"
+      })
     });
   });
 
@@ -765,6 +1313,617 @@ describe("API auth and RBAC boundary", () => {
         purposeOfUse: "TREATMENT"
       }
     });
+
+    for (const [url, requestId] of [
+      [`/api/v1/patients/${outsidePatientId}/encounters`, "encounter-list-abac-denied-001"],
+      [
+        `/api/v1/patients/${outsidePatientId}/allergy-intolerances`,
+        "allergy-list-abac-denied-001"
+      ],
+      [`/api/v1/patients/${outsidePatientId}/conditions`, "condition-list-abac-denied-001"],
+      [
+        `/api/v1/patients/${outsidePatientId}/medication-requests`,
+        "medication-request-list-abac-denied-001"
+      ],
+      [
+        `/api/v1/patients/${outsidePatientId}/medication-dispenses`,
+        "medication-dispense-list-abac-denied-001"
+      ],
+      [
+        `/api/v1/patients/${outsidePatientId}/medication-administrations`,
+        "medication-administration-list-abac-denied-001"
+      ],
+      [`/api/v1/patients/${outsidePatientId}/documents`, "document-list-abac-denied-001"],
+      [`/api/v1/patients/${outsidePatientId}/observations`, "observation-list-abac-denied-001"],
+      [
+        `/api/v1/patients/${outsidePatientId}/service-requests`,
+        "service-request-list-abac-denied-001"
+      ],
+      [
+        `/api/v1/patients/${outsidePatientId}/workflow-tasks`,
+        "workflow-task-list-abac-denied-001"
+      ],
+      [`/api/v1/patients/${outsidePatientId}/procedures`, "procedure-list-abac-denied-001"],
+      [
+        `/api/v1/patients/${outsidePatientId}/diagnostic-reports`,
+        "diagnostic-report-list-abac-denied-001"
+      ],
+      [
+        `/api/v1/patients/${outsidePatientId}/imaging-studies`,
+        "imaging-study-list-abac-denied-001"
+      ],
+      [`/api/v1/patients/${outsidePatientId}/consents`, "consent-list-abac-denied-001"],
+      [
+        `/api/v1/patients/${outsidePatientId}/record-transfers`,
+        "record-transfer-list-abac-denied-001"
+      ]
+    ] as const) {
+      const response = await app.inject({
+        method: "GET",
+        url,
+        headers: {
+          ...treatmentHeaders(clinicianToken),
+          "x-request-id": requestId
+        }
+      });
+
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toMatchObject({
+        error: "PATIENT_ACCESS_DENIED",
+        requestId,
+        patientId: outsidePatientId
+      });
+    }
+
+    const outsideEncounterResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/encounters`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        class: "ambulatory",
+        serviceType: "Khám ngoài tổ chức",
+        reasonText: "Encounter ngoài tổ chức để kiểm tra ABAC.",
+        attendingPractitionerId: "practitioner-demo-003",
+        startedAt: "2026-05-28T00:30:00.000Z"
+      }
+    });
+    const outsideEncounterId = outsideEncounterResponse.json().id as string;
+
+    expect(outsideEncounterResponse.statusCode).toBe(201);
+
+    const outsideAllergyResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/allergy-intolerances`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: outsideEncounterId,
+        type: "allergy",
+        category: "medication",
+        code: {
+          system: "http://snomed.info/sct",
+          code: "91936005",
+          display: "Allergy to penicillin"
+        },
+        recorderPractitionerId: "practitioner-demo-003"
+      }
+    });
+    const outsideAllergyId = outsideAllergyResponse.json().id as string;
+
+    expect(outsideAllergyResponse.statusCode).toBe(201);
+
+    const outsideConditionResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/conditions`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: outsideEncounterId,
+        category: "encounter-diagnosis",
+        code: {
+          system: "http://hl7.org/fhir/sid/icd-10",
+          code: "J18.9",
+          display: "Pneumonia, unspecified organism"
+        },
+        recorderPractitionerId: "practitioner-demo-003"
+      }
+    });
+    const outsideConditionId = outsideConditionResponse.json().id as string;
+
+    expect(outsideConditionResponse.statusCode).toBe(201);
+
+    const outsideDocumentResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/documents`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        type: "referral-letter",
+        title: "Outside referral letter",
+        storageUri: "s3://wiiicare-test/outside/referral-letter.pdf",
+        authorPractitionerId: "practitioner-demo-003"
+      }
+    });
+    const outsideDocumentId = outsideDocumentResponse.json().id as string;
+
+    expect(outsideDocumentResponse.statusCode).toBe(201);
+
+    const outsideObservationResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/observations`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        category: "vital-signs",
+        code: {
+          system: "http://loinc.org",
+          code: "8310-5",
+          display: "Body temperature"
+        },
+        effectiveAt: "2026-05-28T01:00:00.000Z",
+        valueQuantity: {
+          value: 37,
+          unit: "Cel",
+          system: "http://unitsofmeasure.org",
+          code: "Cel"
+        },
+        performerPractitionerId: "practitioner-demo-001"
+      }
+    });
+    const outsideObservationId = outsideObservationResponse.json().id as string;
+
+    expect(outsideObservationResponse.statusCode).toBe(201);
+
+    const outsideMedicationRequestResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/medication-requests`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: outsideEncounterId,
+        reasonConditionId: outsideConditionId,
+        category: "outpatient",
+        medicationCode: {
+          system: "http://www.whocc.no/atc",
+          code: "J01CA04",
+          display: "Amoxicillin"
+        },
+        dosageInstruction: {
+          text: "Take 500 mg every 8 hours",
+          route: "Oral route",
+          doseQuantity: {
+            value: 500,
+            unit: "mg",
+            system: "http://unitsofmeasure.org",
+            code: "mg"
+          },
+          frequency: 3,
+          period: 1,
+          periodUnit: "d"
+        },
+        requesterPractitionerId: "practitioner-demo-003",
+        expectedSupplyDurationDays: 7
+      }
+    });
+    const outsideMedicationRequestId = outsideMedicationRequestResponse.json().id as string;
+
+    expect(outsideMedicationRequestResponse.statusCode).toBe(201);
+
+    const outsideMedicationDispenseResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/medication-dispenses`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: outsideEncounterId,
+        medicationRequestId: outsideMedicationRequestId,
+        status: "completed",
+        category: "outpatient",
+        medicationCode: {
+          system: "http://www.whocc.no/atc",
+          code: "J01CA04",
+          display: "Amoxicillin"
+        },
+        quantity: {
+          value: 21,
+          unit: "tablet",
+          system: "http://unitsofmeasure.org",
+          code: "{tablet}"
+        },
+        daysSupply: {
+          value: 7,
+          unit: "day",
+          system: "http://unitsofmeasure.org",
+          code: "d"
+        },
+        whenPrepared: "2026-05-28T01:10:00.000Z",
+        whenHandedOver: "2026-05-28T01:15:00.000Z",
+        dispenserPractitionerId: "nurse-demo-001",
+        receiverPractitionerId: "nurse-demo-001",
+        dosageInstruction: {
+          text: "Take 500 mg every 8 hours",
+          route: "Oral route",
+          doseQuantity: {
+            value: 500,
+            unit: "mg",
+            system: "http://unitsofmeasure.org",
+            code: "mg"
+          },
+          frequency: 3,
+          period: 1,
+          periodUnit: "d"
+        }
+      }
+    });
+    const outsideMedicationDispenseId = outsideMedicationDispenseResponse.json()
+      .id as string;
+
+    expect(outsideMedicationDispenseResponse.statusCode).toBe(201);
+
+    const outsideMedicationAdministrationResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/medication-administrations`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: outsideEncounterId,
+        medicationRequestId: outsideMedicationRequestId,
+        reasonConditionId: outsideConditionId,
+        status: "completed",
+        category: "outpatient",
+        medicationCode: {
+          system: "http://www.whocc.no/atc",
+          code: "J01CA04",
+          display: "Amoxicillin"
+        },
+        effectivePeriod: {
+          start: "2026-05-28T01:20:00.000Z"
+        },
+        performers: [
+          {
+            actorType: "Practitioner",
+            actorId: "nurse-demo-001"
+          }
+        ],
+        dosage: {
+          text: "Take 500 mg every 8 hours",
+          route: {
+            system: "http://snomed.info/sct",
+            code: "26643006",
+            display: "Oral route"
+          },
+          doseQuantity: {
+            value: 500,
+            unit: "mg",
+            system: "http://unitsofmeasure.org",
+            code: "mg"
+          }
+        }
+      }
+    });
+    const outsideMedicationAdministrationId = outsideMedicationAdministrationResponse.json()
+      .id as string;
+
+    expect(outsideMedicationAdministrationResponse.statusCode).toBe(201);
+
+    const outsideServiceRequestResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/service-requests`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: outsideEncounterId,
+        reasonConditionId: outsideConditionId,
+        category: "laboratory",
+        code: {
+          system: "http://loinc.org",
+          code: "58410-2",
+          display: "Complete blood count panel"
+        },
+        requesterPractitionerId: "practitioner-demo-003"
+      }
+    });
+    const outsideServiceRequestId = outsideServiceRequestResponse.json().id as string;
+
+    expect(outsideServiceRequestResponse.statusCode).toBe(201);
+
+    const outsideDiagnosticReportResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/diagnostic-reports`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: outsideEncounterId,
+        basedOnServiceRequestId: outsideServiceRequestId,
+        category: "laboratory",
+        code: {
+          system: "http://loinc.org",
+          code: "58410-2",
+          display: "Complete blood count panel"
+        },
+        effectiveAt: "2026-05-28T01:30:00.000Z",
+        issuedAt: "2026-05-28T01:45:00.000Z",
+        performerOrganizationId: "department-laboratory",
+        resultsInterpreterPractitionerId: "practitioner-demo-003",
+        resultObservationIds: [outsideObservationId],
+        conclusion: "Outside diagnostic report for ABAC verification."
+      }
+    });
+    const outsideDiagnosticReportId = outsideDiagnosticReportResponse.json().id as string;
+
+    expect(outsideDiagnosticReportResponse.statusCode).toBe(201);
+
+    const outsideProcedureResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/procedures`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: outsideEncounterId,
+        basedOnServiceRequestId: outsideServiceRequestId,
+        reasonConditionId: outsideConditionId,
+        status: "completed",
+        category: "diagnostic",
+        code: {
+          system: "http://snomed.info/sct",
+          code: "168537006",
+          display: "Chest X-ray"
+        },
+        performedPeriod: {
+          start: "2026-05-28T02:00:00.000Z",
+          end: "2026-05-28T02:10:00.000Z"
+        },
+        performers: [
+          {
+            actorType: "Practitioner",
+            actorId: "practitioner-demo-003",
+            onBehalfOfOrganizationId: "hospital-outside-demo"
+          }
+        ],
+        reportReferences: [
+          {
+            resourceType: "DiagnosticReport",
+            id: outsideDiagnosticReportId
+          }
+        ],
+        note: "Outside procedure for ABAC verification."
+      }
+    });
+    const outsideProcedureId = outsideProcedureResponse.json().id as string;
+
+    expect(outsideProcedureResponse.statusCode).toBe(201);
+
+    const outsideImagingStudyResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/imaging-studies`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: outsideEncounterId,
+        basedOnServiceRequestId: outsideServiceRequestId,
+        diagnosticReportId: outsideDiagnosticReportId,
+        studyInstanceUid: "1.2.826.0.1.3680043.10.543.202605280001",
+        accessionNumber: "OUTSIDE-CXR-ABAC-001",
+        description: "Outside chest X-ray study for ABAC verification",
+        startedAt: "2026-05-28T02:00:00.000Z",
+        referrerPractitionerId: "practitioner-demo-003",
+        interpreterPractitionerId: "practitioner-demo-003",
+        endpointId: "endpoint-pacs-hai-phong-demo",
+        series: [
+          {
+            uid: "1.2.826.0.1.3680043.10.543.202605280001.1",
+            number: 1,
+            modality: {
+              system: "http://dicom.nema.org/resources/ontology/DCM",
+              code: "DX",
+              display: "Digital Radiography"
+            },
+            description: "Outside chest radiograph",
+            numberOfInstances: 1,
+            bodySite: {
+              system: "http://snomed.info/sct",
+              code: "51185008",
+              display: "Thoracic structure"
+            }
+          }
+        ]
+      }
+    });
+    const outsideImagingStudyId = outsideImagingStudyResponse.json().id as string;
+
+    expect(outsideImagingStudyResponse.statusCode).toBe(201);
+
+    const outsideTaskResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/workflow-tasks`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        encounterId: outsideEncounterId,
+        basedOnServiceRequestId: outsideServiceRequestId,
+        status: "requested",
+        code: {
+          system: "urn:wiiicare:nexus:workflow-task",
+          code: "lab-order",
+          display: "Lab order"
+        },
+        requesterPractitionerId: "practitioner-demo-003",
+        ownerOrganizationId: "hospital-outside-demo"
+      }
+    });
+    const outsideTaskId = outsideTaskResponse.json().id as string;
+
+    expect(outsideTaskResponse.statusCode).toBe(201);
+
+    const outsideConsentResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/consents`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        category: "record-sharing",
+        granteeOrganizationId: "hospital-hai-phong-referral",
+        validFrom: "2026-05-28T00:00:00.000Z",
+        validUntil: "2026-12-31T23:59:59.000Z"
+      }
+    });
+    const outsideConsentId = outsideConsentResponse.json().id as string;
+
+    expect(outsideConsentResponse.statusCode).toBe(201);
+
+    const outsideTransferResponse = await app.inject({
+      method: "POST",
+      url: `/api/v1/patients/${outsidePatientId}/record-transfers`,
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        bundleType: "document",
+        sourceOrganizationId: "hospital-outside-demo",
+        recipientOrganizationId: "hospital-hai-phong-referral",
+        consentReference: outsideConsentId,
+        reason: "Outside transfer for ABAC verification."
+      }
+    });
+    const outsideTransferId = outsideTransferResponse.json().id as string;
+
+    expect(outsideTransferResponse.statusCode).toBe(201);
+
+    for (const [url, requestId] of [
+      [`/api/v1/encounters/${outsideEncounterId}`, "encounter-read-abac-denied-001"],
+      [
+        `/api/v1/allergy-intolerances/${outsideAllergyId}`,
+        "allergy-read-abac-denied-001"
+      ],
+      [`/api/v1/conditions/${outsideConditionId}`, "condition-read-abac-denied-001"],
+      [
+        `/api/v1/medication-requests/${outsideMedicationRequestId}`,
+        "medication-request-read-abac-denied-001"
+      ],
+      [
+        `/api/v1/medication-dispenses/${outsideMedicationDispenseId}`,
+        "medication-dispense-read-abac-denied-001"
+      ],
+      [
+        `/api/v1/medication-administrations/${outsideMedicationAdministrationId}`,
+        "medication-administration-read-abac-denied-001"
+      ],
+      [`/api/v1/clinical-documents/${outsideDocumentId}/fhir`, "document-read-abac-denied-001"],
+      [`/api/v1/observations/${outsideObservationId}`, "observation-read-abac-denied-001"],
+      [
+        `/api/v1/service-requests/${outsideServiceRequestId}`,
+        "service-request-read-abac-denied-001"
+      ],
+      [`/api/v1/workflow-tasks/${outsideTaskId}`, "workflow-task-read-abac-denied-001"],
+      [`/api/v1/procedures/${outsideProcedureId}`, "procedure-read-abac-denied-001"],
+      [
+        `/api/v1/diagnostic-reports/${outsideDiagnosticReportId}`,
+        "diagnostic-report-read-abac-denied-001"
+      ],
+      [
+        `/api/v1/imaging-studies/${outsideImagingStudyId}`,
+        "imaging-study-read-abac-denied-001"
+      ],
+      [`/api/v1/record-transfers/${outsideTransferId}`, "transfer-read-abac-denied-001"]
+    ] as const) {
+      const response = await app.inject({
+        method: "GET",
+        url,
+        headers: {
+          ...treatmentHeaders(clinicianToken),
+          "x-request-id": requestId
+        }
+      });
+
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toMatchObject({
+        error: "PATIENT_ACCESS_DENIED",
+        requestId,
+        patientId: outsidePatientId
+      });
+    }
+
+    for (const [url, requestId] of [
+      [`/api/v1/encounters/${outsideEncounterId}/fhir`, "encounter-export-abac-denied-001"],
+      [
+        `/api/v1/allergy-intolerances/${outsideAllergyId}/fhir`,
+        "allergy-export-abac-denied-001"
+      ],
+      [`/api/v1/conditions/${outsideConditionId}/fhir`, "condition-export-abac-denied-001"],
+      [
+        `/api/v1/medication-requests/${outsideMedicationRequestId}/fhir`,
+        "medication-request-export-abac-denied-001"
+      ],
+      [
+        `/api/v1/medication-dispenses/${outsideMedicationDispenseId}/fhir`,
+        "medication-dispense-export-abac-denied-001"
+      ],
+      [
+        `/api/v1/medication-administrations/${outsideMedicationAdministrationId}/fhir`,
+        "medication-administration-export-abac-denied-001"
+      ],
+      [
+        `/api/v1/service-requests/${outsideServiceRequestId}/fhir`,
+        "service-request-export-abac-denied-001"
+      ],
+      [`/api/v1/workflow-tasks/${outsideTaskId}/fhir`, "workflow-task-export-abac-denied-001"],
+      [`/api/v1/procedures/${outsideProcedureId}/fhir`, "procedure-export-abac-denied-001"],
+      [
+        `/api/v1/diagnostic-reports/${outsideDiagnosticReportId}/fhir`,
+        "diagnostic-report-export-abac-denied-001"
+      ],
+      [
+        `/api/v1/imaging-studies/${outsideImagingStudyId}/fhir`,
+        "imaging-study-export-abac-denied-001"
+      ],
+      [`/api/v1/consents/${outsideConsentId}/fhir`, "consent-export-abac-denied-001"]
+    ] as const) {
+      const response = await app.inject({
+        method: "GET",
+        url,
+        headers: {
+          ...treatmentHeaders(clinicianToken),
+          "x-request-id": requestId
+        }
+      });
+
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toMatchObject({
+        error: "PATIENT_ACCESS_DENIED",
+        requestId,
+        patientId: outsidePatientId
+      });
+    }
 
     const auditorListResponse = await app.inject({
       method: "GET",
@@ -865,6 +2024,72 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("allows auditor audit-purpose review of global security audit events", async () => {
+    app = await readyServer();
+    const clinicianToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const auditorToken = await loginForToken(app, "security-officer-demo", "auditor");
+
+    const forbiddenAuditListResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/audit-events",
+      headers: {
+        ...treatmentHeaders(clinicianToken),
+        "x-request-id": "global-audit-clinician-denied-001"
+      }
+    });
+
+    expect(forbiddenAuditListResponse.statusCode).toBe(403);
+    expect(forbiddenAuditListResponse.json()).toMatchObject({
+      error: "FORBIDDEN",
+      permission: "audit-event:list",
+      requestId: "global-audit-clinician-denied-001"
+    });
+
+    const deniedResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients",
+      headers: {
+        ...treatmentHeaders(auditorToken),
+        "x-request-id": "global-audit-denied-001"
+      }
+    });
+
+    expect(deniedResponse.statusCode).toBe(403);
+    expect(deniedResponse.json()).toMatchObject({
+      error: "FORBIDDEN",
+      permission: "patient:list",
+      requestId: "global-audit-denied-001"
+    });
+
+    const auditResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/audit-events?limit=25",
+      headers: auditHeaders(auditorToken)
+    });
+    const auditBody = auditResponse.json();
+    const deniedAuditEvent = auditBody.items.find(
+      (event: { readonly metadata?: { readonly requestId?: string } }) =>
+        event.metadata?.requestId === "global-audit-denied-001"
+    );
+
+    expect(auditResponse.statusCode).toBe(200);
+    expect(deniedAuditEvent).toMatchObject({
+      action: "access.denied",
+      resourceType: "Patient",
+      resourceId: "patient:list",
+      metadata: expect.objectContaining({
+        denialCode: "FORBIDDEN",
+        deniedPermission: "patient:list",
+        deniedActorId: "security-officer-demo",
+        deniedActorRole: "auditor",
+        deniedActorPurposeOfUse: "TREATMENT",
+        route: "GET /api/v1/patients",
+        statusCode: 403
+      })
+    });
+    expect(deniedAuditEvent.patientId).toBeUndefined();
+  });
+
   it("stores request id in audit metadata for clinical access", async () => {
     app = await readyServer();
     const clinicianToken = await loginForToken(app, "practitioner-demo-001", "clinician");
@@ -898,6 +2123,112 @@ describe("API auth and RBAC boundary", () => {
         })
       ])
     );
+  });
+
+  it("records denied patient access in the patient audit trail and FHIR export", async () => {
+    app = await readyServer();
+    const adminToken = await loginForToken(app, "admin-demo", "admin");
+    const clinicianToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const auditorToken = await loginForToken(app, "security-officer-demo", "auditor");
+
+    const createResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients",
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        identifiers: [
+          {
+            system: "urn:benh-vien-so:mrn",
+            value: "MRN-DENIED-AUDIT-TEST",
+            type: "hospital-mrn"
+          }
+        ],
+        fullName: "Denied Audit Patient",
+        gender: "unknown",
+        managingOrganizationId: "hospital-outside-demo"
+      }
+    });
+    const outsidePatientId = createResponse.json().id as string;
+
+    expect(createResponse.statusCode).toBe(201);
+
+    const deniedResponse = await app.inject({
+      method: "GET",
+      url: `/api/v1/patients/${outsidePatientId}`,
+      headers: {
+        ...treatmentHeaders(clinicianToken),
+        "x-request-id": "patient-denied-audit-001"
+      }
+    });
+
+    expect(deniedResponse.statusCode).toBe(403);
+    expect(deniedResponse.json()).toMatchObject({
+      error: "PATIENT_ACCESS_DENIED",
+      patientId: outsidePatientId,
+      requestId: "patient-denied-audit-001"
+    });
+
+    const auditResponse = await app.inject({
+      method: "GET",
+      url: `/api/v1/patients/${outsidePatientId}/audit-events`,
+      headers: auditHeaders(auditorToken)
+    });
+    const auditBody = auditResponse.json();
+
+    expect(auditResponse.statusCode).toBe(200);
+    expect(auditBody.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: "access.denied",
+          resourceType: "Patient",
+          resourceId: outsidePatientId,
+          patientId: outsidePatientId,
+          metadata: expect.objectContaining({
+            denialCode: "PATIENT_ACCESS_DENIED",
+            deniedActorId: "practitioner-demo-001",
+            deniedActorRole: "clinician",
+            deniedActorPurposeOfUse: "TREATMENT",
+            requestId: "patient-denied-audit-001",
+            route: `GET /api/v1/patients/${outsidePatientId}`,
+            statusCode: 403
+          })
+        })
+      ])
+    );
+
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: `/api/v1/patients/${outsidePatientId}/audit-events/fhir-bundle`,
+      headers: auditHeaders(auditorToken)
+    });
+    const fhirBody = fhirResponse.json();
+    type FhirAuditEventResource = {
+      readonly subtype: readonly { readonly code: string }[];
+    };
+    const deniedAuditResource = fhirBody.entry
+      .map((entry: { readonly resource: FhirAuditEventResource }) => entry.resource)
+      .find((resource: FhirAuditEventResource) =>
+        resource.subtype.some((subtype) => subtype.code === "access.denied")
+      );
+
+    expect(fhirResponse.statusCode).toBe(200);
+    expect(deniedAuditResource).toMatchObject({
+      resourceType: "AuditEvent",
+      action: "E",
+      outcome: "4",
+      outcomeDesc: "Access denied",
+      entity: [
+        {
+          what: {
+            reference: `Patient/${outsidePatientId}`
+          },
+          name: "access.denied"
+        }
+      ]
+    });
   });
 
   it("exports patient audit trail as a FHIR AuditEvent Bundle for auditor review", async () => {
@@ -1049,7 +2380,7 @@ describe("API auth and RBAC boundary", () => {
         "DocumentReference"
       ])
     );
-    expect(body.entry).toHaveLength(44);
+    expect(body.entry).toHaveLength(47);
   });
 
   it("returns a patient-record FHIR document Bundle with Composition first", async () => {
@@ -1080,7 +2411,7 @@ describe("API auth and RBAC boundary", () => {
         }
       ]
     });
-    expect(body.entry).toHaveLength(45);
+    expect(body.entry).toHaveLength(48);
     expect(body.entry[0].resource.section).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -1210,6 +2541,189 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("negotiates auth and RBAC denials on FHIR endpoints as OperationOutcome", async () => {
+    app = await readyServer();
+    const nurseToken = await loginForToken(app, "nurse-demo-001", "nurse");
+    const auditorToken = await loginForToken(app, "security-officer-demo", "auditor");
+
+    const unauthenticatedResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/fhir",
+      headers: {
+        accept: "application/fhir+json",
+        "x-request-id": "fhir-unauthenticated-001"
+      }
+    });
+
+    expectOperationOutcome(unauthenticatedResponse, {
+      statusCode: 401,
+      code: "login",
+      detailsCode: "UNAUTHENTICATED"
+    });
+    expect(String(unauthenticatedResponse.headers["www-authenticate"])).toBe("Bearer");
+
+    const forbiddenResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/fhir",
+      headers: {
+        ...treatmentHeaders(nurseToken),
+        accept: "application/fhir+json",
+        "x-request-id": "fhir-forbidden-nurse-export-001"
+      }
+    });
+
+    expectOperationOutcome(forbiddenResponse, {
+      statusCode: 403,
+      code: "forbidden",
+      detailsCode: "FORBIDDEN"
+    });
+
+    const auditResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/audit-events?limit=25",
+      headers: auditHeaders(auditorToken)
+    });
+    const auditBody = auditResponse.json();
+    const deniedAuditEvent = auditBody.items.find(
+      (event: { readonly metadata?: { readonly requestId?: string } }) =>
+        event.metadata?.requestId === "fhir-forbidden-nurse-export-001"
+    );
+
+    expect(auditResponse.statusCode).toBe(200);
+    expect(deniedAuditEvent).toMatchObject({
+      action: "access.denied",
+      resourceType: "Patient",
+      resourceId: "patient:fhir-export",
+      metadata: expect.objectContaining({
+        denialCode: "FORBIDDEN",
+        deniedPermission: "patient:fhir-export",
+        deniedActorId: "nurse-demo-001",
+        deniedActorRole: "nurse",
+        deniedActorPurposeOfUse: "TREATMENT",
+        statusCode: 403
+      })
+    });
+  });
+
+  it("negotiates patient-scope ABAC denials on FHIR endpoints as OperationOutcome", async () => {
+    app = await readyServer();
+    const adminToken = await loginForToken(app, "admin-demo", "admin");
+    const clinicianToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const auditorToken = await loginForToken(app, "security-officer-demo", "auditor");
+
+    const outsidePatientResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients",
+      headers: {
+        ...treatmentHeaders(adminToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        identifiers: [
+          {
+            system: "urn:benh-vien-so:mrn",
+            value: "MRN-FHIR-ABAC-DENIED",
+            type: "hospital-mrn"
+          }
+        ],
+        fullName: "FHIR ABAC Denied Patient",
+        gender: "unknown",
+        managingOrganizationId: "hospital-outside-fhir-denied"
+      }
+    });
+    const outsidePatient = outsidePatientResponse.json() as { readonly id: string };
+
+    expect(outsidePatientResponse.statusCode).toBe(201);
+
+    const deniedResponse = await app.inject({
+      method: "GET",
+      url: `/api/v1/patients/${outsidePatient.id}/fhir`,
+      headers: {
+        ...treatmentHeaders(clinicianToken),
+        accept: "application/fhir+json",
+        "x-request-id": "fhir-patient-abac-denied-001"
+      }
+    });
+
+    expectOperationOutcome(deniedResponse, {
+      statusCode: 403,
+      code: "forbidden",
+      detailsCode: "PATIENT_ACCESS_DENIED"
+    });
+
+    const auditResponse = await app.inject({
+      method: "GET",
+      url: `/api/v1/patients/${outsidePatient.id}/audit-events`,
+      headers: auditHeaders(auditorToken)
+    });
+    const auditBody = auditResponse.json();
+    const deniedAuditEvent = auditBody.items.find(
+      (event: { readonly metadata?: { readonly requestId?: string } }) =>
+        event.metadata?.requestId === "fhir-patient-abac-denied-001"
+    );
+
+    expect(auditResponse.statusCode).toBe(200);
+    expect(deniedAuditEvent).toMatchObject({
+      action: "access.denied",
+      resourceType: "Patient",
+      resourceId: outsidePatient.id,
+      patientId: outsidePatient.id,
+      metadata: expect.objectContaining({
+        denialCode: "PATIENT_ACCESS_DENIED",
+        deniedActorId: "practitioner-demo-001",
+        deniedActorRole: "clinician",
+        deniedActorPurposeOfUse: "TREATMENT",
+        statusCode: 403
+      })
+    });
+  });
+
+  it("negotiates validation errors as FHIR OperationOutcome when requested", async () => {
+    app = await readyServer();
+    const auditorToken = await loginForToken(app, "security-officer-demo", "auditor");
+
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/audit-events?limit=0",
+      headers: {
+        ...auditHeaders(auditorToken),
+        accept: "application/fhir+json",
+        "x-request-id": "fhir-validation-error-001"
+      }
+    });
+
+    expectOperationOutcome(fhirResponse, {
+      statusCode: 400,
+      code: "invalid",
+      detailsCode: "VALIDATION_ERROR"
+    });
+    expect(fhirResponse.json()).toMatchObject({
+      issue: [
+        {
+          diagnostics: expect.any(String),
+          expression: ["limit"]
+        }
+      ]
+    });
+
+    const jsonResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/audit-events?limit=0",
+      headers: {
+        ...auditHeaders(auditorToken),
+        "x-request-id": "json-validation-error-001"
+      }
+    });
+
+    expect(jsonResponse.statusCode).toBe(400);
+    expect(String(jsonResponse.headers["content-type"])).toContain("application/json");
+    expect(jsonResponse.json()).toMatchObject({
+      error: "VALIDATION_ERROR",
+      message: "Request validation failed.",
+      requestId: "json-validation-error-001"
+    });
+  });
+
   it("rejects clinical document attachment metadata with invalid MIME type or SHA-1 hash", async () => {
     app = await readyServer();
     const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
@@ -1259,6 +2773,11 @@ describe("API auth and RBAC boundary", () => {
         expect.objectContaining({
           id: "endpoint-pacs-hai-phong-demo",
           connectionType: "dicom-wado-rs"
+        }),
+        expect.objectContaining({
+          id: "endpoint-fhir-hai-phong-referral",
+          managingOrganizationId: "hospital-hai-phong-referral",
+          connectionType: "hl7-fhir-rest"
         })
       ])
     );
@@ -2453,6 +3972,71 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("rejects creating a record transfer directly in the dead-lettered state", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/record-transfers",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        status: "dead-lettered",
+        priority: "urgent",
+        bundleType: "document",
+        sourceOrganizationId: "hospital-hai-phong-demo",
+        recipientOrganizationId: "hospital-hai-phong-referral",
+        consentReference: "consent-demo-transfer-001",
+        reason: "Không cho client tạo trực tiếp trạng thái lỗi cuối.",
+        requestedAt: "2026-05-28T03:00:00.000Z",
+        sentAt: "2026-05-28T03:05:00.000Z",
+        failedAt: "2026-05-28T03:10:00.000Z"
+      }
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({
+      error: "VALIDATION_ERROR"
+    });
+  });
+
+  it("keeps JSON and FHIR not-found errors separate for record transfers", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const jsonResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/record-transfers/record-transfer-missing",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "x-request-id": "record-transfer-json-not-found-001"
+      }
+    });
+
+    expect(jsonResponse.statusCode).toBe(404);
+    expect(String(jsonResponse.headers["content-type"])).toContain("application/json");
+    expect(jsonResponse.json()).toMatchObject({
+      error: "RECORD_TRANSFER_NOT_FOUND",
+      message: "Không tìm thấy yêu cầu chuyển hồ sơ.",
+      requestId: "record-transfer-json-not-found-001"
+    });
+
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/record-transfers/record-transfer-missing/fhir-task",
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expectOperationOutcome(fhirResponse, {
+      statusCode: 404,
+      code: "not-found",
+      detailsCode: "RECORD_TRANSFER_NOT_FOUND"
+    });
+  });
+
   it("moves a record transfer through sent and received milestones", async () => {
     app = await readyServer();
     const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
@@ -2466,7 +4050,7 @@ describe("API auth and RBAC boundary", () => {
       },
       payload: {
         sentAt: "2026-05-28T04:00:00.000Z",
-        note: "Đã gửi gói hồ sơ qua gateway liên thông."
+        note: "Xếp gói hồ sơ vào hàng chờ gửi qua gateway liên thông."
       }
     });
 
@@ -2475,6 +4059,30 @@ describe("API auth and RBAC boundary", () => {
       id: "record-transfer-demo-001",
       status: "in-progress",
       sentAt: "2026-05-28T04:00:00.000Z"
+    });
+
+    const attemptsResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/delivery-attempts",
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(attemptsResponse.statusCode).toBe(200);
+    expect(attemptsResponse.json()).toMatchObject({
+      items: [
+        {
+          recordTransferId: "record-transfer-demo-001",
+          patientId: "patient-demo-001",
+          targetEndpointId: "endpoint-fhir-hai-phong-referral",
+          targetEndpointAddress: "https://fhir.referral.demo.wiiicare.vn/fhir",
+          bundleId: "patient-document-patient-demo-001",
+          bundleType: "document",
+          attemptNumber: 1,
+          status: "queued",
+          queuedAt: "2026-05-28T04:00:00.000Z",
+          idempotencyKey: expect.stringMatching(/^wiiicare-record-transfer-[a-f0-9]{64}$/)
+        }
+      ]
     });
 
     const receiveResponse = await app.inject({
@@ -2495,7 +4103,11 @@ describe("API auth and RBAC boundary", () => {
       id: "record-transfer-demo-001",
       status: "completed",
       sentAt: "2026-05-28T04:00:00.000Z",
-      receivedAt: "2026-05-28T04:15:00.000Z"
+      receivedAt: "2026-05-28T04:15:00.000Z",
+      receivedByActorId: "practitioner-demo-001",
+      acknowledgementReference: expect.stringMatching(
+        /^wiiicare-record-transfer-ack-[a-f0-9]{32}$/
+      )
     });
 
     const fhirResponse = await app.inject({
@@ -2511,7 +4123,395 @@ describe("API auth and RBAC boundary", () => {
       executionPeriod: {
         start: "2026-05-28T04:00:00.000Z",
         end: "2026-05-28T04:15:00.000Z"
+      },
+      note: expect.arrayContaining([
+        {
+          text: "Người xác nhận nhận hồ sơ: practitioner-demo-001"
+        }
+      ])
+    });
+  });
+
+  it("rolls back a record transfer when queuing the delivery attempt fails", async () => {
+    app = await readyServer({
+      recordTransferDeliveryAttemptRepository:
+        new FailingRecordTransferDeliveryAttemptRepository()
+    });
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const sendResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/send",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        sentAt: "2026-05-28T04:00:00.000Z",
+        note: "Giả lập lỗi kho lịch sử gửi để kiểm tra rollback."
       }
+    });
+
+    expect(sendResponse.statusCode).toBe(500);
+
+    const transferListResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/record-transfers",
+      headers: treatmentHeaders(accessToken)
+    });
+    const transferListBody = transferListResponse.json();
+
+    expect(transferListResponse.statusCode).toBe(200);
+    expect(transferListBody.items[0]).toMatchObject({
+      id: "record-transfer-demo-001",
+      status: "ready"
+    });
+    expect(transferListBody.items[0]).not.toHaveProperty("sentAt");
+  });
+
+  it("accepts an operations acknowledgement callback for a sent record transfer", async () => {
+    app = await readyServer();
+    const clinicianToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const gatewayToken = await loginForToken(
+      app,
+      "gateway-hai-phong-referral",
+      "integration"
+    );
+
+    const gatewayPatientListResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients",
+      headers: operationsHeaders(gatewayToken)
+    });
+
+    expect(gatewayPatientListResponse.statusCode).toBe(403);
+    expect(gatewayPatientListResponse.json()).toMatchObject({
+      error: "FORBIDDEN",
+      permission: "patient:list"
+    });
+
+    const sendResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/send",
+      headers: {
+        ...treatmentHeaders(clinicianToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        sentAt: "2026-05-28T04:30:00.000Z",
+        note: "Xếp gói hồ sơ vào hàng chờ gửi qua gateway liên thông."
+      }
+    });
+
+    expect(sendResponse.statusCode).toBe(200);
+
+    const deniedCallbackResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
+      headers: {
+        ...operationsHeaders(clinicianToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        recipientOrganizationId: "hospital-hai-phong-referral",
+        acknowledgementReference: "ack-denied-from-source-organization",
+        receivedAt: "2026-05-28T04:45:00.000Z"
+      }
+    });
+
+    expect(deniedCallbackResponse.statusCode).toBe(403);
+    expect(deniedCallbackResponse.json()).toMatchObject({
+      error: "FORBIDDEN",
+      permission: "record-transfer:acknowledge"
+    });
+
+    const callbackPayload = {
+      recipientOrganizationId: "hospital-hai-phong-referral",
+      acknowledgementReference: "ack-record-transfer-callback-001",
+      receivedAt: "2026-05-28T04:45:00.000Z",
+      receivedByActorId: "system-hai-phong-referral-gateway",
+      targetEndpointId: "endpoint-fhir-hai-phong-referral",
+      deliveryIdempotencyKey: "wiiicare-record-transfer-callback-test-001",
+      note: "Bệnh viện nhận xác nhận tiếp nhận qua callback liên thông."
+    };
+
+    const callbackResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
+      headers: {
+        ...operationsHeaders(gatewayToken),
+        "content-type": "application/json"
+      },
+      payload: callbackPayload
+    });
+
+    expect(callbackResponse.statusCode).toBe(200);
+    expect(callbackResponse.json()).toMatchObject({
+      id: "record-transfer-demo-001",
+      status: "completed",
+      sentAt: "2026-05-28T04:30:00.000Z",
+      receivedAt: "2026-05-28T04:45:00.000Z",
+      receivedByActorId: "system-hai-phong-referral-gateway",
+      acknowledgementReference: "ack-record-transfer-callback-001"
+    });
+
+    const duplicateCallbackResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
+      headers: {
+        ...operationsHeaders(gatewayToken),
+        "content-type": "application/json"
+      },
+      payload: callbackPayload
+    });
+
+    expect(duplicateCallbackResponse.statusCode).toBe(200);
+    expect(duplicateCallbackResponse.json()).toMatchObject({
+      status: "completed",
+      acknowledgementReference: "ack-record-transfer-callback-001"
+    });
+
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/fhir-task",
+      headers: treatmentHeaders(clinicianToken)
+    });
+
+    expect(fhirResponse.statusCode).toBe(200);
+    expect(fhirResponse.json()).toMatchObject({
+      resourceType: "Task",
+      status: "completed",
+      note: expect.arrayContaining([
+        {
+          text: "Biên nhận tiếp nhận: ack-record-transfer-callback-001"
+        }
+      ])
+    });
+  });
+
+  it("requires a valid HMAC signature for acknowledgement callbacks when configured", async () => {
+    process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON = JSON.stringify({
+      [callbackKeyId]: callbackSecret
+    });
+    app = await readyServer();
+    const clinicianToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const gatewayToken = await loginForToken(
+      app,
+      "gateway-hai-phong-referral",
+      "integration"
+    );
+
+    const sendResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/send",
+      headers: {
+        ...treatmentHeaders(clinicianToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        sentAt: "2026-05-28T06:00:00.000Z",
+        note: "Xếp gói hồ sơ vào hàng chờ gửi qua gateway liên thông."
+      }
+    });
+
+    expect(sendResponse.statusCode).toBe(200);
+
+    const callbackPayload = {
+      recipientOrganizationId: "hospital-hai-phong-referral",
+      acknowledgementReference: "ack-record-transfer-callback-signed-001",
+      receivedAt: new Date().toISOString(),
+      receivedByActorId: "system-hai-phong-referral-gateway",
+      targetEndpointId: "endpoint-fhir-hai-phong-referral",
+      deliveryIdempotencyKey: "wiiicare-record-transfer-callback-signed-test-001",
+      note: "Bệnh viện nhận xác nhận tiếp nhận qua callback đã ký."
+    };
+
+    const unsignedCallbackResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
+      headers: {
+        ...operationsHeaders(gatewayToken),
+        "content-type": "application/json",
+        [recordTransferCallbackKeyIdHeader]: callbackKeyId
+      },
+      payload: callbackPayload
+    });
+
+    expect(unsignedCallbackResponse.statusCode).toBe(403);
+    expect(unsignedCallbackResponse.json()).toMatchObject({
+      error: "RECORD_TRANSFER_CALLBACK_SIGNATURE_REQUIRED",
+      permission: "record-transfer:acknowledge"
+    });
+
+    const invalidTimestamp = new Date().toISOString();
+    const invalidSignatureResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
+      headers: {
+        ...operationsHeaders(gatewayToken),
+        "content-type": "application/json",
+        [recordTransferCallbackKeyIdHeader]: callbackKeyId,
+        [recordTransferCallbackTimestampHeader]: invalidTimestamp,
+        [recordTransferCallbackSignatureHeader]: "invalid-signature"
+      },
+      payload: callbackPayload
+    });
+
+    expect(invalidSignatureResponse.statusCode).toBe(403);
+    expect(invalidSignatureResponse.json()).toMatchObject({
+      error: "RECORD_TRANSFER_CALLBACK_SIGNATURE_INVALID",
+      permission: "record-transfer:acknowledge"
+    });
+
+    const signedCallbackResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
+      headers: {
+        ...operationsHeaders(gatewayToken),
+        "content-type": "application/json",
+        ...signedRecordTransferCallbackHeaders({
+          recordTransferId: "record-transfer-demo-001",
+          body: callbackPayload
+        })
+      },
+      payload: callbackPayload
+    });
+
+    expect(signedCallbackResponse.statusCode).toBe(200);
+    expect(signedCallbackResponse.json()).toMatchObject({
+      status: "completed",
+      receivedByActorId: "system-hai-phong-referral-gateway",
+      acknowledgementReference: "ack-record-transfer-callback-signed-001"
+    });
+  });
+
+  it("records failed record transfer delivery and prepares a retry", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const sendResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/send",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        sentAt: "2026-05-28T05:00:00.000Z",
+        note: "Xếp gói hồ sơ vào hàng chờ gửi qua gateway liên thông."
+      }
+    });
+
+    expect(sendResponse.statusCode).toBe(200);
+
+    const failResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/fail",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        failedAt: "2026-05-28T05:05:00.000Z",
+        failureReason: "Recipient gateway unavailable.",
+        nextRetryAt: "2026-05-28T05:20:00.000Z"
+      }
+    });
+
+    expect(failResponse.statusCode, failResponse.body).toBe(200);
+    expect(failResponse.json()).toMatchObject({
+      id: "record-transfer-demo-001",
+      status: "failed",
+      failedAt: "2026-05-28T05:05:00.000Z",
+      failureReason: "Recipient gateway unavailable.",
+      nextRetryAt: "2026-05-28T05:20:00.000Z",
+      retryCount: 0
+    });
+
+    const failedFhirResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/fhir-task",
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(failedFhirResponse.statusCode).toBe(200);
+    expect(failedFhirResponse.json()).toMatchObject({
+      resourceType: "Task",
+      status: "failed",
+      note: expect.arrayContaining([
+        expect.objectContaining({
+          text: "Lý do lỗi chuyển hồ sơ: Recipient gateway unavailable."
+        }),
+        expect.objectContaining({
+          text: "Hẹn thử gửi lại: 2026-05-28T05:20:00.000Z"
+        })
+      ])
+    });
+
+    const retryResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/retry",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        retryAt: "2026-05-28T05:20:00.000Z",
+        note: "Đưa lại vào hàng đợi gửi khi gateway sẵn sàng."
+      }
+    });
+
+    expect(retryResponse.statusCode).toBe(200);
+    expect(retryResponse.json()).toMatchObject({
+      id: "record-transfer-demo-001",
+      status: "ready",
+      retryCount: 1,
+      note: "Đưa lại vào hàng đợi gửi khi gateway sẵn sàng."
+    });
+    expect(retryResponse.json()).not.toHaveProperty("sentAt");
+    expect(retryResponse.json()).not.toHaveProperty("failedAt");
+    expect(retryResponse.json()).not.toHaveProperty("failureReason");
+    expect(retryResponse.json()).not.toHaveProperty("nextRetryAt");
+
+    const resendResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/send",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        sentAt: "2026-05-28T05:25:00.000Z"
+      }
+    });
+
+    expect(resendResponse.statusCode).toBe(200);
+    expect(resendResponse.json()).toMatchObject({
+      status: "in-progress",
+      sentAt: "2026-05-28T05:25:00.000Z",
+      retryCount: 1
+    });
+
+    const attemptsResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/record-transfers/record-transfer-demo-001/delivery-attempts",
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(attemptsResponse.statusCode).toBe(200);
+    expect(attemptsResponse.json()).toMatchObject({
+      items: [
+        {
+          attemptNumber: 1,
+          queuedAt: "2026-05-28T05:00:00.000Z",
+          status: "queued"
+        },
+        {
+          attemptNumber: 2,
+          queuedAt: "2026-05-28T05:25:00.000Z",
+          status: "queued"
+        }
+      ]
     });
   });
 
@@ -2538,6 +4538,49 @@ describe("API auth and RBAC boundary", () => {
     expect(response.statusCode).toBe(403);
     expect(response.json()).toMatchObject({
       error: "CONSENT_DOES_NOT_ALLOW_RECORD_TRANSFER"
+    });
+  });
+
+  it("requires a recipient FHIR Bundle endpoint before creating a record transfer", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const consentResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/consents",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        category: "record-sharing",
+        granteeOrganizationId: "department-laboratory",
+        validFrom: "2026-05-28T00:00:00.000Z",
+        validUntil: "2026-12-31T23:59:59.000Z"
+      }
+    });
+    expect(consentResponse.statusCode).toBe(201);
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/record-transfers",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json"
+      },
+      payload: {
+        bundleType: "document",
+        sourceOrganizationId: "hospital-hai-phong-demo",
+        recipientOrganizationId: "department-laboratory",
+        consentReference: consentResponse.json().id,
+        reason: "Thử chuyển hồ sơ tới đơn vị chưa có FHIR Bundle endpoint."
+      }
+    });
+
+    expect(response.statusCode).toBe(422);
+    expect(response.json()).toMatchObject({
+      error: "RECORD_TRANSFER_ENDPOINT_NOT_FOUND",
+      requestId: expect.any(String)
     });
   });
 
@@ -2580,12 +4623,31 @@ describe("API auth and RBAC boundary", () => {
   });
 });
 
-async function readyServer(): Promise<FastifyInstance> {
+async function readyServer(
+  options: Parameters<typeof buildServer>[0] = {}
+): Promise<FastifyInstance> {
   const server = await buildServer({
-    logger: false
+    logger: false,
+    ...options
   });
   await server.ready();
   return server;
+}
+
+class FailingRecordTransferDeliveryAttemptRepository
+  implements RecordTransferDeliveryAttemptRepository
+{
+  async findByRecordTransferId(): Promise<RecordTransferDeliveryAttempt[]> {
+    return [];
+  }
+
+  async findQueued(): Promise<RecordTransferDeliveryAttempt[]> {
+    return [];
+  }
+
+  async save(_attempt: RecordTransferDeliveryAttempt): Promise<void> {
+    throw new Error("delivery attempt store unavailable");
+  }
 }
 
 async function readyAuthRouteServer(): Promise<FastifyInstance> {
@@ -2650,6 +4712,31 @@ function treatmentHeaders(accessToken: string): Record<string, string> {
   return {
     authorization: `Bearer ${accessToken}`,
     "x-purpose-of-use": "TREATMENT"
+  };
+}
+
+function operationsHeaders(accessToken: string): Record<string, string> {
+  return {
+    authorization: `Bearer ${accessToken}`,
+    "x-purpose-of-use": "OPERATIONS"
+  };
+}
+
+function signedRecordTransferCallbackHeaders(input: {
+  readonly recordTransferId: string;
+  readonly body: unknown;
+}): Record<string, string> {
+  const timestamp = new Date().toISOString();
+
+  return {
+    [recordTransferCallbackKeyIdHeader]: callbackKeyId,
+    [recordTransferCallbackTimestampHeader]: timestamp,
+    [recordTransferCallbackSignatureHeader]: buildRecordTransferCallbackSignature({
+      secret: callbackSecret,
+      timestamp,
+      recordTransferId: input.recordTransferId,
+      body: input.body
+    })
   };
 }
 

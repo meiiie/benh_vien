@@ -1,6 +1,8 @@
-import type { FastifyInstance } from "fastify";
+import { createHash } from "node:crypto";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import { LoginRequestSchema } from "@benh-vien-so/contracts";
-import type { ActorRole } from "@benh-vien-so/domain";
+import { AuditEvent } from "@benh-vien-so/domain";
+import type { ActorRole, AuditEventRepository } from "@benh-vien-so/domain";
 import { demoPasswordHash, dummyPasswordHash, verifyPassword } from "./auth-password.js";
 import { createAccessToken, verifyAccessToken } from "./auth-session.js";
 import {
@@ -45,16 +47,25 @@ const demoAccounts: readonly DemoAccount[] = [
     actorId: "admin-demo",
     displayName: "Quản trị hệ thống",
     role: "admin"
+  },
+  {
+    username: "gateway-hai-phong-referral",
+    passwordHash: demoPasswordHash,
+    actorId: "system-hai-phong-referral-gateway",
+    displayName: "Gateway liên thông BV tiếp nhận Hải Phòng",
+    role: "integration"
   }
 ];
 
 export async function registerAuthRoutes(
   app: FastifyInstance,
   options: {
+    readonly auditRepository?: AuditEventRepository;
     readonly loginRateLimiter?: LoginRateLimiter;
   } = {}
 ): Promise<void> {
   const loginRateLimiter = options.loginRateLimiter ?? createLoginRateLimiterFromEnv();
+  const auditRepository = options.auditRepository;
 
   app.addHook("onClose", async () => {
     await loginRateLimiter.close?.();
@@ -62,6 +73,15 @@ export async function registerAuthRoutes(
 
   app.post("/auth/login", async (request, reply) => {
     if (!isDemoAuthEnabled()) {
+      await recordLoginAuditEvent(auditRepository, request, {
+        actorId: "anonymous",
+        action: "auth.login.failure",
+        metadata: {
+          reason: "DEMO_AUTH_DISABLED",
+          usernameHash: readUsernameHash(request.body)
+        }
+      });
+
       return reply.status(403).send({
         error: "DEMO_AUTH_DISABLED",
         message:
@@ -73,15 +93,35 @@ export async function registerAuthRoutes(
     const parsed = LoginRequestSchema.safeParse(request.body);
 
     if (!parsed.success) {
+      await recordLoginAuditEvent(auditRepository, request, {
+        actorId: "anonymous",
+        action: "auth.login.failure",
+        metadata: {
+          reason: "VALIDATION_ERROR",
+          usernameHash: readUsernameHash(request.body)
+        }
+      });
+
       throw parsed.error;
     }
 
+    const usernameHash = hashLoginUsername(parsed.data.username);
     const rateLimitDecision = await loginRateLimiter.consume(
       createLoginRateLimitKey(request.ip, parsed.data.username)
     );
 
     if (rateLimitDecision.limited) {
       reply.header("Retry-After", String(rateLimitDecision.retryAfterSeconds));
+      await recordLoginAuditEvent(auditRepository, request, {
+        actorId: "anonymous",
+        action: "auth.login.failure",
+        metadata: {
+          reason: "AUTH_RATE_LIMITED",
+          requestedRole: parsed.data.role,
+          retryAfterSeconds: rateLimitDecision.retryAfterSeconds,
+          usernameHash
+        }
+      });
 
       return reply.status(429).send({
         error: "AUTH_RATE_LIMITED",
@@ -98,6 +138,16 @@ export async function registerAuthRoutes(
     );
 
     if (!account || !passwordMatches) {
+      await recordLoginAuditEvent(auditRepository, request, {
+        actorId: account?.actorId ?? "anonymous",
+        action: "auth.login.failure",
+        metadata: {
+          reason: "INVALID_CREDENTIALS",
+          requestedRole: parsed.data.role,
+          usernameHash
+        }
+      });
+
       return reply.status(401).send({
         error: "INVALID_CREDENTIALS",
         message: "Tài khoản hoặc mật khẩu không hợp lệ.",
@@ -106,6 +156,17 @@ export async function registerAuthRoutes(
     }
 
     if (parsed.data.role && parsed.data.role !== account.role) {
+      await recordLoginAuditEvent(auditRepository, request, {
+        actorId: account.actorId,
+        action: "auth.login.failure",
+        metadata: {
+          reason: "ROLE_MISMATCH",
+          expectedRole: account.role,
+          requestedRole: parsed.data.role,
+          usernameHash
+        }
+      });
+
       return reply.status(403).send({
         error: "ROLE_MISMATCH",
         message: "Vai trò yêu cầu không khớp với tài khoản đăng nhập.",
@@ -113,6 +174,15 @@ export async function registerAuthRoutes(
         expectedRole: account.role
       });
     }
+
+    await recordLoginAuditEvent(auditRepository, request, {
+      actorId: account.actorId,
+      action: "auth.login.success",
+      metadata: {
+        actorRole: account.role,
+        usernameHash
+      }
+    });
 
     return createAccessToken({
       actorId: account.actorId,
@@ -137,6 +207,54 @@ export async function registerAuthRoutes(
 
     return session;
   });
+}
+
+async function recordLoginAuditEvent(
+  auditRepository: AuditEventRepository | undefined,
+  request: FastifyRequest,
+  input: {
+    readonly actorId: string;
+    readonly action: "auth.login.success" | "auth.login.failure";
+    readonly metadata: Record<string, unknown>;
+  }
+): Promise<void> {
+  if (!auditRepository) {
+    return;
+  }
+
+  await auditRepository.save(
+    AuditEvent.record({
+      actorId: input.actorId,
+      action: input.action,
+      resourceType: "AuditEvent",
+      resourceId: "auth/login",
+      purposeOfUse: "OPERATIONS",
+      ipAddress: request.ip,
+      userAgent: readHeader(request.headers["user-agent"]),
+      metadata: {
+        requestId: request.id,
+        ...input.metadata
+      }
+    })
+  );
+}
+
+function readUsernameHash(value: unknown): string | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const username = (value as { readonly username?: unknown }).username;
+
+  return typeof username === "string" ? hashLoginUsername(username) : undefined;
+}
+
+function hashLoginUsername(username: string): string {
+  return createHash("sha256").update(username.trim().toLowerCase()).digest("hex");
+}
+
+function readHeader(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
 }
 
 function readBearerToken(value: string | string[] | undefined): string | undefined {

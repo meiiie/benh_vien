@@ -15,9 +15,13 @@ import type {
   EncounterRepository,
   ObservationRepository,
   ObservationSnapshot,
-  PatientRepository
+  PatientRepository,
+  ProviderDirectoryRepository
 } from "@benh-vien-so/domain";
-import { requirePermission } from "../access-control/access-context.js";
+import {
+  requirePatientRecordAccessByPatientId,
+  requirePermission
+} from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 
 export async function registerObservationRoutes(
@@ -25,6 +29,7 @@ export async function registerObservationRoutes(
   patientRepository: PatientRepository,
   encounterRepository: EncounterRepository,
   observationRepository: ObservationRepository,
+  providerDirectoryRepository: ProviderDirectoryRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
   app.get("/patients/:patientId/observations", async (request, reply) => {
@@ -35,12 +40,17 @@ export async function registerObservationRoutes(
     }
 
     const params = PatientObservationsParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const observations = await observationRepository.findByPatientId(params.patientId);
@@ -67,12 +77,17 @@ export async function registerObservationRoutes(
     }
 
     const params = PatientObservationsParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const parsed = CreateObservationRequestSchema.safeParse(request.body);
@@ -140,6 +155,19 @@ export async function registerObservationRoutes(
       });
     }
 
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        observation.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
+    }
+
     await recordAuditEvent(auditRepository, request, {
       action: "observation.read",
       resourceType: "Observation",
@@ -164,6 +192,19 @@ export async function registerObservationRoutes(
       return reply.status(404).send({
         error: "OBSERVATION_NOT_FOUND"
       });
+    }
+
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        observation.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     await recordAuditEvent(auditRepository, request, {

@@ -134,6 +134,19 @@ export function createSeedProviderDirectory(): ProviderDirectory {
         active: true,
         fullName: "Điều dưỡng tiếp nhận",
         qualification: "Điều dưỡng"
+      },
+      {
+        id: "system-hai-phong-referral-gateway",
+        identifiers: [
+          {
+            system: "urn:wiiicare:nexus:system-actor",
+            value: "GW-HP-REFERRAL-001",
+            type: "integration-gateway"
+          }
+        ],
+        active: true,
+        fullName: "Gateway liên thông BV tiếp nhận Hải Phòng",
+        qualification: "Tài khoản hệ thống liên thông hồ sơ"
       }
     ],
     endpoints: [
@@ -154,6 +167,26 @@ export function createSeedProviderDirectory(): ProviderDirectory {
             system: "http://hl7.org/fhir/resource-types",
             code: "DocumentReference",
             display: "FHIR DocumentReference"
+          }
+        ]
+      },
+      {
+        id: "endpoint-fhir-hai-phong-referral",
+        managingOrganizationId: "hospital-hai-phong-referral",
+        status: "active",
+        connectionType: "hl7-fhir-rest",
+        name: "FHIR Gateway bệnh viện tiếp nhận Hải Phòng",
+        address: "https://fhir.referral.demo.wiiicare.vn/fhir",
+        payloadTypes: [
+          {
+            system: "http://hl7.org/fhir/resource-types",
+            code: "Bundle",
+            display: "FHIR Bundle"
+          },
+          {
+            system: "http://hl7.org/fhir/resource-types",
+            code: "Task",
+            display: "FHIR Task"
           }
         ]
       },
@@ -235,6 +268,18 @@ export function createSeedProviderDirectory(): ProviderDirectory {
           code: "nurse",
           display: "Nurse"
         }
+      },
+      {
+        id: "role-system-hai-phong-referral-gateway",
+        practitionerId: "system-hai-phong-referral-gateway",
+        organizationId: "hospital-hai-phong-referral",
+        active: true,
+        code: {
+          system: "urn:wiiicare:nexus:integration-role",
+          code: "record-transfer-acknowledgement-gateway",
+          display: "Record transfer acknowledgement gateway"
+        },
+        endpointIds: ["endpoint-fhir-hai-phong-referral"]
       }
     ]
   });

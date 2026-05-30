@@ -7,10 +7,12 @@ import {
 import type {
   ActorContext,
   Patient,
+  PatientRepository,
   Permission,
   ProviderDirectoryRepository
 } from "@benh-vien-so/domain";
 import { verifyAccessToken } from "../auth/auth-session.js";
+import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
 
 export function readActorContext(request: FastifyRequest): ActorContext | undefined {
   const token = readBearerToken(request.headers.authorization);
@@ -38,6 +40,23 @@ export function requirePermission(
 
   if (!actor) {
     reply.header("WWW-Authenticate", "Bearer");
+
+    if (acceptsFhirJson(request)) {
+      sendFhirOperationOutcome(reply, {
+        statusCode: 401,
+        code: "login",
+        diagnostics: `requestId=${request.id}`,
+        expression: ["Authorization"],
+        details: {
+          code: "UNAUTHENTICATED",
+          display: "Unauthenticated",
+          text: "Cần đăng nhập và gửi Authorization Bearer token hợp lệ."
+        }
+      });
+
+      return undefined;
+    }
+
     reply.status(401).send({
       error: "UNAUTHENTICATED",
       message: "Cần đăng nhập và gửi Authorization Bearer token hợp lệ.",
@@ -49,6 +68,28 @@ export function requirePermission(
 
   if (canAccess(actor, permission)) {
     return actor;
+  }
+
+  if (acceptsFhirJson(request)) {
+    sendFhirOperationOutcome(reply, {
+      statusCode: 403,
+      code: "forbidden",
+      diagnostics: [
+        `requestId=${request.id}`,
+        `permission=${permission}`,
+        `actorId=${actor.actorId}`,
+        `actorRole=${actor.role}`,
+        `purposeOfUse=${actor.purposeOfUse}`
+      ].join("; "),
+      expression: ["Authorization", "Permission"],
+      details: {
+        code: "FORBIDDEN",
+        display: "Forbidden",
+        text: "Actor không có quyền thực hiện thao tác này."
+      }
+    });
+
+    return undefined;
   }
 
   reply.status(403).send({
@@ -79,6 +120,28 @@ export async function requirePatientRecordAccess(
     return true;
   }
 
+  if (acceptsFhirJson(request)) {
+    sendFhirOperationOutcome(reply, {
+      statusCode: 403,
+      code: "forbidden",
+      diagnostics: [
+        `requestId=${request.id}`,
+        `patientId=${patient.id}`,
+        `actorId=${actor.actorId}`,
+        `actorRole=${actor.role}`,
+        `purposeOfUse=${actor.purposeOfUse}`
+      ].join("; "),
+      expression: ["Patient.id"],
+      details: {
+        code: "PATIENT_ACCESS_DENIED",
+        display: "Patient access denied",
+        text: "Actor không có quan hệ điều trị, quyền kiểm toán hoặc quyền quản trị phù hợp với hồ sơ bệnh nhân này."
+      }
+    });
+
+    return false;
+  }
+
   reply.status(403).send({
     error: "PATIENT_ACCESS_DENIED",
     message:
@@ -93,6 +156,45 @@ export async function requirePatientRecordAccess(
   });
 
   return false;
+}
+
+export async function requirePatientRecordAccessByPatientId(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  actor: ActorContext,
+  patientId: string,
+  patientRepository: PatientRepository,
+  providerDirectoryRepository: ProviderDirectoryRepository
+): Promise<Patient | undefined> {
+  const patient = await patientRepository.findById(patientId);
+
+  if (!patient) {
+    reply.status(404).send({
+      error: "PATIENT_NOT_FOUND",
+      requestId: request.id
+    });
+
+    return undefined;
+  }
+
+  if (
+    !(await requirePatientRecordAccess(
+      request,
+      reply,
+      actor,
+      patient,
+      providerDirectoryRepository
+    ))
+  ) {
+    return undefined;
+  }
+
+  if (isPatientRecordWriteRequest(request) && patient.toSnapshot().status === "merged") {
+    sendMergedPatientRecordConflict(request, reply, patient);
+    return undefined;
+  }
+
+  return patient;
 }
 
 export async function filterPatientsByAccess(
@@ -114,6 +216,58 @@ function readHeader(value: string | string[] | undefined): string | undefined {
   }
 
   return value;
+}
+
+function acceptsFhirJson(request: FastifyRequest): boolean {
+  return (
+    readHeader(request.headers.accept)
+      ?.split(",")
+      .map((value) => value.trim().toLowerCase().split(";")[0])
+      .includes("application/fhir+json") ?? false
+  );
+}
+
+function isPatientRecordWriteRequest(request: FastifyRequest): boolean {
+  return !["GET", "HEAD", "OPTIONS"].includes(request.method.toUpperCase());
+}
+
+function sendMergedPatientRecordConflict(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  patient: Patient
+): void {
+  const snapshot = patient.toSnapshot();
+
+  if (acceptsFhirJson(request)) {
+    sendFhirOperationOutcome(reply, {
+      statusCode: 409,
+      code: "conflict",
+      diagnostics: [
+        `requestId=${request.id}`,
+        `patientId=${patient.id}`,
+        `mergedIntoPatientId=${snapshot.mergedIntoPatientId ?? ""}`
+      ].join("; "),
+      expression: ["Patient.active", "Patient.link"],
+      details: {
+        code: "PATIENT_RECORD_MERGED",
+        display: "Patient record merged",
+        text:
+          "Hồ sơ bệnh nhân này đã được merge vào hồ sơ chính; không được ghi dữ liệu mới vào hồ sơ nguồn."
+      }
+    });
+
+    return;
+  }
+
+  reply.status(409).send({
+    error: "PATIENT_RECORD_MERGED",
+    message:
+      "Hồ sơ bệnh nhân này đã được merge vào hồ sơ chính; không được ghi dữ liệu mới vào hồ sơ nguồn.",
+    requestId: request.id,
+    patientId: patient.id,
+    mergedIntoPatientId: snapshot.mergedIntoPatientId,
+    mergedAt: snapshot.mergedAt
+  });
 }
 
 function readBearerToken(value: string | string[] | undefined): string | undefined {

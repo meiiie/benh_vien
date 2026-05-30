@@ -10,11 +10,15 @@ import type {
   AuditEventRepository,
   EncounterRepository,
   PatientRepository,
+  ProviderDirectoryRepository,
   ServiceRequestRepository,
   WorkflowTaskRepository,
   WorkflowTaskSnapshot
 } from "@benh-vien-so/domain";
-import { requirePermission } from "../access-control/access-context.js";
+import {
+  requirePatientRecordAccessByPatientId,
+  requirePermission
+} from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 
 export async function registerWorkflowTaskRoutes(
@@ -23,6 +27,7 @@ export async function registerWorkflowTaskRoutes(
   encounterRepository: EncounterRepository,
   serviceRequestRepository: ServiceRequestRepository,
   taskRepository: WorkflowTaskRepository,
+  providerDirectoryRepository: ProviderDirectoryRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
   app.get("/patients/:patientId/workflow-tasks", async (request, reply) => {
@@ -33,12 +38,17 @@ export async function registerWorkflowTaskRoutes(
     }
 
     const params = PatientWorkflowTasksParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const tasks = await taskRepository.findByPatientId(params.patientId);
@@ -65,12 +75,17 @@ export async function registerWorkflowTaskRoutes(
     }
 
     const params = PatientWorkflowTasksParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const parsed = CreateWorkflowTaskRequestSchema.safeParse(request.body);
@@ -153,6 +168,19 @@ export async function registerWorkflowTaskRoutes(
       });
     }
 
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        task.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
+    }
+
     await recordAuditEvent(auditRepository, request, {
       action: "workflow-task.read",
       resourceType: "Task",
@@ -177,6 +205,19 @@ export async function registerWorkflowTaskRoutes(
       return reply.status(404).send({
         error: "WORKFLOW_TASK_NOT_FOUND"
       });
+    }
+
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        task.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     await recordAuditEvent(auditRepository, request, {

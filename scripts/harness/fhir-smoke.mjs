@@ -964,9 +964,38 @@ completedRecordTransfer.markSent({
   sentAt: "2026-05-27T12:15:00.000Z"
 });
 completedRecordTransfer.markReceived({
-  receivedAt: "2026-05-27T12:30:00.000Z"
+  receivedAt: "2026-05-27T12:30:00.000Z",
+  receivedByActorId: "practitioner-harness-recipient-001",
+  acknowledgementReference: "wiiicare-record-transfer-ack-harness-001"
 });
 const fhirCompletedRecordTransferTask = mapRecordTransferToFhirTask(completedRecordTransfer);
+const failedRecordTransfer = RecordTransfer.create({
+  id: "record-transfer-harness-failed-001",
+  patientId: patient.id,
+  status: "ready",
+  priority: "urgent",
+  bundleType: "document",
+  bundleId: fhirDocumentBundle.id,
+  sourceOrganizationId: "hospital-hai-phong-demo",
+  recipientOrganizationId: "hospital-harness-recipient",
+  consentReference: consent.id,
+  requestedByActorId: "practitioner-harness-001",
+  reason: "Validate record transfer failure and retry metadata.",
+  requestedAt: "2026-05-27T12:05:00.000Z"
+});
+failedRecordTransfer.markSent({
+  sentAt: "2026-05-27T12:15:00.000Z"
+});
+failedRecordTransfer.markFailed({
+  failedAt: "2026-05-27T12:20:00.000Z",
+  failureReason: "Recipient gateway unavailable.",
+  nextRetryAt: "2026-05-27T12:35:00.000Z"
+});
+const fhirFailedRecordTransferTask = mapRecordTransferToFhirTask(failedRecordTransfer);
+failedRecordTransfer.retry({
+  retryAt: "2026-05-27T12:35:00.000Z"
+});
+const retriedRecordTransferSnapshot = failedRecordTransfer.toSnapshot();
 
 if (fhirRecordTransferTask.resourceType !== "Task") {
   throw new Error(
@@ -988,6 +1017,34 @@ if (fhirCompletedRecordTransferTask.status !== "completed") {
 
 if (fhirCompletedRecordTransferTask.executionPeriod?.end !== "2026-05-27T12:30:00.000Z") {
   throw new Error("Expected completed record transfer Task to include executionPeriod end.");
+}
+
+if (
+  !fhirCompletedRecordTransferTask.note?.some((note) =>
+    note.text.includes("wiiicare-record-transfer-ack-harness-001")
+  )
+) {
+  throw new Error("Expected completed record transfer Task to include acknowledgement note.");
+}
+
+if (fhirFailedRecordTransferTask.status !== "failed") {
+  throw new Error("Expected failed record transfer Task status to be failed.");
+}
+
+if (
+  !fhirFailedRecordTransferTask.note?.some((note) =>
+    note.text.includes("Recipient gateway unavailable.")
+  )
+) {
+  throw new Error("Expected failed record transfer Task to include failure reason note.");
+}
+
+if (retriedRecordTransferSnapshot.status !== "ready" || retriedRecordTransferSnapshot.retryCount !== 1) {
+  throw new Error("Expected retried record transfer to return to ready with retryCount 1.");
+}
+
+if (retriedRecordTransferSnapshot.sentAt || retriedRecordTransferSnapshot.failedAt) {
+  throw new Error("Expected retried record transfer to clear previous sent and failed timestamps.");
 }
 
 const auditEvent = AuditEvent.record({
@@ -1184,6 +1241,15 @@ const clinicianCanUpdateRecordTransfer = canAccess(
   "record-transfer:update"
 );
 
+const clinicianCanAcknowledgeRecordTransfer = canAccess(
+  {
+    actorId: "practitioner-harness-001",
+    role: "clinician",
+    purposeOfUse: "OPERATIONS"
+  },
+  "record-transfer:acknowledge"
+);
+
 const clinicianCanRevokeConsent = canAccess(
   {
     actorId: "practitioner-harness-001",
@@ -1328,6 +1394,15 @@ const nurseCanUpdateRecordTransfer = canAccess(
   "record-transfer:update"
 );
 
+const nurseCanAcknowledgeRecordTransfer = canAccess(
+  {
+    actorId: "nurse-harness-001",
+    role: "nurse",
+    purposeOfUse: "OPERATIONS"
+  },
+  "record-transfer:acknowledge"
+);
+
 const nurseCanRevokeConsent = canAccess(
   {
     actorId: "nurse-harness-001",
@@ -1353,6 +1428,24 @@ const nurseCanReadProviderDirectory = canAccess(
     purposeOfUse: "TREATMENT"
   },
   "provider-directory:read"
+);
+
+const integrationCanAcknowledgeRecordTransfer = canAccess(
+  {
+    actorId: "system-hai-phong-referral-gateway",
+    role: "integration",
+    purposeOfUse: "OPERATIONS"
+  },
+  "record-transfer:acknowledge"
+);
+
+const adminCanAcknowledgeRecordTransfer = canAccess(
+  {
+    actorId: "admin-harness-001",
+    role: "admin",
+    purposeOfUse: "OPERATIONS"
+  },
+  "record-transfer:acknowledge"
 );
 
 const clinicianCanReadAudit = canAccess(
@@ -1482,6 +1575,10 @@ if (!clinicianCanUpdateRecordTransfer) {
   throw new Error("Expected clinician/TREATMENT to update record transfer milestones.");
 }
 
+if (clinicianCanAcknowledgeRecordTransfer) {
+  throw new Error("Expected clinician/OPERATIONS to be denied record-transfer:acknowledge.");
+}
+
 if (!clinicianCanRevokeConsent) {
   throw new Error("Expected clinician/TREATMENT to revoke record-sharing consent.");
 }
@@ -1548,6 +1645,10 @@ if (nurseCanUpdateRecordTransfer) {
   throw new Error("Expected nurse/TREATMENT to be denied record-transfer:update.");
 }
 
+if (nurseCanAcknowledgeRecordTransfer) {
+  throw new Error("Expected nurse/OPERATIONS to be denied record-transfer:acknowledge.");
+}
+
 if (nurseCanRevokeConsent) {
   throw new Error("Expected nurse/TREATMENT to be denied consent:revoke.");
 }
@@ -1558,6 +1659,14 @@ if (nurseCanExportConsent) {
 
 if (!nurseCanReadProviderDirectory) {
   throw new Error("Expected nurse/TREATMENT to read provider directory.");
+}
+
+if (!integrationCanAcknowledgeRecordTransfer) {
+  throw new Error("Expected integration/OPERATIONS to acknowledge record transfer callbacks.");
+}
+
+if (!adminCanAcknowledgeRecordTransfer) {
+  throw new Error("Expected admin/OPERATIONS to acknowledge record transfer callbacks.");
 }
 
 if (clinicianCanReadAudit) {
@@ -1644,6 +1753,8 @@ console.log(
       recordTransferResourceType: fhirRecordTransferTask.resourceType,
       recordTransferFocus: fhirRecordTransferTask.focus?.reference,
       completedRecordTransferStatus: fhirCompletedRecordTransferTask.status,
+      failedRecordTransferStatus: fhirFailedRecordTransferTask.status,
+      retriedRecordTransferRetryCount: retriedRecordTransferSnapshot.retryCount,
       auditAction: auditEvent.toSnapshot().action,
       auditResourceType: fhirAuditEvent.resourceType,
       auditBundleEntryCount: fhirAuditBundle.entry.length,
@@ -1668,6 +1779,7 @@ console.log(
         clinicianCanExportProviderDirectory,
         clinicianCanExportRecordTransfer,
         clinicianCanUpdateRecordTransfer,
+        clinicianCanAcknowledgeRecordTransfer,
         clinicianCanRevokeConsent,
         clinicianCanExportConsent,
         clinicianCanExportServiceRequest,
@@ -1684,6 +1796,7 @@ console.log(
         nurseCanExportProviderDirectory,
         nurseCanExportRecordTransfer,
         nurseCanUpdateRecordTransfer,
+        nurseCanAcknowledgeRecordTransfer,
         nurseCanRevokeConsent,
         nurseCanExportConsent,
         nurseCanReadProviderDirectory,
@@ -1692,6 +1805,8 @@ console.log(
         nurseCanExportProcedure,
         clinicianCanReadAudit,
         clinicianCanExportAuditFhir,
+        integrationCanAcknowledgeRecordTransfer,
+        adminCanAcknowledgeRecordTransfer,
         auditorCanListPatientContext,
         auditorCanReadPatientContext,
         auditorCanListPatientForTreatment,

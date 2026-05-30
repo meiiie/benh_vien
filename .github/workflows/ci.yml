@@ -65,10 +65,30 @@ jobs:
       - name: Prepare production-like smoke env
         run: |
           cp .env.prod.example .env.ci.prod
-          sed -i 's|^BVS_AUTH_SECRET=.*|BVS_AUTH_SECRET=ci-wiiicare-auth-secret-0123456789abcdef|g' .env.ci.prod
-          sed -i 's|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=ci_bvs_postgres_password|g' .env.ci.prod
-          sed -i 's|^DATABASE_URL=.*|DATABASE_URL=postgresql://bvs:ci_bvs_postgres_password@postgres:5432/benh_vien_so|g' .env.ci.prod
-          sed -i 's|^MINIO_ROOT_PASSWORD=.*|MINIO_ROOT_PASSWORD=ci_bvs_minio_password|g' .env.ci.prod
+          auth_secret="$(openssl rand -hex 32)"
+          callback_secret="$(openssl rand -hex 32)"
+          callback_key_id="gateway-hai-phong-referral"
+          callback_secrets_json="{\"$callback_key_id\":\"$callback_secret\"}"
+          postgres_password="ci_$(openssl rand -hex 16)"
+          minio_password="ci_$(openssl rand -hex 16)"
+
+          echo "::add-mask::$auth_secret"
+          echo "::add-mask::$callback_secret"
+          echo "::add-mask::$callback_secrets_json"
+          echo "::add-mask::$postgres_password"
+          echo "::add-mask::$minio_password"
+
+          sed -i "s|^BVS_AUTH_SECRET=.*|BVS_AUTH_SECRET=$auth_secret|g" .env.ci.prod
+          sed -i "s|^BVS_RECORD_TRANSFER_CALLBACK_SECRET=.*|BVS_RECORD_TRANSFER_CALLBACK_SECRET=$callback_secret|g" .env.ci.prod
+          sed -i "s|^BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON=.*|BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON=$callback_secrets_json|g" .env.ci.prod
+          sed -i "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$postgres_password|g" .env.ci.prod
+          sed -i "s|^DATABASE_URL=.*|DATABASE_URL=postgresql://bvs:$postgres_password@postgres:5432/benh_vien_so|g" .env.ci.prod
+          sed -i "s|^MINIO_ROOT_PASSWORD=.*|MINIO_ROOT_PASSWORD=$minio_password|g" .env.ci.prod
+
+          {
+            echo "BVS_RECORD_TRANSFER_CALLBACK_KEY_ID=$callback_key_id"
+            echo "BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON=$callback_secrets_json"
+          } >> "$GITHUB_ENV"
 
       - name: Build production images
         run: docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml build migrate api web
@@ -77,7 +97,40 @@ jobs:
         run: docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml up -d --wait postgres valkey minio migrate api web
 
       - name: Verify API health
-        run: curl -fsS http://localhost:7310/health
+        run: docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml exec -T api wget -qO- http://127.0.0.1:7310/health
+
+      - name: Verify API is backend-internal
+        run: |
+          if curl -fsS --max-time 2 http://localhost:7310/health; then
+            echo "Production compose must not publish the API port directly."
+            exit 1
+          fi
+
+      - name: Verify API readiness dependencies
+        run: |
+          docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml exec -T api wget -qO- http://127.0.0.1:7310/ready > /tmp/api-ready.json
+          node <<'NODE'
+          const fs = require("node:fs");
+          const ready = JSON.parse(fs.readFileSync("/tmp/api-ready.json", "utf8"));
+          if (ready.status !== "ready") {
+            throw new Error("Expected ready status, received " + ready.status);
+          }
+          if (ready.repository !== "postgres") {
+            throw new Error("Expected postgres repository, received " + ready.repository);
+          }
+          if (ready.checks?.patients?.status !== "ok") {
+            throw new Error("Expected patients repository readiness check to be ok.");
+          }
+          if (ready.checks?.providerDirectory?.status !== "ok") {
+            throw new Error("Expected provider directory readiness check to be ok.");
+          }
+          if (ready.checks?.loginRateLimit?.status !== "ok") {
+            throw new Error("Expected login rate limit readiness check to be ok.");
+          }
+          if (ready.checks?.loginRateLimit?.store !== "valkey") {
+            throw new Error("Expected Valkey login rate limit store.");
+          }
+          NODE
 
       - name: Verify web health
         run: curl -fsS http://localhost:8080/health
@@ -87,6 +140,12 @@ jobs:
           curl -fsSI http://localhost:8080/ | grep -i '^Content-Security-Policy:'
           curl -fsSI http://localhost:8080/ | grep -i '^X-Frame-Options: DENY'
           curl -fsSI http://localhost:8080/ | grep -i '^X-Content-Type-Options: nosniff'
+          curl -fsSI http://localhost:8080/ | grep -i '^Cross-Origin-Opener-Policy: same-origin'
+          curl -fsSI http://localhost:8080/ | grep -i '^Strict-Transport-Security: max-age=31536000; includeSubDomains'
+          if curl -fsSI http://localhost:8080/ | grep -i '^Server:.*nginx/'; then
+            echo "Web edge must not expose the Nginx version."
+            exit 1
+          fi
 
       - name: Verify FHIR metadata public URL
         run: |
@@ -117,8 +176,109 @@ jobs:
           test "$status" = "403"
           grep -q "DEMO_AUTH_DISABLED" /tmp/demo-login.json
 
+      - name: Enable controlled demo auth for authenticated PostgreSQL smoke
+        run: |
+          cp .env.ci.prod .env.ci.prod.auth-smoke
+          sed -i 's|^BVS_DEMO_AUTH_ENABLED=.*|BVS_DEMO_AUTH_ENABLED=true|g' .env.ci.prod.auth-smoke
+          docker compose --env-file .env.ci.prod.auth-smoke -f docker-compose.yml -f docker-compose.prod.yml up -d --no-deps --force-recreate api
+          for attempt in $(seq 1 30); do
+            if docker compose --env-file .env.ci.prod.auth-smoke -f docker-compose.yml -f docker-compose.prod.yml exec -T api wget -qO- http://127.0.0.1:7310/ready >/tmp/api-ready-auth-smoke.json; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose --env-file .env.ci.prod.auth-smoke -f docker-compose.yml -f docker-compose.prod.yml logs --tail=100 api
+          exit 1
+
+      - name: Verify authenticated PostgreSQL API smoke
+        env:
+          WIIICARE_SMOKE_BASE_URL: http://localhost:8080/api/v1
+        run: node scripts/harness/authenticated-api-smoke.mjs
+
       - name: Verify database migration
-        run: docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -c "select version from schema_migrations order by version;"
+        run: |
+          docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -c "select version, left(checksum_sha256, 12) as checksum_prefix from schema_migrations order by version;"
+          expected_migrations=$(find migrations -maxdepth 1 -name '*.sql' | wc -l | tr -d ' ')
+          actual_migrations=$(docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -Atc "select count(*) from schema_migrations;")
+          test "$actual_migrations" = "$expected_migrations"
+          missing_checksums=$(docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -Atc "select count(*) from schema_migrations where checksum_sha256 is null or checksum_sha256 = '';")
+          test "$missing_checksums" = "0"
+          docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -Atc "
+          with expected(table_name) as (
+            values
+              ('patients'),
+              ('patient_identifier_index'),
+              ('encounters'),
+              ('allergy_intolerances'),
+              ('conditions'),
+              ('service_requests'),
+              ('workflow_tasks'),
+              ('procedures'),
+              ('observations'),
+              ('diagnostic_reports'),
+              ('imaging_studies'),
+              ('medication_requests'),
+              ('medication_dispenses'),
+              ('medication_administrations'),
+              ('clinical_documents'),
+              ('consents'),
+              ('record_transfers'),
+              ('record_transfer_delivery_attempts'),
+              ('provider_directory_resources'),
+              ('audit_events'),
+              ('schema_migrations')
+          )
+          select table_name
+          from expected
+          except
+          select table_name
+          from information_schema.tables
+          where table_schema = 'public';
+          " | tee /tmp/missing-wiiicare-tables.txt
+          test ! -s /tmp/missing-wiiicare-tables.txt
+          record_transfer_constraints=$(docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -Atc "
+          select count(*)
+          from pg_constraint
+          where conrelid = 'record_transfers'::regclass
+            and conname in (
+              'record_transfers_dead_letter_after_failed',
+              'record_transfers_acknowledgement_after_received'
+            );
+          ")
+          test "$record_transfer_constraints" = "2"
+          dead_letter_constraint=$(docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -Atc "
+          select count(*)
+          from pg_constraint
+          where conrelid = 'record_transfers'::regclass
+            and conname = 'record_transfers_dead_letter_after_failed'
+            and pg_get_constraintdef(oid) like '%dead_lettered_at IS NOT NULL%'
+            and pg_get_constraintdef(oid) like '%failed_at IS NOT NULL%';
+          ")
+          test "$dead_letter_constraint" = "1"
+          acknowledgement_constraint=$(docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -Atc "
+          select count(*)
+          from pg_constraint
+          where conrelid = 'record_transfers'::regclass
+            and conname = 'record_transfers_acknowledgement_after_received'
+            and pg_get_constraintdef(oid) like '%received_at IS NOT NULL%';
+          ")
+          test "$acknowledgement_constraint" = "1"
+          patient_identifier_constraint=$(docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -Atc "
+          select count(*)
+          from pg_constraint
+          where conrelid = 'patient_identifier_index'::regclass
+            and conname = 'patient_identifier_index_unique_identifier';
+          ")
+          test "$patient_identifier_constraint" = "1"
+          patient_merge_constraint=$(docker compose --env-file .env.ci.prod -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres psql -U bvs -d benh_vien_so -Atc "
+          select count(*)
+          from pg_constraint
+          where conrelid = 'patients'::regclass
+            and conname = 'patients_merge_metadata_required'
+            and pg_get_constraintdef(oid) like '%merged_into_patient_id IS NOT NULL%'
+            and pg_get_constraintdef(oid) like '%merged_at IS NOT NULL%';
+          ")
+          test "$patient_merge_constraint" = "1"
 
       - name: Print diagnostics on failure
         if: failure()

@@ -11,6 +11,11 @@ type FhirAuditEventEntityDetail = NonNullable<
 >[number];
 
 const auditActionLabels: Record<AuditAction, string> = {
+  "patient.merge": "Merge hồ sơ bệnh nhân",
+  "patient.identifier-conflict": "Chặn trùng định danh bệnh nhân",
+  "auth.login.success": "Đăng nhập thành công",
+  "auth.login.failure": "Đăng nhập thất bại",
+  "access.denied": "Truy cập bị từ chối",
   "patient.list": "Tải danh sách bệnh nhân",
   "patient.create": "Tạo bệnh nhân",
   "patient.read": "Đọc bệnh nhân",
@@ -23,7 +28,11 @@ const auditActionLabels: Record<AuditAction, string> = {
   "record-transfer.create": "Tạo gói chuyển hồ sơ",
   "record-transfer.read": "Đọc gói chuyển hồ sơ",
   "record-transfer.send": "Gửi gói chuyển hồ sơ",
+  "record-transfer.fail": "Ghi nhận lỗi chuyển hồ sơ",
+  "record-transfer.retry": "Thử gửi lại gói chuyển hồ sơ",
+  "record-transfer.dead-letter": "Đưa gói chuyển hồ sơ vào hàng lỗi cuối",
   "record-transfer.receive": "Xác nhận nhận gói chuyển hồ sơ",
+  "record-transfer.acknowledgement-callback": "Callback xác nhận nhận gói chuyển hồ sơ",
   "record-transfer.fhir-export": "Xuất gói chuyển hồ sơ FHIR",
   "encounter.list": "Tải lượt khám",
   "encounter.create": "Tạo lượt khám",
@@ -133,8 +142,8 @@ export function mapAuditEventToFhir(event: AuditEvent): FhirAuditEvent {
     ],
     action: mapAuditAction(snapshot.action),
     recorded: snapshot.occurredAt,
-    outcome: "0",
-    outcomeDesc: "Success",
+    outcome: mapAuditOutcome(snapshot.action),
+    outcomeDesc: mapAuditOutcomeDescription(snapshot.action),
     agent: [
       {
         who: {
@@ -215,15 +224,49 @@ function mapAuditAction(action: AuditAction): FhirAuditEvent["action"] {
     return "C";
   }
 
-  if (action.endsWith(".sign") || action.endsWith(".finish") || action.endsWith(".revoke")) {
+  if (
+    action.endsWith(".sign") ||
+    action.endsWith(".finish") ||
+    action.endsWith(".revoke") ||
+    action.endsWith(".merge") ||
+    action.endsWith(".dead-letter") ||
+    action.endsWith(".acknowledgement-callback")
+  ) {
     return "U";
   }
 
-  if (action.endsWith(".integrity-verify")) {
+  if (
+    action.endsWith(".integrity-verify") ||
+    action.endsWith(".identifier-conflict") ||
+    action === "access.denied" ||
+    action.startsWith("auth.login.")
+  ) {
     return "E";
   }
 
   return "R";
+}
+
+function mapAuditOutcome(action: AuditAction): FhirAuditEvent["outcome"] {
+  return action === "access.denied" ||
+    action === "auth.login.failure" ||
+    action === "patient.identifier-conflict"
+    ? "4"
+    : "0";
+}
+
+function mapAuditOutcomeDescription(action: AuditAction): string {
+  if (action === "auth.login.failure") {
+    return "Authentication failed";
+  }
+
+  if (action === "access.denied") {
+    return "Access denied";
+  }
+
+  return action === "patient.identifier-conflict"
+    ? "Patient identifier conflict"
+    : "Success";
 }
 
 function mapPurposeOfUse(purposeOfUse: string) {

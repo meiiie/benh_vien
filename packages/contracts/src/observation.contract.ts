@@ -34,6 +34,7 @@ export const CreateObservationRequestSchema = z
     valueText: z.string().min(1).optional(),
     performerPractitionerId: z.string().min(1).optional()
   })
+  .strict()
   .refine((value) => Boolean(value.valueQuantity) !== Boolean(value.valueText), {
     message: "Observation phải có đúng một kiểu giá trị.",
     path: ["value"]

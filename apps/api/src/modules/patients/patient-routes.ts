@@ -1,12 +1,14 @@
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { nanoid } from "nanoid";
 import {
   CreatePatientRequestSchema,
+  MergePatientRequestSchema,
   PatientIdParamsSchema
 } from "@benh-vien-so/contracts";
 import {
   DomainError,
   Patient,
+  PatientIdentifierConflictError,
   mapPatientRecordToFhirDocumentBundle,
   mapPatientRecordToFhirBundle,
   mapPatientToFhir
@@ -26,6 +28,7 @@ import type {
   ObservationRepository,
   PatientRepository,
   PatientSnapshot,
+  PatientIdentifierConflict,
   ProcedureRepository,
   ProviderDirectoryRepository,
   ServiceRequestRepository,
@@ -100,8 +103,10 @@ export async function registerPatientRoutes(
       throw parsed.error;
     }
 
+    let patient: Patient | undefined;
+
     try {
-      const patient = Patient.register({
+      patient = Patient.register({
         id: `patient-${nanoid(10)}`,
         ...parsed.data
       });
@@ -118,6 +123,18 @@ export async function registerPatientRoutes(
         return;
       }
 
+      const identifierConflict = await findPatientIdentifierConflict(repository, patient);
+
+      if (identifierConflict) {
+        return sendPatientIdentifierConflict(
+          request,
+          reply,
+          auditRepository,
+          patient,
+          identifierConflict
+        );
+      }
+
       await repository.save(patient);
       await recordAuditEvent(auditRepository, request, {
         action: "patient.create",
@@ -130,6 +147,112 @@ export async function registerPatientRoutes(
       });
 
       return reply.status(201).send(toPatientResponse(patient));
+    } catch (error) {
+      if (error instanceof DomainError) {
+        return reply.status(422).send({
+          error: "PATIENT_DOMAIN_ERROR",
+          message: error.message
+        });
+      }
+
+      if (error instanceof PatientIdentifierConflictError) {
+        if (patient) {
+          return sendPatientIdentifierConflict(
+            request,
+            reply,
+            auditRepository,
+            patient,
+            error.conflict
+          );
+        }
+
+        return reply.status(409).send({
+          error: "PATIENT_IDENTIFIER_CONFLICT",
+          message:
+            "Định danh bệnh nhân đã thuộc về một hồ sơ khác. Cần đối soát/MPI thay vì tạo hồ sơ mới."
+        });
+      }
+
+      throw error;
+    }
+  });
+
+  app.post("/patients/:id/merge", async (request, reply) => {
+    const actor = requirePermission(request, reply, "patient:merge");
+
+    if (!actor) {
+      return;
+    }
+
+    const params = PatientIdParamsSchema.parse(request.params);
+    const parsed = MergePatientRequestSchema.safeParse(request.body);
+
+    if (!parsed.success) {
+      throw parsed.error;
+    }
+
+    const sourcePatient = await repository.findById(params.id);
+
+    if (!sourcePatient) {
+      return reply.status(404).send({
+        error: "PATIENT_NOT_FOUND",
+        requestId: request.id
+      });
+    }
+
+    const targetPatient = await repository.findById(parsed.data.targetPatientId);
+
+    if (!targetPatient) {
+      return reply.status(404).send({
+        error: "TARGET_PATIENT_NOT_FOUND",
+        requestId: request.id
+      });
+    }
+
+    if (
+      !(await requirePatientRecordAccess(
+        request,
+        reply,
+        actor,
+        sourcePatient,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
+    }
+
+    if (
+      !(await requirePatientRecordAccess(
+        request,
+        reply,
+        actor,
+        targetPatient,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
+    }
+
+    try {
+      sourcePatient.markMerged({
+        targetPatientId: targetPatient.id,
+        mergedByActorId: actor.actorId,
+        reason: parsed.data.reason
+      });
+
+      await repository.save(sourcePatient);
+      await recordAuditEvent(auditRepository, request, {
+        action: "patient.merge",
+        resourceType: "Patient",
+        resourceId: sourcePatient.id,
+        patientId: sourcePatient.id,
+        metadata: {
+          targetPatientId: targetPatient.id,
+          mergeReason: parsed.data.reason
+        }
+      });
+
+      return toPatientResponse(sourcePatient);
     } catch (error) {
       if (error instanceof DomainError) {
         return reply.status(422).send({
@@ -555,6 +678,58 @@ export async function registerPatientRoutes(
 
 function toPatientResponse(patient: Patient): PatientSnapshot {
   return patient.toSnapshot();
+}
+
+async function findPatientIdentifierConflict(
+  repository: PatientRepository,
+  patient: Patient
+): Promise<PatientIdentifierConflict | undefined> {
+  const snapshot = patient.toSnapshot();
+
+  for (const identifier of snapshot.identifiers) {
+    const existing = await repository.findByIdentifier(identifier);
+
+    if (existing && existing.id !== snapshot.id) {
+      return {
+        existingPatientId: existing.id,
+        identifier
+      };
+    }
+  }
+
+  return undefined;
+}
+
+async function sendPatientIdentifierConflict(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  auditRepository: AuditEventRepository,
+  patient: Patient,
+  conflict: PatientIdentifierConflict
+) {
+  const snapshot = patient.toSnapshot();
+  await recordAuditEvent(auditRepository, request, {
+    action: "patient.identifier-conflict",
+    resourceType: "Patient",
+    resourceId: conflict.existingPatientId,
+    patientId: conflict.existingPatientId === "unknown" ? undefined : conflict.existingPatientId,
+    metadata: {
+      requestedPatientId: snapshot.id,
+      requestedManagingOrganizationId: snapshot.managingOrganizationId,
+      identifierSystem: conflict.identifier.system,
+      identifierType: conflict.identifier.type
+    }
+  });
+
+  return reply.status(409).send({
+    error: "PATIENT_IDENTIFIER_CONFLICT",
+    message:
+      "Định danh bệnh nhân đã thuộc về một hồ sơ khác. Cần đối soát/MPI thay vì tạo hồ sơ mới.",
+    identifier: {
+      system: conflict.identifier.system,
+      type: conflict.identifier.type
+    }
+  });
 }
 
 function readBundleTransferContext(

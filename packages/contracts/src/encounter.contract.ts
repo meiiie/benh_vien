@@ -24,7 +24,7 @@ export const CreateEncounterRequestSchema = z.object({
   attendingPractitionerId: z.string().min(1),
   startedAt: z.string().datetime(),
   endedAt: z.string().datetime().optional()
-});
+}).strict();
 
 export const PatientEncountersParamsSchema = z.object({
   patientId: z.string().min(1)

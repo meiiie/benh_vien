@@ -1,20 +1,54 @@
 import type { FastifyInstance } from "fastify";
-import { PatientAuditEventsParamsSchema } from "@benh-vien-so/contracts";
+import {
+  AuditEventsQuerySchema,
+  PatientAuditEventsParamsSchema
+} from "@benh-vien-so/contracts";
 import type {
   AuditEvent,
   AuditEventRepository,
   AuditEventSnapshot,
-  PatientRepository
+  PatientRepository,
+  ProviderDirectoryRepository
 } from "@benh-vien-so/domain";
 import { mapAuditEventsToFhirBundle } from "@benh-vien-so/domain";
-import { requirePermission } from "../access-control/access-context.js";
+import {
+  requirePatientRecordAccessByPatientId,
+  requirePermission
+} from "../access-control/access-context.js";
 import { recordAuditEvent } from "./audit-context.js";
 
 export async function registerAuditEventRoutes(
   app: FastifyInstance,
   patientRepository: PatientRepository,
+  providerDirectoryRepository: ProviderDirectoryRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
+  app.get("/audit-events", async (request, reply) => {
+    const actor = requirePermission(request, reply, "audit-event:list");
+
+    if (!actor) {
+      return;
+    }
+
+    const query = AuditEventsQuerySchema.parse(request.query);
+    const events = await auditRepository.findRecent(query.limit);
+
+    await recordAuditEvent(auditRepository, request, {
+      action: "audit-event.list",
+      resourceType: "AuditEvent",
+      resourceId: "collection",
+      metadata: {
+        scope: "global",
+        limit: query.limit,
+        returnedCount: events.length
+      }
+    });
+
+    return {
+      items: events.map(toAuditEventResponse)
+    };
+  });
+
   app.get("/patients/:patientId/audit-events", async (request, reply) => {
     const actor = requirePermission(request, reply, "audit-event:list");
 
@@ -23,12 +57,17 @@ export async function registerAuditEventRoutes(
     }
 
     const params = PatientAuditEventsParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     const events = await auditRepository.findByPatientId(params.patientId);
@@ -56,12 +95,17 @@ export async function registerAuditEventRoutes(
     }
 
     const params = PatientAuditEventsParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     await recordAuditEvent(auditRepository, request, {
@@ -85,12 +129,17 @@ export async function registerAuditEventRoutes(
     }
 
     const params = PatientAuditEventsParamsSchema.parse(request.params);
-    const patient = await patientRepository.findById(params.patientId);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
+    if (
+      !(await requirePatientRecordAccessByPatientId(
+        request,
+        reply,
+        actor,
+        params.patientId,
+        patientRepository,
+        providerDirectoryRepository
+      ))
+    ) {
+      return;
     }
 
     await recordAuditEvent(auditRepository, request, {

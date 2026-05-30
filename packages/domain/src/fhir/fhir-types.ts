@@ -1298,6 +1298,12 @@ export type FhirPatient = {
   readonly managingOrganization?: {
     readonly reference: string;
   };
+  readonly link?: readonly {
+    readonly other: {
+      readonly reference: string;
+    };
+    readonly type: "replaced-by" | "replaces" | "refer" | "seealso";
+  }[];
 };
 
 export type FhirOperationOutcomeIssueSeverity =
