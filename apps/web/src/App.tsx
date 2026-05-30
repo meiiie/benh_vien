@@ -128,6 +128,7 @@ import {
   toApiDateTime
 } from "./lib/clinicalFormatters.js";
 import { loadFhirPreview } from "./lib/fhirPreviewLoader.js";
+import { loadPatientScopedCollection } from "./lib/patientScopedCollectionLoader.js";
 import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { AppRouteRenderer } from "./pages/AppRouteRenderer.js";
@@ -881,285 +882,177 @@ export function App() {
   }
 
   async function loadEncounters(patientId: string, nextSelectedEncounterId?: string) {
-    setIsLoadingEncounters(true);
-
-    try {
-      const data = await listEncounters(clinicalApi, patientId);
-      setEncounters(data.items);
-      setSelectedEncounterId(nextSelectedEncounterId ?? data.items[0]?.id);
-    } catch (error) {
-      setEncounters([]);
-      setSelectedEncounterId(undefined);
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tải lượt khám: ${error.message}`
-          : "Không thể tải lượt khám."
-      );
-    } finally {
-      setIsLoadingEncounters(false);
-    }
+    await loadPatientScopedCollection({
+      errorMessage: "Không thể tải lượt khám",
+      listItems: () => listEncounters(clinicalApi, patientId),
+      nextSelectedId: nextSelectedEncounterId,
+      setItems: setEncounters,
+      setLoading: setIsLoadingEncounters,
+      setSelectedId: setSelectedEncounterId,
+      setStatusMessage
+    });
   }
 
   async function loadClinicalDocuments(patientId: string, nextSelectedDocumentId?: string) {
-    setIsLoadingDocuments(true);
-
-    try {
-      const data = await listClinicalDocuments(clinicalApi, patientId);
-      setClinicalDocuments(data.items);
-      setSelectedDocumentId(nextSelectedDocumentId ?? data.items[0]?.id);
-    } catch (error) {
-      setClinicalDocuments([]);
-      setSelectedDocumentId(undefined);
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tải tài liệu bệnh án: ${error.message}`
-          : "Không thể tải tài liệu bệnh án."
-      );
-    } finally {
-      setIsLoadingDocuments(false);
-    }
+    await loadPatientScopedCollection({
+      errorMessage: "Không thể tải tài liệu bệnh án",
+      listItems: () => listClinicalDocuments(clinicalApi, patientId),
+      nextSelectedId: nextSelectedDocumentId,
+      setItems: setClinicalDocuments,
+      setLoading: setIsLoadingDocuments,
+      setSelectedId: setSelectedDocumentId,
+      setStatusMessage
+    });
   }
 
   async function loadAllergyIntolerances(
     patientId: string,
     nextSelectedAllergyIntoleranceId?: string
   ) {
-    setIsLoadingAllergyIntolerances(true);
-
-    try {
-      const data = await listAllergyIntolerances(clinicalApi, patientId);
-      setAllergyIntolerances(data.items);
-      setSelectedAllergyIntoleranceId(nextSelectedAllergyIntoleranceId ?? data.items[0]?.id);
-    } catch (error) {
-      setAllergyIntolerances([]);
-      setSelectedAllergyIntoleranceId(undefined);
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tải dị ứng/cảnh báo: ${error.message}`
-          : "Không thể tải dị ứng/cảnh báo."
-      );
-    } finally {
-      setIsLoadingAllergyIntolerances(false);
-    }
+    await loadPatientScopedCollection({
+      errorMessage: "Không thể tải dị ứng/cảnh báo",
+      listItems: () => listAllergyIntolerances(clinicalApi, patientId),
+      nextSelectedId: nextSelectedAllergyIntoleranceId,
+      setItems: setAllergyIntolerances,
+      setLoading: setIsLoadingAllergyIntolerances,
+      setSelectedId: setSelectedAllergyIntoleranceId,
+      setStatusMessage
+    });
   }
 
   async function loadConditions(patientId: string, nextSelectedConditionId?: string) {
-    setIsLoadingConditions(true);
-
-    try {
-      const data = await listConditions(clinicalApi, patientId);
-      setConditions(data.items);
-      setSelectedConditionId(nextSelectedConditionId ?? data.items[0]?.id);
-    } catch (error) {
-      setConditions([]);
-      setSelectedConditionId(undefined);
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tải chẩn đoán/vấn đề sức khỏe: ${error.message}`
-          : "Không thể tải chẩn đoán/vấn đề sức khỏe."
-      );
-    } finally {
-      setIsLoadingConditions(false);
-    }
+    await loadPatientScopedCollection({
+      errorMessage: "Không thể tải chẩn đoán/vấn đề sức khỏe",
+      listItems: () => listConditions(clinicalApi, patientId),
+      nextSelectedId: nextSelectedConditionId,
+      setItems: setConditions,
+      setLoading: setIsLoadingConditions,
+      setSelectedId: setSelectedConditionId,
+      setStatusMessage
+    });
   }
 
   async function loadObservations(patientId: string, nextSelectedObservationId?: string) {
-    setIsLoadingObservations(true);
-
-    try {
-      const data = await listObservations(clinicalApi, patientId);
-      setObservations(data.items);
-      setSelectedObservationId(nextSelectedObservationId ?? data.items[0]?.id);
-    } catch (error) {
-      setObservations([]);
-      setSelectedObservationId(undefined);
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tải chỉ số lâm sàng: ${error.message}`
-          : "Không thể tải chỉ số lâm sàng."
-      );
-    } finally {
-      setIsLoadingObservations(false);
-    }
+    await loadPatientScopedCollection({
+      errorMessage: "Không thể tải chỉ số lâm sàng",
+      listItems: () => listObservations(clinicalApi, patientId),
+      nextSelectedId: nextSelectedObservationId,
+      setItems: setObservations,
+      setLoading: setIsLoadingObservations,
+      setSelectedId: setSelectedObservationId,
+      setStatusMessage
+    });
   }
 
   async function loadMedicationRequests(
     patientId: string,
     nextSelectedMedicationRequestId?: string
   ) {
-    setIsLoadingMedicationRequests(true);
-
-    try {
-      const data = await listMedicationRequests(clinicalApi, patientId);
-      setMedicationRequests(data.items);
-      setSelectedMedicationRequestId(nextSelectedMedicationRequestId ?? data.items[0]?.id);
-    } catch (error) {
-      setMedicationRequests([]);
-      setSelectedMedicationRequestId(undefined);
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tải chỉ định thuốc: ${error.message}`
-          : "Không thể tải chỉ định thuốc."
-      );
-    } finally {
-      setIsLoadingMedicationRequests(false);
-    }
+    await loadPatientScopedCollection({
+      errorMessage: "Không thể tải chỉ định thuốc",
+      listItems: () => listMedicationRequests(clinicalApi, patientId),
+      nextSelectedId: nextSelectedMedicationRequestId,
+      setItems: setMedicationRequests,
+      setLoading: setIsLoadingMedicationRequests,
+      setSelectedId: setSelectedMedicationRequestId,
+      setStatusMessage
+    });
   }
 
   async function loadMedicationDispenses(
     patientId: string,
     nextSelectedMedicationDispenseId?: string
   ) {
-    setIsLoadingMedicationDispenses(true);
-
-    try {
-      const data = await listMedicationDispenses(clinicalApi, patientId);
-      setMedicationDispenses(data.items);
-      setSelectedMedicationDispenseId(
-        nextSelectedMedicationDispenseId ?? data.items[0]?.id
-      );
-    } catch (error) {
-      setMedicationDispenses([]);
-      setSelectedMedicationDispenseId(undefined);
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tải cấp phát thuốc: ${error.message}`
-          : "Không thể tải cấp phát thuốc."
-      );
-    } finally {
-      setIsLoadingMedicationDispenses(false);
-    }
+    await loadPatientScopedCollection({
+      errorMessage: "Không thể tải cấp phát thuốc",
+      listItems: () => listMedicationDispenses(clinicalApi, patientId),
+      nextSelectedId: nextSelectedMedicationDispenseId,
+      setItems: setMedicationDispenses,
+      setLoading: setIsLoadingMedicationDispenses,
+      setSelectedId: setSelectedMedicationDispenseId,
+      setStatusMessage
+    });
   }
 
   async function loadMedicationAdministrations(
     patientId: string,
     nextSelectedMedicationAdministrationId?: string
   ) {
-    setIsLoadingMedicationAdministrations(true);
-
-    try {
-      const data = await listMedicationAdministrations(clinicalApi, patientId);
-      setMedicationAdministrations(data.items);
-      setSelectedMedicationAdministrationId(
-        nextSelectedMedicationAdministrationId ?? data.items[0]?.id
-      );
-    } catch (error) {
-      setMedicationAdministrations([]);
-      setSelectedMedicationAdministrationId(undefined);
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tải lần dùng thuốc: ${error.message}`
-          : "Không thể tải lần dùng thuốc."
-      );
-    } finally {
-      setIsLoadingMedicationAdministrations(false);
-    }
+    await loadPatientScopedCollection({
+      errorMessage: "Không thể tải lần dùng thuốc",
+      listItems: () => listMedicationAdministrations(clinicalApi, patientId),
+      nextSelectedId: nextSelectedMedicationAdministrationId,
+      setItems: setMedicationAdministrations,
+      setLoading: setIsLoadingMedicationAdministrations,
+      setSelectedId: setSelectedMedicationAdministrationId,
+      setStatusMessage
+    });
   }
 
   async function loadServiceRequests(
     patientId: string,
     nextSelectedServiceRequestId?: string
   ) {
-    setIsLoadingServiceRequests(true);
-
-    try {
-      const data = await listServiceRequests(clinicalApi, patientId);
-      setServiceRequests(data.items);
-      setSelectedServiceRequestId(nextSelectedServiceRequestId ?? data.items[0]?.id);
-    } catch (error) {
-      setServiceRequests([]);
-      setSelectedServiceRequestId(undefined);
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tải chỉ định dịch vụ: ${error.message}`
-          : "Không thể tải chỉ định dịch vụ."
-      );
-    } finally {
-      setIsLoadingServiceRequests(false);
-    }
+    await loadPatientScopedCollection({
+      errorMessage: "Không thể tải chỉ định dịch vụ",
+      listItems: () => listServiceRequests(clinicalApi, patientId),
+      nextSelectedId: nextSelectedServiceRequestId,
+      setItems: setServiceRequests,
+      setLoading: setIsLoadingServiceRequests,
+      setSelectedId: setSelectedServiceRequestId,
+      setStatusMessage
+    });
   }
 
   async function loadWorkflowTasks(patientId: string, nextSelectedWorkflowTaskId?: string) {
-    setIsLoadingWorkflowTasks(true);
-
-    try {
-      const data = await listWorkflowTasks(clinicalApi, patientId);
-      setWorkflowTasks(data.items);
-      setSelectedWorkflowTaskId(nextSelectedWorkflowTaskId ?? data.items[0]?.id);
-    } catch (error) {
-      setWorkflowTasks([]);
-      setSelectedWorkflowTaskId(undefined);
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tải hàng đợi công việc: ${error.message}`
-          : "Không thể tải hàng đợi công việc."
-      );
-    } finally {
-      setIsLoadingWorkflowTasks(false);
-    }
+    await loadPatientScopedCollection({
+      errorMessage: "Không thể tải hàng đợi công việc",
+      listItems: () => listWorkflowTasks(clinicalApi, patientId),
+      nextSelectedId: nextSelectedWorkflowTaskId,
+      setItems: setWorkflowTasks,
+      setLoading: setIsLoadingWorkflowTasks,
+      setSelectedId: setSelectedWorkflowTaskId,
+      setStatusMessage
+    });
   }
 
   async function loadProcedures(patientId: string, nextSelectedProcedureId?: string) {
-    setIsLoadingProcedures(true);
-
-    try {
-      const data = await listProcedures(clinicalApi, patientId);
-      setProcedures(data.items);
-      setSelectedProcedureId(nextSelectedProcedureId ?? data.items[0]?.id);
-    } catch (error) {
-      setProcedures([]);
-      setSelectedProcedureId(undefined);
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tải thủ thuật/hoạt động đã thực hiện: ${error.message}`
-          : "Không thể tải thủ thuật/hoạt động đã thực hiện."
-      );
-    } finally {
-      setIsLoadingProcedures(false);
-    }
+    await loadPatientScopedCollection({
+      errorMessage: "Không thể tải thủ thuật/hoạt động đã thực hiện",
+      listItems: () => listProcedures(clinicalApi, patientId),
+      nextSelectedId: nextSelectedProcedureId,
+      setItems: setProcedures,
+      setLoading: setIsLoadingProcedures,
+      setSelectedId: setSelectedProcedureId,
+      setStatusMessage
+    });
   }
 
   async function loadDiagnosticReports(
     patientId: string,
     nextSelectedDiagnosticReportId?: string
   ) {
-    setIsLoadingDiagnosticReports(true);
-
-    try {
-      const data = await listDiagnosticReports(clinicalApi, patientId);
-      setDiagnosticReports(data.items);
-      setSelectedDiagnosticReportId(nextSelectedDiagnosticReportId ?? data.items[0]?.id);
-    } catch (error) {
-      setDiagnosticReports([]);
-      setSelectedDiagnosticReportId(undefined);
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tải báo cáo kết quả: ${error.message}`
-          : "Không thể tải báo cáo kết quả."
-      );
-    } finally {
-      setIsLoadingDiagnosticReports(false);
-    }
+    await loadPatientScopedCollection({
+      errorMessage: "Không thể tải báo cáo kết quả",
+      listItems: () => listDiagnosticReports(clinicalApi, patientId),
+      nextSelectedId: nextSelectedDiagnosticReportId,
+      setItems: setDiagnosticReports,
+      setLoading: setIsLoadingDiagnosticReports,
+      setSelectedId: setSelectedDiagnosticReportId,
+      setStatusMessage
+    });
   }
 
   async function loadImagingStudies(patientId: string, nextSelectedImagingStudyId?: string) {
-    setIsLoadingImagingStudies(true);
-
-    try {
-      const data = await listImagingStudies(clinicalApi, patientId);
-      setImagingStudies(data.items);
-      setSelectedImagingStudyId(nextSelectedImagingStudyId ?? data.items[0]?.id);
-    } catch (error) {
-      setImagingStudies([]);
-      setSelectedImagingStudyId(undefined);
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tải nghiên cứu hình ảnh/PACS: ${error.message}`
-          : "Không thể tải nghiên cứu hình ảnh/PACS."
-      );
-    } finally {
-      setIsLoadingImagingStudies(false);
-    }
+    await loadPatientScopedCollection({
+      errorMessage: "Không thể tải nghiên cứu hình ảnh/PACS",
+      listItems: () => listImagingStudies(clinicalApi, patientId),
+      nextSelectedId: nextSelectedImagingStudyId,
+      setItems: setImagingStudies,
+      setLoading: setIsLoadingImagingStudies,
+      setSelectedId: setSelectedImagingStudyId,
+      setStatusMessage
+    });
   }
 
   async function loadAuditEvents(patientId: string, options: { readonly silent?: boolean } = {}) {
