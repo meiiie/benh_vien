@@ -71,6 +71,7 @@ import {
   listPatientConsents,
   revokePatientConsent
 } from "./features/consents/consentApi.js";
+import { ConsentInteropPanel } from "./features/consents/ConsentInteropPanel.js";
 import {
   createPatient,
   exportPatientFhir,
@@ -118,8 +119,6 @@ import {
   formatConditionClinicalStatus,
   formatConditionSeverity,
   formatConditionVerificationStatus,
-  formatConsentCategory,
-  formatConsentStatus,
   formatDateTime,
   formatDiagnosticReportCategory,
   formatDiagnosticReportStatus,
@@ -3361,69 +3360,16 @@ export function App() {
 
   function renderConsentInteropPanel(): ReactNode {
     return (
-      <article className="panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Đồng ý chia sẻ hồ sơ</p>
-            <h2>Căn cứ chia sẻ hồ sơ</h2>
-          </div>
-          <span className="pill cyan">{isLoadingConsents ? "đang tải" : `${consents.length} đồng ý`}</span>
-        </div>
-
-        <div className="detail-grid compact">
-          <Info label="Mã đồng ý dùng để xuất Bundle" value={defaultTransferContext.consentReference} />
-          <Info label="Đơn vị nhận" value={defaultTransferContext.recipientOrganizationId} />
-        </div>
-
-        <div className="reference-list">
-          {consents.map((consent) => (
-            <div key={consent.id}>
-              <div className="reference-header">
-                <strong>
-                  {consent.id} · {formatConsentStatus(consent.status)}
-                </strong>
-                <div className="reference-actions">
-                  <button
-                    className="ghost-button compact-button"
-                    type="button"
-                    onClick={() => void loadConsentFhirPreview(consent.id)}
-                  >
-                    FHIR
-                  </button>
-                  <button
-                    className="ghost-button compact-button"
-                    type="button"
-                    disabled={
-                      consent.status !== "active" ||
-                      revokingConsentId === consent.id ||
-                      selectedPatientWriteDisabled
-                    }
-                    onClick={() => void handleRevokeConsent(consent)}
-                  >
-                    {revokingConsentId === consent.id ? "Đang thu hồi..." : "Thu hồi"}
-                  </button>
-                </div>
-              </div>
-              <span>
-                {formatConsentCategory(consent.category)} cho {consent.granteeOrganizationId}, hiệu lực từ{" "}
-                {formatDateTime(consent.validFrom)}
-                {consent.validUntil ? ` đến ${formatDateTime(consent.validUntil)}` : ""}
-              </span>
-              {consent.revokedAt ? (
-                <span>
-                  Thu hồi lúc {formatDateTime(consent.revokedAt)} bởi {consent.revokedByActorId ?? "không rõ"}
-                  {consent.revocationReason ? ` · ${consent.revocationReason}` : ""}
-                </span>
-              ) : null}
-            </div>
-          ))}
-          {consents.length === 0 ? (
-            <p className="empty-state">
-              Chưa có đồng ý chia sẻ hợp lệ trong workspace này; FHIR Bundle liên viện sẽ bị API chặn nếu thiếu consent.
-            </p>
-          ) : null}
-        </div>
-      </article>
+      <ConsentInteropPanel
+        consents={consents}
+        consentReference={defaultTransferContext.consentReference}
+        isLoading={isLoadingConsents}
+        isWriteDisabled={selectedPatientWriteDisabled}
+        recipientOrganizationId={defaultTransferContext.recipientOrganizationId}
+        revokingConsentId={revokingConsentId}
+        onLoadFhirPreview={loadConsentFhirPreview}
+        onRevokeConsent={handleRevokeConsent}
+      />
     );
   }
 
