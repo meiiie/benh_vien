@@ -70,6 +70,7 @@ import { AllergyIntolerancePanel } from "./features/clinical-records/AllergyInto
 import { ConditionPanel } from "./features/clinical-records/ConditionPanel.js";
 import { DiagnosticReportPanel } from "./features/clinical-records/DiagnosticReportPanel.js";
 import { EncounterPanel } from "./features/clinical-records/EncounterPanel.js";
+import { ImagingStudyPanel } from "./features/clinical-records/ImagingStudyPanel.js";
 import { ObservationPanel } from "./features/clinical-records/ObservationPanel.js";
 import { ProcedurePanel } from "./features/clinical-records/ProcedurePanel.js";
 import { ServiceRequestPanel } from "./features/clinical-records/ServiceRequestPanel.js";
@@ -126,7 +127,6 @@ import {
   formatDocumentType,
   formatDosageInstruction,
   formatIdentifierType,
-  formatImagingStudyStatus,
   formatMedicationAdministrationCategory,
   formatMedicationAdministrationDose,
   formatMedicationAdministrationPerformers,
@@ -193,7 +193,6 @@ import type {
   MedicationAdministrationStatus,
   MedicationAdministrationCategory,
   MedicationAdministrationPerformerActorType,
-  ImagingStudyStatus,
   ConsentStatus,
   ConsentCategory,
   RecordTransferStatus,
@@ -3533,298 +3532,21 @@ export function App() {
 
   function renderImagingStudyPanel(): ReactNode {
     return (
-      <article className="panel imaging-study-panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">PACS / DICOM</p>
-            <h2>Nghiên cứu hình ảnh y khoa</h2>
-          </div>
-          <span className="pill cyan">
-            {isLoadingImagingStudies ? "đang tải" : `${imagingStudies.length} nghiên cứu`}
-          </span>
-        </div>
-
-        <div className="document-layout">
-          <div className="imaging-study-cards">
-            {imagingStudies.map((imagingStudy) => (
-              <button
-                className={
-                  imagingStudy.id === selectedImagingStudyId
-                    ? "imaging-study-card selected"
-                    : "imaging-study-card"
-                }
-                key={imagingStudy.id}
-                type="button"
-                onClick={() => setSelectedImagingStudyId(imagingStudy.id)}
-              >
-                <span>{formatImagingStudyStatus(imagingStudy.status)}</span>
-                <strong>{imagingStudy.description ?? imagingStudy.studyInstanceUid}</strong>
-                <small>
-                  {imagingStudy.series[0]?.modality.display ?? "DICOM"} ·{" "}
-                  {imagingStudy.startedAt ? formatDateTime(imagingStudy.startedAt) : "Chưa có thời điểm"}
-                </small>
-              </button>
-            ))}
-            {imagingStudies.length === 0 ? (
-              <p className="empty-state">
-                Chưa có FHIR ImagingStudy. Khi PACS/RIS có siêu dữ liệu DICOM, hãy tạo nghiên cứu hình ảnh để Bundle không chỉ có báo cáo PDF mà còn có chỉ mục ảnh máy đọc được.
-              </p>
-            ) : null}
-          </div>
-
-          <div className="imaging-study-summary">
-            {selectedImagingStudy ? (
-              <>
-                <div className="document-meta">
-                  <Info label="Mô tả" value={selectedImagingStudy.description ?? "Chưa có mô tả"} />
-                  <Info label="Study UID" value={selectedImagingStudy.studyInstanceUid} />
-                  <Info label="Accession" value={selectedImagingStudy.accessionNumber ?? "Chưa gắn"} />
-                  <Info label="Trạng thái" value={formatImagingStudyStatus(selectedImagingStudy.status)} />
-                  <Info label="Y lệnh gốc" value={selectedImagingStudy.basedOnServiceRequestId ?? "Chưa gắn"} />
-                  <Info label="Báo cáo liên quan" value={selectedImagingStudy.diagnosticReportId ?? "Chưa gắn"} />
-                  <Info label="Endpoint PACS" value={selectedImagingStudy.endpointId ?? "Chưa gắn"} />
-                  <Info label="Số ảnh" value={`${selectedImagingStudy.numberOfInstances} ảnh / ${selectedImagingStudy.numberOfSeries} series`} />
-                </div>
-                <div className="reference-list">
-                  {selectedImagingStudy.series.map((series) => (
-                    <div key={series.uid}>
-                      <strong>
-                        Series {series.number ?? "-"} · {series.modality.display}
-                      </strong>
-                      <span>
-                        UID {series.uid}; {series.numberOfInstances} ảnh
-                        {series.bodySite ? `; vùng chụp ${series.bodySite.display}` : ""}.
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <p className="empty-state">Chọn một nghiên cứu hình ảnh để xem siêu dữ liệu PACS/DICOM và xuất FHIR ImagingStudy.</p>
-            )}
-          </div>
-        </div>
-
-        <form className="imaging-study-form" onSubmit={(event) => void handleCreateImagingStudy(event)}>
-          <label>
-            Gắn với lượt khám
-            <select
-              value={imagingStudyForm.encounterId}
-              onChange={(event) =>
-                setImagingStudyForm({ ...imagingStudyForm, encounterId: event.target.value })
-              }
-            >
-              <option value="">Không gắn</option>
-              {encounters.map((encounter) => (
-                <option key={encounter.id} value={encounter.id}>
-                  {encounter.serviceType} · {formatDateTime(encounter.startedAt)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Y lệnh gốc
-            <select
-              value={imagingStudyForm.basedOnServiceRequestId}
-              onChange={(event) =>
-                setImagingStudyForm({
-                  ...imagingStudyForm,
-                  basedOnServiceRequestId: event.target.value
-                })
-              }
-            >
-              <option value="">Không gắn</option>
-              {serviceRequests.map((serviceRequest) => (
-                <option key={serviceRequest.id} value={serviceRequest.id}>
-                  {serviceRequest.code.display}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Báo cáo liên quan
-            <select
-              value={imagingStudyForm.diagnosticReportId}
-              onChange={(event) =>
-                setImagingStudyForm({
-                  ...imagingStudyForm,
-                  diagnosticReportId: event.target.value
-                })
-              }
-            >
-              <option value="">Không gắn</option>
-              {diagnosticReports.map((diagnosticReport) => (
-                <option key={diagnosticReport.id} value={diagnosticReport.id}>
-                  {diagnosticReport.code.display}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="wide-field">
-            DICOM Study Instance UID
-            <input
-              value={imagingStudyForm.studyInstanceUid}
-              onChange={(event) =>
-                setImagingStudyForm({ ...imagingStudyForm, studyInstanceUid: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Accession number
-            <input
-              value={imagingStudyForm.accessionNumber}
-              onChange={(event) =>
-                setImagingStudyForm({ ...imagingStudyForm, accessionNumber: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Thời điểm bắt đầu
-            <input
-              type="datetime-local"
-              value={imagingStudyForm.startedAt}
-              onChange={(event) =>
-                setImagingStudyForm({ ...imagingStudyForm, startedAt: event.target.value })
-              }
-            />
-          </label>
-          <label className="wide-field">
-            Mô tả nghiên cứu
-            <input
-              value={imagingStudyForm.description}
-              onChange={(event) =>
-                setImagingStudyForm({ ...imagingStudyForm, description: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Bác sĩ chỉ định
-            <input
-              value={imagingStudyForm.referrerPractitionerId}
-              onChange={(event) =>
-                setImagingStudyForm({
-                  ...imagingStudyForm,
-                  referrerPractitionerId: event.target.value
-                })
-              }
-            />
-          </label>
-          <label>
-            Bác sĩ đọc ảnh
-            <input
-              value={imagingStudyForm.interpreterPractitionerId}
-              onChange={(event) =>
-                setImagingStudyForm({
-                  ...imagingStudyForm,
-                  interpreterPractitionerId: event.target.value
-                })
-              }
-            />
-          </label>
-          <label className="wide-field">
-            Endpoint PACS/DICOMweb
-            <input
-              value={imagingStudyForm.endpointId}
-              onChange={(event) =>
-                setImagingStudyForm({ ...imagingStudyForm, endpointId: event.target.value })
-              }
-            />
-          </label>
-          <label className="wide-field">
-            DICOM Series Instance UID
-            <input
-              value={imagingStudyForm.seriesUid}
-              onChange={(event) =>
-                setImagingStudyForm({ ...imagingStudyForm, seriesUid: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Số thứ tự series
-            <input
-              value={imagingStudyForm.seriesNumber}
-              onChange={(event) =>
-                setImagingStudyForm({ ...imagingStudyForm, seriesNumber: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Số ảnh
-            <input
-              value={imagingStudyForm.numberOfInstances}
-              onChange={(event) =>
-                setImagingStudyForm({ ...imagingStudyForm, numberOfInstances: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Hệ mã modality
-            <input
-              value={imagingStudyForm.modalitySystem}
-              onChange={(event) =>
-                setImagingStudyForm({ ...imagingStudyForm, modalitySystem: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Mã modality
-            <input
-              value={imagingStudyForm.modalityCode}
-              onChange={(event) =>
-                setImagingStudyForm({ ...imagingStudyForm, modalityCode: event.target.value })
-              }
-            />
-          </label>
-          <label className="wide-field">
-            Tên modality
-            <input
-              value={imagingStudyForm.modalityDisplay}
-              onChange={(event) =>
-                setImagingStudyForm({ ...imagingStudyForm, modalityDisplay: event.target.value })
-              }
-            />
-          </label>
-          <label className="wide-field">
-            Mô tả series
-            <input
-              value={imagingStudyForm.seriesDescription}
-              onChange={(event) =>
-                setImagingStudyForm({ ...imagingStudyForm, seriesDescription: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Hệ mã vùng chụp
-            <input
-              value={imagingStudyForm.bodySiteSystem}
-              onChange={(event) =>
-                setImagingStudyForm({ ...imagingStudyForm, bodySiteSystem: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Mã vùng chụp
-            <input
-              value={imagingStudyForm.bodySiteCode}
-              onChange={(event) =>
-                setImagingStudyForm({ ...imagingStudyForm, bodySiteCode: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Tên vùng chụp
-            <input
-              value={imagingStudyForm.bodySiteDisplay}
-              onChange={(event) =>
-                setImagingStudyForm({ ...imagingStudyForm, bodySiteDisplay: event.target.value })
-              }
-            />
-          </label>
-          <button className="primary-button" type="submit" disabled={selectedPatientWriteDisabled || isSubmittingImagingStudy}>
-            {isSubmittingImagingStudy ? "Đang tạo..." : "Tạo ImagingStudy"}
-          </button>
-        </form>
-      </article>
+      <ImagingStudyPanel
+        diagnosticReports={diagnosticReports}
+        encounters={encounters}
+        form={imagingStudyForm}
+        imagingStudies={imagingStudies}
+        isLoading={isLoadingImagingStudies}
+        isSubmitting={isSubmittingImagingStudy}
+        isWriteDisabled={selectedPatientWriteDisabled}
+        selectedImagingStudy={selectedImagingStudy}
+        selectedImagingStudyId={selectedImagingStudyId}
+        serviceRequests={serviceRequests}
+        onCreateImagingStudy={handleCreateImagingStudy}
+        onFormChange={setImagingStudyForm}
+        onSelectImagingStudy={setSelectedImagingStudyId}
+      />
     );
   }
 
