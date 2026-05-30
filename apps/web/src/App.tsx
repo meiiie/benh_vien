@@ -67,7 +67,6 @@ import {
   listServiceRequests,
   listWorkflowTasks
 } from "./features/clinical-records/clinicalRecordApi.js";
-import { buildEncounterRecordCounts } from "./features/clinical-records/encounterSelectors.js";
 import {
   buildMedicationAdministrationCommand,
   buildMedicationDispenseCommand,
@@ -150,6 +149,7 @@ import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { AppRouteRenderer } from "./pages/AppRouteRenderer.js";
 import { buildDashboardMetrics } from "./pages/dashboardMetrics.js";
+import { buildWorkspaceSelection } from "./pages/workspaceSelection.js";
 
 import {
   defaultAllergyIntoleranceForm,
@@ -440,54 +440,7 @@ export function App() {
     patients,
     selectedPatientId
   });
-  const selectedEncounter = encounters.find((encounter) => encounter.id === selectedEncounterId);
-  const selectedDocument = clinicalDocuments.find((document) => document.id === selectedDocumentId);
-  const selectedAllergyIntolerance = allergyIntolerances.find(
-    (allergyIntolerance) => allergyIntolerance.id === selectedAllergyIntoleranceId
-  );
-  const selectedCondition = conditions.find((condition) => condition.id === selectedConditionId);
-  const selectedObservation = observations.find((observation) => observation.id === selectedObservationId);
-  const selectedMedicationRequest = medicationRequests.find(
-    (medicationRequest) => medicationRequest.id === selectedMedicationRequestId
-  );
-  const selectedMedicationDispense = medicationDispenses.find(
-    (medicationDispense) => medicationDispense.id === selectedMedicationDispenseId
-  );
-  const selectedMedicationAdministration = medicationAdministrations.find(
-    (medicationAdministration) =>
-      medicationAdministration.id === selectedMedicationAdministrationId
-  );
-  const selectedServiceRequest = serviceRequests.find(
-    (serviceRequest) => serviceRequest.id === selectedServiceRequestId
-  );
-  const selectedWorkflowTask = workflowTasks.find((task) => task.id === selectedWorkflowTaskId);
-  const selectedProcedure = procedures.find((procedure) => procedure.id === selectedProcedureId);
-  const selectedDiagnosticReport = diagnosticReports.find(
-    (diagnosticReport) => diagnosticReport.id === selectedDiagnosticReportId
-  );
-  const selectedImagingStudy = imagingStudies.find(
-    (imagingStudy) => imagingStudy.id === selectedImagingStudyId
-  );
-  const selectedRecordTransfer = recordTransfers.find(
-    (recordTransfer) => recordTransfer.id === selectedRecordTransferId
-  );
-  selectedRecordTransferIdRef.current = selectedRecordTransferId;
-  const selectedEncounterCounts = buildEncounterRecordCounts({
-    allergyIntolerances,
-    clinicalDocuments,
-    conditions,
-    diagnosticReports,
-    imagingStudies,
-    medicationAdministrations,
-    medicationDispenses,
-    medicationRequests,
-    observations,
-    procedures,
-    selectedEncounter,
-    serviceRequests,
-    workflowTasks
-  });
-  const dashboardMetrics = buildDashboardMetrics({
+  const patientWorkspaceCollections = {
     allergyIntolerances,
     clinicalDocuments,
     conditions,
@@ -498,12 +451,33 @@ export function App() {
     medicationDispenses,
     medicationRequests,
     observations,
-    patients,
     procedures,
-    providerDirectory,
     recordTransfers,
     serviceRequests,
     workflowTasks
+  };
+  const workspaceSelection = buildWorkspaceSelection({
+    ...patientWorkspaceCollections,
+    selectedAllergyIntoleranceId,
+    selectedConditionId,
+    selectedDiagnosticReportId,
+    selectedDocumentId,
+    selectedEncounterId,
+    selectedImagingStudyId,
+    selectedMedicationAdministrationId,
+    selectedMedicationDispenseId,
+    selectedMedicationRequestId,
+    selectedObservationId,
+    selectedProcedureId,
+    selectedRecordTransferId,
+    selectedServiceRequestId,
+    selectedWorkflowTaskId
+  });
+  selectedRecordTransferIdRef.current = selectedRecordTransferId;
+  const dashboardMetrics = buildDashboardMetrics({
+    ...patientWorkspaceCollections,
+    patients,
+    providerDirectory
   });
   const canReadAudit = authSession?.actor.role === "auditor" || authSession?.actor.role === "admin";
   const canViewRuntimeInfo = canReadAudit;
@@ -639,7 +613,7 @@ export function App() {
     }
 
     void loadDocumentFhirPreview(selectedDocumentId);
-    if (selectedDocument?.status === "signed") {
+    if (workspaceSelection.selectedDocument?.status === "signed") {
       void loadDocumentProvenanceFhirPreview(selectedDocumentId);
       return;
     }
@@ -647,7 +621,7 @@ export function App() {
     setDocumentProvenanceFhirPreview({
       note: "FHIR Provenance chỉ được xuất khi tài liệu đã ký/xác nhận."
     });
-  }, [selectedDocumentId, selectedDocument?.status]);
+  }, [selectedDocumentId, workspaceSelection.selectedDocument?.status]);
 
   useEffect(() => {
     if (!selectedConditionId) {
@@ -2682,7 +2656,7 @@ export function App() {
         isSubmitting={isSubmittingRecordTransfer}
         isWriteDisabled={selectedPatientWriteDisabled}
         recordTransfers={recordTransfers}
-        selectedRecordTransfer={selectedRecordTransfer}
+        selectedRecordTransfer={workspaceSelection.selectedRecordTransfer}
         selectedRecordTransferId={selectedRecordTransferId}
         transitioningRecordTransferId={transitioningRecordTransferId}
         onCreateRecordTransfer={handleCreateRecordTransfer}
@@ -2741,8 +2715,8 @@ export function App() {
         isLoading={isLoadingEncounters}
         isSubmitting={isSubmittingEncounter}
         isWriteDisabled={selectedPatientWriteDisabled}
-        selectedEncounter={selectedEncounter}
-        selectedEncounterCounts={selectedEncounterCounts}
+        selectedEncounter={workspaceSelection.selectedEncounter}
+        selectedEncounterCounts={workspaceSelection.selectedEncounterCounts}
         selectedEncounterId={selectedEncounterId}
         onCreateEncounter={handleCreateEncounter}
         onFinishEncounter={handleFinishEncounter}
@@ -2761,7 +2735,7 @@ export function App() {
         isLoading={isLoadingAllergyIntolerances}
         isSubmitting={isSubmittingAllergyIntolerance}
         isWriteDisabled={selectedPatientWriteDisabled}
-        selectedAllergyIntolerance={selectedAllergyIntolerance}
+        selectedAllergyIntolerance={workspaceSelection.selectedAllergyIntolerance}
         selectedAllergyIntoleranceId={selectedAllergyIntoleranceId}
         onCreateAllergyIntolerance={handleCreateAllergyIntolerance}
         onFormChange={setAllergyIntoleranceForm}
@@ -2779,7 +2753,7 @@ export function App() {
         isLoading={isLoadingConditions}
         isSubmitting={isSubmittingCondition}
         isWriteDisabled={selectedPatientWriteDisabled}
-        selectedCondition={selectedCondition}
+        selectedCondition={workspaceSelection.selectedCondition}
         selectedConditionId={selectedConditionId}
         onCreateCondition={handleCreateCondition}
         onFormChange={setConditionForm}
@@ -2797,7 +2771,7 @@ export function App() {
         isLoading={isLoadingServiceRequests}
         isSubmitting={isSubmittingServiceRequest}
         isWriteDisabled={selectedPatientWriteDisabled}
-        selectedServiceRequest={selectedServiceRequest}
+        selectedServiceRequest={workspaceSelection.selectedServiceRequest}
         selectedServiceRequestId={selectedServiceRequestId}
         serviceRequests={serviceRequests}
         onCreateServiceRequest={handleCreateServiceRequest}
@@ -2811,7 +2785,7 @@ export function App() {
     return (
       <WorkflowTaskPanel
         isLoading={isLoadingWorkflowTasks}
-        selectedWorkflowTask={selectedWorkflowTask}
+        selectedWorkflowTask={workspaceSelection.selectedWorkflowTask}
         selectedWorkflowTaskId={selectedWorkflowTaskId}
         workflowTasks={workflowTasks}
         onSelectWorkflowTask={setSelectedWorkflowTaskId}
@@ -2830,7 +2804,7 @@ export function App() {
         isSubmitting={isSubmittingProcedure}
         isWriteDisabled={selectedPatientWriteDisabled}
         procedures={procedures}
-        selectedProcedure={selectedProcedure}
+        selectedProcedure={workspaceSelection.selectedProcedure}
         selectedProcedureId={selectedProcedureId}
         serviceRequests={serviceRequests}
         onCreateProcedure={handleCreateProcedure}
@@ -2849,7 +2823,7 @@ export function App() {
         isSubmitting={isSubmittingObservation}
         isWriteDisabled={selectedPatientWriteDisabled}
         observations={observations}
-        selectedObservation={selectedObservation}
+        selectedObservation={workspaceSelection.selectedObservation}
         selectedObservationId={selectedObservationId}
         onCreateObservation={handleCreateObservation}
         onFormChange={setObservationForm}
@@ -2868,7 +2842,7 @@ export function App() {
         isSubmitting={isSubmittingDiagnosticReport}
         isWriteDisabled={selectedPatientWriteDisabled}
         observations={observations}
-        selectedDiagnosticReport={selectedDiagnosticReport}
+        selectedDiagnosticReport={workspaceSelection.selectedDiagnosticReport}
         selectedDiagnosticReportId={selectedDiagnosticReportId}
         serviceRequests={serviceRequests}
         onCreateDiagnosticReport={handleCreateDiagnosticReport}
@@ -2888,7 +2862,7 @@ export function App() {
         isLoading={isLoadingImagingStudies}
         isSubmitting={isSubmittingImagingStudy}
         isWriteDisabled={selectedPatientWriteDisabled}
-        selectedImagingStudy={selectedImagingStudy}
+        selectedImagingStudy={workspaceSelection.selectedImagingStudy}
         selectedImagingStudyId={selectedImagingStudyId}
         serviceRequests={serviceRequests}
         onCreateImagingStudy={handleCreateImagingStudy}
@@ -2908,7 +2882,7 @@ export function App() {
         isSubmitting={isSubmittingMedicationRequest}
         isWriteDisabled={selectedPatientWriteDisabled}
         medicationRequests={medicationRequests}
-        selectedMedicationRequest={selectedMedicationRequest}
+        selectedMedicationRequest={workspaceSelection.selectedMedicationRequest}
         selectedMedicationRequestId={selectedMedicationRequestId}
         onCreateMedicationRequest={handleCreateMedicationRequest}
         onFormChange={setMedicationRequestForm}
@@ -2927,7 +2901,7 @@ export function App() {
         isWriteDisabled={selectedPatientWriteDisabled}
         medicationDispenses={medicationDispenses}
         medicationRequests={medicationRequests}
-        selectedMedicationDispense={selectedMedicationDispense}
+        selectedMedicationDispense={workspaceSelection.selectedMedicationDispense}
         selectedMedicationDispenseId={selectedMedicationDispenseId}
         onCreateMedicationDispense={handleCreateMedicationDispense}
         onFormChange={setMedicationDispenseForm}
@@ -2947,7 +2921,7 @@ export function App() {
         isWriteDisabled={selectedPatientWriteDisabled}
         medicationAdministrations={medicationAdministrations}
         medicationRequests={medicationRequests}
-        selectedMedicationAdministration={selectedMedicationAdministration}
+        selectedMedicationAdministration={workspaceSelection.selectedMedicationAdministration}
         selectedMedicationAdministrationId={selectedMedicationAdministrationId}
         onCreateMedicationAdministration={handleCreateMedicationAdministration}
         onFormChange={setMedicationAdministrationForm}
@@ -2968,7 +2942,7 @@ export function App() {
         isSigningDocument={isSigningDocument}
         isSubmitting={isSubmittingDocument}
         isWriteDisabled={selectedPatientWriteDisabled}
-        selectedDocument={selectedDocument}
+        selectedDocument={workspaceSelection.selectedDocument}
         selectedDocumentId={selectedDocumentId}
         onCreateDocument={handleCreateClinicalDocument}
         onFormChange={setDocumentForm}
