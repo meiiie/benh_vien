@@ -169,9 +169,13 @@ import {
 } from "./lib/clinicalFormatters.js";
 import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
+import { AuditLogPage } from "./pages/AuditLogPage.js";
 import { DashboardPage } from "./pages/DashboardPage.js";
+import { DocumentsPage } from "./pages/DocumentsPage.js";
 import { GatewayAcknowledgementPage } from "./pages/GatewayAcknowledgementPage.js";
+import { InteropPage } from "./pages/InteropPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
+import { WorkspacePage } from "./pages/WorkspacePage.js";
 
 import {
   defaultAllergyIntoleranceForm,
@@ -3214,19 +3218,79 @@ export function App() {
     }
 
     if (appRoute === "workspace") {
-      return renderWorkspacePage();
+      return (
+        <WorkspacePage
+          allergyIntolerancePanel={renderAllergyIntolerancePanel()}
+          conditionPanel={renderConditionPanel()}
+          createPatientPanel={renderCreatePatientPanel()}
+          diagnosticReportPanel={renderDiagnosticReportPanel()}
+          encounterPanel={renderEncounterPanel()}
+          imagingStudyPanel={renderImagingStudyPanel()}
+          medicationAdministrationPanel={renderMedicationAdministrationPanel()}
+          medicationDispensePanel={renderMedicationDispensePanel()}
+          medicationRequestPanel={renderMedicationRequestPanel()}
+          observationPanel={renderObservationPanel()}
+          patientDetailPanel={renderPatientDetailPanel()}
+          patientListPanel={renderPatientListPanel()}
+          patientMergePanel={canMergePatients ? renderPatientMergePanel() : undefined}
+          procedurePanel={renderProcedurePanel()}
+          serviceRequestPanel={renderServiceRequestPanel()}
+          workflowTaskPanel={renderWorkflowTaskPanel()}
+        />
+      );
     }
 
     if (appRoute === "documents") {
-      return renderDocumentsPage();
+      return (
+        <DocumentsPage
+          documentFhirPreview={documentFhirPreview}
+          documentPanel={renderDocumentPanel()}
+          documentProvenanceFhirPreview={documentProvenanceFhirPreview}
+          patientListPanel={renderPatientListPanel()}
+        />
+      );
     }
 
     if (appRoute === "audit") {
-      return renderAuditPage();
+      return (
+        <AuditLogPage
+          auditPanel={renderAuditPanel()}
+          globalAuditPanel={renderGlobalAuditPanel()}
+        />
+      );
     }
 
     if (appRoute === "interop") {
-      return renderInteropPage();
+      return (
+        <InteropPage
+          allergyIntoleranceFhirPreview={allergyIntoleranceFhirPreview}
+          capabilityStatementPreview={capabilityStatementPreview}
+          conditionFhirPreview={conditionFhirPreview}
+          consentFhirPreview={consentFhirPreview}
+          consentInteropPanel={renderConsentInteropPanel()}
+          diagnosticReportFhirPreview={diagnosticReportFhirPreview}
+          documentFhirPreview={documentFhirPreview}
+          documentProvenanceFhirPreview={documentProvenanceFhirPreview}
+          encounterFhirPreview={encounterFhirPreview}
+          imagingStudyFhirPreview={imagingStudyFhirPreview}
+          medicationAdministrationFhirPreview={medicationAdministrationFhirPreview}
+          medicationDispenseFhirPreview={medicationDispenseFhirPreview}
+          medicationRequestFhirPreview={medicationRequestFhirPreview}
+          observationFhirPreview={observationFhirPreview}
+          patientFhirBundlePreview={patientFhirBundlePreview}
+          patientFhirDocumentBundlePreview={patientFhirDocumentBundlePreview}
+          patientFhirPreview={patientFhirPreview}
+          procedureFhirPreview={procedureFhirPreview}
+          providerDirectoryFhirPreview={providerDirectoryFhirPreview}
+          providerDirectoryPanel={renderProviderDirectoryPanel()}
+          recordTransferFhirTaskPreview={recordTransferFhirTaskPreview}
+          recordTransferInteropPanel={renderRecordTransferInteropPanel()}
+          referenceSignals={referenceSignals}
+          serviceRequestFhirPreview={serviceRequestFhirPreview}
+          workflowSteps={workflowSteps}
+          workflowTaskFhirPreview={workflowTaskFhirPreview}
+        />
+      );
     }
 
     if (appRoute === "settings") {
@@ -3269,142 +3333,6 @@ export function App() {
         onNavigate={setAppRoute}
         selectedPatient={selectedPatient}
       />
-    );
-  }
-
-  function renderWorkspacePage(): ReactNode {
-    return (
-      <div className="page-stack">
-        <PageHeader
-          eyebrow="Patient Workspace"
-          title="Bàn làm việc bệnh nhân"
-          description="Luồng chính mô phỏng EMR thật: chọn bệnh nhân, mở lượt khám, gắn tài liệu và theo dõi hồ sơ."
-        />
-
-        <section className="workspace">
-          {renderPatientListPanel()}
-          {renderPatientDetailPanel()}
-          {canMergePatients ? renderPatientMergePanel() : null}
-          {renderEncounterPanel()}
-          {renderAllergyIntolerancePanel()}
-          {renderConditionPanel()}
-          {renderServiceRequestPanel()}
-          {renderWorkflowTaskPanel()}
-          {renderProcedurePanel()}
-          {renderObservationPanel()}
-          {renderDiagnosticReportPanel()}
-          {renderImagingStudyPanel()}
-          {renderMedicationRequestPanel()}
-          {renderMedicationDispensePanel()}
-          {renderMedicationAdministrationPanel()}
-          {renderCreatePatientPanel()}
-        </section>
-      </div>
-    );
-  }
-
-  function renderDocumentsPage(): ReactNode {
-    return (
-      <div className="page-stack">
-        <PageHeader
-          eyebrow="Document Center"
-          title="Trung tâm tài liệu bệnh án"
-          description="Tổ chức tài liệu theo danh mục gần với OpenEMR: CCR/CCDA, hồ sơ bệnh án, xét nghiệm, thông tin bệnh nhân và tài liệu FHIR export."
-        />
-
-        <section className="workspace">
-          {renderPatientListPanel()}
-          {renderDocumentPanel()}
-          <FhirPanel title="FHIR DocumentReference JSON" badge="DocumentReference" value={documentFhirPreview} />
-          <FhirPanel title="FHIR Provenance JSON" badge="Provenance" value={documentProvenanceFhirPreview} />
-        </section>
-      </div>
-    );
-  }
-
-  function renderAuditPage(): ReactNode {
-    return (
-      <div className="page-stack">
-        <PageHeader
-          eyebrow="Audit"
-          title="Nhật ký truy cập và kiểm toán"
-          description="Mỗi lần xem FHIR, mở lượt khám, tạo/ký tài liệu đều được ghi log với actor, mục đích sử dụng và tài nguyên liên quan."
-        />
-
-        <section className="workspace">
-          {renderGlobalAuditPanel()}
-          {renderAuditPanel()}
-          <article className="panel">
-            <p className="eyebrow">Policy note</p>
-            <h2>Ranh giới demo</h2>
-            <ul className="milestone-list">
-              <li>Giao diện đã dùng phiên Bearer token nội bộ, chưa phải IAM/SSO bệnh viện thật.</li>
-              <li>API chặn quyền cơ bản: điều trị thao tác hồ sơ, kiểm toán xem nhật ký, quản trị có quyền giám sát.</li>
-              <li>Khi lên sản phẩm thật cần thêm SSO/MFA, đồng ý chia sẻ (consent), chữ ký số và log bất biến.</li>
-            </ul>
-          </article>
-        </section>
-      </div>
-    );
-  }
-
-  function renderInteropPage(): ReactNode {
-    return (
-      <div className="page-stack">
-        <PageHeader
-          eyebrow="Interop"
-          title="FHIR và hướng liên thông bệnh viện"
-          description="Màn này gom các biểu diễn FHIR hiện có để chuẩn bị cho luồng gửi sang HAPI FHIR hoặc hệ thống bệnh viện khác."
-        />
-
-        <section className="workflow-strip" aria-label="Luồng liên thông">
-          {workflowSteps.map((item, index) => (
-            <div className="workflow-step" key={item}>
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              <strong>{item}</strong>
-            </div>
-          ))}
-        </section>
-
-        <section className="workspace">
-          {renderProviderDirectoryPanel()}
-          <FhirPanel title="FHIR CapabilityStatement JSON" badge="CapabilityStatement" value={capabilityStatementPreview} />
-          <FhirPanel title="FHIR Provider Directory Bundle JSON" badge="Organization/Endpoint" value={providerDirectoryFhirPreview} />
-          <FhirPanel title="FHIR Patient JSON" badge="Patient" value={patientFhirPreview} />
-          <FhirPanel title="FHIR Patient Record Bundle JSON" badge="Bundle" value={patientFhirBundlePreview} />
-          <FhirPanel title="FHIR Clinical Document Bundle JSON" badge="Composition" value={patientFhirDocumentBundlePreview} />
-          <FhirPanel title="FHIR Encounter JSON" badge="Encounter" value={encounterFhirPreview} />
-          <FhirPanel title="FHIR AllergyIntolerance JSON" badge="AllergyIntolerance" value={allergyIntoleranceFhirPreview} />
-          <FhirPanel title="FHIR Condition JSON" badge="Condition" value={conditionFhirPreview} />
-          <FhirPanel title="FHIR ServiceRequest JSON" badge="ServiceRequest" value={serviceRequestFhirPreview} />
-          <FhirPanel title="FHIR Task JSON" badge="Task" value={workflowTaskFhirPreview} />
-          <FhirPanel title="FHIR Procedure JSON" badge="Procedure" value={procedureFhirPreview} />
-          <FhirPanel title="FHIR Observation JSON" badge="Observation" value={observationFhirPreview} />
-          <FhirPanel title="FHIR DiagnosticReport JSON" badge="DiagnosticReport" value={diagnosticReportFhirPreview} />
-          <FhirPanel title="FHIR ImagingStudy JSON" badge="ImagingStudy" value={imagingStudyFhirPreview} />
-          <FhirPanel title="FHIR MedicationRequest JSON" badge="MedicationRequest" value={medicationRequestFhirPreview} />
-          <FhirPanel title="FHIR MedicationDispense JSON" badge="MedicationDispense" value={medicationDispenseFhirPreview} />
-          <FhirPanel title="FHIR MedicationAdministration JSON" badge="MedicationAdministration" value={medicationAdministrationFhirPreview} />
-          <FhirPanel title="FHIR DocumentReference JSON" badge="DocumentReference" value={documentFhirPreview} />
-          <FhirPanel title="FHIR Document Provenance JSON" badge="Provenance" value={documentProvenanceFhirPreview} />
-          {renderConsentInteropPanel()}
-          <FhirPanel title="FHIR Consent JSON" badge="Consent" value={consentFhirPreview} />
-          {renderRecordTransferInteropPanel()}
-          <FhirPanel title="FHIR Record Transfer Task JSON" badge="Task" value={recordTransferFhirTaskPreview} />
-          <article className="panel dark-panel">
-            <p className="eyebrow">Reference map</p>
-            <h2>Chuẩn đang bám theo</h2>
-            <div className="reference-list">
-              {referenceSignals.map((reference) => (
-                <div key={reference.name}>
-                  <strong>{reference.name}</strong>
-                  <span>{reference.value}</span>
-                </div>
-              ))}
-            </div>
-          </article>
-        </section>
-      </div>
     );
   }
 
