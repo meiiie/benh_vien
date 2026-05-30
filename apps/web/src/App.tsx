@@ -20,7 +20,6 @@ import {
   AuthenticatedLayout,
   FhirPanel,
   Info,
-  MetricCard,
   PageHeader
 } from "./components/AppShell.js";
 import {
@@ -171,6 +170,7 @@ import {
 } from "./lib/clinicalFormatters.js";
 import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
+import { DashboardPage } from "./pages/DashboardPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
 
 import {
@@ -3233,7 +3233,33 @@ export function App() {
       );
     }
 
-    return renderDashboardPage();
+    return (
+      <DashboardPage
+        latestEncounterServiceType={encounters[0]?.serviceType}
+        metrics={{
+          allergyIntolerances: allergyIntolerances.length,
+          clinicalDocuments: clinicalDocuments.length,
+          conditions: conditions.length,
+          diagnosticReports: diagnosticReports.length,
+          draftDocuments: draftDocuments.length,
+          imagingStudies: imagingStudies.length,
+          medicationAdministrations: medicationAdministrations.length,
+          medicationDispenses: medicationDispenses.length,
+          medicationRequests: medicationRequests.length,
+          observations: observations.length,
+          openEncounters: openEncounters.length,
+          patients: patients.length,
+          procedures: procedures.length,
+          providerEndpoints: providerDirectory?.endpoints.length ?? 0,
+          providerOrganizations: providerDirectory?.organizations.length ?? 0,
+          recordTransfers: recordTransfers.length,
+          serviceRequests: serviceRequests.length,
+          workflowTasks: workflowTasks.length
+        }}
+        onNavigate={setAppRoute}
+        selectedPatient={selectedPatient}
+      />
+    );
   }
 
   function renderGatewayAcknowledgementPage(): ReactNode {
@@ -3386,90 +3412,6 @@ export function App() {
               </div>
             </article>
           ) : null}
-        </section>
-      </div>
-    );
-  }
-
-  function renderDashboardPage(): ReactNode {
-    return (
-      <div className="page-stack">
-        <PageHeader
-          eyebrow="Dashboard"
-          title="Tổng quan vận hành bệnh án điện tử"
-          description="Màn hình dành cho đầu ca làm việc: xem nhanh hồ sơ, lượt khám mở, tài liệu chờ ký và trạng thái liên thông."
-        />
-
-        <section className="metric-grid">
-          <MetricCard label="Bệnh nhân" value={`${patients.length}`} note="Hồ sơ trong registry demo" />
-          <MetricCard
-            label="Provider Directory"
-            value={`${providerDirectory?.organizations.length ?? 0}/${providerDirectory?.endpoints.length ?? 0}`}
-            note="Cơ sở y tế / endpoint liên thông"
-          />
-          <MetricCard label="Lượt khám mở" value={`${openEncounters.length}`} note="Theo bệnh nhân đang chọn" />
-          <MetricCard label="Dị ứng" value={`${allergyIntolerances.length}`} note="Cảnh báo an toàn" />
-          <MetricCard label="Chẩn đoán" value={`${conditions.length}`} note="Vấn đề sức khỏe có cấu trúc" />
-          <MetricCard label="Chỉ định DV" value={`${serviceRequests.length}`} note="FHIR ServiceRequest" />
-          <MetricCard label="Công việc" value={`${workflowTasks.length}`} note="FHIR Task" />
-          <MetricCard label="Thủ thuật" value={`${procedures.length}`} note="FHIR Procedure" />
-          <MetricCard label="Kết quả" value={`${diagnosticReports.length}`} note="FHIR DiagnosticReport" />
-          <MetricCard label="Ảnh y khoa" value={`${imagingStudies.length}`} note="FHIR ImagingStudy" />
-          <MetricCard label="Chỉ định thuốc" value={`${medicationRequests.length}`} note="FHIR MedicationRequest" />
-          <MetricCard label="Cấp phát thuốc" value={`${medicationDispenses.length}`} note="FHIR MedicationDispense" />
-          <MetricCard label="Dùng thuốc" value={`${medicationAdministrations.length}`} note="FHIR MedicationAdministration" />
-          <MetricCard label="Chuyển hồ sơ" value={`${recordTransfers.length}`} note="FHIR Task liên viện" />
-          <MetricCard label="Tài liệu nháp" value={`${draftDocuments.length}`} note="Cần ký/xác thực" />
-        </section>
-
-        <section className="dashboard-grid">
-          <article className="panel command-panel">
-            <div>
-              <p className="eyebrow">Today queue</p>
-              <h2>Việc nên xử lý tiếp</h2>
-            </div>
-            <div className="queue-list">
-              <button type="button" onClick={() => setAppRoute("workspace")}>
-                <strong>Mở patient workspace</strong>
-                <span>Xem hồ sơ, lượt khám và tài liệu đang gắn với bệnh nhân.</span>
-              </button>
-              <button type="button" onClick={() => setAppRoute("documents")}>
-                <strong>Kiểm tra tài liệu chờ ký</strong>
-                <span>{draftDocuments.length} tài liệu đang ở trạng thái nháp.</span>
-              </button>
-              <button type="button" onClick={() => setAppRoute("interop")}>
-                <strong>Xem gói FHIR</strong>
-                <span>Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, MedicationDispense, MedicationAdministration, DocumentReference, Provenance và gói chuyển hồ sơ đã có preview.</span>
-              </button>
-            </div>
-          </article>
-
-          <article className="panel">
-            <p className="eyebrow">Selected chart</p>
-            <h2>{selectedPatient?.fullName ?? "Chưa chọn bệnh nhân"}</h2>
-            {selectedPatient ? (
-              <div className="detail-grid compact">
-                <Info label="MRN" value={selectedPatient.identifiers[0]?.value ?? selectedPatient.id} />
-                <Info label="Lượt khám gần nhất" value={encounters[0]?.serviceType ?? "Chưa có"} />
-                <Info label="Dị ứng/cảnh báo" value={`${allergyIntolerances.length}`} />
-                <Info label="Chẩn đoán/vấn đề" value={`${conditions.length}`} />
-                <Info label="Chỉ định dịch vụ" value={`${serviceRequests.length}`} />
-                <Info label="Công việc thực thi" value={`${workflowTasks.length}`} />
-                <Info label="Thủ thuật/hoạt động" value={`${procedures.length}`} />
-                <Info label="Chỉ số lâm sàng" value={`${observations.length}`} />
-                <Info label="Báo cáo kết quả" value={`${diagnosticReports.length}`} />
-                <Info label="Nghiên cứu hình ảnh" value={`${imagingStudies.length}`} />
-                <Info label="Chỉ định thuốc" value={`${medicationRequests.length}`} />
-                <Info label="Cấp phát thuốc" value={`${medicationDispenses.length}`} />
-                <Info label="Dùng thuốc thực tế" value={`${medicationAdministrations.length}`} />
-                <Info label="Gói chuyển hồ sơ" value={`${recordTransfers.length}`} />
-                <Info label="Tài liệu" value={`${clinicalDocuments.length}`} />
-                <Info label="Cập nhật" value={formatDateTime(selectedPatient.updatedAt)} />
-              </div>
-            ) : (
-              <p className="empty-state">Chưa có dữ liệu bệnh nhân để hiển thị.</p>
-            )}
-          </article>
         </section>
       </div>
     );
