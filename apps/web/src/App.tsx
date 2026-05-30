@@ -68,6 +68,7 @@ import {
 } from "./features/clinical-records/clinicalRecordApi.js";
 import { AllergyIntolerancePanel } from "./features/clinical-records/AllergyIntolerancePanel.js";
 import { ConditionPanel } from "./features/clinical-records/ConditionPanel.js";
+import { DiagnosticReportPanel } from "./features/clinical-records/DiagnosticReportPanel.js";
 import { EncounterPanel } from "./features/clinical-records/EncounterPanel.js";
 import { ObservationPanel } from "./features/clinical-records/ObservationPanel.js";
 import { ProcedurePanel } from "./features/clinical-records/ProcedurePanel.js";
@@ -121,8 +122,6 @@ import {
 } from "./lib/auditFormatters.js";
 import {
   formatDateTime,
-  formatDiagnosticReportCategory,
-  formatDiagnosticReportStatus,
   formatDocumentStatus,
   formatDocumentType,
   formatDosageInstruction,
@@ -141,7 +140,6 @@ import {
   formatMedicationRequestIntent,
   formatMedicationRequestPriority,
   formatMedicationRequestStatus,
-  formatObservationValue,
   formatPatientRecordStatus,
   isMissingRecordTransferDeliveryAttemptsRoute,
   normalizeSearchText,
@@ -195,8 +193,6 @@ import type {
   MedicationAdministrationStatus,
   MedicationAdministrationCategory,
   MedicationAdministrationPerformerActorType,
-  DiagnosticReportStatus,
-  DiagnosticReportCategory,
   ImagingStudyStatus,
   ConsentStatus,
   ConsentCategory,
@@ -3517,253 +3513,21 @@ export function App() {
 
   function renderDiagnosticReportPanel(): ReactNode {
     return (
-      <article className="panel diagnostic-report-panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Diagnostic reports</p>
-            <h2>Báo cáo kết quả xét nghiệm và hình ảnh</h2>
-          </div>
-          <span className="pill cyan">
-            {isLoadingDiagnosticReports ? "đang tải" : `${diagnosticReports.length} báo cáo`}
-          </span>
-        </div>
-
-        <div className="document-layout">
-          <div className="diagnostic-report-cards">
-            {diagnosticReports.map((diagnosticReport) => (
-              <button
-                className={
-                  diagnosticReport.id === selectedDiagnosticReportId
-                    ? "diagnostic-report-card selected"
-                    : "diagnostic-report-card"
-                }
-                key={diagnosticReport.id}
-                type="button"
-                onClick={() => setSelectedDiagnosticReportId(diagnosticReport.id)}
-              >
-                <span>{formatDiagnosticReportCategory(diagnosticReport.category)}</span>
-                <strong>{diagnosticReport.code.display}</strong>
-                <small>
-                  {formatDiagnosticReportStatus(diagnosticReport.status)} ·{" "}
-                  {formatDateTime(diagnosticReport.issuedAt)}
-                </small>
-              </button>
-            ))}
-            {diagnosticReports.length === 0 ? (
-              <p className="empty-state">
-                Chưa có báo cáo kết quả. Khi LIS/RIS/PACS trả kết quả, hãy tạo DiagnosticReport để đóng vòng y lệnh.
-              </p>
-            ) : null}
-          </div>
-
-          <div className="diagnostic-report-summary">
-            {selectedDiagnosticReport ? (
-              <>
-                <div className="document-meta">
-                  <Info label="Báo cáo" value={selectedDiagnosticReport.code.display} />
-                  <Info label="Mã báo cáo" value={`${selectedDiagnosticReport.code.system} · ${selectedDiagnosticReport.code.code}`} />
-                  <Info label="Nhóm" value={formatDiagnosticReportCategory(selectedDiagnosticReport.category)} />
-                  <Info label="Trạng thái" value={formatDiagnosticReportStatus(selectedDiagnosticReport.status)} />
-                  <Info label="Y lệnh gốc" value={selectedDiagnosticReport.basedOnServiceRequestId ?? "Chưa gắn"} />
-                  <Info label="Observation kết quả" value={`${selectedDiagnosticReport.resultObservationIds.length}`} />
-                  <Info label="Khoa phát hành" value={selectedDiagnosticReport.performerOrganizationId ?? "Chưa gắn"} />
-                  <Info label="Người diễn giải" value={selectedDiagnosticReport.resultsInterpreterPractitionerId ?? "Chưa gắn"} />
-                </div>
-                <p className="empty-state">
-                  {selectedDiagnosticReport.conclusion ??
-                    "DiagnosticReport gom các Observation hoặc báo cáo dạng tệp để bên nhận hiểu đây là kết quả của một y lệnh ServiceRequest."}
-                </p>
-              </>
-            ) : (
-              <p className="empty-state">Chọn một báo cáo để xem siêu dữ liệu và xuất FHIR DiagnosticReport.</p>
-            )}
-          </div>
-        </div>
-
-        <form className="diagnostic-report-form" onSubmit={(event) => void handleCreateDiagnosticReport(event)}>
-          <label>
-            Gắn với lượt khám
-            <select
-              value={diagnosticReportForm.encounterId}
-              onChange={(event) =>
-                setDiagnosticReportForm({ ...diagnosticReportForm, encounterId: event.target.value })
-              }
-            >
-              <option value="">Không gắn</option>
-              {encounters.map((encounter) => (
-                <option key={encounter.id} value={encounter.id}>
-                  {encounter.serviceType} · {formatDateTime(encounter.startedAt)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Y lệnh gốc
-            <select
-              value={diagnosticReportForm.basedOnServiceRequestId}
-              onChange={(event) =>
-                setDiagnosticReportForm({
-                  ...diagnosticReportForm,
-                  basedOnServiceRequestId: event.target.value
-                })
-              }
-            >
-              <option value="">Không gắn</option>
-              {serviceRequests.map((serviceRequest) => (
-                <option key={serviceRequest.id} value={serviceRequest.id}>
-                  {serviceRequest.code.display}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Nhóm báo cáo
-            <select
-              value={diagnosticReportForm.category}
-              onChange={(event) =>
-                setDiagnosticReportForm({
-                  ...diagnosticReportForm,
-                  category: event.target.value as DiagnosticReportCategory
-                })
-              }
-            >
-              <option value="laboratory">Xét nghiệm</option>
-              <option value="imaging">Chẩn đoán hình ảnh</option>
-              <option value="pathology">Giải phẫu bệnh</option>
-              <option value="other">Khác</option>
-            </select>
-          </label>
-          <label>
-            Hệ mã
-            <input
-              value={diagnosticReportForm.codeSystem}
-              onChange={(event) =>
-                setDiagnosticReportForm({ ...diagnosticReportForm, codeSystem: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Mã báo cáo
-            <input
-              value={diagnosticReportForm.code}
-              onChange={(event) =>
-                setDiagnosticReportForm({ ...diagnosticReportForm, code: event.target.value })
-              }
-            />
-          </label>
-          <label className="wide-field">
-            Tên báo cáo
-            <input
-              value={diagnosticReportForm.codeDisplay}
-              onChange={(event) =>
-                setDiagnosticReportForm({ ...diagnosticReportForm, codeDisplay: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Thời điểm hiệu lực
-            <input
-              type="datetime-local"
-              value={diagnosticReportForm.effectiveAt}
-              onChange={(event) =>
-                setDiagnosticReportForm({ ...diagnosticReportForm, effectiveAt: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Thời điểm phát hành
-            <input
-              type="datetime-local"
-              value={diagnosticReportForm.issuedAt}
-              onChange={(event) =>
-                setDiagnosticReportForm({ ...diagnosticReportForm, issuedAt: event.target.value })
-              }
-            />
-          </label>
-          <label className="wide-field">
-            Khoa/phòng phát hành
-            <input
-              value={diagnosticReportForm.performerOrganizationId}
-              onChange={(event) =>
-                setDiagnosticReportForm({
-                  ...diagnosticReportForm,
-                  performerOrganizationId: event.target.value
-                })
-              }
-            />
-          </label>
-          <label className="wide-field">
-            Người diễn giải kết quả
-            <input
-              value={diagnosticReportForm.resultsInterpreterPractitionerId}
-              onChange={(event) =>
-                setDiagnosticReportForm({
-                  ...diagnosticReportForm,
-                  resultsInterpreterPractitionerId: event.target.value
-                })
-              }
-            />
-          </label>
-          <div className="wide-field checkbox-list">
-            <span>Observation kết quả</span>
-            {observations.map((observation) => {
-              const isChecked = diagnosticReportForm.resultObservationIds.includes(observation.id);
-
-              return (
-                <label className="check-option" key={observation.id}>
-                  <input
-                    checked={isChecked}
-                    type="checkbox"
-                    onChange={(event) => {
-                      const nextIds = event.target.checked
-                        ? [...diagnosticReportForm.resultObservationIds, observation.id]
-                        : diagnosticReportForm.resultObservationIds.filter((id) => id !== observation.id);
-                      setDiagnosticReportForm({
-                        ...diagnosticReportForm,
-                        resultObservationIds: nextIds
-                      });
-                    }}
-                  />
-                  <span>{observation.code.display} · {formatObservationValue(observation)}</span>
-                </label>
-              );
-            })}
-            {observations.length === 0 ? (
-              <small>Chưa có Observation để gắn. Có thể dùng kết luận hoặc tệp báo cáo.</small>
-            ) : null}
-          </div>
-          <label className="wide-field">
-            Kết luận
-            <input
-              value={diagnosticReportForm.conclusion}
-              onChange={(event) =>
-                setDiagnosticReportForm({ ...diagnosticReportForm, conclusion: event.target.value })
-              }
-            />
-          </label>
-          <label className="wide-field">
-            Đường dẫn tệp báo cáo
-            <input
-              value={diagnosticReportForm.presentedFormUrl}
-              onChange={(event) =>
-                setDiagnosticReportForm({ ...diagnosticReportForm, presentedFormUrl: event.target.value })
-              }
-            />
-          </label>
-          <label className="wide-field">
-            Tiêu đề tệp báo cáo
-            <input
-              value={diagnosticReportForm.presentedFormTitle}
-              onChange={(event) =>
-                setDiagnosticReportForm({ ...diagnosticReportForm, presentedFormTitle: event.target.value })
-              }
-            />
-          </label>
-          <button className="primary-button" type="submit" disabled={selectedPatientWriteDisabled || isSubmittingDiagnosticReport}>
-            {isSubmittingDiagnosticReport ? "Đang tạo..." : "Tạo báo cáo kết quả"}
-          </button>
-        </form>
-      </article>
+      <DiagnosticReportPanel
+        diagnosticReports={diagnosticReports}
+        encounters={encounters}
+        form={diagnosticReportForm}
+        isLoading={isLoadingDiagnosticReports}
+        isSubmitting={isSubmittingDiagnosticReport}
+        isWriteDisabled={selectedPatientWriteDisabled}
+        observations={observations}
+        selectedDiagnosticReport={selectedDiagnosticReport}
+        selectedDiagnosticReportId={selectedDiagnosticReportId}
+        serviceRequests={serviceRequests}
+        onCreateDiagnosticReport={handleCreateDiagnosticReport}
+        onFormChange={setDiagnosticReportForm}
+        onSelectDiagnosticReport={setSelectedDiagnosticReportId}
+      />
     );
   }
 
