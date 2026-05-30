@@ -5,6 +5,7 @@ import {
   type DemoRole,
   type LoginForm
 } from "./auth/demoLogin.js";
+import { loginDemoSession } from "./auth/authApi.js";
 import {
   createClinicalApiClient,
   isApiHttpError
@@ -30,10 +31,64 @@ import {
   signClinicalDocument
 } from "./features/clinical-documents/clinicalDocumentApi.js";
 import {
+  createAllergyIntolerance,
+  createCondition,
+  createDiagnosticReport,
+  createEncounter,
+  createImagingStudy,
+  createMedicationAdministration,
+  createMedicationDispense,
+  createMedicationRequest,
+  createObservation,
+  createProcedure,
+  createServiceRequest,
+  exportAllergyIntoleranceFhir,
+  exportConditionFhir,
+  exportDiagnosticReportFhir,
+  exportEncounterFhir,
+  exportImagingStudyFhir,
+  exportMedicationAdministrationFhir,
+  exportMedicationDispenseFhir,
+  exportMedicationRequestFhir,
+  exportObservationFhir,
+  exportProcedureFhir,
+  exportServiceRequestFhir,
+  exportWorkflowTaskFhir,
+  finishEncounter,
+  listAllergyIntolerances,
+  listConditions,
+  listDiagnosticReports,
+  listEncounters,
+  listImagingStudies,
+  listMedicationAdministrations,
+  listMedicationDispenses,
+  listMedicationRequests,
+  listObservations,
+  listProcedures,
+  listServiceRequests,
+  listWorkflowTasks
+} from "./features/clinical-records/clinicalRecordApi.js";
+import {
   exportConsentFhir,
   listPatientConsents,
   revokePatientConsent
 } from "./features/consents/consentApi.js";
+import {
+  createPatient,
+  exportPatientFhir,
+  exportPatientFhirBundle,
+  exportPatientFhirDocumentBundle,
+  listPatients,
+  mergePatient
+} from "./features/patient-registry/patientRegistryApi.js";
+import {
+  getApiRuntimeInfo,
+  getFhirCapabilityStatement
+} from "./features/platform/platformApi.js";
+import {
+  exportProviderDirectoryFhir,
+  getProviderDirectory
+} from "./features/provider-directory/providerDirectoryApi.js";
 import {
   acknowledgeRecordTransfer,
   createRecordTransfer,
@@ -251,19 +306,6 @@ import type {
   RecordTransferOperationalSeverity,
   RecordTransferOperationalSummary,
   ApiRuntimeInfo,
-  PatientsResponse,
-  EncountersResponse,
-  ConditionsResponse,
-  AllergyIntolerancesResponse,
-  ObservationsResponse,
-  MedicationRequestsResponse,
-  MedicationDispensesResponse,
-  MedicationAdministrationsResponse,
-  ServiceRequestsResponse,
-  WorkflowTasksResponse,
-  ProceduresResponse,
-  DiagnosticReportsResponse,
-  ImagingStudiesResponse,
   NewPatientForm,
   PatientMergeForm,
   NewRecordTransferForm,
@@ -847,9 +889,7 @@ export function App() {
     setIsLoadingPatients(true);
 
     try {
-      const data = await clinicalApi.requestJson<PatientsResponse>("/patients", {
-        purposeOfUse: isAuditOnlySession ? "AUDIT" : "TREATMENT"
-      });
+      const data = await listPatients(clinicalApi, isAuditOnlySession ? "AUDIT" : "TREATMENT");
       setPatients(data.items);
       setSelectedPatientId(nextSelectedId ?? selectedPatientId ?? data.items[0]?.id);
       setStatusMessage(`Đã tải ${data.items.length} hồ sơ bệnh nhân từ backend.`);
@@ -869,9 +909,7 @@ export function App() {
 
     try {
       if (isAuditOnlySession) {
-        const directory = await clinicalApi.requestJson<ProviderDirectory>("/provider-directory", {
-          purposeOfUse: "AUDIT"
-        });
+        const directory = await getProviderDirectory(clinicalApi, "AUDIT");
         setProviderDirectory(directory);
         setProviderDirectoryFhirPreview({
           note: "Phiên kiểm toán chỉ tải danh bạ vận hành; không xuất FHIR Provider Directory."
@@ -880,12 +918,8 @@ export function App() {
       }
 
       const [directory, fhirPreview] = await Promise.all([
-        clinicalApi.requestJson<ProviderDirectory>("/provider-directory", {
-          purposeOfUse: "TREATMENT"
-        }),
-        clinicalApi.requestJson<unknown>("/provider-directory/fhir", {
-          purposeOfUse: "TREATMENT"
-        })
+        getProviderDirectory(clinicalApi, "TREATMENT"),
+        exportProviderDirectoryFhir(clinicalApi)
       ]);
 
       setProviderDirectory(directory);
@@ -905,7 +939,7 @@ export function App() {
 
   async function loadCapabilityStatement() {
     try {
-      setCapabilityStatementPreview(await clinicalApi.requestJson<unknown>("/fhir/metadata"));
+      setCapabilityStatementPreview(await getFhirCapabilityStatement(clinicalApi));
     } catch (error) {
       setCapabilityStatementPreview({
         error:
@@ -918,13 +952,9 @@ export function App() {
 
   async function loadApiRuntimeInfo() {
     try {
-      const runtimeInfo = await clinicalApi.requestJson<ApiRuntimeInfo>(
-        "/runtime",
-        authSession
-          ? {
-              purposeOfUse: authSession.actor.role === "auditor" ? "AUDIT" : "OPERATIONS"
-            }
-          : undefined
+      const runtimeInfo = await getApiRuntimeInfo(
+        clinicalApi,
+        authSession ? (authSession.actor.role === "auditor" ? "AUDIT" : "OPERATIONS") : undefined
       );
       setApiRuntimeInfo(runtimeInfo);
       setApiRuntimeWarning(undefined);
@@ -988,12 +1018,7 @@ export function App() {
     setIsLoadingEncounters(true);
 
     try {
-      const data = await clinicalApi.requestJson<EncountersResponse>(
-        `/patients/${patientId}/encounters`,
-        {
-          purposeOfUse: "TREATMENT"
-        }
-      );
+      const data = await listEncounters(clinicalApi, patientId);
       setEncounters(data.items);
       setSelectedEncounterId(nextSelectedEncounterId ?? data.items[0]?.id);
     } catch (error) {
@@ -1036,12 +1061,7 @@ export function App() {
     setIsLoadingAllergyIntolerances(true);
 
     try {
-      const data = await clinicalApi.requestJson<AllergyIntolerancesResponse>(
-        `/patients/${patientId}/allergy-intolerances`,
-        {
-          purposeOfUse: "TREATMENT"
-        }
-      );
+      const data = await listAllergyIntolerances(clinicalApi, patientId);
       setAllergyIntolerances(data.items);
       setSelectedAllergyIntoleranceId(nextSelectedAllergyIntoleranceId ?? data.items[0]?.id);
     } catch (error) {
@@ -1061,12 +1081,7 @@ export function App() {
     setIsLoadingConditions(true);
 
     try {
-      const data = await clinicalApi.requestJson<ConditionsResponse>(
-        `/patients/${patientId}/conditions`,
-        {
-          purposeOfUse: "TREATMENT"
-        }
-      );
+      const data = await listConditions(clinicalApi, patientId);
       setConditions(data.items);
       setSelectedConditionId(nextSelectedConditionId ?? data.items[0]?.id);
     } catch (error) {
@@ -1086,12 +1101,7 @@ export function App() {
     setIsLoadingObservations(true);
 
     try {
-      const data = await clinicalApi.requestJson<ObservationsResponse>(
-        `/patients/${patientId}/observations`,
-        {
-          purposeOfUse: "TREATMENT"
-        }
-      );
+      const data = await listObservations(clinicalApi, patientId);
       setObservations(data.items);
       setSelectedObservationId(nextSelectedObservationId ?? data.items[0]?.id);
     } catch (error) {
@@ -1114,12 +1124,7 @@ export function App() {
     setIsLoadingMedicationRequests(true);
 
     try {
-      const data = await clinicalApi.requestJson<MedicationRequestsResponse>(
-        `/patients/${patientId}/medication-requests`,
-        {
-          purposeOfUse: "TREATMENT"
-        }
-      );
+      const data = await listMedicationRequests(clinicalApi, patientId);
       setMedicationRequests(data.items);
       setSelectedMedicationRequestId(nextSelectedMedicationRequestId ?? data.items[0]?.id);
     } catch (error) {
@@ -1142,12 +1147,7 @@ export function App() {
     setIsLoadingMedicationDispenses(true);
 
     try {
-      const data = await clinicalApi.requestJson<MedicationDispensesResponse>(
-        `/patients/${patientId}/medication-dispenses`,
-        {
-          purposeOfUse: "TREATMENT"
-        }
-      );
+      const data = await listMedicationDispenses(clinicalApi, patientId);
       setMedicationDispenses(data.items);
       setSelectedMedicationDispenseId(
         nextSelectedMedicationDispenseId ?? data.items[0]?.id
@@ -1172,12 +1172,7 @@ export function App() {
     setIsLoadingMedicationAdministrations(true);
 
     try {
-      const data = await clinicalApi.requestJson<MedicationAdministrationsResponse>(
-        `/patients/${patientId}/medication-administrations`,
-        {
-          purposeOfUse: "TREATMENT"
-        }
-      );
+      const data = await listMedicationAdministrations(clinicalApi, patientId);
       setMedicationAdministrations(data.items);
       setSelectedMedicationAdministrationId(
         nextSelectedMedicationAdministrationId ?? data.items[0]?.id
@@ -1202,12 +1197,7 @@ export function App() {
     setIsLoadingServiceRequests(true);
 
     try {
-      const data = await clinicalApi.requestJson<ServiceRequestsResponse>(
-        `/patients/${patientId}/service-requests`,
-        {
-          purposeOfUse: "TREATMENT"
-        }
-      );
+      const data = await listServiceRequests(clinicalApi, patientId);
       setServiceRequests(data.items);
       setSelectedServiceRequestId(nextSelectedServiceRequestId ?? data.items[0]?.id);
     } catch (error) {
@@ -1227,12 +1217,7 @@ export function App() {
     setIsLoadingWorkflowTasks(true);
 
     try {
-      const data = await clinicalApi.requestJson<WorkflowTasksResponse>(
-        `/patients/${patientId}/workflow-tasks`,
-        {
-          purposeOfUse: "TREATMENT"
-        }
-      );
+      const data = await listWorkflowTasks(clinicalApi, patientId);
       setWorkflowTasks(data.items);
       setSelectedWorkflowTaskId(nextSelectedWorkflowTaskId ?? data.items[0]?.id);
     } catch (error) {
@@ -1252,12 +1237,7 @@ export function App() {
     setIsLoadingProcedures(true);
 
     try {
-      const data = await clinicalApi.requestJson<ProceduresResponse>(
-        `/patients/${patientId}/procedures`,
-        {
-          purposeOfUse: "TREATMENT"
-        }
-      );
+      const data = await listProcedures(clinicalApi, patientId);
       setProcedures(data.items);
       setSelectedProcedureId(nextSelectedProcedureId ?? data.items[0]?.id);
     } catch (error) {
@@ -1280,12 +1260,7 @@ export function App() {
     setIsLoadingDiagnosticReports(true);
 
     try {
-      const data = await clinicalApi.requestJson<DiagnosticReportsResponse>(
-        `/patients/${patientId}/diagnostic-reports`,
-        {
-          purposeOfUse: "TREATMENT"
-        }
-      );
+      const data = await listDiagnosticReports(clinicalApi, patientId);
       setDiagnosticReports(data.items);
       setSelectedDiagnosticReportId(nextSelectedDiagnosticReportId ?? data.items[0]?.id);
     } catch (error) {
@@ -1305,12 +1280,7 @@ export function App() {
     setIsLoadingImagingStudies(true);
 
     try {
-      const data = await clinicalApi.requestJson<ImagingStudiesResponse>(
-        `/patients/${patientId}/imaging-studies`,
-        {
-          purposeOfUse: "TREATMENT"
-        }
-      );
+      const data = await listImagingStudies(clinicalApi, patientId);
       setImagingStudies(data.items);
       setSelectedImagingStudyId(nextSelectedImagingStudyId ?? data.items[0]?.id);
     } catch (error) {
@@ -1643,9 +1613,7 @@ export function App() {
   async function loadPatientFhirPreview(patientId: string) {
     try {
       setPatientFhirPreview(
-        await clinicalApi.requestJson<unknown>(`/patients/${patientId}/fhir`, {
-          purposeOfUse: isAuditOnlySession ? "AUDIT" : "TREATMENT"
-        })
+        await exportPatientFhir(clinicalApi, patientId, isAuditOnlySession ? "AUDIT" : "TREATMENT")
       );
     } catch (error) {
       setPatientFhirPreview({
@@ -1659,11 +1627,7 @@ export function App() {
 
   async function loadPatientFhirBundlePreview(patientId: string) {
     try {
-      setPatientFhirBundlePreview(
-        await clinicalApi.requestJson<unknown>(`/patients/${patientId}/fhir-bundle`, {
-          purposeOfUse: "TREATMENT"
-        })
-      );
+      setPatientFhirBundlePreview(await exportPatientFhirBundle(clinicalApi, patientId));
     } catch (error) {
       setPatientFhirBundlePreview({
         error:
@@ -1677,12 +1641,7 @@ export function App() {
   async function loadPatientFhirDocumentBundlePreview(patientId: string) {
     try {
       setPatientFhirDocumentBundlePreview(
-        await clinicalApi.requestJson<unknown>(
-          `/patients/${patientId}/fhir-document-bundle`,
-          {
-            purposeOfUse: "TREATMENT"
-          }
-        )
+        await exportPatientFhirDocumentBundle(clinicalApi, patientId)
       );
     } catch (error) {
       setPatientFhirDocumentBundlePreview({
@@ -1696,11 +1655,7 @@ export function App() {
 
   async function loadEncounterFhirPreview(encounterId: string) {
     try {
-      setEncounterFhirPreview(
-        await clinicalApi.requestJson<unknown>(`/encounters/${encounterId}/fhir`, {
-          purposeOfUse: "TREATMENT"
-        })
-      );
+      setEncounterFhirPreview(await exportEncounterFhir(clinicalApi, encounterId));
     } catch (error) {
       setEncounterFhirPreview({
         error:
@@ -1741,11 +1696,7 @@ export function App() {
 
   async function loadConditionFhirPreview(conditionId: string) {
     try {
-      setConditionFhirPreview(
-        await clinicalApi.requestJson<unknown>(`/conditions/${conditionId}/fhir`, {
-          purposeOfUse: "TREATMENT"
-        })
-      );
+      setConditionFhirPreview(await exportConditionFhir(clinicalApi, conditionId));
     } catch (error) {
       setConditionFhirPreview({
         error:
@@ -1759,12 +1710,7 @@ export function App() {
   async function loadAllergyIntoleranceFhirPreview(allergyIntoleranceId: string) {
     try {
       setAllergyIntoleranceFhirPreview(
-        await clinicalApi.requestJson<unknown>(
-          `/allergy-intolerances/${allergyIntoleranceId}/fhir`,
-          {
-            purposeOfUse: "TREATMENT"
-          }
-        )
+        await exportAllergyIntoleranceFhir(clinicalApi, allergyIntoleranceId)
       );
     } catch (error) {
       setAllergyIntoleranceFhirPreview({
@@ -1778,11 +1724,7 @@ export function App() {
 
   async function loadObservationFhirPreview(observationId: string) {
     try {
-      setObservationFhirPreview(
-        await clinicalApi.requestJson<unknown>(`/observations/${observationId}/fhir`, {
-          purposeOfUse: "TREATMENT"
-        })
-      );
+      setObservationFhirPreview(await exportObservationFhir(clinicalApi, observationId));
     } catch (error) {
       setObservationFhirPreview({
         error:
@@ -1796,12 +1738,7 @@ export function App() {
   async function loadMedicationRequestFhirPreview(medicationRequestId: string) {
     try {
       setMedicationRequestFhirPreview(
-        await clinicalApi.requestJson<unknown>(
-          `/medication-requests/${medicationRequestId}/fhir`,
-          {
-            purposeOfUse: "TREATMENT"
-          }
-        )
+        await exportMedicationRequestFhir(clinicalApi, medicationRequestId)
       );
     } catch (error) {
       setMedicationRequestFhirPreview({
@@ -1816,12 +1753,7 @@ export function App() {
   async function loadMedicationDispenseFhirPreview(medicationDispenseId: string) {
     try {
       setMedicationDispenseFhirPreview(
-        await clinicalApi.requestJson<unknown>(
-          `/medication-dispenses/${medicationDispenseId}/fhir`,
-          {
-            purposeOfUse: "TREATMENT"
-          }
-        )
+        await exportMedicationDispenseFhir(clinicalApi, medicationDispenseId)
       );
     } catch (error) {
       setMedicationDispenseFhirPreview({
@@ -1838,12 +1770,7 @@ export function App() {
   ) {
     try {
       setMedicationAdministrationFhirPreview(
-        await clinicalApi.requestJson<unknown>(
-          `/medication-administrations/${medicationAdministrationId}/fhir`,
-          {
-            purposeOfUse: "TREATMENT"
-          }
-        )
+        await exportMedicationAdministrationFhir(clinicalApi, medicationAdministrationId)
       );
     } catch (error) {
       setMedicationAdministrationFhirPreview({
@@ -1858,12 +1785,7 @@ export function App() {
   async function loadServiceRequestFhirPreview(serviceRequestId: string) {
     try {
       setServiceRequestFhirPreview(
-        await clinicalApi.requestJson<unknown>(
-          `/service-requests/${serviceRequestId}/fhir`,
-          {
-            purposeOfUse: "TREATMENT"
-          }
-        )
+        await exportServiceRequestFhir(clinicalApi, serviceRequestId)
       );
     } catch (error) {
       setServiceRequestFhirPreview({
@@ -1877,11 +1799,7 @@ export function App() {
 
   async function loadWorkflowTaskFhirPreview(taskId: string) {
     try {
-      setWorkflowTaskFhirPreview(
-        await clinicalApi.requestJson<unknown>(`/workflow-tasks/${taskId}/fhir`, {
-          purposeOfUse: "TREATMENT"
-        })
-      );
+      setWorkflowTaskFhirPreview(await exportWorkflowTaskFhir(clinicalApi, taskId));
     } catch (error) {
       setWorkflowTaskFhirPreview({
         error:
@@ -1894,11 +1812,7 @@ export function App() {
 
   async function loadProcedureFhirPreview(procedureId: string) {
     try {
-      setProcedureFhirPreview(
-        await clinicalApi.requestJson<unknown>(`/procedures/${procedureId}/fhir`, {
-          purposeOfUse: "TREATMENT"
-        })
-      );
+      setProcedureFhirPreview(await exportProcedureFhir(clinicalApi, procedureId));
     } catch (error) {
       setProcedureFhirPreview({
         error:
@@ -1912,12 +1826,7 @@ export function App() {
   async function loadDiagnosticReportFhirPreview(diagnosticReportId: string) {
     try {
       setDiagnosticReportFhirPreview(
-        await clinicalApi.requestJson<unknown>(
-          `/diagnostic-reports/${diagnosticReportId}/fhir`,
-          {
-            purposeOfUse: "TREATMENT"
-          }
-        )
+        await exportDiagnosticReportFhir(clinicalApi, diagnosticReportId)
       );
     } catch (error) {
       setDiagnosticReportFhirPreview({
@@ -1932,12 +1841,7 @@ export function App() {
   async function loadImagingStudyFhirPreview(imagingStudyId: string) {
     try {
       setImagingStudyFhirPreview(
-        await clinicalApi.requestJson<unknown>(
-          `/imaging-studies/${imagingStudyId}/fhir`,
-          {
-            purposeOfUse: "TREATMENT"
-          }
-        )
+        await exportImagingStudyFhir(clinicalApi, imagingStudyId)
       );
     } catch (error) {
       setImagingStudyFhirPreview({
@@ -1963,10 +1867,7 @@ export function App() {
       setLoginError(undefined);
       setStatusMessage("Đang xác thực phiên đăng nhập...");
 
-      const session = await clinicalApi.requestJson<AuthSession>("/auth/login", {
-        method: "POST",
-        json: loginForm
-      });
+      const session = await loginDemoSession(clinicalApi, loginForm);
       setAuthSession(session);
       setIsAuthenticated(true);
       setAppRoute(session.actor.role === "auditor" ? "audit" : "dashboard");
@@ -2069,18 +1970,14 @@ export function App() {
     ];
 
     try {
-      const createdPatient = await clinicalApi.requestJson<Patient>("/patients", {
-        method: "POST",
-        purposeOfUse: "TREATMENT",
-        json: {
-          identifiers,
-          fullName: patientForm.fullName,
-          birthDate: patientForm.birthDate || undefined,
-          gender: patientForm.gender,
-          address: patientForm.address || undefined,
-          phone: patientForm.phone || undefined,
-          managingOrganizationId: patientForm.managingOrganizationId
-        }
+      const createdPatient = await createPatient(clinicalApi, {
+        identifiers,
+        fullName: patientForm.fullName,
+        birthDate: patientForm.birthDate || undefined,
+        gender: patientForm.gender,
+        address: patientForm.address || undefined,
+        phone: patientForm.phone || undefined,
+        managingOrganizationId: patientForm.managingOrganizationId
       });
       await loadPatients(createdPatient.id);
       setAppRoute("workspace");
@@ -2132,17 +2029,10 @@ export function App() {
     setIsMergingPatient(true);
 
     try {
-      const mergedPatient = await clinicalApi.requestJson<Patient>(
-        `/patients/${selectedPatient.id}/merge`,
-        {
-          method: "POST",
-          purposeOfUse: "TREATMENT",
-          json: {
-            targetPatientId: patientMergeTargetId,
-            reason: patientMergeForm.reason.trim()
-          }
-        }
-      );
+      const mergedPatient = await mergePatient(clinicalApi, selectedPatient.id, {
+        targetPatientId: patientMergeTargetId,
+        reason: patientMergeForm.reason.trim()
+      });
       await loadPatients(mergedPatient.id);
       await loadPatientWorkspace(mergedPatient.id);
       setPatientMergeForm({
@@ -2386,21 +2276,14 @@ export function App() {
     setIsSubmittingEncounter(true);
 
     try {
-      const createdEncounter = await clinicalApi.requestJson<Encounter>(
-        `/patients/${selectedPatient.id}/encounters`,
-        {
-          method: "POST",
-          purposeOfUse: "TREATMENT",
-          json: {
-            class: encounterForm.class,
-            serviceType: encounterForm.serviceType,
-            reasonText: encounterForm.reasonText,
-            departmentId: encounterForm.departmentId || undefined,
-            attendingPractitionerId: encounterForm.attendingPractitionerId,
-            startedAt: toApiDateTime(encounterForm.startedAt)
-          }
-        }
-      );
+      const createdEncounter = await createEncounter(clinicalApi, selectedPatient.id, {
+        class: encounterForm.class,
+        serviceType: encounterForm.serviceType,
+        reasonText: encounterForm.reasonText,
+        departmentId: encounterForm.departmentId || undefined,
+        attendingPractitionerId: encounterForm.attendingPractitionerId,
+        startedAt: toApiDateTime(encounterForm.startedAt)
+      });
       await loadEncounters(selectedPatient.id, createdEncounter.id);
       await loadAuditEvents(selectedPatient.id, { silent: true });
       setAppRoute("workspace");
@@ -2428,10 +2311,7 @@ export function App() {
     setIsFinishingEncounter(true);
 
     try {
-      const finishedEncounter = await clinicalApi.requestJson<Encounter>(`/encounters/${encounterId}/finish`, {
-        method: "POST",
-        purposeOfUse: "TREATMENT"
-      });
+      const finishedEncounter = await finishEncounter(clinicalApi, encounterId);
       await loadEncounters(selectedPatient.id, finishedEncounter.id);
       await loadEncounterFhirPreview(finishedEncounter.id);
       await loadAuditEvents(selectedPatient.id, { silent: true });
@@ -2467,43 +2347,39 @@ export function App() {
     setIsSubmittingAllergyIntolerance(true);
 
     try {
-      const createdAllergyIntolerance =
-        await clinicalApi.requestJson<AllergyIntolerance>(
-          `/patients/${selectedPatient.id}/allergy-intolerances`,
-          {
-            method: "POST",
-            purposeOfUse: "TREATMENT",
-            json: {
-              encounterId: allergyIntoleranceForm.encounterId || undefined,
-              clinicalStatus: allergyIntoleranceForm.clinicalStatus,
-              verificationStatus: allergyIntoleranceForm.verificationStatus,
-              type: allergyIntoleranceForm.type,
-              category: allergyIntoleranceForm.category,
-              criticality: allergyIntoleranceForm.criticality || undefined,
-              code: {
-                system: allergyIntoleranceForm.codeSystem,
-                code: allergyIntoleranceForm.code,
-                display: allergyIntoleranceForm.codeDisplay
-              },
-              reaction: hasReaction
-                ? {
-                    manifestation: {
-                      system: allergyIntoleranceForm.manifestationSystem,
-                      code: allergyIntoleranceForm.manifestationCode,
-                      display: allergyIntoleranceForm.manifestationDisplay
-                    },
-                    severity: allergyIntoleranceForm.reactionSeverity || undefined,
-                    description: allergyIntoleranceForm.reactionDescription || undefined
-                  }
-                : undefined,
-              recordedAt: allergyIntoleranceForm.recordedAt
-                ? toApiDateTime(allergyIntoleranceForm.recordedAt)
-                : undefined,
-              recorderPractitionerId: allergyIntoleranceForm.recorderPractitionerId,
-              note: allergyIntoleranceForm.note || undefined
+      const createdAllergyIntolerance = await createAllergyIntolerance(
+        clinicalApi,
+        selectedPatient.id,
+        {
+          encounterId: allergyIntoleranceForm.encounterId || undefined,
+          clinicalStatus: allergyIntoleranceForm.clinicalStatus,
+          verificationStatus: allergyIntoleranceForm.verificationStatus,
+          type: allergyIntoleranceForm.type,
+          category: allergyIntoleranceForm.category,
+          criticality: allergyIntoleranceForm.criticality || undefined,
+          code: {
+            system: allergyIntoleranceForm.codeSystem,
+            code: allergyIntoleranceForm.code,
+            display: allergyIntoleranceForm.codeDisplay
+          },
+          reaction: hasReaction
+            ? {
+                manifestation: {
+                  system: allergyIntoleranceForm.manifestationSystem,
+                  code: allergyIntoleranceForm.manifestationCode,
+                  display: allergyIntoleranceForm.manifestationDisplay
+                },
+                severity: allergyIntoleranceForm.reactionSeverity || undefined,
+                description: allergyIntoleranceForm.reactionDescription || undefined
             }
-          }
-        );
+            : undefined,
+          recordedAt: allergyIntoleranceForm.recordedAt
+            ? toApiDateTime(allergyIntoleranceForm.recordedAt)
+            : undefined,
+          recorderPractitionerId: allergyIntoleranceForm.recorderPractitionerId,
+          note: allergyIntoleranceForm.note || undefined
+        }
+      );
       await loadAllergyIntolerances(selectedPatient.id, createdAllergyIntolerance.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
       await loadAuditEvents(selectedPatient.id, { silent: true });
@@ -2537,28 +2413,21 @@ export function App() {
     setIsSubmittingCondition(true);
 
     try {
-      const createdCondition = await clinicalApi.requestJson<Condition>(
-        `/patients/${selectedPatient.id}/conditions`,
-        {
-          method: "POST",
-          purposeOfUse: "TREATMENT",
-          json: {
-            encounterId: conditionForm.encounterId || undefined,
-            clinicalStatus: conditionForm.clinicalStatus,
-            verificationStatus: conditionForm.verificationStatus,
-            category: conditionForm.category,
-            code: {
-              system: conditionForm.codeSystem,
-              code: conditionForm.code,
-              display: conditionForm.codeDisplay
-            },
-            severity: conditionForm.severity || undefined,
-            onsetAt: conditionForm.onsetAt ? toApiDateTime(conditionForm.onsetAt) : undefined,
-            recorderPractitionerId: conditionForm.recorderPractitionerId,
-            note: conditionForm.note || undefined
-          }
-        }
-      );
+      const createdCondition = await createCondition(clinicalApi, selectedPatient.id, {
+        encounterId: conditionForm.encounterId || undefined,
+        clinicalStatus: conditionForm.clinicalStatus,
+        verificationStatus: conditionForm.verificationStatus,
+        category: conditionForm.category,
+        code: {
+          system: conditionForm.codeSystem,
+          code: conditionForm.code,
+          display: conditionForm.codeDisplay
+        },
+        severity: conditionForm.severity || undefined,
+        onsetAt: conditionForm.onsetAt ? toApiDateTime(conditionForm.onsetAt) : undefined,
+        recorderPractitionerId: conditionForm.recorderPractitionerId,
+        note: conditionForm.note || undefined
+      });
       await loadConditions(selectedPatient.id, createdCondition.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
       await loadAuditEvents(selectedPatient.id, { silent: true });
@@ -2597,30 +2466,23 @@ export function App() {
     setIsSubmittingObservation(true);
 
     try {
-      const createdObservation = await clinicalApi.requestJson<Observation>(
-        `/patients/${selectedPatient.id}/observations`,
-        {
-          method: "POST",
-          purposeOfUse: "TREATMENT",
-          json: {
-            encounterId: observationForm.encounterId || undefined,
-            category: observationForm.category,
-            code: {
-              system: observationForm.codeSystem,
-              code: observationForm.code,
-              display: observationForm.codeDisplay
-            },
-            effectiveAt: toApiDateTime(observationForm.effectiveAt),
-            valueQuantity: {
-              value: numericValue,
-              unit: observationForm.unit,
-              system: observationForm.unitSystem || undefined,
-              code: observationForm.unitCode || undefined
-            },
-            performerPractitionerId: observationForm.performerPractitionerId || undefined
-          }
-        }
-      );
+      const createdObservation = await createObservation(clinicalApi, selectedPatient.id, {
+        encounterId: observationForm.encounterId || undefined,
+        category: observationForm.category,
+        code: {
+          system: observationForm.codeSystem,
+          code: observationForm.code,
+          display: observationForm.codeDisplay
+        },
+        effectiveAt: toApiDateTime(observationForm.effectiveAt),
+        valueQuantity: {
+          value: numericValue,
+          unit: observationForm.unit,
+          system: observationForm.unitSystem || undefined,
+          code: observationForm.unitCode || undefined
+        },
+        performerPractitionerId: observationForm.performerPractitionerId || undefined
+      });
       await loadObservations(selectedPatient.id, createdObservation.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
       await loadAuditEvents(selectedPatient.id, { silent: true });
@@ -2677,46 +2539,42 @@ export function App() {
     setIsSubmittingMedicationRequest(true);
 
     try {
-      const createdMedicationRequest =
-        await clinicalApi.requestJson<MedicationRequest>(
-          `/patients/${selectedPatient.id}/medication-requests`,
-          {
-            method: "POST",
-            purposeOfUse: "TREATMENT",
-            json: {
-              encounterId: medicationRequestForm.encounterId || undefined,
-              reasonConditionId: medicationRequestForm.reasonConditionId || undefined,
-              category: medicationRequestForm.category,
-              priority: medicationRequestForm.priority,
-              medicationCode: {
-                system: medicationRequestForm.medicationSystem,
-                code: medicationRequestForm.medicationCode,
-                display: medicationRequestForm.medicationDisplay
-              },
-              dosageInstruction: {
-                text: medicationRequestForm.dosageText,
-                route: medicationRequestForm.route || undefined,
-                doseQuantity: {
-                  value: doseValue,
-                  unit: medicationRequestForm.doseUnit,
-                  system: "http://unitsofmeasure.org",
-                  code: medicationRequestForm.doseUnit
-                },
-                frequency,
-                period,
-                periodUnit: medicationRequestForm.periodUnit
-              },
-              authoredOn: medicationRequestForm.authoredOn
-                ? toApiDateTime(medicationRequestForm.authoredOn)
-                : undefined,
-              requesterPractitionerId: medicationRequestForm.requesterPractitionerId,
-              expectedSupplyDurationDays: medicationRequestForm.expectedSupplyDurationDays
-                ? expectedSupplyDurationDays
-                : undefined,
-              note: medicationRequestForm.note || undefined
+      const createdMedicationRequest = await createMedicationRequest(
+        clinicalApi,
+        selectedPatient.id,
+        {
+          encounterId: medicationRequestForm.encounterId || undefined,
+          reasonConditionId: medicationRequestForm.reasonConditionId || undefined,
+          category: medicationRequestForm.category,
+          priority: medicationRequestForm.priority,
+          medicationCode: {
+            system: medicationRequestForm.medicationSystem,
+            code: medicationRequestForm.medicationCode,
+            display: medicationRequestForm.medicationDisplay
+          },
+          dosageInstruction: {
+            text: medicationRequestForm.dosageText,
+            route: medicationRequestForm.route || undefined,
+            doseQuantity: {
+              value: doseValue,
+              unit: medicationRequestForm.doseUnit,
+              system: "http://unitsofmeasure.org",
+              code: medicationRequestForm.doseUnit
             },
-          }
-        );
+            frequency,
+            period,
+            periodUnit: medicationRequestForm.periodUnit
+          },
+          authoredOn: medicationRequestForm.authoredOn
+            ? toApiDateTime(medicationRequestForm.authoredOn)
+            : undefined,
+          requesterPractitionerId: medicationRequestForm.requesterPractitionerId,
+          expectedSupplyDurationDays: medicationRequestForm.expectedSupplyDurationDays
+            ? expectedSupplyDurationDays
+            : undefined,
+          note: medicationRequestForm.note || undefined
+        }
+      );
       await loadMedicationRequests(selectedPatient.id, createdMedicationRequest.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
       await loadAuditEvents(selectedPatient.id, { silent: true });
@@ -2781,56 +2639,53 @@ export function App() {
     setIsSubmittingMedicationDispense(true);
 
     try {
-      const createdMedicationDispense = await clinicalApi.requestJson<MedicationDispense>(
-        `/patients/${selectedPatient.id}/medication-dispenses`,
+      const createdMedicationDispense = await createMedicationDispense(
+        clinicalApi,
+        selectedPatient.id,
         {
-          method: "POST",
-          purposeOfUse: "TREATMENT",
-          json: {
-            encounterId: medicationDispenseForm.encounterId || undefined,
-            medicationRequestId: medicationDispenseForm.medicationRequestId || undefined,
-            status: "completed",
-            category: medicationDispenseForm.category,
-            medicationCode: {
-              system: medicationDispenseForm.medicationSystem,
-              code: medicationDispenseForm.medicationCode,
-              display: medicationDispenseForm.medicationDisplay
-            },
-            quantity: {
-              value: quantityValue,
-              unit: medicationDispenseForm.quantityUnit,
+          encounterId: medicationDispenseForm.encounterId || undefined,
+          medicationRequestId: medicationDispenseForm.medicationRequestId || undefined,
+          status: "completed",
+          category: medicationDispenseForm.category,
+          medicationCode: {
+            system: medicationDispenseForm.medicationSystem,
+            code: medicationDispenseForm.medicationCode,
+            display: medicationDispenseForm.medicationDisplay
+          },
+          quantity: {
+            value: quantityValue,
+            unit: medicationDispenseForm.quantityUnit,
+            system: "http://unitsofmeasure.org",
+            code: medicationDispenseForm.quantityUnit
+          },
+          daysSupply: {
+            value: daysSupplyValue,
+            unit: "ngày",
+            system: "http://unitsofmeasure.org",
+            code: "d"
+          },
+          whenPrepared: medicationDispenseForm.whenPrepared
+            ? toApiDateTime(medicationDispenseForm.whenPrepared)
+            : undefined,
+          whenHandedOver: toApiDateTime(medicationDispenseForm.whenHandedOver),
+          dispenserPractitionerId:
+            medicationDispenseForm.dispenserPractitionerId || undefined,
+          receiverPractitionerId:
+            medicationDispenseForm.receiverPractitionerId || undefined,
+          dosageInstruction: {
+            text: medicationDispenseForm.dosageText,
+            route: medicationDispenseForm.route || undefined,
+            doseQuantity: {
+              value: doseValue,
+              unit: medicationDispenseForm.doseUnit,
               system: "http://unitsofmeasure.org",
-              code: medicationDispenseForm.quantityUnit
+              code: medicationDispenseForm.doseUnit
             },
-            daysSupply: {
-              value: daysSupplyValue,
-              unit: "ngày",
-              system: "http://unitsofmeasure.org",
-              code: "d"
-            },
-            whenPrepared: medicationDispenseForm.whenPrepared
-              ? toApiDateTime(medicationDispenseForm.whenPrepared)
-              : undefined,
-            whenHandedOver: toApiDateTime(medicationDispenseForm.whenHandedOver),
-            dispenserPractitionerId:
-              medicationDispenseForm.dispenserPractitionerId || undefined,
-            receiverPractitionerId:
-              medicationDispenseForm.receiverPractitionerId || undefined,
-            dosageInstruction: {
-              text: medicationDispenseForm.dosageText,
-              route: medicationDispenseForm.route || undefined,
-              doseQuantity: {
-                value: doseValue,
-                unit: medicationDispenseForm.doseUnit,
-                system: "http://unitsofmeasure.org",
-                code: medicationDispenseForm.doseUnit
-              },
-              frequency,
-              period,
-              periodUnit: medicationDispenseForm.periodUnit
-            },
-            note: medicationDispenseForm.note || undefined
-          }
+            frequency,
+            period,
+            periodUnit: medicationDispenseForm.periodUnit
+          },
+          note: medicationDispenseForm.note || undefined
         }
       );
       await loadMedicationDispenses(selectedPatient.id, createdMedicationDispense.id);
@@ -2884,61 +2739,57 @@ export function App() {
     setIsSubmittingMedicationAdministration(true);
 
     try {
-      const createdMedicationAdministration =
-        await clinicalApi.requestJson<MedicationAdministration>(
-          `/patients/${selectedPatient.id}/medication-administrations`,
-          {
-            method: "POST",
-            purposeOfUse: "TREATMENT",
-            json: {
-              encounterId: medicationAdministrationForm.encounterId || undefined,
-              medicationRequestId:
-                medicationAdministrationForm.medicationRequestId || undefined,
-              reasonConditionId: medicationAdministrationForm.reasonConditionId || undefined,
-              status: "completed",
-              category: medicationAdministrationForm.category,
-              medicationCode: {
-                system: medicationAdministrationForm.medicationSystem,
-                code: medicationAdministrationForm.medicationCode,
-                display: medicationAdministrationForm.medicationDisplay
-              },
-              effectivePeriod: {
-                start: toApiDateTime(medicationAdministrationForm.effectiveStart)
-              },
-              performers: [
-                {
-                  actorType: medicationAdministrationForm.performerActorType,
-                  actorId: medicationAdministrationForm.performerActorId,
-                  function: medicationAdministrationForm.performerFunctionDisplay
-                    ? {
-                        system:
-                          "urn:wiiicare:nexus:medication-admin-performer-function",
-                        code: "medication-administration-recorder",
-                        display: medicationAdministrationForm.performerFunctionDisplay
-                      }
-                    : undefined
-                }
-              ],
-              dosage: {
-                text: medicationAdministrationForm.dosageText || undefined,
-                route: medicationAdministrationForm.routeCode
-                  ? {
-                      system: medicationAdministrationForm.routeSystem,
-                      code: medicationAdministrationForm.routeCode,
-                      display: medicationAdministrationForm.routeDisplay
-                    }
-                  : undefined,
-                doseQuantity: {
-                  value: doseValue,
-                  unit: medicationAdministrationForm.doseUnit,
-                  system: "http://unitsofmeasure.org",
-                  code: medicationAdministrationForm.doseUnit
-                }
-              },
-              note: medicationAdministrationForm.note || undefined
+      const createdMedicationAdministration = await createMedicationAdministration(
+        clinicalApi,
+        selectedPatient.id,
+        {
+          encounterId: medicationAdministrationForm.encounterId || undefined,
+          medicationRequestId:
+            medicationAdministrationForm.medicationRequestId || undefined,
+          reasonConditionId: medicationAdministrationForm.reasonConditionId || undefined,
+          status: "completed",
+          category: medicationAdministrationForm.category,
+          medicationCode: {
+            system: medicationAdministrationForm.medicationSystem,
+            code: medicationAdministrationForm.medicationCode,
+            display: medicationAdministrationForm.medicationDisplay
+          },
+          effectivePeriod: {
+            start: toApiDateTime(medicationAdministrationForm.effectiveStart)
+          },
+          performers: [
+            {
+              actorType: medicationAdministrationForm.performerActorType,
+              actorId: medicationAdministrationForm.performerActorId,
+              function: medicationAdministrationForm.performerFunctionDisplay
+                ? {
+                    system:
+                      "urn:wiiicare:nexus:medication-admin-performer-function",
+                    code: "medication-administration-recorder",
+                    display: medicationAdministrationForm.performerFunctionDisplay
+                  }
+                : undefined
             }
-          }
-        );
+          ],
+          dosage: {
+            text: medicationAdministrationForm.dosageText || undefined,
+            route: medicationAdministrationForm.routeCode
+              ? {
+                  system: medicationAdministrationForm.routeSystem,
+                  code: medicationAdministrationForm.routeCode,
+                  display: medicationAdministrationForm.routeDisplay
+                }
+              : undefined,
+            doseQuantity: {
+              value: doseValue,
+              unit: medicationAdministrationForm.doseUnit,
+              system: "http://unitsofmeasure.org",
+              code: medicationAdministrationForm.doseUnit
+            }
+          },
+          note: medicationAdministrationForm.note || undefined
+        }
+      );
       await loadMedicationAdministrations(
         selectedPatient.id,
         createdMedicationAdministration.id
@@ -2976,35 +2827,31 @@ export function App() {
     setIsSubmittingServiceRequest(true);
 
     try {
-      const createdServiceRequest =
-        await clinicalApi.requestJson<ServiceRequest>(
-          `/patients/${selectedPatient.id}/service-requests`,
-          {
-            method: "POST",
-            purposeOfUse: "TREATMENT",
-            json: {
-              encounterId: serviceRequestForm.encounterId || undefined,
-              reasonConditionId: serviceRequestForm.reasonConditionId || undefined,
-              category: serviceRequestForm.category,
-              priority: serviceRequestForm.priority,
-              code: {
-                system: serviceRequestForm.codeSystem,
-                code: serviceRequestForm.code,
-                display: serviceRequestForm.codeDisplay
-              },
-              occurrenceAt: serviceRequestForm.occurrenceAt
-                ? toApiDateTime(serviceRequestForm.occurrenceAt)
-                : undefined,
-              authoredOn: serviceRequestForm.authoredOn
-                ? toApiDateTime(serviceRequestForm.authoredOn)
-                : undefined,
-              requesterPractitionerId: serviceRequestForm.requesterPractitionerId,
-              performerOrganizationId: serviceRequestForm.performerOrganizationId || undefined,
-              patientInstruction: serviceRequestForm.patientInstruction || undefined,
-              note: serviceRequestForm.note || undefined
-            }
-          }
-        );
+      const createdServiceRequest = await createServiceRequest(
+        clinicalApi,
+        selectedPatient.id,
+        {
+          encounterId: serviceRequestForm.encounterId || undefined,
+          reasonConditionId: serviceRequestForm.reasonConditionId || undefined,
+          category: serviceRequestForm.category,
+          priority: serviceRequestForm.priority,
+          code: {
+            system: serviceRequestForm.codeSystem,
+            code: serviceRequestForm.code,
+            display: serviceRequestForm.codeDisplay
+          },
+          occurrenceAt: serviceRequestForm.occurrenceAt
+            ? toApiDateTime(serviceRequestForm.occurrenceAt)
+            : undefined,
+          authoredOn: serviceRequestForm.authoredOn
+            ? toApiDateTime(serviceRequestForm.authoredOn)
+            : undefined,
+          requesterPractitionerId: serviceRequestForm.requesterPractitionerId,
+          performerOrganizationId: serviceRequestForm.performerOrganizationId || undefined,
+          patientInstruction: serviceRequestForm.patientInstruction || undefined,
+          note: serviceRequestForm.note || undefined
+        }
+      );
       await loadServiceRequests(selectedPatient.id, createdServiceRequest.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
       await loadAuditEvents(selectedPatient.id, { silent: true });
@@ -3048,73 +2895,66 @@ export function App() {
         : [];
 
     try {
-      const createdProcedure = await clinicalApi.requestJson<Procedure>(
-        `/patients/${selectedPatient.id}/procedures`,
-        {
-          method: "POST",
-          purposeOfUse: "TREATMENT",
-          json: {
-            encounterId: procedureForm.encounterId || undefined,
-            basedOnServiceRequestId: procedureForm.basedOnServiceRequestId || undefined,
-            reasonConditionId: procedureForm.reasonConditionId || undefined,
-            category: procedureForm.category,
-            status: procedureForm.status,
-            code: {
-              system: procedureForm.codeSystem,
-              code: procedureForm.code,
-              display: procedureForm.codeDisplay
-            },
-            performedPeriod:
-              procedureForm.performedStart || procedureForm.performedEnd
-                ? {
-                    start: procedureForm.performedStart
-                      ? toApiDateTime(procedureForm.performedStart)
-                      : undefined,
-                    end: procedureForm.performedEnd
-                      ? toApiDateTime(procedureForm.performedEnd)
-                      : undefined
-                  }
-                : undefined,
-            performers: procedureForm.performerActorId
-              ? [
-                  {
-                    actorType: procedureForm.performerActorType,
-                    actorId: procedureForm.performerActorId,
-                    function:
-                      procedureForm.performerFunctionCode && procedureForm.performerFunctionDisplay
-                        ? {
-                            system: procedureForm.performerFunctionSystem,
-                            code: procedureForm.performerFunctionCode,
-                            display: procedureForm.performerFunctionDisplay
-                          }
-                        : undefined,
-                    onBehalfOfOrganizationId: procedureForm.onBehalfOfOrganizationId || undefined
-                  }
-                ]
-              : [],
-            recorderPractitionerId: procedureForm.recorderPractitionerId || undefined,
-            asserterPractitionerId: procedureForm.asserterPractitionerId || undefined,
-            bodySite:
-              procedureForm.bodySiteCode && procedureForm.bodySiteDisplay
-                ? {
-                    system: procedureForm.bodySiteSystem,
-                    code: procedureForm.bodySiteCode,
-                    display: procedureForm.bodySiteDisplay
-                  }
-                : undefined,
-            outcome:
-              procedureForm.outcomeCode && procedureForm.outcomeDisplay
-                ? {
-                    system: procedureForm.outcomeSystem,
-                    code: procedureForm.outcomeCode,
-                    display: procedureForm.outcomeDisplay
-                  }
-                : undefined,
-            reportReferences,
-            note: procedureForm.note || undefined
-          }
-        }
-      );
+      const createdProcedure = await createProcedure(clinicalApi, selectedPatient.id, {
+        encounterId: procedureForm.encounterId || undefined,
+        basedOnServiceRequestId: procedureForm.basedOnServiceRequestId || undefined,
+        reasonConditionId: procedureForm.reasonConditionId || undefined,
+        category: procedureForm.category,
+        status: procedureForm.status,
+        code: {
+          system: procedureForm.codeSystem,
+          code: procedureForm.code,
+          display: procedureForm.codeDisplay
+        },
+        performedPeriod:
+          procedureForm.performedStart || procedureForm.performedEnd
+            ? {
+                start: procedureForm.performedStart
+                  ? toApiDateTime(procedureForm.performedStart)
+                  : undefined,
+                end: procedureForm.performedEnd
+                  ? toApiDateTime(procedureForm.performedEnd)
+                  : undefined
+              }
+            : undefined,
+        performers: procedureForm.performerActorId
+          ? [
+              {
+                actorType: procedureForm.performerActorType,
+                actorId: procedureForm.performerActorId,
+                function:
+                  procedureForm.performerFunctionCode && procedureForm.performerFunctionDisplay
+                    ? {
+                        system: procedureForm.performerFunctionSystem,
+                        code: procedureForm.performerFunctionCode,
+                        display: procedureForm.performerFunctionDisplay
+                      }
+                    : undefined,
+                onBehalfOfOrganizationId: procedureForm.onBehalfOfOrganizationId || undefined
+              }
+            ]
+          : [],
+        recorderPractitionerId: procedureForm.recorderPractitionerId || undefined,
+        asserterPractitionerId: procedureForm.asserterPractitionerId || undefined,
+        bodySite:
+          procedureForm.bodySiteCode && procedureForm.bodySiteDisplay
+            ? {
+                system: procedureForm.bodySiteSystem,
+                code: procedureForm.bodySiteCode,
+                display: procedureForm.bodySiteDisplay
+              }
+            : undefined,
+        outcome:
+          procedureForm.outcomeCode && procedureForm.outcomeDisplay
+            ? {
+                system: procedureForm.outcomeSystem,
+                code: procedureForm.outcomeCode,
+                display: procedureForm.outcomeDisplay
+              }
+            : undefined,
+        reportReferences,
+        note: procedureForm.note || undefined
+      });
       await loadProcedures(selectedPatient.id, createdProcedure.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
       await loadPatientFhirDocumentBundlePreview(selectedPatient.id);
@@ -3149,35 +2989,31 @@ export function App() {
     setIsSubmittingDiagnosticReport(true);
 
     try {
-      const createdDiagnosticReport =
-        await clinicalApi.requestJson<DiagnosticReport>(
-          `/patients/${selectedPatient.id}/diagnostic-reports`,
-          {
-            method: "POST",
-            purposeOfUse: "TREATMENT",
-            json: {
-              encounterId: diagnosticReportForm.encounterId || undefined,
-              basedOnServiceRequestId: diagnosticReportForm.basedOnServiceRequestId || undefined,
-              category: diagnosticReportForm.category,
-              code: {
-                system: diagnosticReportForm.codeSystem,
-                code: diagnosticReportForm.code,
-                display: diagnosticReportForm.codeDisplay
-              },
-              effectiveAt: toApiDateTime(diagnosticReportForm.effectiveAt),
-              issuedAt: diagnosticReportForm.issuedAt
-                ? toApiDateTime(diagnosticReportForm.issuedAt)
-                : undefined,
-              performerOrganizationId: diagnosticReportForm.performerOrganizationId || undefined,
-              resultsInterpreterPractitionerId:
-                diagnosticReportForm.resultsInterpreterPractitionerId || undefined,
-              resultObservationIds: diagnosticReportForm.resultObservationIds,
-              conclusion: diagnosticReportForm.conclusion || undefined,
-              presentedFormUrl: diagnosticReportForm.presentedFormUrl || undefined,
-              presentedFormTitle: diagnosticReportForm.presentedFormTitle || undefined
-            }
-          }
-        );
+      const createdDiagnosticReport = await createDiagnosticReport(
+        clinicalApi,
+        selectedPatient.id,
+        {
+          encounterId: diagnosticReportForm.encounterId || undefined,
+          basedOnServiceRequestId: diagnosticReportForm.basedOnServiceRequestId || undefined,
+          category: diagnosticReportForm.category,
+          code: {
+            system: diagnosticReportForm.codeSystem,
+            code: diagnosticReportForm.code,
+            display: diagnosticReportForm.codeDisplay
+          },
+          effectiveAt: toApiDateTime(diagnosticReportForm.effectiveAt),
+          issuedAt: diagnosticReportForm.issuedAt
+            ? toApiDateTime(diagnosticReportForm.issuedAt)
+            : undefined,
+          performerOrganizationId: diagnosticReportForm.performerOrganizationId || undefined,
+          resultsInterpreterPractitionerId:
+            diagnosticReportForm.resultsInterpreterPractitionerId || undefined,
+          resultObservationIds: diagnosticReportForm.resultObservationIds,
+          conclusion: diagnosticReportForm.conclusion || undefined,
+          presentedFormUrl: diagnosticReportForm.presentedFormUrl || undefined,
+          presentedFormTitle: diagnosticReportForm.presentedFormTitle || undefined
+        }
+      );
       await loadDiagnosticReports(selectedPatient.id, createdDiagnosticReport.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
       await loadAuditEvents(selectedPatient.id, { silent: true });
@@ -3211,50 +3047,47 @@ export function App() {
     setIsSubmittingImagingStudy(true);
 
     try {
-      const createdImagingStudy = await clinicalApi.requestJson<ImagingStudy>(
-        `/patients/${selectedPatient.id}/imaging-studies`,
+      const createdImagingStudy = await createImagingStudy(
+        clinicalApi,
+        selectedPatient.id,
         {
-          method: "POST",
-          purposeOfUse: "TREATMENT",
-          json: {
-            encounterId: imagingStudyForm.encounterId || undefined,
-            basedOnServiceRequestId: imagingStudyForm.basedOnServiceRequestId || undefined,
-            diagnosticReportId: imagingStudyForm.diagnosticReportId || undefined,
-            studyInstanceUid: imagingStudyForm.studyInstanceUid,
-            accessionNumber: imagingStudyForm.accessionNumber || undefined,
-            description: imagingStudyForm.description || undefined,
-            startedAt: imagingStudyForm.startedAt
-              ? toApiDateTime(imagingStudyForm.startedAt)
-              : undefined,
-            referrerPractitionerId: imagingStudyForm.referrerPractitionerId || undefined,
-            interpreterPractitionerId: imagingStudyForm.interpreterPractitionerId || undefined,
-            endpointId: imagingStudyForm.endpointId || undefined,
-            series: [
-              {
-                uid: imagingStudyForm.seriesUid,
-                number: imagingStudyForm.seriesNumber
-                  ? Number.parseInt(imagingStudyForm.seriesNumber, 10)
-                  : undefined,
-                modality: {
-                  system: imagingStudyForm.modalitySystem,
-                  code: imagingStudyForm.modalityCode,
-                  display: imagingStudyForm.modalityDisplay
-                },
-                description: imagingStudyForm.seriesDescription || undefined,
-                numberOfInstances: imagingStudyForm.numberOfInstances
-                  ? Number.parseInt(imagingStudyForm.numberOfInstances, 10)
-                  : undefined,
-                bodySite:
-                  imagingStudyForm.bodySiteCode || imagingStudyForm.bodySiteDisplay
-                    ? {
-                        system: imagingStudyForm.bodySiteSystem,
-                        code: imagingStudyForm.bodySiteCode,
-                        display: imagingStudyForm.bodySiteDisplay
-                      }
-                    : undefined
-              }
-            ]
-          }
+          encounterId: imagingStudyForm.encounterId || undefined,
+          basedOnServiceRequestId: imagingStudyForm.basedOnServiceRequestId || undefined,
+          diagnosticReportId: imagingStudyForm.diagnosticReportId || undefined,
+          studyInstanceUid: imagingStudyForm.studyInstanceUid,
+          accessionNumber: imagingStudyForm.accessionNumber || undefined,
+          description: imagingStudyForm.description || undefined,
+          startedAt: imagingStudyForm.startedAt
+            ? toApiDateTime(imagingStudyForm.startedAt)
+            : undefined,
+          referrerPractitionerId: imagingStudyForm.referrerPractitionerId || undefined,
+          interpreterPractitionerId: imagingStudyForm.interpreterPractitionerId || undefined,
+          endpointId: imagingStudyForm.endpointId || undefined,
+          series: [
+            {
+              uid: imagingStudyForm.seriesUid,
+              number: imagingStudyForm.seriesNumber
+                ? Number.parseInt(imagingStudyForm.seriesNumber, 10)
+                : undefined,
+              modality: {
+                system: imagingStudyForm.modalitySystem,
+                code: imagingStudyForm.modalityCode,
+                display: imagingStudyForm.modalityDisplay
+              },
+              description: imagingStudyForm.seriesDescription || undefined,
+              numberOfInstances: imagingStudyForm.numberOfInstances
+                ? Number.parseInt(imagingStudyForm.numberOfInstances, 10)
+                : undefined,
+              bodySite:
+                imagingStudyForm.bodySiteCode || imagingStudyForm.bodySiteDisplay
+                  ? {
+                      system: imagingStudyForm.bodySiteSystem,
+                      code: imagingStudyForm.bodySiteCode,
+                      display: imagingStudyForm.bodySiteDisplay
+                    }
+                  : undefined
+            }
+          ]
         }
       );
       await loadImagingStudies(selectedPatient.id, createdImagingStudy.id);

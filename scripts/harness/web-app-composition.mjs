@@ -6,12 +6,17 @@ const webSrcPath = resolve("apps/web/src");
 const allowedFetchModulePath = resolve("apps/web/src/api/clinicalApi.ts");
 const requiredModules = [
   "apps/web/src/api/clinicalApi.ts",
+  "apps/web/src/auth/authApi.ts",
   "apps/web/src/auth/demoLogin.ts",
   "apps/web/src/components/AppShell.tsx",
   "apps/web/src/config/demoClinicalDefaults.ts",
   "apps/web/src/features/audit/auditApi.ts",
   "apps/web/src/features/clinical-documents/clinicalDocumentApi.ts",
+  "apps/web/src/features/clinical-records/clinicalRecordApi.ts",
   "apps/web/src/features/consents/consentApi.ts",
+  "apps/web/src/features/patient-registry/patientRegistryApi.ts",
+  "apps/web/src/features/platform/platformApi.ts",
+  "apps/web/src/features/provider-directory/providerDirectoryApi.ts",
   "apps/web/src/features/record-transfers/recordTransferApi.ts",
   "apps/web/src/lib/auditFormatters.ts",
   "apps/web/src/lib/clinicalFormatters.ts",
@@ -24,7 +29,24 @@ const maxAppLines = 9_000;
 const appSource = await readFile(appPath, "utf8");
 const appLineCount = appSource.split(/\r?\n/).length;
 const directFetchPattern = /\bfetch\s*\(/;
+const directClinicalApiRequestPattern = /\bclinicalApi\.requestJson\s*\(/;
 const forbiddenAppApiPathPatterns = [
+  {
+    pattern: /[`'"]\/patients[`'"]/,
+    message:
+      "apps/web/src/App.tsx must use apps/web/src/features/patient-registry/patientRegistryApi.ts for patient registry HTTP routes."
+  },
+  {
+    pattern: /[`'"]\/patients\/[^`'"]+\/(?:merge|fhir(?:-bundle|-document-bundle)?\b)/,
+    message:
+      "apps/web/src/App.tsx must use apps/web/src/features/patient-registry/patientRegistryApi.ts for patient merge and Patient FHIR HTTP routes."
+  },
+  {
+    pattern:
+      /[`'"]\/(?:patients\/[^`'"]+\/(?:encounters|allergy-intolerances|conditions|observations|medication-requests|medication-dispenses|medication-administrations|service-requests|workflow-tasks|procedures|diagnostic-reports|imaging-studies)\b|(?:encounters\/[^`'"]+\/(?:finish|fhir)|allergy-intolerances\/[^`'"]+\/fhir|conditions\/[^`'"]+\/fhir|observations\/[^`'"]+\/fhir|medication-requests\/[^`'"]+\/fhir|medication-dispenses\/[^`'"]+\/fhir|medication-administrations\/[^`'"]+\/fhir|service-requests\/[^`'"]+\/fhir|workflow-tasks\/[^`'"]+\/fhir|procedures\/[^`'"]+\/fhir|diagnostic-reports\/[^`'"]+\/fhir|imaging-studies\/[^`'"]+\/fhir))/,
+    message:
+      "apps/web/src/App.tsx must use apps/web/src/features/clinical-records/clinicalRecordApi.ts for clinical-record HTTP routes."
+  },
   {
     pattern: /[`'"]\/(?:audit-events\b|patients\/[^`'"]+\/audit-(?:events|integrity)\b)/,
     message:
@@ -50,6 +72,12 @@ const forbiddenAppApiPathPatterns = [
 if (appLineCount > maxAppLines) {
   throw new Error(
     `apps/web/src/App.tsx has ${appLineCount} lines; keep it at or below ${maxAppLines} by extracting pages, shell components, types, config, and pure helpers.`
+  );
+}
+
+if (directClinicalApiRequestPattern.test(appSource)) {
+  throw new Error(
+    "apps/web/src/App.tsx must call feature/platform/auth API modules instead of clinicalApi.requestJson directly."
   );
 }
 
