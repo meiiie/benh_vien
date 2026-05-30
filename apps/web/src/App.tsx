@@ -79,6 +79,12 @@ import {
   buildProcedureCommand,
   buildServiceRequestCommand
 } from "./features/clinical-records/carePlanCommandBuilders.js";
+import {
+  buildAllergyIntoleranceCommand,
+  buildConditionCommand,
+  buildEncounterCommand,
+  buildObservationCommand
+} from "./features/clinical-records/clinicalEntryCommandBuilders.js";
 import { AllergyIntolerancePanel } from "./features/clinical-records/AllergyIntolerancePanel.js";
 import { ConditionPanel } from "./features/clinical-records/ConditionPanel.js";
 import { DiagnosticReportPanel } from "./features/clinical-records/DiagnosticReportPanel.js";
@@ -1943,14 +1949,11 @@ export function App() {
     setIsSubmittingEncounter(true);
 
     try {
-      const createdEncounter = await createEncounter(clinicalApi, selectedPatient.id, {
-        class: encounterForm.class,
-        serviceType: encounterForm.serviceType,
-        reasonText: encounterForm.reasonText,
-        departmentId: encounterForm.departmentId || undefined,
-        attendingPractitionerId: encounterForm.attendingPractitionerId,
-        startedAt: toApiDateTime(encounterForm.startedAt)
-      });
+      const createdEncounter = await createEncounter(
+        clinicalApi,
+        selectedPatient.id,
+        buildEncounterCommand(encounterForm)
+      );
       await loadEncounters(selectedPatient.id, createdEncounter.id);
       await loadAuditEvents(selectedPatient.id, { silent: true });
       setAppRoute("workspace");
@@ -2006,46 +2009,13 @@ export function App() {
       return;
     }
 
-    const hasReaction =
-      allergyIntoleranceForm.manifestationCode.trim() ||
-      allergyIntoleranceForm.manifestationDisplay.trim() ||
-      allergyIntoleranceForm.reactionDescription.trim();
-
     setIsSubmittingAllergyIntolerance(true);
 
     try {
       const createdAllergyIntolerance = await createAllergyIntolerance(
         clinicalApi,
         selectedPatient.id,
-        {
-          encounterId: allergyIntoleranceForm.encounterId || undefined,
-          clinicalStatus: allergyIntoleranceForm.clinicalStatus,
-          verificationStatus: allergyIntoleranceForm.verificationStatus,
-          type: allergyIntoleranceForm.type,
-          category: allergyIntoleranceForm.category,
-          criticality: allergyIntoleranceForm.criticality || undefined,
-          code: {
-            system: allergyIntoleranceForm.codeSystem,
-            code: allergyIntoleranceForm.code,
-            display: allergyIntoleranceForm.codeDisplay
-          },
-          reaction: hasReaction
-            ? {
-                manifestation: {
-                  system: allergyIntoleranceForm.manifestationSystem,
-                  code: allergyIntoleranceForm.manifestationCode,
-                  display: allergyIntoleranceForm.manifestationDisplay
-                },
-                severity: allergyIntoleranceForm.reactionSeverity || undefined,
-                description: allergyIntoleranceForm.reactionDescription || undefined
-            }
-            : undefined,
-          recordedAt: allergyIntoleranceForm.recordedAt
-            ? toApiDateTime(allergyIntoleranceForm.recordedAt)
-            : undefined,
-          recorderPractitionerId: allergyIntoleranceForm.recorderPractitionerId,
-          note: allergyIntoleranceForm.note || undefined
-        }
+        buildAllergyIntoleranceCommand(allergyIntoleranceForm)
       );
       await loadAllergyIntolerances(selectedPatient.id, createdAllergyIntolerance.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
@@ -2080,21 +2050,11 @@ export function App() {
     setIsSubmittingCondition(true);
 
     try {
-      const createdCondition = await createCondition(clinicalApi, selectedPatient.id, {
-        encounterId: conditionForm.encounterId || undefined,
-        clinicalStatus: conditionForm.clinicalStatus,
-        verificationStatus: conditionForm.verificationStatus,
-        category: conditionForm.category,
-        code: {
-          system: conditionForm.codeSystem,
-          code: conditionForm.code,
-          display: conditionForm.codeDisplay
-        },
-        severity: conditionForm.severity || undefined,
-        onsetAt: conditionForm.onsetAt ? toApiDateTime(conditionForm.onsetAt) : undefined,
-        recorderPractitionerId: conditionForm.recorderPractitionerId,
-        note: conditionForm.note || undefined
-      });
+      const createdCondition = await createCondition(
+        clinicalApi,
+        selectedPatient.id,
+        buildConditionCommand(conditionForm)
+      );
       await loadConditions(selectedPatient.id, createdCondition.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
       await loadAuditEvents(selectedPatient.id, { silent: true });
@@ -2133,23 +2093,11 @@ export function App() {
     setIsSubmittingObservation(true);
 
     try {
-      const createdObservation = await createObservation(clinicalApi, selectedPatient.id, {
-        encounterId: observationForm.encounterId || undefined,
-        category: observationForm.category,
-        code: {
-          system: observationForm.codeSystem,
-          code: observationForm.code,
-          display: observationForm.codeDisplay
-        },
-        effectiveAt: toApiDateTime(observationForm.effectiveAt),
-        valueQuantity: {
-          value: numericValue,
-          unit: observationForm.unit,
-          system: observationForm.unitSystem || undefined,
-          code: observationForm.unitCode || undefined
-        },
-        performerPractitionerId: observationForm.performerPractitionerId || undefined
-      });
+      const createdObservation = await createObservation(
+        clinicalApi,
+        selectedPatient.id,
+        buildObservationCommand(observationForm, { numericValue })
+      );
       await loadObservations(selectedPatient.id, createdObservation.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
       await loadAuditEvents(selectedPatient.id, { silent: true });
