@@ -73,6 +73,12 @@ import {
   buildMedicationDispenseCommand,
   buildMedicationRequestCommand
 } from "./features/clinical-records/medicationCommandBuilders.js";
+import {
+  buildDiagnosticReportCommand,
+  buildImagingStudyCommand,
+  buildProcedureCommand,
+  buildServiceRequestCommand
+} from "./features/clinical-records/carePlanCommandBuilders.js";
 import { AllergyIntolerancePanel } from "./features/clinical-records/AllergyIntolerancePanel.js";
 import { ConditionPanel } from "./features/clinical-records/ConditionPanel.js";
 import { DiagnosticReportPanel } from "./features/clinical-records/DiagnosticReportPanel.js";
@@ -2383,27 +2389,7 @@ export function App() {
       const createdServiceRequest = await createServiceRequest(
         clinicalApi,
         selectedPatient.id,
-        {
-          encounterId: serviceRequestForm.encounterId || undefined,
-          reasonConditionId: serviceRequestForm.reasonConditionId || undefined,
-          category: serviceRequestForm.category,
-          priority: serviceRequestForm.priority,
-          code: {
-            system: serviceRequestForm.codeSystem,
-            code: serviceRequestForm.code,
-            display: serviceRequestForm.codeDisplay
-          },
-          occurrenceAt: serviceRequestForm.occurrenceAt
-            ? toApiDateTime(serviceRequestForm.occurrenceAt)
-            : undefined,
-          authoredOn: serviceRequestForm.authoredOn
-            ? toApiDateTime(serviceRequestForm.authoredOn)
-            : undefined,
-          requesterPractitionerId: serviceRequestForm.requesterPractitionerId,
-          performerOrganizationId: serviceRequestForm.performerOrganizationId || undefined,
-          patientInstruction: serviceRequestForm.patientInstruction || undefined,
-          note: serviceRequestForm.note || undefined
-        }
+        buildServiceRequestCommand(serviceRequestForm)
       );
       await loadServiceRequests(selectedPatient.id, createdServiceRequest.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
@@ -2437,77 +2423,12 @@ export function App() {
 
     setIsSubmittingProcedure(true);
 
-    const reportReferences =
-      procedureForm.reportReferenceId.trim().length > 0
-        ? [
-            {
-              resourceType: procedureForm.reportReferenceType,
-              id: procedureForm.reportReferenceId
-            }
-          ]
-        : [];
-
     try {
-      const createdProcedure = await createProcedure(clinicalApi, selectedPatient.id, {
-        encounterId: procedureForm.encounterId || undefined,
-        basedOnServiceRequestId: procedureForm.basedOnServiceRequestId || undefined,
-        reasonConditionId: procedureForm.reasonConditionId || undefined,
-        category: procedureForm.category,
-        status: procedureForm.status,
-        code: {
-          system: procedureForm.codeSystem,
-          code: procedureForm.code,
-          display: procedureForm.codeDisplay
-        },
-        performedPeriod:
-          procedureForm.performedStart || procedureForm.performedEnd
-            ? {
-                start: procedureForm.performedStart
-                  ? toApiDateTime(procedureForm.performedStart)
-                  : undefined,
-                end: procedureForm.performedEnd
-                  ? toApiDateTime(procedureForm.performedEnd)
-                  : undefined
-              }
-            : undefined,
-        performers: procedureForm.performerActorId
-          ? [
-              {
-                actorType: procedureForm.performerActorType,
-                actorId: procedureForm.performerActorId,
-                function:
-                  procedureForm.performerFunctionCode && procedureForm.performerFunctionDisplay
-                    ? {
-                        system: procedureForm.performerFunctionSystem,
-                        code: procedureForm.performerFunctionCode,
-                        display: procedureForm.performerFunctionDisplay
-                      }
-                    : undefined,
-                onBehalfOfOrganizationId: procedureForm.onBehalfOfOrganizationId || undefined
-              }
-            ]
-          : [],
-        recorderPractitionerId: procedureForm.recorderPractitionerId || undefined,
-        asserterPractitionerId: procedureForm.asserterPractitionerId || undefined,
-        bodySite:
-          procedureForm.bodySiteCode && procedureForm.bodySiteDisplay
-            ? {
-                system: procedureForm.bodySiteSystem,
-                code: procedureForm.bodySiteCode,
-                display: procedureForm.bodySiteDisplay
-              }
-            : undefined,
-        outcome:
-          procedureForm.outcomeCode && procedureForm.outcomeDisplay
-            ? {
-                system: procedureForm.outcomeSystem,
-                code: procedureForm.outcomeCode,
-                display: procedureForm.outcomeDisplay
-              }
-            : undefined,
-        reportReferences,
-        note: procedureForm.note || undefined
-      });
+      const createdProcedure = await createProcedure(
+        clinicalApi,
+        selectedPatient.id,
+        buildProcedureCommand(procedureForm)
+      );
       await loadProcedures(selectedPatient.id, createdProcedure.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
       await loadPatientFhirDocumentBundlePreview(selectedPatient.id);
@@ -2545,27 +2466,7 @@ export function App() {
       const createdDiagnosticReport = await createDiagnosticReport(
         clinicalApi,
         selectedPatient.id,
-        {
-          encounterId: diagnosticReportForm.encounterId || undefined,
-          basedOnServiceRequestId: diagnosticReportForm.basedOnServiceRequestId || undefined,
-          category: diagnosticReportForm.category,
-          code: {
-            system: diagnosticReportForm.codeSystem,
-            code: diagnosticReportForm.code,
-            display: diagnosticReportForm.codeDisplay
-          },
-          effectiveAt: toApiDateTime(diagnosticReportForm.effectiveAt),
-          issuedAt: diagnosticReportForm.issuedAt
-            ? toApiDateTime(diagnosticReportForm.issuedAt)
-            : undefined,
-          performerOrganizationId: diagnosticReportForm.performerOrganizationId || undefined,
-          resultsInterpreterPractitionerId:
-            diagnosticReportForm.resultsInterpreterPractitionerId || undefined,
-          resultObservationIds: diagnosticReportForm.resultObservationIds,
-          conclusion: diagnosticReportForm.conclusion || undefined,
-          presentedFormUrl: diagnosticReportForm.presentedFormUrl || undefined,
-          presentedFormTitle: diagnosticReportForm.presentedFormTitle || undefined
-        }
+        buildDiagnosticReportCommand(diagnosticReportForm)
       );
       await loadDiagnosticReports(selectedPatient.id, createdDiagnosticReport.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
@@ -2603,45 +2504,7 @@ export function App() {
       const createdImagingStudy = await createImagingStudy(
         clinicalApi,
         selectedPatient.id,
-        {
-          encounterId: imagingStudyForm.encounterId || undefined,
-          basedOnServiceRequestId: imagingStudyForm.basedOnServiceRequestId || undefined,
-          diagnosticReportId: imagingStudyForm.diagnosticReportId || undefined,
-          studyInstanceUid: imagingStudyForm.studyInstanceUid,
-          accessionNumber: imagingStudyForm.accessionNumber || undefined,
-          description: imagingStudyForm.description || undefined,
-          startedAt: imagingStudyForm.startedAt
-            ? toApiDateTime(imagingStudyForm.startedAt)
-            : undefined,
-          referrerPractitionerId: imagingStudyForm.referrerPractitionerId || undefined,
-          interpreterPractitionerId: imagingStudyForm.interpreterPractitionerId || undefined,
-          endpointId: imagingStudyForm.endpointId || undefined,
-          series: [
-            {
-              uid: imagingStudyForm.seriesUid,
-              number: imagingStudyForm.seriesNumber
-                ? Number.parseInt(imagingStudyForm.seriesNumber, 10)
-                : undefined,
-              modality: {
-                system: imagingStudyForm.modalitySystem,
-                code: imagingStudyForm.modalityCode,
-                display: imagingStudyForm.modalityDisplay
-              },
-              description: imagingStudyForm.seriesDescription || undefined,
-              numberOfInstances: imagingStudyForm.numberOfInstances
-                ? Number.parseInt(imagingStudyForm.numberOfInstances, 10)
-                : undefined,
-              bodySite:
-                imagingStudyForm.bodySiteCode || imagingStudyForm.bodySiteDisplay
-                  ? {
-                      system: imagingStudyForm.bodySiteSystem,
-                      code: imagingStudyForm.bodySiteCode,
-                      display: imagingStudyForm.bodySiteDisplay
-                    }
-                  : undefined
-            }
-          ]
-        }
+        buildImagingStudyCommand(imagingStudyForm)
       );
       await loadImagingStudies(selectedPatient.id, createdImagingStudy.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
