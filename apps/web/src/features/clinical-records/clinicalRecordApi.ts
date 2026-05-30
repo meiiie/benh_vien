@@ -10,6 +10,7 @@ import type {
   EncountersResponse,
   ImagingStudiesResponse,
   ImagingStudy,
+  ImagingStudySeries,
   MedicationAdministration,
   MedicationAdministrationsResponse,
   MedicationDispense,
@@ -25,7 +26,146 @@ import type {
   WorkflowTasksResponse
 } from "../../types/clinical.js";
 
-type ClinicalCommand = Record<string, unknown>;
+type CreateEncounterCommand = Pick<
+  Encounter,
+  "class" | "serviceType" | "reasonText" | "departmentId" | "attendingPractitionerId" | "startedAt"
+>;
+
+type CreateAllergyIntoleranceCommand = Pick<
+  AllergyIntolerance,
+  "clinicalStatus" | "verificationStatus" | "type" | "category" | "code" | "recorderPractitionerId"
+> &
+  Partial<Pick<AllergyIntolerance, "encounterId" | "criticality" | "reaction" | "recordedAt" | "note">>;
+
+type CreateConditionCommand = Pick<
+  Condition,
+  "clinicalStatus" | "verificationStatus" | "category" | "code" | "recorderPractitionerId"
+> &
+  Partial<Pick<Condition, "encounterId" | "severity" | "onsetAt" | "note">>;
+
+type CreateObservationCommand = Pick<Observation, "category" | "code" | "effectiveAt"> &
+  Partial<Pick<Observation, "encounterId" | "valueQuantity" | "valueText" | "performerPractitionerId">>;
+
+type CreateMedicationRequestCommand = Pick<
+  MedicationRequest,
+  "category" | "priority" | "medicationCode" | "dosageInstruction" | "requesterPractitionerId"
+> &
+  Partial<
+    Pick<
+      MedicationRequest,
+      "encounterId" | "reasonConditionId" | "authoredOn" | "expectedSupplyDurationDays" | "note"
+    >
+  >;
+
+type CreateMedicationDispenseCommand = Pick<
+  MedicationDispense,
+  "status" | "category" | "medicationCode"
+> &
+  Partial<
+    Pick<
+      MedicationDispense,
+      | "encounterId"
+      | "medicationRequestId"
+      | "quantity"
+      | "daysSupply"
+      | "whenPrepared"
+      | "whenHandedOver"
+      | "dispenserPractitionerId"
+      | "receiverPractitionerId"
+      | "dosageInstruction"
+      | "note"
+    >
+  >;
+
+type CreateMedicationAdministrationCommand = Pick<
+  MedicationAdministration,
+  "status" | "category" | "medicationCode" | "effectivePeriod" | "performers"
+> &
+  Partial<
+    Pick<
+      MedicationAdministration,
+      "encounterId" | "medicationRequestId" | "reasonConditionId" | "dosage" | "note"
+    >
+  >;
+
+type CreateServiceRequestCommand = Pick<
+  ServiceRequest,
+  "category" | "priority" | "code" | "requesterPractitionerId"
+> &
+  Partial<
+    Pick<
+      ServiceRequest,
+      | "encounterId"
+      | "reasonConditionId"
+      | "occurrenceAt"
+      | "authoredOn"
+      | "performerOrganizationId"
+      | "patientInstruction"
+      | "note"
+    >
+  >;
+
+type CreateProcedureCommand = Pick<
+  Procedure,
+  "category" | "status" | "code" | "performers" | "reportReferences"
+> &
+  Partial<
+    Pick<
+      Procedure,
+      | "encounterId"
+      | "basedOnServiceRequestId"
+      | "reasonConditionId"
+      | "performedPeriod"
+      | "recorderPractitionerId"
+      | "asserterPractitionerId"
+      | "bodySite"
+      | "outcome"
+      | "note"
+    >
+  >;
+
+type CreateDiagnosticReportCommand = Pick<
+  DiagnosticReport,
+  "category" | "code" | "effectiveAt" | "resultObservationIds"
+> &
+  Partial<
+    Pick<
+      DiagnosticReport,
+      | "encounterId"
+      | "basedOnServiceRequestId"
+      | "issuedAt"
+      | "performerOrganizationId"
+      | "resultsInterpreterPractitionerId"
+      | "conclusion"
+      | "presentedFormUrl"
+      | "presentedFormTitle"
+    >
+  >;
+
+type CreateImagingStudySeriesCommand = Omit<
+  ImagingStudySeries,
+  "numberOfInstances"
+> & {
+  readonly numberOfInstances?: number;
+};
+
+type CreateImagingStudyCommand = Pick<ImagingStudy, "studyInstanceUid"> &
+  Partial<
+    Pick<
+      ImagingStudy,
+      | "encounterId"
+      | "basedOnServiceRequestId"
+      | "diagnosticReportId"
+      | "accessionNumber"
+      | "description"
+      | "startedAt"
+      | "referrerPractitionerId"
+      | "interpreterPractitionerId"
+      | "endpointId"
+    >
+  > & {
+    readonly series: readonly CreateImagingStudySeriesCommand[];
+  };
 
 export function listEncounters(
   api: ClinicalApiClient,
@@ -37,7 +177,7 @@ export function listEncounters(
 export function createEncounter(
   api: ClinicalApiClient,
   patientId: string,
-  command: ClinicalCommand
+  command: CreateEncounterCommand
 ): Promise<Encounter> {
   return postTreatmentJson(api, `/patients/${patientId}/encounters`, command);
 }
@@ -66,7 +206,7 @@ export function listAllergyIntolerances(
 export function createAllergyIntolerance(
   api: ClinicalApiClient,
   patientId: string,
-  command: ClinicalCommand
+  command: CreateAllergyIntoleranceCommand
 ): Promise<AllergyIntolerance> {
   return postTreatmentJson(api, `/patients/${patientId}/allergy-intolerances`, command);
 }
@@ -88,7 +228,7 @@ export function listConditions(
 export function createCondition(
   api: ClinicalApiClient,
   patientId: string,
-  command: ClinicalCommand
+  command: CreateConditionCommand
 ): Promise<Condition> {
   return postTreatmentJson(api, `/patients/${patientId}/conditions`, command);
 }
@@ -110,7 +250,7 @@ export function listObservations(
 export function createObservation(
   api: ClinicalApiClient,
   patientId: string,
-  command: ClinicalCommand
+  command: CreateObservationCommand
 ): Promise<Observation> {
   return postTreatmentJson(api, `/patients/${patientId}/observations`, command);
 }
@@ -132,7 +272,7 @@ export function listMedicationRequests(
 export function createMedicationRequest(
   api: ClinicalApiClient,
   patientId: string,
-  command: ClinicalCommand
+  command: CreateMedicationRequestCommand
 ): Promise<MedicationRequest> {
   return postTreatmentJson(api, `/patients/${patientId}/medication-requests`, command);
 }
@@ -154,7 +294,7 @@ export function listMedicationDispenses(
 export function createMedicationDispense(
   api: ClinicalApiClient,
   patientId: string,
-  command: ClinicalCommand
+  command: CreateMedicationDispenseCommand
 ): Promise<MedicationDispense> {
   return postTreatmentJson(api, `/patients/${patientId}/medication-dispenses`, command);
 }
@@ -176,7 +316,7 @@ export function listMedicationAdministrations(
 export function createMedicationAdministration(
   api: ClinicalApiClient,
   patientId: string,
-  command: ClinicalCommand
+  command: CreateMedicationAdministrationCommand
 ): Promise<MedicationAdministration> {
   return postTreatmentJson(
     api,
@@ -205,7 +345,7 @@ export function listServiceRequests(
 export function createServiceRequest(
   api: ClinicalApiClient,
   patientId: string,
-  command: ClinicalCommand
+  command: CreateServiceRequestCommand
 ): Promise<ServiceRequest> {
   return postTreatmentJson(api, `/patients/${patientId}/service-requests`, command);
 }
@@ -241,7 +381,7 @@ export function listProcedures(
 export function createProcedure(
   api: ClinicalApiClient,
   patientId: string,
-  command: ClinicalCommand
+  command: CreateProcedureCommand
 ): Promise<Procedure> {
   return postTreatmentJson(api, `/patients/${patientId}/procedures`, command);
 }
@@ -263,7 +403,7 @@ export function listDiagnosticReports(
 export function createDiagnosticReport(
   api: ClinicalApiClient,
   patientId: string,
-  command: ClinicalCommand
+  command: CreateDiagnosticReportCommand
 ): Promise<DiagnosticReport> {
   return postTreatmentJson(api, `/patients/${patientId}/diagnostic-reports`, command);
 }
@@ -285,7 +425,7 @@ export function listImagingStudies(
 export function createImagingStudy(
   api: ClinicalApiClient,
   patientId: string,
-  command: ClinicalCommand
+  command: CreateImagingStudyCommand
 ): Promise<ImagingStudy> {
   return postTreatmentJson(api, `/patients/${patientId}/imaging-studies`, command);
 }
@@ -306,7 +446,7 @@ function requestTreatmentJson<T>(api: ClinicalApiClient, path: string): Promise<
 function postTreatmentJson<T>(
   api: ClinicalApiClient,
   path: string,
-  command?: ClinicalCommand
+  command?: unknown
 ): Promise<T> {
   return api.requestJson<T>(path, {
     method: "POST",
