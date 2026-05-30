@@ -156,7 +156,6 @@ import type {
   DiagnosticReportStatus,
   DiagnosticReportCategory,
   ImagingStudyStatus,
-  PurposeOfUse,
   ConsentStatus,
   ConsentCategory,
   RecordTransferStatus,
@@ -820,13 +819,6 @@ export function App() {
     void loadRecordTransferFhirTaskPreview(selectedRecordTransferId);
     void loadRecordTransferDeliveryAttempts(selectedRecordTransferId);
   }, [selectedRecordTransferId, recordTransfers]);
-
-  function buildHeaders(
-    purposeOfUse: PurposeOfUse,
-    headers: Record<string, string> = {}
-  ): Record<string, string> {
-    return clinicalApi.buildHeaders(purposeOfUse, headers);
-  }
 
   async function loadPatients(nextSelectedId?: string) {
     setIsLoadingPatients(true);
@@ -1498,24 +1490,16 @@ export function App() {
     setRevokingConsentId(consent.id);
 
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/patients/${selectedPatient.id}/consents/${consent.id}/revoke`,
+      const revokedConsent = await clinicalApi.requestJson<Consent>(
+        `/patients/${selectedPatient.id}/consents/${consent.id}/revoke`,
         {
           method: "POST",
-          headers: buildHeaders("TREATMENT", {
-            "Content-Type": "application/json"
-          }),
-          body: JSON.stringify({
+          purposeOfUse: "TREATMENT",
+          json: {
             reason: "Thu hồi theo yêu cầu người bệnh trong phiên demo."
-          })
+          }
         }
       );
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      const revokedConsent = (await response.json()) as Consent;
       await loadConsents(selectedPatient.id);
       await loadConsentFhirPreview(revokedConsent.id);
       setStatusMessage(`Đã thu hồi consent ${revokedConsent.id}; các lần xuất/chuyển hồ sơ mới sẽ bị chặn nếu dùng consent này.`);
@@ -2126,12 +2110,10 @@ export function App() {
     ];
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients`, {
+      const createdPatient = await clinicalApi.requestJson<Patient>("/patients", {
         method: "POST",
-        headers: buildHeaders("TREATMENT", {
-          "Content-Type": "application/json"
-        }),
-        body: JSON.stringify({
+        purposeOfUse: "TREATMENT",
+        json: {
           identifiers,
           fullName: patientForm.fullName,
           birthDate: patientForm.birthDate || undefined,
@@ -2139,15 +2121,8 @@ export function App() {
           address: patientForm.address || undefined,
           phone: patientForm.phone || undefined,
           managingOrganizationId: patientForm.managingOrganizationId
-        })
+        }
       });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
-      const createdPatient = (await response.json()) as Patient;
       await loadPatients(createdPatient.id);
       setAppRoute("workspace");
       setStatusMessage(`Đã tạo hồ sơ ${createdPatient.fullName} và chọn ngay trên workspace.`);
@@ -2198,23 +2173,17 @@ export function App() {
     setIsMergingPatient(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/merge`, {
-        method: "POST",
-        headers: buildHeaders("TREATMENT", {
-          "Content-Type": "application/json"
-        }),
-        body: JSON.stringify({
-          targetPatientId: patientMergeTargetId,
-          reason: patientMergeForm.reason.trim()
-        })
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
-      const mergedPatient = (await response.json()) as Patient;
+      const mergedPatient = await clinicalApi.requestJson<Patient>(
+        `/patients/${selectedPatient.id}/merge`,
+        {
+          method: "POST",
+          purposeOfUse: "TREATMENT",
+          json: {
+            targetPatientId: patientMergeTargetId,
+            reason: patientMergeForm.reason.trim()
+          }
+        }
+      );
       await loadPatients(mergedPatient.id);
       await loadPatientWorkspace(mergedPatient.id);
       setPatientMergeForm({
@@ -2250,28 +2219,22 @@ export function App() {
     setIsSubmittingRecordTransfer(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/record-transfers`, {
-        method: "POST",
-        headers: buildHeaders("TREATMENT", {
-          "Content-Type": "application/json"
-        }),
-        body: JSON.stringify({
-          priority: recordTransferForm.priority,
-          bundleType: recordTransferForm.bundleType,
-          sourceOrganizationId: recordTransferForm.sourceOrganizationId,
-          recipientOrganizationId: recordTransferForm.recipientOrganizationId,
-          consentReference: recordTransferForm.consentReference,
-          reason: recordTransferForm.reason,
-          note: recordTransferForm.note || undefined
-        })
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
-      const createdTransfer = (await response.json()) as RecordTransfer;
+      const createdTransfer = await clinicalApi.requestJson<RecordTransfer>(
+        `/patients/${selectedPatient.id}/record-transfers`,
+        {
+          method: "POST",
+          purposeOfUse: "TREATMENT",
+          json: {
+            priority: recordTransferForm.priority,
+            bundleType: recordTransferForm.bundleType,
+            sourceOrganizationId: recordTransferForm.sourceOrganizationId,
+            recipientOrganizationId: recordTransferForm.recipientOrganizationId,
+            consentReference: recordTransferForm.consentReference,
+            reason: recordTransferForm.reason,
+            note: recordTransferForm.note || undefined
+          }
+        }
+      );
       await loadRecordTransfers(selectedPatient.id, createdTransfer.id);
       setStatusMessage(
         `Đã tạo gói chuyển hồ sơ ${createdTransfer.id} cho ${selectedPatient.fullName}.`
@@ -2300,22 +2263,16 @@ export function App() {
     setTransitioningRecordTransferId(recordTransfer.id);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/record-transfers/${recordTransfer.id}/send`, {
-        method: "POST",
-        headers: buildHeaders("TREATMENT", {
-          "Content-Type": "application/json"
-        }),
-        body: JSON.stringify({
-          note: "Đã gửi gói hồ sơ qua gateway liên thông demo."
-        })
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
-      const updatedTransfer = (await response.json()) as RecordTransfer;
+      const updatedTransfer = await clinicalApi.requestJson<RecordTransfer>(
+        `/record-transfers/${recordTransfer.id}/send`,
+        {
+          method: "POST",
+          purposeOfUse: "TREATMENT",
+          json: {
+            note: "Đã gửi gói hồ sơ qua gateway liên thông demo."
+          }
+        }
+      );
       await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
       await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
       await loadRecordTransferDeliveryAttempts(updatedTransfer.id);
@@ -2344,22 +2301,16 @@ export function App() {
     setTransitioningRecordTransferId(recordTransfer.id);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/record-transfers/${recordTransfer.id}/receive`, {
-        method: "POST",
-        headers: buildHeaders("TREATMENT", {
-          "Content-Type": "application/json"
-        }),
-        body: JSON.stringify({
-          note: "Bệnh viện nhận đã xác nhận tiếp nhận qua giao diện demo."
-        })
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
-      const updatedTransfer = (await response.json()) as RecordTransfer;
+      const updatedTransfer = await clinicalApi.requestJson<RecordTransfer>(
+        `/record-transfers/${recordTransfer.id}/receive`,
+        {
+          method: "POST",
+          purposeOfUse: "TREATMENT",
+          json: {
+            note: "Bệnh viện nhận đã xác nhận tiếp nhận qua giao diện demo."
+          }
+        }
+      );
       await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
       await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
       await loadRecordTransferDeliveryAttempts(updatedTransfer.id);
@@ -2395,14 +2346,12 @@ export function App() {
     setGatewayAcknowledgementResult(undefined);
 
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/record-transfers/${recordTransferId}/acknowledgement-callback`,
+      const acknowledgedTransfer = await clinicalApi.requestJson<RecordTransfer>(
+        `/record-transfers/${recordTransferId}/acknowledgement-callback`,
         {
           method: "POST",
-          headers: buildHeaders("OPERATIONS", {
-            "Content-Type": "application/json"
-          }),
-          body: JSON.stringify({
+          purposeOfUse: "OPERATIONS",
+          json: {
             recipientOrganizationId,
             acknowledgementReference,
             ...(gatewayAcknowledgementForm.receivedAt.trim()
@@ -2423,16 +2372,9 @@ export function App() {
             ...(gatewayAcknowledgementForm.note.trim()
               ? { note: gatewayAcknowledgementForm.note.trim() }
               : {})
-          })
+          }
         }
       );
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
-      const acknowledgedTransfer = (await response.json()) as RecordTransfer;
       setGatewayAcknowledgementResult(acknowledgedTransfer);
       setStatusMessage(
         `Gateway đã xác nhận tiếp nhận gói ${acknowledgedTransfer.id} bằng biên nhận ${acknowledgedTransfer.acknowledgementReference ?? acknowledgementReference}.`
@@ -2461,23 +2403,17 @@ export function App() {
     setTransitioningRecordTransferId(recordTransfer.id);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/record-transfers/${recordTransfer.id}/fail`, {
-        method: "POST",
-        headers: buildHeaders("TREATMENT", {
-          "Content-Type": "application/json"
-        }),
-        body: JSON.stringify({
-          failureReason: "Gateway liên thông demo tạm thời không phản hồi.",
-          note: "Đã ghi nhận lỗi gửi để thử lại sau."
-        })
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
-      const updatedTransfer = (await response.json()) as RecordTransfer;
+      const updatedTransfer = await clinicalApi.requestJson<RecordTransfer>(
+        `/record-transfers/${recordTransfer.id}/fail`,
+        {
+          method: "POST",
+          purposeOfUse: "TREATMENT",
+          json: {
+            failureReason: "Gateway liên thông demo tạm thời không phản hồi.",
+            note: "Đã ghi nhận lỗi gửi để thử lại sau."
+          }
+        }
+      );
       await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
       await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
       await loadRecordTransferDeliveryAttempts(updatedTransfer.id);
@@ -2506,22 +2442,16 @@ export function App() {
     setTransitioningRecordTransferId(recordTransfer.id);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/record-transfers/${recordTransfer.id}/retry`, {
-        method: "POST",
-        headers: buildHeaders("TREATMENT", {
-          "Content-Type": "application/json"
-        }),
-        body: JSON.stringify({
-          note: "Đưa lại gói hồ sơ vào hàng đợi gửi."
-        })
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
-      const updatedTransfer = (await response.json()) as RecordTransfer;
+      const updatedTransfer = await clinicalApi.requestJson<RecordTransfer>(
+        `/record-transfers/${recordTransfer.id}/retry`,
+        {
+          method: "POST",
+          purposeOfUse: "TREATMENT",
+          json: {
+            note: "Đưa lại gói hồ sơ vào hàng đợi gửi."
+          }
+        }
+      );
       await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
       await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
       await loadRecordTransferDeliveryAttempts(updatedTransfer.id);
@@ -2552,27 +2482,21 @@ export function App() {
     setIsSubmittingEncounter(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/encounters`, {
-        method: "POST",
-        headers: buildHeaders("TREATMENT", {
-          "Content-Type": "application/json"
-        }),
-        body: JSON.stringify({
-          class: encounterForm.class,
-          serviceType: encounterForm.serviceType,
-          reasonText: encounterForm.reasonText,
-          departmentId: encounterForm.departmentId || undefined,
-          attendingPractitionerId: encounterForm.attendingPractitionerId,
-          startedAt: toApiDateTime(encounterForm.startedAt)
-        })
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
-      const createdEncounter = (await response.json()) as Encounter;
+      const createdEncounter = await clinicalApi.requestJson<Encounter>(
+        `/patients/${selectedPatient.id}/encounters`,
+        {
+          method: "POST",
+          purposeOfUse: "TREATMENT",
+          json: {
+            class: encounterForm.class,
+            serviceType: encounterForm.serviceType,
+            reasonText: encounterForm.reasonText,
+            departmentId: encounterForm.departmentId || undefined,
+            attendingPractitionerId: encounterForm.attendingPractitionerId,
+            startedAt: toApiDateTime(encounterForm.startedAt)
+          }
+        }
+      );
       await loadEncounters(selectedPatient.id, createdEncounter.id);
       await loadAuditEvents(selectedPatient.id, { silent: true });
       setAppRoute("workspace");
@@ -2600,17 +2524,10 @@ export function App() {
     setIsFinishingEncounter(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/encounters/${encounterId}/finish`, {
+      const finishedEncounter = await clinicalApi.requestJson<Encounter>(`/encounters/${encounterId}/finish`, {
         method: "POST",
-        headers: buildHeaders("TREATMENT")
+        purposeOfUse: "TREATMENT"
       });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
-      const finishedEncounter = (await response.json()) as Encounter;
       await loadEncounters(selectedPatient.id, finishedEncounter.id);
       await loadEncounterFhirPreview(finishedEncounter.id);
       await loadAuditEvents(selectedPatient.id, { silent: true });
@@ -2646,48 +2563,43 @@ export function App() {
     setIsSubmittingAllergyIntolerance(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/allergy-intolerances`, {
-        method: "POST",
-        headers: buildHeaders("TREATMENT", {
-          "Content-Type": "application/json"
-        }),
-        body: JSON.stringify({
-          encounterId: allergyIntoleranceForm.encounterId || undefined,
-          clinicalStatus: allergyIntoleranceForm.clinicalStatus,
-          verificationStatus: allergyIntoleranceForm.verificationStatus,
-          type: allergyIntoleranceForm.type,
-          category: allergyIntoleranceForm.category,
-          criticality: allergyIntoleranceForm.criticality || undefined,
-          code: {
-            system: allergyIntoleranceForm.codeSystem,
-            code: allergyIntoleranceForm.code,
-            display: allergyIntoleranceForm.codeDisplay
-          },
-          reaction: hasReaction
-            ? {
-                manifestation: {
-                  system: allergyIntoleranceForm.manifestationSystem,
-                  code: allergyIntoleranceForm.manifestationCode,
-                  display: allergyIntoleranceForm.manifestationDisplay
-                },
-                severity: allergyIntoleranceForm.reactionSeverity || undefined,
-                description: allergyIntoleranceForm.reactionDescription || undefined
-              }
-            : undefined,
-          recordedAt: allergyIntoleranceForm.recordedAt
-            ? toApiDateTime(allergyIntoleranceForm.recordedAt)
-            : undefined,
-          recorderPractitionerId: allergyIntoleranceForm.recorderPractitionerId,
-          note: allergyIntoleranceForm.note || undefined
-        })
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
-      const createdAllergyIntolerance = (await response.json()) as AllergyIntolerance;
+      const createdAllergyIntolerance =
+        await clinicalApi.requestJson<AllergyIntolerance>(
+          `/patients/${selectedPatient.id}/allergy-intolerances`,
+          {
+            method: "POST",
+            purposeOfUse: "TREATMENT",
+            json: {
+              encounterId: allergyIntoleranceForm.encounterId || undefined,
+              clinicalStatus: allergyIntoleranceForm.clinicalStatus,
+              verificationStatus: allergyIntoleranceForm.verificationStatus,
+              type: allergyIntoleranceForm.type,
+              category: allergyIntoleranceForm.category,
+              criticality: allergyIntoleranceForm.criticality || undefined,
+              code: {
+                system: allergyIntoleranceForm.codeSystem,
+                code: allergyIntoleranceForm.code,
+                display: allergyIntoleranceForm.codeDisplay
+              },
+              reaction: hasReaction
+                ? {
+                    manifestation: {
+                      system: allergyIntoleranceForm.manifestationSystem,
+                      code: allergyIntoleranceForm.manifestationCode,
+                      display: allergyIntoleranceForm.manifestationDisplay
+                    },
+                    severity: allergyIntoleranceForm.reactionSeverity || undefined,
+                    description: allergyIntoleranceForm.reactionDescription || undefined
+                  }
+                : undefined,
+              recordedAt: allergyIntoleranceForm.recordedAt
+                ? toApiDateTime(allergyIntoleranceForm.recordedAt)
+                : undefined,
+              recorderPractitionerId: allergyIntoleranceForm.recorderPractitionerId,
+              note: allergyIntoleranceForm.note || undefined
+            }
+          }
+        );
       await loadAllergyIntolerances(selectedPatient.id, createdAllergyIntolerance.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
       await loadAuditEvents(selectedPatient.id, { silent: true });
@@ -2721,34 +2633,28 @@ export function App() {
     setIsSubmittingCondition(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/conditions`, {
-        method: "POST",
-        headers: buildHeaders("TREATMENT", {
-          "Content-Type": "application/json"
-        }),
-        body: JSON.stringify({
-          encounterId: conditionForm.encounterId || undefined,
-          clinicalStatus: conditionForm.clinicalStatus,
-          verificationStatus: conditionForm.verificationStatus,
-          category: conditionForm.category,
-          code: {
-            system: conditionForm.codeSystem,
-            code: conditionForm.code,
-            display: conditionForm.codeDisplay
-          },
-          severity: conditionForm.severity || undefined,
-          onsetAt: conditionForm.onsetAt ? toApiDateTime(conditionForm.onsetAt) : undefined,
-          recorderPractitionerId: conditionForm.recorderPractitionerId,
-          note: conditionForm.note || undefined
-        })
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
-      const createdCondition = (await response.json()) as Condition;
+      const createdCondition = await clinicalApi.requestJson<Condition>(
+        `/patients/${selectedPatient.id}/conditions`,
+        {
+          method: "POST",
+          purposeOfUse: "TREATMENT",
+          json: {
+            encounterId: conditionForm.encounterId || undefined,
+            clinicalStatus: conditionForm.clinicalStatus,
+            verificationStatus: conditionForm.verificationStatus,
+            category: conditionForm.category,
+            code: {
+              system: conditionForm.codeSystem,
+              code: conditionForm.code,
+              display: conditionForm.codeDisplay
+            },
+            severity: conditionForm.severity || undefined,
+            onsetAt: conditionForm.onsetAt ? toApiDateTime(conditionForm.onsetAt) : undefined,
+            recorderPractitionerId: conditionForm.recorderPractitionerId,
+            note: conditionForm.note || undefined
+          }
+        }
+      );
       await loadConditions(selectedPatient.id, createdCondition.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
       await loadAuditEvents(selectedPatient.id, { silent: true });
@@ -2787,36 +2693,30 @@ export function App() {
     setIsSubmittingObservation(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/observations`, {
-        method: "POST",
-        headers: buildHeaders("TREATMENT", {
-          "Content-Type": "application/json"
-        }),
-        body: JSON.stringify({
-          encounterId: observationForm.encounterId || undefined,
-          category: observationForm.category,
-          code: {
-            system: observationForm.codeSystem,
-            code: observationForm.code,
-            display: observationForm.codeDisplay
-          },
-          effectiveAt: toApiDateTime(observationForm.effectiveAt),
-          valueQuantity: {
-            value: numericValue,
-            unit: observationForm.unit,
-            system: observationForm.unitSystem || undefined,
-            code: observationForm.unitCode || undefined
-          },
-          performerPractitionerId: observationForm.performerPractitionerId || undefined
-        })
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
-      const createdObservation = (await response.json()) as Observation;
+      const createdObservation = await clinicalApi.requestJson<Observation>(
+        `/patients/${selectedPatient.id}/observations`,
+        {
+          method: "POST",
+          purposeOfUse: "TREATMENT",
+          json: {
+            encounterId: observationForm.encounterId || undefined,
+            category: observationForm.category,
+            code: {
+              system: observationForm.codeSystem,
+              code: observationForm.code,
+              display: observationForm.codeDisplay
+            },
+            effectiveAt: toApiDateTime(observationForm.effectiveAt),
+            valueQuantity: {
+              value: numericValue,
+              unit: observationForm.unit,
+              system: observationForm.unitSystem || undefined,
+              code: observationForm.unitCode || undefined
+            },
+            performerPractitionerId: observationForm.performerPractitionerId || undefined
+          }
+        }
+      );
       await loadObservations(selectedPatient.id, createdObservation.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
       await loadAuditEvents(selectedPatient.id, { silent: true });
@@ -2873,51 +2773,46 @@ export function App() {
     setIsSubmittingMedicationRequest(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/medication-requests`, {
-        method: "POST",
-        headers: buildHeaders("TREATMENT", {
-          "Content-Type": "application/json"
-        }),
-        body: JSON.stringify({
-          encounterId: medicationRequestForm.encounterId || undefined,
-          reasonConditionId: medicationRequestForm.reasonConditionId || undefined,
-          category: medicationRequestForm.category,
-          priority: medicationRequestForm.priority,
-          medicationCode: {
-            system: medicationRequestForm.medicationSystem,
-            code: medicationRequestForm.medicationCode,
-            display: medicationRequestForm.medicationDisplay
-          },
-          dosageInstruction: {
-            text: medicationRequestForm.dosageText,
-            route: medicationRequestForm.route || undefined,
-            doseQuantity: {
-              value: doseValue,
-              unit: medicationRequestForm.doseUnit,
-              system: "http://unitsofmeasure.org",
-              code: medicationRequestForm.doseUnit
+      const createdMedicationRequest =
+        await clinicalApi.requestJson<MedicationRequest>(
+          `/patients/${selectedPatient.id}/medication-requests`,
+          {
+            method: "POST",
+            purposeOfUse: "TREATMENT",
+            json: {
+              encounterId: medicationRequestForm.encounterId || undefined,
+              reasonConditionId: medicationRequestForm.reasonConditionId || undefined,
+              category: medicationRequestForm.category,
+              priority: medicationRequestForm.priority,
+              medicationCode: {
+                system: medicationRequestForm.medicationSystem,
+                code: medicationRequestForm.medicationCode,
+                display: medicationRequestForm.medicationDisplay
+              },
+              dosageInstruction: {
+                text: medicationRequestForm.dosageText,
+                route: medicationRequestForm.route || undefined,
+                doseQuantity: {
+                  value: doseValue,
+                  unit: medicationRequestForm.doseUnit,
+                  system: "http://unitsofmeasure.org",
+                  code: medicationRequestForm.doseUnit
+                },
+                frequency,
+                period,
+                periodUnit: medicationRequestForm.periodUnit
+              },
+              authoredOn: medicationRequestForm.authoredOn
+                ? toApiDateTime(medicationRequestForm.authoredOn)
+                : undefined,
+              requesterPractitionerId: medicationRequestForm.requesterPractitionerId,
+              expectedSupplyDurationDays: medicationRequestForm.expectedSupplyDurationDays
+                ? expectedSupplyDurationDays
+                : undefined,
+              note: medicationRequestForm.note || undefined
             },
-            frequency,
-            period,
-            periodUnit: medicationRequestForm.periodUnit
-          },
-          authoredOn: medicationRequestForm.authoredOn
-            ? toApiDateTime(medicationRequestForm.authoredOn)
-            : undefined,
-          requesterPractitionerId: medicationRequestForm.requesterPractitionerId,
-          expectedSupplyDurationDays: medicationRequestForm.expectedSupplyDurationDays
-            ? expectedSupplyDurationDays
-            : undefined,
-          note: medicationRequestForm.note || undefined
-        })
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
-      const createdMedicationRequest = (await response.json()) as MedicationRequest;
+          }
+        );
       await loadMedicationRequests(selectedPatient.id, createdMedicationRequest.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
       await loadAuditEvents(selectedPatient.id, { silent: true });
@@ -2982,14 +2877,12 @@ export function App() {
     setIsSubmittingMedicationDispense(true);
 
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/patients/${selectedPatient.id}/medication-dispenses`,
+      const createdMedicationDispense = await clinicalApi.requestJson<MedicationDispense>(
+        `/patients/${selectedPatient.id}/medication-dispenses`,
         {
           method: "POST",
-          headers: buildHeaders("TREATMENT", {
-            "Content-Type": "application/json"
-          }),
-          body: JSON.stringify({
+          purposeOfUse: "TREATMENT",
+          json: {
             encounterId: medicationDispenseForm.encounterId || undefined,
             medicationRequestId: medicationDispenseForm.medicationRequestId || undefined,
             status: "completed",
@@ -3033,16 +2926,9 @@ export function App() {
               periodUnit: medicationDispenseForm.periodUnit
             },
             note: medicationDispenseForm.note || undefined
-          })
+          }
         }
       );
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
-      const createdMedicationDispense = (await response.json()) as MedicationDispense;
       await loadMedicationDispenses(selectedPatient.id, createdMedicationDispense.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
       await loadPatientFhirDocumentBundlePreview(selectedPatient.id);
@@ -3094,70 +2980,61 @@ export function App() {
     setIsSubmittingMedicationAdministration(true);
 
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/patients/${selectedPatient.id}/medication-administrations`,
-        {
-          method: "POST",
-          headers: buildHeaders("TREATMENT", {
-            "Content-Type": "application/json"
-          }),
-          body: JSON.stringify({
-            encounterId: medicationAdministrationForm.encounterId || undefined,
-            medicationRequestId:
-              medicationAdministrationForm.medicationRequestId || undefined,
-            reasonConditionId: medicationAdministrationForm.reasonConditionId || undefined,
-            status: "completed",
-            category: medicationAdministrationForm.category,
-            medicationCode: {
-              system: medicationAdministrationForm.medicationSystem,
-              code: medicationAdministrationForm.medicationCode,
-              display: medicationAdministrationForm.medicationDisplay
-            },
-            effectivePeriod: {
-              start: toApiDateTime(medicationAdministrationForm.effectiveStart)
-            },
-            performers: [
-              {
-                actorType: medicationAdministrationForm.performerActorType,
-                actorId: medicationAdministrationForm.performerActorId,
-                function: medicationAdministrationForm.performerFunctionDisplay
-                  ? {
-                      system:
-                        "urn:wiiicare:nexus:medication-admin-performer-function",
-                      code: "medication-administration-recorder",
-                      display: medicationAdministrationForm.performerFunctionDisplay
-                    }
-                  : undefined
-              }
-            ],
-            dosage: {
-              text: medicationAdministrationForm.dosageText || undefined,
-              route: medicationAdministrationForm.routeCode
-                ? {
-                    system: medicationAdministrationForm.routeSystem,
-                    code: medicationAdministrationForm.routeCode,
-                    display: medicationAdministrationForm.routeDisplay
-                  }
-                : undefined,
-              doseQuantity: {
-                value: doseValue,
-                unit: medicationAdministrationForm.doseUnit,
-                system: "http://unitsofmeasure.org",
-                code: medicationAdministrationForm.doseUnit
-              }
-            },
-            note: medicationAdministrationForm.note || undefined
-          })
-        }
-      );
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
       const createdMedicationAdministration =
-        (await response.json()) as MedicationAdministration;
+        await clinicalApi.requestJson<MedicationAdministration>(
+          `/patients/${selectedPatient.id}/medication-administrations`,
+          {
+            method: "POST",
+            purposeOfUse: "TREATMENT",
+            json: {
+              encounterId: medicationAdministrationForm.encounterId || undefined,
+              medicationRequestId:
+                medicationAdministrationForm.medicationRequestId || undefined,
+              reasonConditionId: medicationAdministrationForm.reasonConditionId || undefined,
+              status: "completed",
+              category: medicationAdministrationForm.category,
+              medicationCode: {
+                system: medicationAdministrationForm.medicationSystem,
+                code: medicationAdministrationForm.medicationCode,
+                display: medicationAdministrationForm.medicationDisplay
+              },
+              effectivePeriod: {
+                start: toApiDateTime(medicationAdministrationForm.effectiveStart)
+              },
+              performers: [
+                {
+                  actorType: medicationAdministrationForm.performerActorType,
+                  actorId: medicationAdministrationForm.performerActorId,
+                  function: medicationAdministrationForm.performerFunctionDisplay
+                    ? {
+                        system:
+                          "urn:wiiicare:nexus:medication-admin-performer-function",
+                        code: "medication-administration-recorder",
+                        display: medicationAdministrationForm.performerFunctionDisplay
+                      }
+                    : undefined
+                }
+              ],
+              dosage: {
+                text: medicationAdministrationForm.dosageText || undefined,
+                route: medicationAdministrationForm.routeCode
+                  ? {
+                      system: medicationAdministrationForm.routeSystem,
+                      code: medicationAdministrationForm.routeCode,
+                      display: medicationAdministrationForm.routeDisplay
+                    }
+                  : undefined,
+                doseQuantity: {
+                  value: doseValue,
+                  unit: medicationAdministrationForm.doseUnit,
+                  system: "http://unitsofmeasure.org",
+                  code: medicationAdministrationForm.doseUnit
+                }
+              },
+              note: medicationAdministrationForm.note || undefined
+            }
+          }
+        );
       await loadMedicationAdministrations(
         selectedPatient.id,
         createdMedicationAdministration.id
@@ -3195,40 +3072,35 @@ export function App() {
     setIsSubmittingServiceRequest(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/service-requests`, {
-        method: "POST",
-        headers: buildHeaders("TREATMENT", {
-          "Content-Type": "application/json"
-        }),
-        body: JSON.stringify({
-          encounterId: serviceRequestForm.encounterId || undefined,
-          reasonConditionId: serviceRequestForm.reasonConditionId || undefined,
-          category: serviceRequestForm.category,
-          priority: serviceRequestForm.priority,
-          code: {
-            system: serviceRequestForm.codeSystem,
-            code: serviceRequestForm.code,
-            display: serviceRequestForm.codeDisplay
-          },
-          occurrenceAt: serviceRequestForm.occurrenceAt
-            ? toApiDateTime(serviceRequestForm.occurrenceAt)
-            : undefined,
-          authoredOn: serviceRequestForm.authoredOn
-            ? toApiDateTime(serviceRequestForm.authoredOn)
-            : undefined,
-          requesterPractitionerId: serviceRequestForm.requesterPractitionerId,
-          performerOrganizationId: serviceRequestForm.performerOrganizationId || undefined,
-          patientInstruction: serviceRequestForm.patientInstruction || undefined,
-          note: serviceRequestForm.note || undefined
-        })
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
-      const createdServiceRequest = (await response.json()) as ServiceRequest;
+      const createdServiceRequest =
+        await clinicalApi.requestJson<ServiceRequest>(
+          `/patients/${selectedPatient.id}/service-requests`,
+          {
+            method: "POST",
+            purposeOfUse: "TREATMENT",
+            json: {
+              encounterId: serviceRequestForm.encounterId || undefined,
+              reasonConditionId: serviceRequestForm.reasonConditionId || undefined,
+              category: serviceRequestForm.category,
+              priority: serviceRequestForm.priority,
+              code: {
+                system: serviceRequestForm.codeSystem,
+                code: serviceRequestForm.code,
+                display: serviceRequestForm.codeDisplay
+              },
+              occurrenceAt: serviceRequestForm.occurrenceAt
+                ? toApiDateTime(serviceRequestForm.occurrenceAt)
+                : undefined,
+              authoredOn: serviceRequestForm.authoredOn
+                ? toApiDateTime(serviceRequestForm.authoredOn)
+                : undefined,
+              requesterPractitionerId: serviceRequestForm.requesterPractitionerId,
+              performerOrganizationId: serviceRequestForm.performerOrganizationId || undefined,
+              patientInstruction: serviceRequestForm.patientInstruction || undefined,
+              note: serviceRequestForm.note || undefined
+            }
+          }
+        );
       await loadServiceRequests(selectedPatient.id, createdServiceRequest.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
       await loadAuditEvents(selectedPatient.id, { silent: true });
@@ -3272,79 +3144,73 @@ export function App() {
         : [];
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/procedures`, {
-        method: "POST",
-        headers: buildHeaders("TREATMENT", {
-          "Content-Type": "application/json"
-        }),
-        body: JSON.stringify({
-          encounterId: procedureForm.encounterId || undefined,
-          basedOnServiceRequestId: procedureForm.basedOnServiceRequestId || undefined,
-          reasonConditionId: procedureForm.reasonConditionId || undefined,
-          category: procedureForm.category,
-          status: procedureForm.status,
-          code: {
-            system: procedureForm.codeSystem,
-            code: procedureForm.code,
-            display: procedureForm.codeDisplay
-          },
-          performedPeriod:
-            procedureForm.performedStart || procedureForm.performedEnd
-              ? {
-                  start: procedureForm.performedStart
-                    ? toApiDateTime(procedureForm.performedStart)
-                    : undefined,
-                  end: procedureForm.performedEnd
-                    ? toApiDateTime(procedureForm.performedEnd)
-                    : undefined
-                }
-              : undefined,
-          performers: procedureForm.performerActorId
-            ? [
-                {
-                  actorType: procedureForm.performerActorType,
-                  actorId: procedureForm.performerActorId,
-                  function:
-                    procedureForm.performerFunctionCode && procedureForm.performerFunctionDisplay
-                      ? {
-                          system: procedureForm.performerFunctionSystem,
-                          code: procedureForm.performerFunctionCode,
-                          display: procedureForm.performerFunctionDisplay
-                        }
+      const createdProcedure = await clinicalApi.requestJson<Procedure>(
+        `/patients/${selectedPatient.id}/procedures`,
+        {
+          method: "POST",
+          purposeOfUse: "TREATMENT",
+          json: {
+            encounterId: procedureForm.encounterId || undefined,
+            basedOnServiceRequestId: procedureForm.basedOnServiceRequestId || undefined,
+            reasonConditionId: procedureForm.reasonConditionId || undefined,
+            category: procedureForm.category,
+            status: procedureForm.status,
+            code: {
+              system: procedureForm.codeSystem,
+              code: procedureForm.code,
+              display: procedureForm.codeDisplay
+            },
+            performedPeriod:
+              procedureForm.performedStart || procedureForm.performedEnd
+                ? {
+                    start: procedureForm.performedStart
+                      ? toApiDateTime(procedureForm.performedStart)
                       : undefined,
-                  onBehalfOfOrganizationId: procedureForm.onBehalfOfOrganizationId || undefined
-                }
-              ]
-            : [],
-          recorderPractitionerId: procedureForm.recorderPractitionerId || undefined,
-          asserterPractitionerId: procedureForm.asserterPractitionerId || undefined,
-          bodySite:
-            procedureForm.bodySiteCode && procedureForm.bodySiteDisplay
-              ? {
-                  system: procedureForm.bodySiteSystem,
-                  code: procedureForm.bodySiteCode,
-                  display: procedureForm.bodySiteDisplay
-                }
-              : undefined,
-          outcome:
-            procedureForm.outcomeCode && procedureForm.outcomeDisplay
-              ? {
-                  system: procedureForm.outcomeSystem,
-                  code: procedureForm.outcomeCode,
-                  display: procedureForm.outcomeDisplay
-                }
-              : undefined,
-          reportReferences,
-          note: procedureForm.note || undefined
-        })
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
-      const createdProcedure = (await response.json()) as Procedure;
+                    end: procedureForm.performedEnd
+                      ? toApiDateTime(procedureForm.performedEnd)
+                      : undefined
+                  }
+                : undefined,
+            performers: procedureForm.performerActorId
+              ? [
+                  {
+                    actorType: procedureForm.performerActorType,
+                    actorId: procedureForm.performerActorId,
+                    function:
+                      procedureForm.performerFunctionCode && procedureForm.performerFunctionDisplay
+                        ? {
+                            system: procedureForm.performerFunctionSystem,
+                            code: procedureForm.performerFunctionCode,
+                            display: procedureForm.performerFunctionDisplay
+                          }
+                        : undefined,
+                    onBehalfOfOrganizationId: procedureForm.onBehalfOfOrganizationId || undefined
+                  }
+                ]
+              : [],
+            recorderPractitionerId: procedureForm.recorderPractitionerId || undefined,
+            asserterPractitionerId: procedureForm.asserterPractitionerId || undefined,
+            bodySite:
+              procedureForm.bodySiteCode && procedureForm.bodySiteDisplay
+                ? {
+                    system: procedureForm.bodySiteSystem,
+                    code: procedureForm.bodySiteCode,
+                    display: procedureForm.bodySiteDisplay
+                  }
+                : undefined,
+            outcome:
+              procedureForm.outcomeCode && procedureForm.outcomeDisplay
+                ? {
+                    system: procedureForm.outcomeSystem,
+                    code: procedureForm.outcomeCode,
+                    display: procedureForm.outcomeDisplay
+                  }
+                : undefined,
+            reportReferences,
+            note: procedureForm.note || undefined
+          }
+        }
+      );
       await loadProcedures(selectedPatient.id, createdProcedure.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
       await loadPatientFhirDocumentBundlePreview(selectedPatient.id);
@@ -3379,40 +3245,35 @@ export function App() {
     setIsSubmittingDiagnosticReport(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/diagnostic-reports`, {
-        method: "POST",
-        headers: buildHeaders("TREATMENT", {
-          "Content-Type": "application/json"
-        }),
-        body: JSON.stringify({
-          encounterId: diagnosticReportForm.encounterId || undefined,
-          basedOnServiceRequestId: diagnosticReportForm.basedOnServiceRequestId || undefined,
-          category: diagnosticReportForm.category,
-          code: {
-            system: diagnosticReportForm.codeSystem,
-            code: diagnosticReportForm.code,
-            display: diagnosticReportForm.codeDisplay
-          },
-          effectiveAt: toApiDateTime(diagnosticReportForm.effectiveAt),
-          issuedAt: diagnosticReportForm.issuedAt
-            ? toApiDateTime(diagnosticReportForm.issuedAt)
-            : undefined,
-          performerOrganizationId: diagnosticReportForm.performerOrganizationId || undefined,
-          resultsInterpreterPractitionerId:
-            diagnosticReportForm.resultsInterpreterPractitionerId || undefined,
-          resultObservationIds: diagnosticReportForm.resultObservationIds,
-          conclusion: diagnosticReportForm.conclusion || undefined,
-          presentedFormUrl: diagnosticReportForm.presentedFormUrl || undefined,
-          presentedFormTitle: diagnosticReportForm.presentedFormTitle || undefined
-        })
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
-      const createdDiagnosticReport = (await response.json()) as DiagnosticReport;
+      const createdDiagnosticReport =
+        await clinicalApi.requestJson<DiagnosticReport>(
+          `/patients/${selectedPatient.id}/diagnostic-reports`,
+          {
+            method: "POST",
+            purposeOfUse: "TREATMENT",
+            json: {
+              encounterId: diagnosticReportForm.encounterId || undefined,
+              basedOnServiceRequestId: diagnosticReportForm.basedOnServiceRequestId || undefined,
+              category: diagnosticReportForm.category,
+              code: {
+                system: diagnosticReportForm.codeSystem,
+                code: diagnosticReportForm.code,
+                display: diagnosticReportForm.codeDisplay
+              },
+              effectiveAt: toApiDateTime(diagnosticReportForm.effectiveAt),
+              issuedAt: diagnosticReportForm.issuedAt
+                ? toApiDateTime(diagnosticReportForm.issuedAt)
+                : undefined,
+              performerOrganizationId: diagnosticReportForm.performerOrganizationId || undefined,
+              resultsInterpreterPractitionerId:
+                diagnosticReportForm.resultsInterpreterPractitionerId || undefined,
+              resultObservationIds: diagnosticReportForm.resultObservationIds,
+              conclusion: diagnosticReportForm.conclusion || undefined,
+              presentedFormUrl: diagnosticReportForm.presentedFormUrl || undefined,
+              presentedFormTitle: diagnosticReportForm.presentedFormTitle || undefined
+            }
+          }
+        );
       await loadDiagnosticReports(selectedPatient.id, createdDiagnosticReport.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
       await loadAuditEvents(selectedPatient.id, { silent: true });
@@ -3446,56 +3307,52 @@ export function App() {
     setIsSubmittingImagingStudy(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/imaging-studies`, {
-        method: "POST",
-        headers: buildHeaders("TREATMENT", {
-          "Content-Type": "application/json"
-        }),
-        body: JSON.stringify({
-          encounterId: imagingStudyForm.encounterId || undefined,
-          basedOnServiceRequestId: imagingStudyForm.basedOnServiceRequestId || undefined,
-          diagnosticReportId: imagingStudyForm.diagnosticReportId || undefined,
-          studyInstanceUid: imagingStudyForm.studyInstanceUid,
-          accessionNumber: imagingStudyForm.accessionNumber || undefined,
-          description: imagingStudyForm.description || undefined,
-          startedAt: imagingStudyForm.startedAt ? toApiDateTime(imagingStudyForm.startedAt) : undefined,
-          referrerPractitionerId: imagingStudyForm.referrerPractitionerId || undefined,
-          interpreterPractitionerId: imagingStudyForm.interpreterPractitionerId || undefined,
-          endpointId: imagingStudyForm.endpointId || undefined,
-          series: [
-            {
-              uid: imagingStudyForm.seriesUid,
-              number: imagingStudyForm.seriesNumber
-                ? Number.parseInt(imagingStudyForm.seriesNumber, 10)
-                : undefined,
-              modality: {
-                system: imagingStudyForm.modalitySystem,
-                code: imagingStudyForm.modalityCode,
-                display: imagingStudyForm.modalityDisplay
-              },
-              description: imagingStudyForm.seriesDescription || undefined,
-              numberOfInstances: imagingStudyForm.numberOfInstances
-                ? Number.parseInt(imagingStudyForm.numberOfInstances, 10)
-                : undefined,
-              bodySite:
-                imagingStudyForm.bodySiteCode || imagingStudyForm.bodySiteDisplay
-                  ? {
-                      system: imagingStudyForm.bodySiteSystem,
-                      code: imagingStudyForm.bodySiteCode,
-                      display: imagingStudyForm.bodySiteDisplay
-                    }
-                  : undefined
-            }
-          ]
-        })
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
-      const createdImagingStudy = (await response.json()) as ImagingStudy;
+      const createdImagingStudy = await clinicalApi.requestJson<ImagingStudy>(
+        `/patients/${selectedPatient.id}/imaging-studies`,
+        {
+          method: "POST",
+          purposeOfUse: "TREATMENT",
+          json: {
+            encounterId: imagingStudyForm.encounterId || undefined,
+            basedOnServiceRequestId: imagingStudyForm.basedOnServiceRequestId || undefined,
+            diagnosticReportId: imagingStudyForm.diagnosticReportId || undefined,
+            studyInstanceUid: imagingStudyForm.studyInstanceUid,
+            accessionNumber: imagingStudyForm.accessionNumber || undefined,
+            description: imagingStudyForm.description || undefined,
+            startedAt: imagingStudyForm.startedAt
+              ? toApiDateTime(imagingStudyForm.startedAt)
+              : undefined,
+            referrerPractitionerId: imagingStudyForm.referrerPractitionerId || undefined,
+            interpreterPractitionerId: imagingStudyForm.interpreterPractitionerId || undefined,
+            endpointId: imagingStudyForm.endpointId || undefined,
+            series: [
+              {
+                uid: imagingStudyForm.seriesUid,
+                number: imagingStudyForm.seriesNumber
+                  ? Number.parseInt(imagingStudyForm.seriesNumber, 10)
+                  : undefined,
+                modality: {
+                  system: imagingStudyForm.modalitySystem,
+                  code: imagingStudyForm.modalityCode,
+                  display: imagingStudyForm.modalityDisplay
+                },
+                description: imagingStudyForm.seriesDescription || undefined,
+                numberOfInstances: imagingStudyForm.numberOfInstances
+                  ? Number.parseInt(imagingStudyForm.numberOfInstances, 10)
+                  : undefined,
+                bodySite:
+                  imagingStudyForm.bodySiteCode || imagingStudyForm.bodySiteDisplay
+                    ? {
+                        system: imagingStudyForm.bodySiteSystem,
+                        code: imagingStudyForm.bodySiteCode,
+                        display: imagingStudyForm.bodySiteDisplay
+                      }
+                    : undefined
+              }
+            ]
+          }
+        }
+      );
       await loadImagingStudies(selectedPatient.id, createdImagingStudy.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
       await loadAuditEvents(selectedPatient.id, { silent: true });
@@ -3529,34 +3386,28 @@ export function App() {
     setIsSubmittingDocument(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${selectedPatient.id}/documents`, {
-        method: "POST",
-        headers: buildHeaders("TREATMENT", {
-          "Content-Type": "application/json"
-        }),
-        body: JSON.stringify({
-          encounterId: documentForm.encounterId || undefined,
-          type: documentForm.type,
-          title: documentForm.title,
-          storageUri: documentForm.storageUri.replace("/current/", `/${selectedPatient.id}/`),
-          attachmentContentType: documentForm.attachmentContentType || undefined,
-          attachmentSizeBytes: documentForm.attachmentSizeBytes
-            ? Number(documentForm.attachmentSizeBytes)
-            : undefined,
-          attachmentHashSha1Base64: documentForm.attachmentHashSha1Base64 || undefined,
-          attachmentCreatedAt: documentForm.attachmentCreatedAt
-            ? toApiDateTime(documentForm.attachmentCreatedAt)
-            : undefined,
-          authorPractitionerId: documentForm.authorPractitionerId
-        })
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
-      const createdDocument = (await response.json()) as ClinicalDocument;
+      const createdDocument = await clinicalApi.requestJson<ClinicalDocument>(
+        `/patients/${selectedPatient.id}/documents`,
+        {
+          method: "POST",
+          purposeOfUse: "TREATMENT",
+          json: {
+            encounterId: documentForm.encounterId || undefined,
+            type: documentForm.type,
+            title: documentForm.title,
+            storageUri: documentForm.storageUri.replace("/current/", `/${selectedPatient.id}/`),
+            attachmentContentType: documentForm.attachmentContentType || undefined,
+            attachmentSizeBytes: documentForm.attachmentSizeBytes
+              ? Number(documentForm.attachmentSizeBytes)
+              : undefined,
+            attachmentHashSha1Base64: documentForm.attachmentHashSha1Base64 || undefined,
+            attachmentCreatedAt: documentForm.attachmentCreatedAt
+              ? toApiDateTime(documentForm.attachmentCreatedAt)
+              : undefined,
+            authorPractitionerId: documentForm.authorPractitionerId
+          }
+        }
+      );
       await loadClinicalDocuments(selectedPatient.id, createdDocument.id);
       await loadAuditEvents(selectedPatient.id, { silent: true });
       setAppRoute("documents");
@@ -3580,17 +3431,13 @@ export function App() {
     setIsSigningDocument(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/clinical-documents/${documentId}/sign`, {
-        method: "POST",
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
-      const signedDocument = (await response.json()) as ClinicalDocument;
+      const signedDocument = await clinicalApi.requestJson<ClinicalDocument>(
+        `/clinical-documents/${documentId}/sign`,
+        {
+          method: "POST",
+          purposeOfUse: "TREATMENT"
+        }
+      );
       await loadClinicalDocuments(signedDocument.patientId, signedDocument.id);
       await loadDocumentFhirPreview(signedDocument.id);
       await loadDocumentProvenanceFhirPreview(signedDocument.id);

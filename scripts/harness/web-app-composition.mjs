@@ -17,11 +17,24 @@ const maxAppLines = 9_000;
 
 const appSource = await readFile(appPath, "utf8");
 const appLineCount = appSource.split(/\r?\n/).length;
+const forbiddenAppPatterns = [
+  {
+    pattern: /\bfetch\s*\(/,
+    message:
+      "apps/web/src/App.tsx must not call fetch directly; use apps/web/src/api/clinicalApi.ts for HTTP boundaries."
+  }
+];
 
 if (appLineCount > maxAppLines) {
   throw new Error(
     `apps/web/src/App.tsx has ${appLineCount} lines; keep it at or below ${maxAppLines} by extracting pages, shell components, types, config, and pure helpers.`
   );
+}
+
+for (const forbidden of forbiddenAppPatterns) {
+  if (forbidden.pattern.test(appSource)) {
+    throw new Error(forbidden.message);
+  }
 }
 
 const missingModules = [];
