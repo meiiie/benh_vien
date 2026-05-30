@@ -24,6 +24,11 @@ import {
   signClinicalDocument
 } from "./features/clinical-documents/clinicalDocumentApi.js";
 import {
+  exportConsentFhir,
+  listPatientConsents,
+  revokePatientConsent
+} from "./features/consents/consentApi.js";
+import {
   acknowledgeRecordTransfer,
   createRecordTransfer,
   exportRecordTransferFhirTask,
@@ -255,7 +260,6 @@ import type {
   ImagingStudiesResponse,
   AuditEventsResponse,
   AuditIntegrityReportResponse,
-  ConsentsResponse,
   NewPatientForm,
   PatientMergeForm,
   NewRecordTransferForm,
@@ -1469,12 +1473,7 @@ export function App() {
     setIsLoadingConsents(true);
 
     try {
-      const data = await clinicalApi.requestJson<ConsentsResponse>(
-        `/patients/${patientId}/consents`,
-        {
-          purposeOfUse: "TREATMENT"
-        }
-      );
+      const data = await listPatientConsents(clinicalApi, patientId);
       setConsents(data.items);
     } catch (error) {
       setConsents([]);
@@ -1500,15 +1499,11 @@ export function App() {
     setRevokingConsentId(consent.id);
 
     try {
-      const revokedConsent = await clinicalApi.requestJson<Consent>(
-        `/patients/${selectedPatient.id}/consents/${consent.id}/revoke`,
-        {
-          method: "POST",
-          purposeOfUse: "TREATMENT",
-          json: {
-            reason: "Thu hồi theo yêu cầu người bệnh trong phiên demo."
-          }
-        }
+      const revokedConsent = await revokePatientConsent(
+        clinicalApi,
+        selectedPatient.id,
+        consent.id,
+        "Thu hồi theo yêu cầu người bệnh trong phiên demo."
       );
       await loadConsents(selectedPatient.id);
       await loadConsentFhirPreview(revokedConsent.id);
@@ -1631,11 +1626,7 @@ export function App() {
 
   async function loadConsentFhirPreview(consentId: string) {
     try {
-      setConsentFhirPreview(
-        await clinicalApi.requestJson<unknown>(`/consents/${consentId}/fhir`, {
-          purposeOfUse: "TREATMENT"
-        })
-      );
+      setConsentFhirPreview(await exportConsentFhir(clinicalApi, consentId));
     } catch (error) {
       setConsentFhirPreview({
         error:
