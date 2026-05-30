@@ -69,6 +69,7 @@ import {
 import { AllergyIntolerancePanel } from "./features/clinical-records/AllergyIntolerancePanel.js";
 import { ConditionPanel } from "./features/clinical-records/ConditionPanel.js";
 import { EncounterPanel } from "./features/clinical-records/EncounterPanel.js";
+import { ProcedurePanel } from "./features/clinical-records/ProcedurePanel.js";
 import { ServiceRequestPanel } from "./features/clinical-records/ServiceRequestPanel.js";
 import { WorkflowTaskPanel } from "./features/clinical-records/WorkflowTaskPanel.js";
 import {
@@ -143,10 +144,6 @@ import {
   formatObservationStatus,
   formatObservationValue,
   formatPatientRecordStatus,
-  formatProcedureCategory,
-  formatProcedurePerformers,
-  formatProcedureReferences,
-  formatProcedureStatus,
   isMissingRecordTransferDeliveryAttemptsRoute,
   normalizeSearchText,
   resolveSelectedRecordTransferId,
@@ -201,10 +198,6 @@ import type {
   MedicationAdministrationStatus,
   MedicationAdministrationCategory,
   MedicationAdministrationPerformerActorType,
-  ProcedureStatus,
-  ProcedureCategory,
-  ProcedurePerformerActorType,
-  ProcedureReportReferenceResourceType,
   DiagnosticReportStatus,
   DiagnosticReportCategory,
   ImagingStudyStatus,
@@ -246,10 +239,6 @@ import type {
   ServiceRequestCode,
   ServiceRequest,
   WorkflowTask,
-  ProcedureCoding,
-  ProcedurePerformedPeriod,
-  ProcedurePerformer,
-  ProcedureReportReference,
   Procedure,
   DiagnosticReportCode,
   DiagnosticReport,
@@ -3492,283 +3481,22 @@ export function App() {
 
   function renderProcedurePanel(): ReactNode {
     return (
-      <article className="panel service-request-panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Clinical procedures</p>
-            <h2>Thủ thuật và hoạt động đã thực hiện</h2>
-          </div>
-          <span className="pill cyan">
-            {isLoadingProcedures ? "đang tải" : `${procedures.length} bản ghi`}
-          </span>
-        </div>
-
-        <div className="document-layout">
-          <div className="service-cards">
-            {procedures.map((procedure) => (
-              <button
-                className={procedure.id === selectedProcedureId ? "service-card selected" : "service-card"}
-                key={procedure.id}
-                type="button"
-                onClick={() => setSelectedProcedureId(procedure.id)}
-              >
-                <span>{formatProcedureCategory(procedure.category)}</span>
-                <strong>{procedure.code.display}</strong>
-                <small>
-                  {formatProcedureStatus(procedure.status)} ·{" "}
-                  {procedure.performedPeriod?.start
-                    ? formatDateTime(procedure.performedPeriod.start)
-                    : formatDateTime(procedure.updatedAt)}
-                </small>
-              </button>
-            ))}
-            {procedures.length === 0 ? (
-              <p className="empty-state">
-                Chưa có Procedure cho bệnh nhân này. Procedure ghi lại hành động y tế đã thực hiện, còn ServiceRequest là y lệnh và Task là hàng đợi xử lý.
-              </p>
-            ) : null}
-          </div>
-
-          <div className="service-summary">
-            {selectedProcedure ? (
-              <>
-                <div className="document-meta">
-                  <Info label="Hoạt động" value={selectedProcedure.code.display} />
-                  <Info label="Mã chuẩn" value={`${selectedProcedure.code.system} · ${selectedProcedure.code.code}`} />
-                  <Info label="Nhóm" value={formatProcedureCategory(selectedProcedure.category)} />
-                  <Info label="Trạng thái FHIR" value={formatProcedureStatus(selectedProcedure.status)} />
-                  <Info label="Y lệnh gốc" value={selectedProcedure.basedOnServiceRequestId ?? "Chưa gắn"} />
-                  <Info label="Chẩn đoán/lý do" value={selectedProcedure.reasonConditionId ?? "Chưa gắn"} />
-                  <Info
-                    label="Bắt đầu"
-                    value={
-                      selectedProcedure.performedPeriod?.start
-                        ? formatDateTime(selectedProcedure.performedPeriod.start)
-                        : "Chưa gắn"
-                    }
-                  />
-                  <Info
-                    label="Kết thúc"
-                    value={
-                      selectedProcedure.performedPeriod?.end
-                        ? formatDateTime(selectedProcedure.performedPeriod.end)
-                        : "Chưa gắn"
-                    }
-                  />
-                  <Info label="Người ghi nhận" value={selectedProcedure.recorderPractitionerId ?? "Chưa gắn"} />
-                  <Info label="Người xác nhận" value={selectedProcedure.asserterPractitionerId ?? "Chưa gắn"} />
-                  <Info label="Vị trí/cơ quan" value={selectedProcedure.bodySite?.display ?? "Chưa gắn"} />
-                  <Info label="Kết quả thủ thuật" value={selectedProcedure.outcome?.display ?? "Chưa gắn"} />
-                </div>
-                <div className="reference-list compact-list">
-                  <div>
-                    <strong>Người/đơn vị thực hiện</strong>
-                    <span>{formatProcedurePerformers(selectedProcedure.performers)}</span>
-                  </div>
-                  <div>
-                    <strong>Báo cáo liên quan</strong>
-                    <span>{formatProcedureReferences(selectedProcedure.reportReferences)}</span>
-                  </div>
-                </div>
-                <p className="empty-state">
-                  Procedure là lớp “đã làm gì cho người bệnh”: ví dụ chụp X-quang, thủ thuật, tư vấn hoặc phục hồi chức năng. Nó giúp Bundle không chỉ có y lệnh và kết quả, mà còn có dấu vết lâm sàng của hành động đã diễn ra.
-                </p>
-              </>
-            ) : (
-              <p className="empty-state">Chọn một thủ thuật/thao tác y khoa để xem siêu dữ liệu và xuất FHIR Procedure.</p>
-            )}
-          </div>
-        </div>
-
-        <form className="service-form" onSubmit={(event) => void handleCreateProcedure(event)}>
-          <label>
-            Gắn với lượt khám
-            <select
-              value={procedureForm.encounterId}
-              onChange={(event) => setProcedureForm({ ...procedureForm, encounterId: event.target.value })}
-            >
-              <option value="">Không gắn</option>
-              {encounters.map((encounter) => (
-                <option key={encounter.id} value={encounter.id}>
-                  {encounter.serviceType} · {formatDateTime(encounter.startedAt)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Y lệnh gốc
-            <select
-              value={procedureForm.basedOnServiceRequestId}
-              onChange={(event) =>
-                setProcedureForm({ ...procedureForm, basedOnServiceRequestId: event.target.value })
-              }
-            >
-              <option value="">Không gắn</option>
-              {serviceRequests.map((serviceRequest) => (
-                <option key={serviceRequest.id} value={serviceRequest.id}>
-                  {serviceRequest.code.display}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Chẩn đoán/lý do
-            <select
-              value={procedureForm.reasonConditionId}
-              onChange={(event) => setProcedureForm({ ...procedureForm, reasonConditionId: event.target.value })}
-            >
-              <option value="">Không gắn</option>
-              {conditions.map((condition) => (
-                <option key={condition.id} value={condition.id}>
-                  {condition.code.display}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Nhóm Procedure
-            <select
-              value={procedureForm.category}
-              onChange={(event) =>
-                setProcedureForm({ ...procedureForm, category: event.target.value as ProcedureCategory })
-              }
-            >
-              <option value="diagnostic">Chẩn đoán</option>
-              <option value="therapeutic">Điều trị</option>
-              <option value="surgical">Phẫu thuật</option>
-              <option value="counseling">Tư vấn</option>
-              <option value="rehabilitation">Phục hồi chức năng</option>
-              <option value="other">Khác</option>
-            </select>
-          </label>
-          <label>
-            Trạng thái
-            <select
-              value={procedureForm.status}
-              onChange={(event) =>
-                setProcedureForm({ ...procedureForm, status: event.target.value as ProcedureStatus })
-              }
-            >
-              <option value="completed">Hoàn tất</option>
-              <option value="in-progress">Đang thực hiện</option>
-              <option value="preparation">Chuẩn bị</option>
-              <option value="not-done">Không thực hiện</option>
-              <option value="on-hold">Tạm giữ</option>
-              <option value="stopped">Đã dừng</option>
-              <option value="unknown">Chưa rõ</option>
-            </select>
-          </label>
-          <label>
-            Hệ mã
-            <input
-              value={procedureForm.codeSystem}
-              onChange={(event) => setProcedureForm({ ...procedureForm, codeSystem: event.target.value })}
-            />
-          </label>
-          <label>
-            Mã Procedure
-            <input
-              value={procedureForm.code}
-              onChange={(event) => setProcedureForm({ ...procedureForm, code: event.target.value })}
-            />
-          </label>
-          <label className="wide-field">
-            Tên Procedure
-            <input
-              value={procedureForm.codeDisplay}
-              onChange={(event) => setProcedureForm({ ...procedureForm, codeDisplay: event.target.value })}
-            />
-          </label>
-          <label>
-            Bắt đầu
-            <input
-              type="datetime-local"
-              value={procedureForm.performedStart}
-              onChange={(event) => setProcedureForm({ ...procedureForm, performedStart: event.target.value })}
-            />
-          </label>
-          <label>
-            Kết thúc
-            <input
-              type="datetime-local"
-              value={procedureForm.performedEnd}
-              onChange={(event) => setProcedureForm({ ...procedureForm, performedEnd: event.target.value })}
-            />
-          </label>
-          <label>
-            Người/đơn vị thực hiện
-            <input
-              value={procedureForm.performerActorId}
-              onChange={(event) => setProcedureForm({ ...procedureForm, performerActorId: event.target.value })}
-            />
-          </label>
-          <label>
-            Đại diện khoa/phòng
-            <input
-              value={procedureForm.onBehalfOfOrganizationId}
-              onChange={(event) =>
-                setProcedureForm({ ...procedureForm, onBehalfOfOrganizationId: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Chức năng thực hiện
-            <input
-              value={procedureForm.performerFunctionDisplay}
-              onChange={(event) =>
-                setProcedureForm({ ...procedureForm, performerFunctionDisplay: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Người ghi nhận
-            <input
-              value={procedureForm.recorderPractitionerId}
-              onChange={(event) =>
-                setProcedureForm({ ...procedureForm, recorderPractitionerId: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Vị trí/cơ quan
-            <input
-              value={procedureForm.bodySiteDisplay}
-              onChange={(event) => setProcedureForm({ ...procedureForm, bodySiteDisplay: event.target.value })}
-            />
-          </label>
-          <label>
-            Kết quả
-            <input
-              value={procedureForm.outcomeDisplay}
-              onChange={(event) => setProcedureForm({ ...procedureForm, outcomeDisplay: event.target.value })}
-            />
-          </label>
-          <label>
-            Báo cáo liên quan
-            <select
-              value={procedureForm.reportReferenceId}
-              onChange={(event) => setProcedureForm({ ...procedureForm, reportReferenceId: event.target.value })}
-            >
-              <option value="">Không gắn</option>
-              {diagnosticReports.map((diagnosticReport) => (
-                <option key={diagnosticReport.id} value={diagnosticReport.id}>
-                  {diagnosticReport.code.display}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="wide-field">
-            Ghi chú
-            <textarea
-              value={procedureForm.note}
-              onChange={(event) => setProcedureForm({ ...procedureForm, note: event.target.value })}
-            />
-          </label>
-          <button className="primary-button" type="submit" disabled={selectedPatientWriteDisabled || isSubmittingProcedure}>
-            {isSubmittingProcedure ? "Đang ghi nhận..." : "Ghi nhận Procedure"}
-          </button>
-        </form>
-      </article>
+      <ProcedurePanel
+        conditions={conditions}
+        diagnosticReports={diagnosticReports}
+        encounters={encounters}
+        form={procedureForm}
+        isLoading={isLoadingProcedures}
+        isSubmitting={isSubmittingProcedure}
+        isWriteDisabled={selectedPatientWriteDisabled}
+        procedures={procedures}
+        selectedProcedure={selectedProcedure}
+        selectedProcedureId={selectedProcedureId}
+        serviceRequests={serviceRequests}
+        onCreateProcedure={handleCreateProcedure}
+        onFormChange={setProcedureForm}
+        onSelectProcedure={setSelectedProcedureId}
+      />
     );
   }
 
