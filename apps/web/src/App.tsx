@@ -79,6 +79,7 @@ import {
   listPatients,
   mergePatient
 } from "./features/patient-registry/patientRegistryApi.js";
+import { PatientListPanel } from "./features/patient-registry/PatientListPanel.js";
 import {
   getApiRuntimeInfo,
   getFhirCapabilityStatement
@@ -3338,91 +3339,23 @@ export function App() {
 
   function renderPatientListPanel(): ReactNode {
     return (
-      <article className="panel patient-list">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Registry</p>
-            <h2>Danh sách bệnh nhân</h2>
-          </div>
-          <div className="patient-list-actions">
-            <span className="pill cyan">
-              {visiblePatients.length}/{patients.length} hồ sơ
-            </span>
-            <button
-              className="ghost-button compact-button"
-              type="button"
-              onClick={() => void loadPatients()}
-              disabled={isLoadingPatients}
-            >
-              {isLoadingPatients ? "Đang tải..." : "Tải lại"}
-            </button>
-          </div>
-        </div>
-
-        <div className="patient-list-controls">
-          <label>
-            Tìm kiếm
-            <input
-              value={patientSearchTerm}
-              onChange={(event) => setPatientSearchTerm(event.target.value)}
-              placeholder="Tên, MRN/CCCD, điện thoại, cơ sở..."
-            />
-          </label>
-          <label>
-            Trạng thái
-            <select
-              value={patientStatusFilter}
-              onChange={(event) =>
-                setPatientStatusFilter(event.target.value as PatientStatusFilter)
-              }
-            >
-              <option value="all">Tất cả trạng thái</option>
-              <option value="active">Đang hoạt động</option>
-              <option value="merged">Đã merge</option>
-              <option value="inactive">Ngừng hoạt động</option>
-            </select>
-          </label>
-          <button
-            className="ghost-button compact-button"
-            type="button"
-            onClick={() => {
-              setPatientSearchTerm("");
-              setPatientStatusFilter("all");
-            }}
-            disabled={!hasPatientListFilter}
-          >
-            Xóa lọc
-          </button>
-        </div>
-
-        <div className="patient-cards">
-          {visiblePatients.map((patient) => (
-            <button
-              className={[
-                "patient-card",
-                patient.id === selectedPatientId ? "selected" : "",
-                patient.status === "merged" ? "merged" : ""
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              key={patient.id}
-              type="button"
-              onClick={() => setSelectedPatientId(patient.id)}
-            >
-              <span>
-                {patient.identifiers[0]?.value ?? patient.id} · {formatPatientRecordStatus(patient.status)}
-              </span>
-              <strong>{patient.fullName}</strong>
-              <small>{patient.address ?? "Chưa có địa chỉ"}</small>
-            </button>
-          ))}
-          {!isLoadingPatients && visiblePatients.length === 0 ? (
-            <p className="empty-state">
-              Không có hồ sơ phù hợp với bộ lọc hiện tại. Hãy thử xóa lọc hoặc tìm theo mã MRN/CCCD khác.
-            </p>
-          ) : null}
-        </div>
-      </article>
+      <PatientListPanel
+        patients={patients}
+        visiblePatients={visiblePatients}
+        selectedPatientId={selectedPatientId}
+        searchTerm={patientSearchTerm}
+        statusFilter={patientStatusFilter}
+        hasFilter={hasPatientListFilter}
+        isLoading={isLoadingPatients}
+        onClearFilters={() => {
+          setPatientSearchTerm("");
+          setPatientStatusFilter("all");
+        }}
+        onRefresh={loadPatients}
+        onSearchTermChange={setPatientSearchTerm}
+        onSelectPatient={setSelectedPatientId}
+        onStatusFilterChange={setPatientStatusFilter}
+      />
     );
   }
 
