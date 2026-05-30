@@ -71,6 +71,7 @@ import { ConditionPanel } from "./features/clinical-records/ConditionPanel.js";
 import { DiagnosticReportPanel } from "./features/clinical-records/DiagnosticReportPanel.js";
 import { EncounterPanel } from "./features/clinical-records/EncounterPanel.js";
 import { ImagingStudyPanel } from "./features/clinical-records/ImagingStudyPanel.js";
+import { MedicationRequestPanel } from "./features/clinical-records/MedicationRequestPanel.js";
 import { ObservationPanel } from "./features/clinical-records/ObservationPanel.js";
 import { ProcedurePanel } from "./features/clinical-records/ProcedurePanel.js";
 import { ServiceRequestPanel } from "./features/clinical-records/ServiceRequestPanel.js";
@@ -125,7 +126,6 @@ import {
   formatDateTime,
   formatDocumentStatus,
   formatDocumentType,
-  formatDosageInstruction,
   formatIdentifierType,
   formatMedicationAdministrationCategory,
   formatMedicationAdministrationDose,
@@ -136,10 +136,6 @@ import {
   formatMedicationDispenseQuantity,
   formatMedicationDispenseStatus,
   formatMedicationDispenseTime,
-  formatMedicationRequestCategory,
-  formatMedicationRequestIntent,
-  formatMedicationRequestPriority,
-  formatMedicationRequestStatus,
   formatPatientRecordStatus,
   isMissingRecordTransferDeliveryAttemptsRoute,
   normalizeSearchText,
@@ -183,10 +179,6 @@ import type {
   PatientIdentifierType,
   ClinicalDocumentType,
   ClinicalDocumentStatus,
-  MedicationRequestStatus,
-  MedicationRequestIntent,
-  MedicationRequestCategory,
-  MedicationRequestPriority,
   MedicationTimingUnit,
   MedicationDispenseStatus,
   MedicationDispenseCategory,
@@ -3552,290 +3544,20 @@ export function App() {
 
   function renderMedicationRequestPanel(): ReactNode {
     return (
-      <article className="panel medication-panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Medication requests</p>
-            <h2>Chỉ định thuốc và đơn thuốc</h2>
-          </div>
-          <span className="pill cyan">
-            {isLoadingMedicationRequests ? "đang tải" : `${medicationRequests.length} chỉ định`}
-          </span>
-        </div>
-
-        <div className="document-layout">
-          <div className="medication-cards">
-            {medicationRequests.map((medicationRequest) => (
-              <button
-                className={
-                  medicationRequest.id === selectedMedicationRequestId
-                    ? "medication-card selected"
-                    : "medication-card"
-                }
-                key={medicationRequest.id}
-                type="button"
-                onClick={() => setSelectedMedicationRequestId(medicationRequest.id)}
-              >
-                <span>{formatMedicationRequestCategory(medicationRequest.category)}</span>
-                <strong>{medicationRequest.medicationCode.display}</strong>
-                <small>
-                  {formatMedicationRequestStatus(medicationRequest.status)} ·{" "}
-                  {formatDateTime(medicationRequest.authoredOn)}
-                </small>
-              </button>
-            ))}
-            {medicationRequests.length === 0 ? (
-              <p className="empty-state">
-                Bệnh nhân này chưa có chỉ định thuốc có cấu trúc. Hãy ghi nhận thuốc đầu tiên để Bundle có thêm MedicationRequest.
-              </p>
-            ) : null}
-          </div>
-
-          <div className="medication-summary">
-            {selectedMedicationRequest ? (
-              <>
-                <div className="document-meta">
-                  <Info label="Thuốc" value={selectedMedicationRequest.medicationCode.display} />
-                  <Info label="Mã thuốc" value={`${selectedMedicationRequest.medicationCode.system} · ${selectedMedicationRequest.medicationCode.code}`} />
-                  <Info label="Trạng thái" value={formatMedicationRequestStatus(selectedMedicationRequest.status)} />
-                  <Info label="Mục đích" value={formatMedicationRequestIntent(selectedMedicationRequest.intent)} />
-                  <Info label="Ưu tiên" value={formatMedicationRequestPriority(selectedMedicationRequest.priority)} />
-                  <Info label="Liều dùng" value={formatDosageInstruction(selectedMedicationRequest.dosageInstruction)} />
-                  <Info label="Chẩn đoán liên quan" value={selectedMedicationRequest.reasonConditionId ?? "Chưa gắn"} />
-                  <Info label="Người kê" value={selectedMedicationRequest.requesterPractitionerId} />
-                </div>
-                <p className="empty-state">
-                  MedicationRequest thể hiện yêu cầu dùng thuốc ở dạng máy đọc được; trong luồng liên viện, nó giúp bên nhận thấy thuốc đang được chỉ định thay vì chỉ đọc trong tài liệu PDF.
-                </p>
-              </>
-            ) : (
-              <p className="empty-state">Chọn một chỉ định thuốc để xem siêu dữ liệu và xuất FHIR MedicationRequest.</p>
-            )}
-          </div>
-        </div>
-
-        <form className="medication-form" onSubmit={(event) => void handleCreateMedicationRequest(event)}>
-          <label>
-            Gắn với lượt khám
-            <select
-              value={medicationRequestForm.encounterId}
-              onChange={(event) =>
-                setMedicationRequestForm({ ...medicationRequestForm, encounterId: event.target.value })
-              }
-            >
-              <option value="">Không gắn</option>
-              {encounters.map((encounter) => (
-                <option key={encounter.id} value={encounter.id}>
-                  {encounter.serviceType} · {formatDateTime(encounter.startedAt)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Chẩn đoán liên quan
-            <select
-              value={medicationRequestForm.reasonConditionId}
-              onChange={(event) =>
-                setMedicationRequestForm({ ...medicationRequestForm, reasonConditionId: event.target.value })
-              }
-            >
-              <option value="">Không gắn</option>
-              {conditions.map((condition) => (
-                <option key={condition.id} value={condition.id}>
-                  {condition.code.display} · {condition.code.code}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Loại chỉ định
-            <select
-              value={medicationRequestForm.category}
-              onChange={(event) =>
-                setMedicationRequestForm({
-                  ...medicationRequestForm,
-                  category: event.target.value as MedicationRequestCategory
-                })
-              }
-            >
-              <option value="outpatient">Ngoại trú</option>
-              <option value="inpatient">Nội trú</option>
-              <option value="community">Cộng đồng</option>
-              <option value="discharge">Ra viện</option>
-            </select>
-          </label>
-          <label>
-            Ưu tiên
-            <select
-              value={medicationRequestForm.priority}
-              onChange={(event) =>
-                setMedicationRequestForm({
-                  ...medicationRequestForm,
-                  priority: event.target.value as MedicationRequestPriority
-                })
-              }
-            >
-              <option value="routine">Thường quy</option>
-              <option value="urgent">Khẩn</option>
-              <option value="asap">Càng sớm càng tốt</option>
-              <option value="stat">Ngay lập tức</option>
-            </select>
-          </label>
-          <label>
-            Hệ mã thuốc
-            <input
-              value={medicationRequestForm.medicationSystem}
-              onChange={(event) =>
-                setMedicationRequestForm({ ...medicationRequestForm, medicationSystem: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Mã thuốc
-            <input
-              value={medicationRequestForm.medicationCode}
-              onChange={(event) =>
-                setMedicationRequestForm({ ...medicationRequestForm, medicationCode: event.target.value })
-              }
-            />
-          </label>
-          <label className="wide-field">
-            Tên thuốc
-            <input
-              value={medicationRequestForm.medicationDisplay}
-              onChange={(event) =>
-                setMedicationRequestForm({ ...medicationRequestForm, medicationDisplay: event.target.value })
-              }
-            />
-          </label>
-          <label className="wide-field">
-            Hướng dẫn dùng
-            <input
-              value={medicationRequestForm.dosageText}
-              onChange={(event) =>
-                setMedicationRequestForm({ ...medicationRequestForm, dosageText: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Đường dùng
-            <input
-              value={medicationRequestForm.route}
-              onChange={(event) =>
-                setMedicationRequestForm({ ...medicationRequestForm, route: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Liều lượng
-            <input
-              type="number"
-              step="any"
-              value={medicationRequestForm.doseValue}
-              onChange={(event) =>
-                setMedicationRequestForm({ ...medicationRequestForm, doseValue: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Đơn vị liều
-            <input
-              value={medicationRequestForm.doseUnit}
-              onChange={(event) =>
-                setMedicationRequestForm({ ...medicationRequestForm, doseUnit: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Tần suất
-            <input
-              type="number"
-              value={medicationRequestForm.frequency}
-              onChange={(event) =>
-                setMedicationRequestForm({ ...medicationRequestForm, frequency: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Chu kỳ
-            <input
-              type="number"
-              step="any"
-              value={medicationRequestForm.period}
-              onChange={(event) =>
-                setMedicationRequestForm({ ...medicationRequestForm, period: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Đơn vị chu kỳ
-            <select
-              value={medicationRequestForm.periodUnit}
-              onChange={(event) =>
-                setMedicationRequestForm({
-                  ...medicationRequestForm,
-                  periodUnit: event.target.value as MedicationTimingUnit
-                })
-              }
-            >
-              <option value="h">Giờ</option>
-              <option value="d">Ngày</option>
-              <option value="wk">Tuần</option>
-            </select>
-          </label>
-          <label>
-            Thời điểm kê
-            <input
-              type="datetime-local"
-              value={medicationRequestForm.authoredOn}
-              onChange={(event) =>
-                setMedicationRequestForm({ ...medicationRequestForm, authoredOn: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Số ngày cấp
-            <input
-              type="number"
-              value={medicationRequestForm.expectedSupplyDurationDays}
-              onChange={(event) =>
-                setMedicationRequestForm({
-                  ...medicationRequestForm,
-                  expectedSupplyDurationDays: event.target.value
-                })
-              }
-            />
-          </label>
-          <label className="wide-field">
-            Người kê
-            <input
-              value={medicationRequestForm.requesterPractitionerId}
-              onChange={(event) =>
-                setMedicationRequestForm({
-                  ...medicationRequestForm,
-                  requesterPractitionerId: event.target.value
-                })
-              }
-            />
-          </label>
-          <label className="wide-field">
-            Ghi chú
-            <input
-              value={medicationRequestForm.note}
-              onChange={(event) =>
-                setMedicationRequestForm({ ...medicationRequestForm, note: event.target.value })
-              }
-            />
-          </label>
-          <button
-            className="primary-button"
-            type="submit"
-            disabled={selectedPatientWriteDisabled || isSubmittingMedicationRequest}
-          >
-            {isSubmittingMedicationRequest ? "Đang ghi nhận..." : "Ghi nhận chỉ định thuốc"}
-          </button>
-        </form>
-      </article>
+      <MedicationRequestPanel
+        conditions={conditions}
+        encounters={encounters}
+        form={medicationRequestForm}
+        isLoading={isLoadingMedicationRequests}
+        isSubmitting={isSubmittingMedicationRequest}
+        isWriteDisabled={selectedPatientWriteDisabled}
+        medicationRequests={medicationRequests}
+        selectedMedicationRequest={selectedMedicationRequest}
+        selectedMedicationRequestId={selectedMedicationRequestId}
+        onCreateMedicationRequest={handleCreateMedicationRequest}
+        onFormChange={setMedicationRequestForm}
+        onSelectMedicationRequest={setSelectedMedicationRequestId}
+      />
     );
   }
 
