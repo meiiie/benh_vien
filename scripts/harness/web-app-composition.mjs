@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 
 const appPath = resolve("apps/web/src/App.tsx");
 const requiredModules = [
+  "apps/web/src/api/clinicalApi.ts",
   "apps/web/src/auth/demoLogin.ts",
   "apps/web/src/components/AppShell.tsx",
   "apps/web/src/config/demoClinicalDefaults.ts",

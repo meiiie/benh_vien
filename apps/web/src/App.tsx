@@ -6,6 +6,10 @@ import {
   type LoginForm
 } from "./auth/demoLogin.js";
 import {
+  createClinicalApiClient,
+  isApiHttpError
+} from "./api/clinicalApi.js";
+import {
   AuthenticatedLayout,
   FhirPanel,
   Info,
@@ -265,6 +269,10 @@ export function App() {
   const [appRoute, setAppRoute] = useState<AppRoute>("landing");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authSession, setAuthSession] = useState<AuthSession>();
+  const clinicalApi = createClinicalApiClient({
+    baseUrl: apiBaseUrl,
+    getSession: () => authSession
+  });
   const [loginForm, setLoginForm] = useState<LoginForm>(loginPresets.clinician);
   const [loginError, setLoginError] = useState<string>();
   const [patients, setPatients] = useState<readonly Patient[]>([]);
@@ -817,30 +825,16 @@ export function App() {
     purposeOfUse: PurposeOfUse,
     headers: Record<string, string> = {}
   ): Record<string, string> {
-    if (!authSession) {
-      throw new Error("Chưa có phiên đăng nhập hợp lệ.");
-    }
-
-    return {
-      ...headers,
-      Authorization: `Bearer ${authSession.accessToken}`,
-      "x-purpose-of-use": purposeOfUse
-    };
+    return clinicalApi.buildHeaders(purposeOfUse, headers);
   }
 
   async function loadPatients(nextSelectedId?: string) {
     setIsLoadingPatients(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients`, {
-        headers: buildHeaders(isAuditOnlySession ? "AUDIT" : "TREATMENT")
+      const data = await clinicalApi.requestJson<PatientsResponse>("/patients", {
+        purposeOfUse: isAuditOnlySession ? "AUDIT" : "TREATMENT"
       });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      const data = (await response.json()) as PatientsResponse;
       setPatients(data.items);
       setSelectedPatientId(nextSelectedId ?? selectedPatientId ?? data.items[0]?.id);
       setStatusMessage(`Đã tải ${data.items.length} hồ sơ bệnh nhân từ backend.`);
@@ -860,40 +854,27 @@ export function App() {
 
     try {
       if (isAuditOnlySession) {
-        const response = await fetch(`${apiBaseUrl}/provider-directory`, {
-          headers: buildHeaders("AUDIT")
+        const directory = await clinicalApi.requestJson<ProviderDirectory>("/provider-directory", {
+          purposeOfUse: "AUDIT"
         });
-
-        if (!response.ok) {
-          throw new Error(`Provider Directory API trả về HTTP ${response.status}`);
-        }
-
-        setProviderDirectory((await response.json()) as ProviderDirectory);
+        setProviderDirectory(directory);
         setProviderDirectoryFhirPreview({
           note: "Phiên kiểm toán chỉ tải danh bạ vận hành; không xuất FHIR Provider Directory."
         });
         return;
       }
 
-      const [directoryResponse, fhirResponse] = await Promise.all([
-        fetch(`${apiBaseUrl}/provider-directory`, {
-          headers: buildHeaders("TREATMENT")
+      const [directory, fhirPreview] = await Promise.all([
+        clinicalApi.requestJson<ProviderDirectory>("/provider-directory", {
+          purposeOfUse: "TREATMENT"
         }),
-        fetch(`${apiBaseUrl}/provider-directory/fhir`, {
-          headers: buildHeaders("TREATMENT")
+        clinicalApi.requestJson<unknown>("/provider-directory/fhir", {
+          purposeOfUse: "TREATMENT"
         })
       ]);
 
-      if (!directoryResponse.ok) {
-        throw new Error(`Provider Directory API trả về HTTP ${directoryResponse.status}`);
-      }
-
-      if (!fhirResponse.ok) {
-        throw new Error(`Provider Directory FHIR API trả về HTTP ${fhirResponse.status}`);
-      }
-
-      setProviderDirectory((await directoryResponse.json()) as ProviderDirectory);
-      setProviderDirectoryFhirPreview(await fhirResponse.json());
+      setProviderDirectory(directory);
+      setProviderDirectoryFhirPreview(fhirPreview);
     } catch (error) {
       setProviderDirectory(undefined);
       setProviderDirectoryFhirPreview({
@@ -909,13 +890,7 @@ export function App() {
 
   async function loadCapabilityStatement() {
     try {
-      const response = await fetch(`${apiBaseUrl}/fhir/metadata`);
-
-      if (!response.ok) {
-        throw new Error(`FHIR metadata API trả về HTTP ${response.status}`);
-      }
-
-      setCapabilityStatementPreview(await response.json());
+      setCapabilityStatementPreview(await clinicalApi.requestJson<unknown>("/fhir/metadata"));
     } catch (error) {
       setCapabilityStatementPreview({
         error:
@@ -928,30 +903,25 @@ export function App() {
 
   async function loadApiRuntimeInfo() {
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/runtime`,
+      const runtimeInfo = await clinicalApi.requestJson<ApiRuntimeInfo>(
+        "/runtime",
         authSession
           ? {
-              headers: buildHeaders(authSession.actor.role === "auditor" ? "AUDIT" : "OPERATIONS")
+              purposeOfUse: authSession.actor.role === "auditor" ? "AUDIT" : "OPERATIONS"
             }
           : undefined
       );
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          setApiRuntimeInfo(undefined);
-          setApiRuntimeWarning(
-            "API runtime metadata chưa có trong backend đang chạy. Hãy khởi động lại backend mới nhất nếu cần kiểm tra phiên bản và trạng thái worker."
-          );
-          return;
-        }
-
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      setApiRuntimeInfo((await response.json()) as ApiRuntimeInfo);
+      setApiRuntimeInfo(runtimeInfo);
       setApiRuntimeWarning(undefined);
     } catch (error) {
+      if (isApiHttpError(error) && error.status === 404) {
+        setApiRuntimeInfo(undefined);
+        setApiRuntimeWarning(
+          "API runtime metadata chưa có trong backend đang chạy. Hãy khởi động lại backend mới nhất nếu cần kiểm tra phiên bản và trạng thái worker."
+        );
+        return;
+      }
+
       setApiRuntimeInfo(undefined);
       setApiRuntimeWarning(
         error instanceof Error
@@ -1003,15 +973,12 @@ export function App() {
     setIsLoadingEncounters(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/encounters`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      const data = (await response.json()) as EncountersResponse;
+      const data = await clinicalApi.requestJson<EncountersResponse>(
+        `/patients/${patientId}/encounters`,
+        {
+          purposeOfUse: "TREATMENT"
+        }
+      );
       setEncounters(data.items);
       setSelectedEncounterId(nextSelectedEncounterId ?? data.items[0]?.id);
     } catch (error) {
@@ -1031,15 +998,12 @@ export function App() {
     setIsLoadingDocuments(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/documents`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      const data = (await response.json()) as ClinicalDocumentsResponse;
+      const data = await clinicalApi.requestJson<ClinicalDocumentsResponse>(
+        `/patients/${patientId}/documents`,
+        {
+          purposeOfUse: "TREATMENT"
+        }
+      );
       setClinicalDocuments(data.items);
       setSelectedDocumentId(nextSelectedDocumentId ?? data.items[0]?.id);
     } catch (error) {
@@ -1062,15 +1026,12 @@ export function App() {
     setIsLoadingAllergyIntolerances(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/allergy-intolerances`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      const data = (await response.json()) as AllergyIntolerancesResponse;
+      const data = await clinicalApi.requestJson<AllergyIntolerancesResponse>(
+        `/patients/${patientId}/allergy-intolerances`,
+        {
+          purposeOfUse: "TREATMENT"
+        }
+      );
       setAllergyIntolerances(data.items);
       setSelectedAllergyIntoleranceId(nextSelectedAllergyIntoleranceId ?? data.items[0]?.id);
     } catch (error) {
@@ -1090,15 +1051,12 @@ export function App() {
     setIsLoadingConditions(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/conditions`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      const data = (await response.json()) as ConditionsResponse;
+      const data = await clinicalApi.requestJson<ConditionsResponse>(
+        `/patients/${patientId}/conditions`,
+        {
+          purposeOfUse: "TREATMENT"
+        }
+      );
       setConditions(data.items);
       setSelectedConditionId(nextSelectedConditionId ?? data.items[0]?.id);
     } catch (error) {
@@ -1118,15 +1076,12 @@ export function App() {
     setIsLoadingObservations(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/observations`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      const data = (await response.json()) as ObservationsResponse;
+      const data = await clinicalApi.requestJson<ObservationsResponse>(
+        `/patients/${patientId}/observations`,
+        {
+          purposeOfUse: "TREATMENT"
+        }
+      );
       setObservations(data.items);
       setSelectedObservationId(nextSelectedObservationId ?? data.items[0]?.id);
     } catch (error) {
@@ -1149,15 +1104,12 @@ export function App() {
     setIsLoadingMedicationRequests(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/medication-requests`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      const data = (await response.json()) as MedicationRequestsResponse;
+      const data = await clinicalApi.requestJson<MedicationRequestsResponse>(
+        `/patients/${patientId}/medication-requests`,
+        {
+          purposeOfUse: "TREATMENT"
+        }
+      );
       setMedicationRequests(data.items);
       setSelectedMedicationRequestId(nextSelectedMedicationRequestId ?? data.items[0]?.id);
     } catch (error) {
@@ -1180,18 +1132,12 @@ export function App() {
     setIsLoadingMedicationDispenses(true);
 
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/patients/${patientId}/medication-dispenses`,
+      const data = await clinicalApi.requestJson<MedicationDispensesResponse>(
+        `/patients/${patientId}/medication-dispenses`,
         {
-          headers: buildHeaders("TREATMENT")
+          purposeOfUse: "TREATMENT"
         }
       );
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      const data = (await response.json()) as MedicationDispensesResponse;
       setMedicationDispenses(data.items);
       setSelectedMedicationDispenseId(
         nextSelectedMedicationDispenseId ?? data.items[0]?.id
@@ -1216,18 +1162,12 @@ export function App() {
     setIsLoadingMedicationAdministrations(true);
 
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/patients/${patientId}/medication-administrations`,
+      const data = await clinicalApi.requestJson<MedicationAdministrationsResponse>(
+        `/patients/${patientId}/medication-administrations`,
         {
-          headers: buildHeaders("TREATMENT")
+          purposeOfUse: "TREATMENT"
         }
       );
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      const data = (await response.json()) as MedicationAdministrationsResponse;
       setMedicationAdministrations(data.items);
       setSelectedMedicationAdministrationId(
         nextSelectedMedicationAdministrationId ?? data.items[0]?.id
@@ -1252,15 +1192,12 @@ export function App() {
     setIsLoadingServiceRequests(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/service-requests`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      const data = (await response.json()) as ServiceRequestsResponse;
+      const data = await clinicalApi.requestJson<ServiceRequestsResponse>(
+        `/patients/${patientId}/service-requests`,
+        {
+          purposeOfUse: "TREATMENT"
+        }
+      );
       setServiceRequests(data.items);
       setSelectedServiceRequestId(nextSelectedServiceRequestId ?? data.items[0]?.id);
     } catch (error) {
@@ -1280,15 +1217,12 @@ export function App() {
     setIsLoadingWorkflowTasks(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/workflow-tasks`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      const data = (await response.json()) as WorkflowTasksResponse;
+      const data = await clinicalApi.requestJson<WorkflowTasksResponse>(
+        `/patients/${patientId}/workflow-tasks`,
+        {
+          purposeOfUse: "TREATMENT"
+        }
+      );
       setWorkflowTasks(data.items);
       setSelectedWorkflowTaskId(nextSelectedWorkflowTaskId ?? data.items[0]?.id);
     } catch (error) {
@@ -1308,15 +1242,12 @@ export function App() {
     setIsLoadingProcedures(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/procedures`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      const data = (await response.json()) as ProceduresResponse;
+      const data = await clinicalApi.requestJson<ProceduresResponse>(
+        `/patients/${patientId}/procedures`,
+        {
+          purposeOfUse: "TREATMENT"
+        }
+      );
       setProcedures(data.items);
       setSelectedProcedureId(nextSelectedProcedureId ?? data.items[0]?.id);
     } catch (error) {
@@ -1339,15 +1270,12 @@ export function App() {
     setIsLoadingDiagnosticReports(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/diagnostic-reports`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      const data = (await response.json()) as DiagnosticReportsResponse;
+      const data = await clinicalApi.requestJson<DiagnosticReportsResponse>(
+        `/patients/${patientId}/diagnostic-reports`,
+        {
+          purposeOfUse: "TREATMENT"
+        }
+      );
       setDiagnosticReports(data.items);
       setSelectedDiagnosticReportId(nextSelectedDiagnosticReportId ?? data.items[0]?.id);
     } catch (error) {
@@ -1367,15 +1295,12 @@ export function App() {
     setIsLoadingImagingStudies(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/imaging-studies`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      const data = (await response.json()) as ImagingStudiesResponse;
+      const data = await clinicalApi.requestJson<ImagingStudiesResponse>(
+        `/patients/${patientId}/imaging-studies`,
+        {
+          purposeOfUse: "TREATMENT"
+        }
+      );
       setImagingStudies(data.items);
       setSelectedImagingStudyId(nextSelectedImagingStudyId ?? data.items[0]?.id);
     } catch (error) {
@@ -1407,15 +1332,12 @@ export function App() {
     setIsLoadingAuditEvents(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/audit-events`, {
-        headers: buildHeaders("AUDIT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      const data = (await response.json()) as AuditEventsResponse;
+      const data = await clinicalApi.requestJson<AuditEventsResponse>(
+        `/patients/${patientId}/audit-events`,
+        {
+          purposeOfUse: "AUDIT"
+        }
+      );
       setAuditEvents(data.items);
     } catch (error) {
       setAuditEvents([]);
@@ -1443,15 +1365,12 @@ export function App() {
     setIsLoadingGlobalAuditEvents(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/audit-events?limit=100`, {
-        headers: buildHeaders("AUDIT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      const data = (await response.json()) as AuditEventsResponse;
+      const data = await clinicalApi.requestJson<AuditEventsResponse>(
+        "/audit-events?limit=100",
+        {
+          purposeOfUse: "AUDIT"
+        }
+      );
       setGlobalAuditEvents(data.items);
 
       if (!options.silent) {
@@ -1486,15 +1405,12 @@ export function App() {
     setIsVerifyingAuditIntegrity(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/audit-integrity`, {
-        headers: buildHeaders("AUDIT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      const data = (await response.json()) as AuditIntegrityReportResponse;
+      const data = await clinicalApi.requestJson<AuditIntegrityReportResponse>(
+        `/patients/${patientId}/audit-integrity`,
+        {
+          purposeOfUse: "AUDIT"
+        }
+      );
       setAuditIntegrityReport(data);
 
       if (!options.silent) {
@@ -1526,15 +1442,14 @@ export function App() {
     setIsExportingAuditFhir(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/audit-events/fhir-bundle`, {
-        headers: buildHeaders("AUDIT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      setAuditFhirBundlePreview(await response.json());
+      setAuditFhirBundlePreview(
+        await clinicalApi.requestJson<unknown>(
+          `/patients/${patientId}/audit-events/fhir-bundle`,
+          {
+            purposeOfUse: "AUDIT"
+          }
+        )
+      );
       setStatusMessage("Đã xuất FHIR AuditEvent Bundle cho nhật ký kiểm toán.");
     } catch (error) {
       setAuditFhirBundlePreview({
@@ -1552,15 +1467,12 @@ export function App() {
     setIsLoadingConsents(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/consents`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      const data = (await response.json()) as ConsentsResponse;
+      const data = await clinicalApi.requestJson<ConsentsResponse>(
+        `/patients/${patientId}/consents`,
+        {
+          purposeOfUse: "TREATMENT"
+        }
+      );
       setConsents(data.items);
     } catch (error) {
       setConsents([]);
@@ -1625,15 +1537,12 @@ export function App() {
     setIsLoadingRecordTransfers(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/record-transfers`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      const data = (await response.json()) as RecordTransfersResponse;
+      const data = await clinicalApi.requestJson<RecordTransfersResponse>(
+        `/patients/${patientId}/record-transfers`,
+        {
+          purposeOfUse: "TREATMENT"
+        }
+      );
       setRecordTransfers(data.items);
       setSelectedRecordTransferId(
         resolveSelectedRecordTransferId({
@@ -1659,15 +1568,12 @@ export function App() {
 
   async function loadRecordTransferFhirTaskPreview(recordTransferId: string) {
     try {
-      const response = await fetch(`${apiBaseUrl}/record-transfers/${recordTransferId}/fhir-task`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      const preview = await response.json();
+      const preview = await clinicalApi.requestJson<unknown>(
+        `/record-transfers/${recordTransferId}/fhir-task`,
+        {
+          purposeOfUse: "TREATMENT"
+        }
+      );
 
       if (!isCurrentRecordTransferSelection(recordTransferId)) {
         return;
@@ -1697,35 +1603,12 @@ export function App() {
     setRecordTransferDeliveryAttemptWarning(undefined);
 
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/record-transfers/${recordTransferId}/delivery-attempts`,
+      const data = await clinicalApi.requestJson<RecordTransferDeliveryAttemptsResponse>(
+        `/record-transfers/${recordTransferId}/delivery-attempts`,
         {
-          headers: buildHeaders("TREATMENT")
+          purposeOfUse: "TREATMENT"
         }
       );
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-
-        if (
-          response.status === 404 &&
-          isMissingRecordTransferDeliveryAttemptsRoute(payload)
-        ) {
-          if (!isCurrentRecordTransferSelection(recordTransferId)) {
-            return;
-          }
-
-          setRecordTransferDeliveryAttempts([]);
-          setRecordTransferDeliveryAttemptWarning(
-            "API lịch sử gửi chưa sẵn sàng trong runtime hiện tại. Gói chuyển vẫn hiển thị được, nhưng cần khởi động lại backend mới nhất để xem delivery attempt/outbox."
-          );
-          return;
-        }
-
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
-      const data = (await response.json()) as RecordTransferDeliveryAttemptsResponse;
 
       if (!isCurrentRecordTransferSelection(recordTransferId)) {
         return;
@@ -1735,6 +1618,18 @@ export function App() {
       setRecordTransferDeliveryAttemptWarning(undefined);
     } catch (error) {
       if (!isCurrentRecordTransferSelection(recordTransferId)) {
+        return;
+      }
+
+      if (
+        isApiHttpError(error) &&
+        error.status === 404 &&
+        isMissingRecordTransferDeliveryAttemptsRoute(error.payload)
+      ) {
+        setRecordTransferDeliveryAttempts([]);
+        setRecordTransferDeliveryAttemptWarning(
+          "API lịch sử gửi chưa sẵn sàng trong runtime hiện tại. Gói chuyển vẫn hiển thị được, nhưng cần khởi động lại backend mới nhất để xem delivery attempt/outbox."
+        );
         return;
       }
 
@@ -1757,15 +1652,11 @@ export function App() {
 
   async function loadConsentFhirPreview(consentId: string) {
     try {
-      const response = await fetch(`${apiBaseUrl}/consents/${consentId}/fhir`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      setConsentFhirPreview(await response.json());
+      setConsentFhirPreview(
+        await clinicalApi.requestJson<unknown>(`/consents/${consentId}/fhir`, {
+          purposeOfUse: "TREATMENT"
+        })
+      );
     } catch (error) {
       setConsentFhirPreview({
         error:
@@ -1778,18 +1669,18 @@ export function App() {
 
   function buildSelectedPatientMergedReadOnlyMessage(): string {
     if (!selectedPatient) {
-      return "Cần chọn bệnh nhân trước khi ghi dữ liệu.";
+      return "Chưa chọn hồ sơ bệnh nhân.";
     }
 
-    const targetLabel = selectedPatientMergeTarget
-      ? `${selectedPatientMergeTarget.fullName} (${selectedPatient.mergedIntoPatientId})`
-      : selectedPatient.mergedIntoPatientId ?? "chưa ghi nhận hồ sơ đích";
+    const mergeTarget = selectedPatientMergeTarget
+      ? `${selectedPatientMergeTarget.fullName} (${selectedPatientMergeTarget.id})`
+      : (selectedPatient.mergedIntoPatientId ?? "hồ sơ đích không còn trong danh sách tải về");
 
-    return `Hồ sơ ${selectedPatient.fullName} đã được merge và đang ở chế độ chỉ đọc. Vui lòng ghi dữ liệu mới vào hồ sơ đích ${targetLabel}.`;
+    return `Hồ sơ này đã được merge vào ${mergeTarget}. Các thao tác ghi mới bị khóa để bảo toàn lịch sử và tránh ghi nhầm vào hồ sơ nguồn.`;
   }
 
   function ensureSelectedPatientWritable(): boolean {
-    if (!isSelectedPatientMerged) {
+    if (!selectedPatientWriteDisabled) {
       return true;
     }
 
@@ -1799,15 +1690,11 @@ export function App() {
 
   async function loadPatientFhirPreview(patientId: string) {
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/fhir`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      setPatientFhirPreview(await response.json());
+      setPatientFhirPreview(
+        await clinicalApi.requestJson<unknown>(`/patients/${patientId}/fhir`, {
+          purposeOfUse: isAuditOnlySession ? "AUDIT" : "TREATMENT"
+        })
+      );
     } catch (error) {
       setPatientFhirPreview({
         error:
@@ -1820,63 +1707,48 @@ export function App() {
 
   async function loadPatientFhirBundlePreview(patientId: string) {
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/fhir-bundle`, {
-        headers: buildHeaders("TREATMENT", {
-          "x-consent-reference": defaultTransferContext.consentReference,
-          "x-recipient-organization-id": defaultTransferContext.recipientOrganizationId
+      setPatientFhirBundlePreview(
+        await clinicalApi.requestJson<unknown>(`/patients/${patientId}/fhir-bundle`, {
+          purposeOfUse: "TREATMENT"
         })
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      setPatientFhirBundlePreview(await response.json());
+      );
     } catch (error) {
       setPatientFhirBundlePreview({
         error:
           error instanceof Error
-            ? `Không thể xuất FHIR Bundle hồ sơ bệnh nhân: ${error.message}`
-            : "Không thể xuất FHIR Bundle hồ sơ bệnh nhân."
+            ? `Không thể xuất FHIR Bundle: ${error.message}`
+            : "Không thể xuất FHIR Bundle."
       });
     }
   }
 
   async function loadPatientFhirDocumentBundlePreview(patientId: string) {
     try {
-      const response = await fetch(`${apiBaseUrl}/patients/${patientId}/fhir-document-bundle`, {
-        headers: buildHeaders("TREATMENT", {
-          "x-consent-reference": defaultTransferContext.consentReference,
-          "x-recipient-organization-id": defaultTransferContext.recipientOrganizationId
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      setPatientFhirDocumentBundlePreview(await response.json());
+      setPatientFhirDocumentBundlePreview(
+        await clinicalApi.requestJson<unknown>(
+          `/patients/${patientId}/fhir-document-bundle`,
+          {
+            purposeOfUse: "TREATMENT"
+          }
+        )
+      );
     } catch (error) {
       setPatientFhirDocumentBundlePreview({
         error:
           error instanceof Error
-            ? `Không thể xuất FHIR document Bundle hồ sơ bệnh nhân: ${error.message}`
-            : "Không thể xuất FHIR document Bundle hồ sơ bệnh nhân."
+            ? `Không thể xuất FHIR document Bundle: ${error.message}`
+            : "Không thể xuất FHIR document Bundle."
       });
     }
   }
 
   async function loadEncounterFhirPreview(encounterId: string) {
     try {
-      const response = await fetch(`${apiBaseUrl}/encounters/${encounterId}/fhir`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      setEncounterFhirPreview(await response.json());
+      setEncounterFhirPreview(
+        await clinicalApi.requestJson<unknown>(`/encounters/${encounterId}/fhir`, {
+          purposeOfUse: "TREATMENT"
+        })
+      );
     } catch (error) {
       setEncounterFhirPreview({
         error:
@@ -1889,15 +1761,11 @@ export function App() {
 
   async function loadDocumentFhirPreview(documentId: string) {
     try {
-      const response = await fetch(`${apiBaseUrl}/clinical-documents/${documentId}/fhir`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      setDocumentFhirPreview(await response.json());
+      setDocumentFhirPreview(
+        await clinicalApi.requestJson<unknown>(`/clinical-documents/${documentId}/fhir`, {
+          purposeOfUse: "TREATMENT"
+        })
+      );
     } catch (error) {
       setDocumentFhirPreview({
         error:
@@ -1910,18 +1778,14 @@ export function App() {
 
   async function loadDocumentProvenanceFhirPreview(documentId: string) {
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/clinical-documents/${documentId}/fhir-provenance`,
-        {
-          headers: buildHeaders("TREATMENT")
-        }
+      setDocumentProvenanceFhirPreview(
+        await clinicalApi.requestJson<unknown>(
+          `/clinical-documents/${documentId}/provenance/fhir`,
+          {
+            purposeOfUse: "TREATMENT"
+          }
+        )
       );
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      setDocumentProvenanceFhirPreview(await response.json());
     } catch (error) {
       setDocumentProvenanceFhirPreview({
         error:
@@ -1934,15 +1798,11 @@ export function App() {
 
   async function loadConditionFhirPreview(conditionId: string) {
     try {
-      const response = await fetch(`${apiBaseUrl}/conditions/${conditionId}/fhir`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      setConditionFhirPreview(await response.json());
+      setConditionFhirPreview(
+        await clinicalApi.requestJson<unknown>(`/conditions/${conditionId}/fhir`, {
+          purposeOfUse: "TREATMENT"
+        })
+      );
     } catch (error) {
       setConditionFhirPreview({
         error:
@@ -1955,15 +1815,14 @@ export function App() {
 
   async function loadAllergyIntoleranceFhirPreview(allergyIntoleranceId: string) {
     try {
-      const response = await fetch(`${apiBaseUrl}/allergy-intolerances/${allergyIntoleranceId}/fhir`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      setAllergyIntoleranceFhirPreview(await response.json());
+      setAllergyIntoleranceFhirPreview(
+        await clinicalApi.requestJson<unknown>(
+          `/allergy-intolerances/${allergyIntoleranceId}/fhir`,
+          {
+            purposeOfUse: "TREATMENT"
+          }
+        )
+      );
     } catch (error) {
       setAllergyIntoleranceFhirPreview({
         error:
@@ -1976,15 +1835,11 @@ export function App() {
 
   async function loadObservationFhirPreview(observationId: string) {
     try {
-      const response = await fetch(`${apiBaseUrl}/observations/${observationId}/fhir`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      setObservationFhirPreview(await response.json());
+      setObservationFhirPreview(
+        await clinicalApi.requestJson<unknown>(`/observations/${observationId}/fhir`, {
+          purposeOfUse: "TREATMENT"
+        })
+      );
     } catch (error) {
       setObservationFhirPreview({
         error:
@@ -1997,15 +1852,14 @@ export function App() {
 
   async function loadMedicationRequestFhirPreview(medicationRequestId: string) {
     try {
-      const response = await fetch(`${apiBaseUrl}/medication-requests/${medicationRequestId}/fhir`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      setMedicationRequestFhirPreview(await response.json());
+      setMedicationRequestFhirPreview(
+        await clinicalApi.requestJson<unknown>(
+          `/medication-requests/${medicationRequestId}/fhir`,
+          {
+            purposeOfUse: "TREATMENT"
+          }
+        )
+      );
     } catch (error) {
       setMedicationRequestFhirPreview({
         error:
@@ -2018,18 +1872,14 @@ export function App() {
 
   async function loadMedicationDispenseFhirPreview(medicationDispenseId: string) {
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/medication-dispenses/${medicationDispenseId}/fhir`,
-        {
-          headers: buildHeaders("TREATMENT")
-        }
+      setMedicationDispenseFhirPreview(
+        await clinicalApi.requestJson<unknown>(
+          `/medication-dispenses/${medicationDispenseId}/fhir`,
+          {
+            purposeOfUse: "TREATMENT"
+          }
+        )
       );
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      setMedicationDispenseFhirPreview(await response.json());
     } catch (error) {
       setMedicationDispenseFhirPreview({
         error:
@@ -2044,18 +1894,14 @@ export function App() {
     medicationAdministrationId: string
   ) {
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/medication-administrations/${medicationAdministrationId}/fhir`,
-        {
-          headers: buildHeaders("TREATMENT")
-        }
+      setMedicationAdministrationFhirPreview(
+        await clinicalApi.requestJson<unknown>(
+          `/medication-administrations/${medicationAdministrationId}/fhir`,
+          {
+            purposeOfUse: "TREATMENT"
+          }
+        )
       );
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      setMedicationAdministrationFhirPreview(await response.json());
     } catch (error) {
       setMedicationAdministrationFhirPreview({
         error:
@@ -2068,15 +1914,14 @@ export function App() {
 
   async function loadServiceRequestFhirPreview(serviceRequestId: string) {
     try {
-      const response = await fetch(`${apiBaseUrl}/service-requests/${serviceRequestId}/fhir`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      setServiceRequestFhirPreview(await response.json());
+      setServiceRequestFhirPreview(
+        await clinicalApi.requestJson<unknown>(
+          `/service-requests/${serviceRequestId}/fhir`,
+          {
+            purposeOfUse: "TREATMENT"
+          }
+        )
+      );
     } catch (error) {
       setServiceRequestFhirPreview({
         error:
@@ -2089,15 +1934,11 @@ export function App() {
 
   async function loadWorkflowTaskFhirPreview(taskId: string) {
     try {
-      const response = await fetch(`${apiBaseUrl}/workflow-tasks/${taskId}/fhir`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      setWorkflowTaskFhirPreview(await response.json());
+      setWorkflowTaskFhirPreview(
+        await clinicalApi.requestJson<unknown>(`/workflow-tasks/${taskId}/fhir`, {
+          purposeOfUse: "TREATMENT"
+        })
+      );
     } catch (error) {
       setWorkflowTaskFhirPreview({
         error:
@@ -2110,15 +1951,11 @@ export function App() {
 
   async function loadProcedureFhirPreview(procedureId: string) {
     try {
-      const response = await fetch(`${apiBaseUrl}/procedures/${procedureId}/fhir`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      setProcedureFhirPreview(await response.json());
+      setProcedureFhirPreview(
+        await clinicalApi.requestJson<unknown>(`/procedures/${procedureId}/fhir`, {
+          purposeOfUse: "TREATMENT"
+        })
+      );
     } catch (error) {
       setProcedureFhirPreview({
         error:
@@ -2131,15 +1968,14 @@ export function App() {
 
   async function loadDiagnosticReportFhirPreview(diagnosticReportId: string) {
     try {
-      const response = await fetch(`${apiBaseUrl}/diagnostic-reports/${diagnosticReportId}/fhir`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      setDiagnosticReportFhirPreview(await response.json());
+      setDiagnosticReportFhirPreview(
+        await clinicalApi.requestJson<unknown>(
+          `/diagnostic-reports/${diagnosticReportId}/fhir`,
+          {
+            purposeOfUse: "TREATMENT"
+          }
+        )
+      );
     } catch (error) {
       setDiagnosticReportFhirPreview({
         error:
@@ -2152,15 +1988,14 @@ export function App() {
 
   async function loadImagingStudyFhirPreview(imagingStudyId: string) {
     try {
-      const response = await fetch(`${apiBaseUrl}/imaging-studies/${imagingStudyId}/fhir`, {
-        headers: buildHeaders("TREATMENT")
-      });
-
-      if (!response.ok) {
-        throw new Error(`API trả về HTTP ${response.status}`);
-      }
-
-      setImagingStudyFhirPreview(await response.json());
+      setImagingStudyFhirPreview(
+        await clinicalApi.requestJson<unknown>(
+          `/imaging-studies/${imagingStudyId}/fhir`,
+          {
+            purposeOfUse: "TREATMENT"
+          }
+        )
+      );
     } catch (error) {
       setImagingStudyFhirPreview({
         error:
@@ -2185,20 +2020,10 @@ export function App() {
       setLoginError(undefined);
       setStatusMessage("Đang xác thực phiên đăng nhập...");
 
-      const response = await fetch(`${apiBaseUrl}/auth/login`, {
+      const session = await clinicalApi.requestJson<AuthSession>("/auth/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(loginForm)
+        json: loginForm
       });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => undefined);
-        throw new Error(payload?.message ?? payload?.error ?? `API trả về HTTP ${response.status}`);
-      }
-
-      const session = (await response.json()) as AuthSession;
       setAuthSession(session);
       setIsAuthenticated(true);
       setAppRoute(session.actor.role === "auditor" ? "audit" : "dashboard");
