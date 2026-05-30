@@ -71,6 +71,7 @@ import { ConditionPanel } from "./features/clinical-records/ConditionPanel.js";
 import { DiagnosticReportPanel } from "./features/clinical-records/DiagnosticReportPanel.js";
 import { EncounterPanel } from "./features/clinical-records/EncounterPanel.js";
 import { ImagingStudyPanel } from "./features/clinical-records/ImagingStudyPanel.js";
+import { MedicationAdministrationPanel } from "./features/clinical-records/MedicationAdministrationPanel.js";
 import { MedicationDispensePanel } from "./features/clinical-records/MedicationDispensePanel.js";
 import { MedicationRequestPanel } from "./features/clinical-records/MedicationRequestPanel.js";
 import { ObservationPanel } from "./features/clinical-records/ObservationPanel.js";
@@ -128,11 +129,6 @@ import {
   formatDocumentStatus,
   formatDocumentType,
   formatIdentifierType,
-  formatMedicationAdministrationCategory,
-  formatMedicationAdministrationDose,
-  formatMedicationAdministrationPerformers,
-  formatMedicationAdministrationPeriod,
-  formatMedicationAdministrationStatus,
   formatPatientRecordStatus,
   isMissingRecordTransferDeliveryAttemptsRoute,
   normalizeSearchText,
@@ -178,9 +174,6 @@ import type {
   ClinicalDocumentStatus,
   MedicationTimingUnit,
   MedicationDispenseStatus,
-  MedicationAdministrationStatus,
-  MedicationAdministrationCategory,
-  MedicationAdministrationPerformerActorType,
   ConsentStatus,
   ConsentCategory,
   RecordTransferStatus,
@@ -3578,313 +3571,23 @@ export function App() {
 
   function renderMedicationAdministrationPanel(): ReactNode {
     return (
-      <article className="panel medication-panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Medication administrations</p>
-            <h2>Dùng thuốc thực tế</h2>
-          </div>
-          <span className="pill cyan">
-            {isLoadingMedicationAdministrations
-              ? "đang tải"
-              : `${medicationAdministrations.length} lần dùng`}
-          </span>
-        </div>
-
-        <div className="document-layout">
-          <div className="medication-cards">
-            {medicationAdministrations.map((medicationAdministration) => (
-              <button
-                className={
-                  medicationAdministration.id === selectedMedicationAdministrationId
-                    ? "medication-card selected"
-                    : "medication-card"
-                }
-                key={medicationAdministration.id}
-                type="button"
-                onClick={() => setSelectedMedicationAdministrationId(medicationAdministration.id)}
-              >
-                <span>{formatMedicationAdministrationCategory(medicationAdministration.category)}</span>
-                <strong>{medicationAdministration.medicationCode.display}</strong>
-                <small>
-                  {formatMedicationAdministrationStatus(medicationAdministration.status)} ·{" "}
-                  {formatDateTime(
-                    medicationAdministration.effectivePeriod.start ??
-                      medicationAdministration.updatedAt
-                  )}
-                </small>
-              </button>
-            ))}
-            {medicationAdministrations.length === 0 ? (
-              <p className="empty-state">
-                Chưa có bản ghi dùng thuốc thực tế. Hãy xác nhận sau khi có
-                MedicationRequest để phân biệt “chỉ định” với “đã dùng”.
-              </p>
-            ) : null}
-          </div>
-
-          <div className="medication-summary">
-            {selectedMedicationAdministration ? (
-              <>
-                <div className="document-meta">
-                  <Info label="Thuốc" value={selectedMedicationAdministration.medicationCode.display} />
-                  <Info label="Trạng thái" value={formatMedicationAdministrationStatus(selectedMedicationAdministration.status)} />
-                  <Info label="Bối cảnh" value={formatMedicationAdministrationCategory(selectedMedicationAdministration.category)} />
-                  <Info label="Thời điểm" value={formatMedicationAdministrationPeriod(selectedMedicationAdministration.effectivePeriod)} />
-                  <Info label="Liều thực tế" value={formatMedicationAdministrationDose(selectedMedicationAdministration.dosage)} />
-                  <Info label="Gắn đơn thuốc" value={selectedMedicationAdministration.medicationRequestId ?? "Chưa gắn"} />
-                  <Info label="Người xác nhận" value={formatMedicationAdministrationPerformers(selectedMedicationAdministration.performers)} />
-                  <Info label="Chẩn đoán liên quan" value={selectedMedicationAdministration.reasonConditionId ?? "Chưa gắn"} />
-                </div>
-                <p className="empty-state">
-                  MedicationAdministration là sự kiện thuốc đã được dùng hoặc
-                  được xác nhận dùng. Đây là phần giúp EMR đóng vòng điều trị:
-                  bác sĩ kê, hệ thống lưu chỉ định, nhân sự y tế xác nhận dùng
-                  và FHIR Bundle có thể chuyển sang bệnh viện khác.
-                </p>
-              </>
-            ) : (
-              <p className="empty-state">Chọn một lần dùng thuốc để xem siêu dữ liệu và xuất FHIR MedicationAdministration.</p>
-            )}
-          </div>
-        </div>
-
-        <form className="medication-form" onSubmit={(event) => void handleCreateMedicationAdministration(event)}>
-          <label>
-            Gắn với lượt khám
-            <select
-              value={medicationAdministrationForm.encounterId}
-              onChange={(event) =>
-                setMedicationAdministrationForm({
-                  ...medicationAdministrationForm,
-                  encounterId: event.target.value
-                })
-              }
-            >
-              <option value="">Không gắn</option>
-              {encounters.map((encounter) => (
-                <option key={encounter.id} value={encounter.id}>
-                  {encounter.serviceType} · {formatDateTime(encounter.startedAt)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Gắn chỉ định thuốc (MedicationRequest)
-            <select
-              value={medicationAdministrationForm.medicationRequestId}
-              onChange={(event) => {
-                const medicationRequest = medicationRequests.find(
-                  (request) => request.id === event.target.value
-                );
-                setMedicationAdministrationForm({
-                  ...medicationAdministrationForm,
-                  medicationRequestId: event.target.value,
-                  reasonConditionId:
-                    medicationRequest?.reasonConditionId ??
-                    medicationAdministrationForm.reasonConditionId,
-                  medicationSystem:
-                    medicationRequest?.medicationCode.system ??
-                    medicationAdministrationForm.medicationSystem,
-                  medicationCode:
-                    medicationRequest?.medicationCode.code ??
-                    medicationAdministrationForm.medicationCode,
-                  medicationDisplay:
-                    medicationRequest?.medicationCode.display ??
-                    medicationAdministrationForm.medicationDisplay,
-                  dosageText:
-                    medicationRequest?.dosageInstruction.text ??
-                    medicationAdministrationForm.dosageText,
-                  doseValue:
-                    medicationRequest?.dosageInstruction.doseQuantity?.value.toString() ??
-                    medicationAdministrationForm.doseValue,
-                  doseUnit:
-                    medicationRequest?.dosageInstruction.doseQuantity?.unit ??
-                    medicationAdministrationForm.doseUnit
-                });
-              }}
-            >
-              <option value="">Không gắn</option>
-              {medicationRequests.map((medicationRequest) => (
-                <option key={medicationRequest.id} value={medicationRequest.id}>
-                  {medicationRequest.medicationCode.display} · {formatDateTime(medicationRequest.authoredOn)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Chẩn đoán liên quan
-            <select
-              value={medicationAdministrationForm.reasonConditionId}
-              onChange={(event) =>
-                setMedicationAdministrationForm({
-                  ...medicationAdministrationForm,
-                  reasonConditionId: event.target.value
-                })
-              }
-            >
-              <option value="">Không gắn</option>
-              {conditions.map((condition) => (
-                <option key={condition.id} value={condition.id}>
-                  {condition.code.display} · {condition.code.code}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Bối cảnh dùng thuốc
-            <select
-              value={medicationAdministrationForm.category}
-              onChange={(event) =>
-                setMedicationAdministrationForm({
-                  ...medicationAdministrationForm,
-                  category: event.target.value as MedicationAdministrationCategory
-                })
-              }
-            >
-              <option value="outpatient">Ngoại trú</option>
-              <option value="inpatient">Nội trú</option>
-              <option value="community">Cộng đồng</option>
-              <option value="patient-specified">Bệnh nhân tự khai</option>
-            </select>
-          </label>
-          <label>
-            Thời điểm dùng
-            <input
-              type="datetime-local"
-              value={medicationAdministrationForm.effectiveStart}
-              onChange={(event) =>
-                setMedicationAdministrationForm({
-                  ...medicationAdministrationForm,
-                  effectiveStart: event.target.value
-                })
-              }
-            />
-          </label>
-          <label>
-            Người/thiết bị xác nhận
-            <input
-              value={medicationAdministrationForm.performerActorId}
-              onChange={(event) =>
-                setMedicationAdministrationForm({
-                  ...medicationAdministrationForm,
-                  performerActorId: event.target.value
-                })
-              }
-            />
-          </label>
-          <label>
-            Vai trò xác nhận
-            <input
-              value={medicationAdministrationForm.performerFunctionDisplay}
-              onChange={(event) =>
-                setMedicationAdministrationForm({
-                  ...medicationAdministrationForm,
-                  performerFunctionDisplay: event.target.value
-                })
-              }
-            />
-          </label>
-          <label className="wide-field">
-            Tên thuốc
-            <input
-              value={medicationAdministrationForm.medicationDisplay}
-              onChange={(event) =>
-                setMedicationAdministrationForm({
-                  ...medicationAdministrationForm,
-                  medicationDisplay: event.target.value
-                })
-              }
-            />
-          </label>
-          <label>
-            Hệ mã thuốc
-            <input
-              value={medicationAdministrationForm.medicationSystem}
-              onChange={(event) =>
-                setMedicationAdministrationForm({
-                  ...medicationAdministrationForm,
-                  medicationSystem: event.target.value
-                })
-              }
-            />
-          </label>
-          <label>
-            Mã thuốc
-            <input
-              value={medicationAdministrationForm.medicationCode}
-              onChange={(event) =>
-                setMedicationAdministrationForm({
-                  ...medicationAdministrationForm,
-                  medicationCode: event.target.value
-                })
-              }
-            />
-          </label>
-          <label className="wide-field">
-            Mô tả liều thực tế
-            <input
-              value={medicationAdministrationForm.dosageText}
-              onChange={(event) =>
-                setMedicationAdministrationForm({
-                  ...medicationAdministrationForm,
-                  dosageText: event.target.value
-                })
-              }
-            />
-          </label>
-          <label>
-            Liều
-            <input
-              type="number"
-              step="any"
-              value={medicationAdministrationForm.doseValue}
-              onChange={(event) =>
-                setMedicationAdministrationForm({
-                  ...medicationAdministrationForm,
-                  doseValue: event.target.value
-                })
-              }
-            />
-          </label>
-          <label>
-            Đơn vị
-            <input
-              value={medicationAdministrationForm.doseUnit}
-              onChange={(event) =>
-                setMedicationAdministrationForm({
-                  ...medicationAdministrationForm,
-                  doseUnit: event.target.value
-                })
-              }
-            />
-          </label>
-          <label className="wide-field">
-            Ghi chú
-            <input
-              value={medicationAdministrationForm.note}
-              onChange={(event) =>
-                setMedicationAdministrationForm({
-                  ...medicationAdministrationForm,
-                  note: event.target.value
-                })
-              }
-            />
-          </label>
-          <button
-            className="primary-button"
-            type="submit"
-            disabled={selectedPatientWriteDisabled || isSubmittingMedicationAdministration}
-          >
-            {isSubmittingMedicationAdministration
-              ? "Đang ghi nhận..."
-              : "Ghi nhận dùng thuốc"}
-          </button>
-        </form>
-      </article>
+      <MedicationAdministrationPanel
+        conditions={conditions}
+        encounters={encounters}
+        form={medicationAdministrationForm}
+        isLoading={isLoadingMedicationAdministrations}
+        isSubmitting={isSubmittingMedicationAdministration}
+        isWriteDisabled={selectedPatientWriteDisabled}
+        medicationAdministrations={medicationAdministrations}
+        medicationRequests={medicationRequests}
+        selectedMedicationAdministration={selectedMedicationAdministration}
+        selectedMedicationAdministrationId={selectedMedicationAdministrationId}
+        onCreateMedicationAdministration={handleCreateMedicationAdministration}
+        onFormChange={setMedicationAdministrationForm}
+        onSelectMedicationAdministration={setSelectedMedicationAdministrationId}
+      />
     );
   }
-
   function renderDocumentPanel(): ReactNode {
     return (
       <article className="panel document-panel">
