@@ -80,6 +80,7 @@ import {
   listPatients,
   mergePatient
 } from "./features/patient-registry/patientRegistryApi.js";
+import { CreatePatientPanel } from "./features/patient-registry/CreatePatientPanel.js";
 import { PatientDetailPanel } from "./features/patient-registry/PatientDetailPanel.js";
 import { PatientListPanel } from "./features/patient-registry/PatientListPanel.js";
 import { PatientMergePanel } from "./features/patient-registry/PatientMergePanel.js";
@@ -198,7 +199,6 @@ import {
 import type {
   AppRoute,
   PatientIdentifierType,
-  PatientGender,
   EncounterClass,
   EncounterStatus,
   ClinicalDocumentType,
@@ -6725,82 +6725,12 @@ export function App() {
 
   function renderCreatePatientPanel(): ReactNode {
     return (
-      <article className="panel create-panel">
-        <div>
-          <p className="eyebrow">Intake</p>
-          <h2>Tạo nhanh hồ sơ mới</h2>
-        </div>
-
-        <form className="patient-form" onSubmit={(event) => void handleCreatePatient(event)}>
-          <label>
-            Họ tên
-            <input
-              value={patientForm.fullName}
-              onChange={(event) => setPatientForm({ ...patientForm, fullName: event.target.value })}
-            />
-          </label>
-          <label>
-            Số định danh
-            <input
-              value={patientForm.nationalId}
-              onChange={(event) => setPatientForm({ ...patientForm, nationalId: event.target.value })}
-            />
-          </label>
-          <label>
-            Mã hồ sơ bệnh viện
-            <input
-              value={patientForm.hospitalMrn}
-              onChange={(event) => setPatientForm({ ...patientForm, hospitalMrn: event.target.value })}
-            />
-          </label>
-          <label>
-            Ngày sinh
-            <input
-              type="date"
-              value={patientForm.birthDate}
-              onChange={(event) => setPatientForm({ ...patientForm, birthDate: event.target.value })}
-            />
-          </label>
-          <label>
-            Giới tính
-            <select
-              value={patientForm.gender}
-              onChange={(event) => setPatientForm({ ...patientForm, gender: event.target.value as PatientGender })}
-            >
-              <option value="male">Nam</option>
-              <option value="female">Nữ</option>
-              <option value="other">Khác</option>
-              <option value="unknown">Chưa rõ</option>
-            </select>
-          </label>
-          <label>
-            Điện thoại
-            <input
-              value={patientForm.phone}
-              onChange={(event) => setPatientForm({ ...patientForm, phone: event.target.value })}
-            />
-          </label>
-          <label className="wide-field">
-            Địa chỉ
-            <input
-              value={patientForm.address}
-              onChange={(event) => setPatientForm({ ...patientForm, address: event.target.value })}
-            />
-          </label>
-          <label className="wide-field">
-            Cơ sở quản lý
-            <input
-              value={patientForm.managingOrganizationId}
-              onChange={(event) =>
-                setPatientForm({ ...patientForm, managingOrganizationId: event.target.value })
-              }
-            />
-          </label>
-          <button className="primary-button" type="submit" disabled={isSubmittingPatient}>
-            {isSubmittingPatient ? "Đang tạo..." : "Tạo hồ sơ bệnh nhân"}
-          </button>
-        </form>
-      </article>
+      <CreatePatientPanel
+        form={patientForm}
+        isSubmitting={isSubmittingPatient}
+        onCreatePatient={handleCreatePatient}
+        onFormChange={setPatientForm}
+      />
     );
   }
 }
