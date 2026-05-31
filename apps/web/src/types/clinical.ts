@@ -3,6 +3,7 @@ import type { DemoRole } from "../auth/demoLogin.js";
 export * from "./audit.js";
 export * from "./clinicalDocuments.js";
 export * from "./consents.js";
+export * from "./encounters.js";
 export * from "./providerDirectory.js";
 export * from "./patientRegistry.js";
 export * from "./recordTransfers.js";
@@ -16,8 +17,6 @@ export type AppRoute =
   | "audit"
   | "interop"
   | "settings";
-export type EncounterClass = "ambulatory" | "inpatient" | "emergency" | "virtual";
-export type EncounterStatus = "planned" | "in-progress" | "finished" | "cancelled" | "entered-in-error";
 export type ConditionClinicalStatus =
   | "active"
   | "recurrence"
@@ -186,21 +185,6 @@ export type ImagingStudyStatus =
   | "entered-in-error"
   | "unknown";
 export type PurposeOfUse = "TREATMENT" | "AUDIT" | "OPERATIONS";
-
-export type Encounter = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly status: EncounterStatus;
-  readonly class: EncounterClass;
-  readonly serviceType: string;
-  readonly reasonText: string;
-  readonly departmentId?: string;
-  readonly attendingPractitionerId: string;
-  readonly startedAt: string;
-  readonly endedAt?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
 
 export type ObservationCode = {
   readonly system: string;
@@ -583,10 +567,6 @@ export type ApiRuntimeInfo = {
   };
 };
 
-export type EncountersResponse = {
-  readonly items: readonly Encounter[];
-};
-
 export type ConditionsResponse = {
   readonly items: readonly Condition[];
 };
@@ -629,15 +609,6 @@ export type DiagnosticReportsResponse = {
 
 export type ImagingStudiesResponse = {
   readonly items: readonly ImagingStudy[];
-};
-
-export type NewEncounterForm = {
-  class: EncounterClass;
-  serviceType: string;
-  reasonText: string;
-  departmentId: string;
-  attendingPractitionerId: string;
-  startedAt: string;
 };
 
 export type NewConditionForm = {
