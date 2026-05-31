@@ -88,6 +88,12 @@ export class Condition {
     const recordedAt = input.recordedAt
       ? parseDate(input.recordedAt, "Thời điểm ghi nhận chẩn đoán không hợp lệ.")
       : now;
+    validateTimeline({
+      onsetAt,
+      recordedAt,
+      createdAt: now,
+      updatedAt: now
+    });
 
     return new Condition({
       id: normalizeRequired(input.id, "Mã chẩn đoán không được để trống."),
@@ -111,6 +117,24 @@ export class Condition {
   }
 
   static rehydrate(snapshot: ConditionSnapshot): Condition {
+    const onsetAt = snapshot.onsetAt
+      ? parseDate(snapshot.onsetAt, "Thời điểm khởi phát chẩn đoán không hợp lệ.")
+      : undefined;
+    const recordedAt = parseDate(
+      snapshot.recordedAt,
+      "Thời điểm ghi nhận chẩn đoán không hợp lệ."
+    );
+    const createdAt = parseDate(
+      snapshot.createdAt,
+      "Thời điểm tạo chẩn đoán không hợp lệ."
+    );
+    const updatedAt = parseDate(
+      snapshot.updatedAt,
+      "Thời điểm cập nhật chẩn đoán không hợp lệ."
+    );
+
+    validateTimeline({ onsetAt, recordedAt, createdAt, updatedAt });
+
     return new Condition({
       ...snapshot,
       id: normalizeRequired(snapshot.id, "Mã chẩn đoán không được để trống."),
@@ -121,20 +145,15 @@ export class Condition {
       category: normalizeCategory(snapshot.category),
       code: normalizeCode(snapshot.code),
       severity: snapshot.severity ? normalizeSeverity(snapshot.severity) : undefined,
-      onsetAt: snapshot.onsetAt
-        ? parseDate(snapshot.onsetAt, "Thời điểm khởi phát chẩn đoán không hợp lệ.").toISOString()
-        : undefined,
-      recordedAt: parseDate(
-        snapshot.recordedAt,
-        "Thời điểm ghi nhận chẩn đoán không hợp lệ."
-      ).toISOString(),
+      onsetAt: onsetAt?.toISOString(),
+      recordedAt: recordedAt.toISOString(),
       recorderPractitionerId: normalizeRequired(
         snapshot.recorderPractitionerId,
         "Nhân sự ghi nhận chẩn đoán không được để trống."
       ),
       note: normalizeOptional(snapshot.note),
-      createdAt: parseDate(snapshot.createdAt, "Thời điểm tạo chẩn đoán không hợp lệ.").toISOString(),
-      updatedAt: parseDate(snapshot.updatedAt, "Thời điểm cập nhật chẩn đoán không hợp lệ.").toISOString()
+      createdAt: createdAt.toISOString(),
+      updatedAt: updatedAt.toISOString()
     });
   }
 
@@ -209,6 +228,21 @@ function normalizeSeverity(value: ConditionSeverity): ConditionSeverity {
   }
 
   return value;
+}
+
+function validateTimeline(input: {
+  readonly onsetAt?: Date;
+  readonly recordedAt: Date;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+}): void {
+  if (input.onsetAt && input.onsetAt > input.recordedAt) {
+    throw new DomainError("Thời điểm khởi phát chẩn đoán không được sau thời điểm ghi nhận.");
+  }
+
+  if (input.updatedAt < input.createdAt) {
+    throw new DomainError("Thời điểm cập nhật chẩn đoán không được trước thời điểm tạo chẩn đoán.");
+  }
 }
 
 function parseDate(value: string, message: string): Date {

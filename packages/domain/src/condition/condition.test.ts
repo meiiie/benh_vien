@@ -45,6 +45,25 @@ describe("Condition", () => {
       })
     ).toThrow("Mã chẩn đoán không được để trống.");
   });
+
+  it("rejects diagnosis onset timestamps after the recorded time", () => {
+    expect(() =>
+      Condition.record({
+        id: "condition-test-invalid-timeline-001",
+        patientId: "patient-test-001",
+        category: "encounter-diagnosis",
+        code: {
+          system: "http://hl7.org/fhir/sid/icd-10",
+          code: "J18.9",
+          display: "Viêm phổi không đặc hiệu"
+        },
+        onsetAt: "2026-05-28T03:00:00.000Z",
+        recordedAt: "2026-05-28T02:00:00.000Z",
+        recorderPractitionerId: "practitioner-test-001"
+      })
+    ).toThrow(DomainError);
+  });
+
   it("rejects invalid rehydrated condition metadata", () => {
     const snapshot = Condition.record({
       id: "condition-test-003",
@@ -103,6 +122,21 @@ describe("Condition", () => {
       Condition.rehydrate({
         ...snapshot,
         recordedAt: "not-a-date"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Condition.rehydrate({
+        ...snapshot,
+        onsetAt: "2026-05-28T03:00:00.000Z",
+        recordedAt: "2026-05-28T02:00:00.000Z"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Condition.rehydrate({
+        ...snapshot,
+        updatedAt: "1999-01-01T00:00:00.000Z"
       })
     ).toThrow(DomainError);
   });
