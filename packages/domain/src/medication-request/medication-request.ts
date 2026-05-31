@@ -24,6 +24,40 @@ export type MedicationRequestCategory = "inpatient" | "outpatient" | "community"
 export type MedicationRequestPriority = "routine" | "urgent" | "asap" | "stat";
 export type MedicationTimingUnit = "h" | "d" | "wk";
 
+const medicationRequestStatuses = new Set<MedicationRequestStatus>([
+  "active",
+  "on-hold",
+  "cancelled",
+  "completed",
+  "entered-in-error",
+  "stopped",
+  "draft",
+  "unknown"
+]);
+const medicationRequestIntents = new Set<MedicationRequestIntent>([
+  "proposal",
+  "plan",
+  "order",
+  "original-order",
+  "reflex-order",
+  "filler-order",
+  "instance-order",
+  "option"
+]);
+const medicationRequestCategories = new Set<MedicationRequestCategory>([
+  "inpatient",
+  "outpatient",
+  "community",
+  "discharge"
+]);
+const medicationRequestPriorities = new Set<MedicationRequestPriority>([
+  "routine",
+  "urgent",
+  "asap",
+  "stat"
+]);
+const medicationTimingUnits = new Set<MedicationTimingUnit>(["h", "d", "wk"]);
+
 export type MedicationCode = {
   readonly system: string;
   readonly code: string;
@@ -89,15 +123,11 @@ export class MedicationRequest {
       patientId: normalizeRequired(input.patientId, "Chỉ định thuốc phải gắn với một bệnh nhân."),
       encounterId: normalizeOptional(input.encounterId),
       reasonConditionId: normalizeOptional(input.reasonConditionId),
-      status: input.status ?? "active",
-      intent: input.intent ?? "order",
-      category: input.category,
-      priority: input.priority ?? "routine",
-      medicationCode: {
-        system: normalizeRequired(input.medicationCode.system, "Hệ mã thuốc không được để trống."),
-        code: normalizeRequired(input.medicationCode.code, "Mã thuốc không được để trống."),
-        display: normalizeRequired(input.medicationCode.display, "Tên thuốc không được để trống.")
-      },
+      status: normalizeStatus(input.status ?? "active"),
+      intent: normalizeIntent(input.intent ?? "order"),
+      category: normalizeCategory(input.category),
+      priority: normalizePriority(input.priority ?? "routine"),
+      medicationCode: normalizeMedicationCode(input.medicationCode),
       dosageInstruction: normalizeDosageInstruction(input.dosageInstruction),
       authoredOn: authoredOn.toISOString(),
       requesterPractitionerId: normalizeRequired(
@@ -117,15 +147,28 @@ export class MedicationRequest {
   static rehydrate(snapshot: MedicationRequestSnapshot): MedicationRequest {
     return new MedicationRequest({
       ...snapshot,
+      id: normalizeRequired(snapshot.id, "Mã chỉ định thuốc không được để trống."),
+      patientId: normalizeRequired(snapshot.patientId, "Chỉ định thuốc phải gắn với một bệnh nhân."),
       encounterId: normalizeOptional(snapshot.encounterId),
       reasonConditionId: normalizeOptional(snapshot.reasonConditionId),
+      status: normalizeStatus(snapshot.status),
+      intent: normalizeIntent(snapshot.intent),
+      category: normalizeCategory(snapshot.category),
+      priority: normalizePriority(snapshot.priority),
+      medicationCode: normalizeMedicationCode(snapshot.medicationCode),
       dosageInstruction: normalizeDosageInstruction(snapshot.dosageInstruction),
       authoredOn: parseDate(snapshot.authoredOn, "Thời điểm kê thuốc không hợp lệ.").toISOString(),
+      requesterPractitionerId: normalizeRequired(
+        snapshot.requesterPractitionerId,
+        "Nhân sự kê thuốc không được để trống."
+      ),
       expectedSupplyDurationDays: normalizePositiveNumber(
         snapshot.expectedSupplyDurationDays,
         "Số ngày cấp thuốc phải lớn hơn 0."
       ),
-      note: normalizeOptional(snapshot.note)
+      note: normalizeOptional(snapshot.note),
+      createdAt: parseDate(snapshot.createdAt, "Thời điểm tạo chỉ định thuốc không hợp lệ.").toISOString(),
+      updatedAt: parseDate(snapshot.updatedAt, "Thời điểm cập nhật chỉ định thuốc không hợp lệ.").toISOString()
     });
   }
 
@@ -157,8 +200,9 @@ function normalizeDosageInstruction(value: DosageInstruction): DosageInstruction
     "Tần suất dùng thuốc phải lớn hơn 0."
   );
   const period = normalizePositiveNumber(value.period, "Chu kỳ dùng thuốc phải lớn hơn 0.");
+  const periodUnit = value.periodUnit ? normalizeTimingUnit(value.periodUnit) : undefined;
 
-  if ((frequency || period) && !(frequency && period && value.periodUnit)) {
+  if ((frequency || period) && !(frequency && period && periodUnit)) {
     throw new DomainError("Thông tin nhịp dùng thuốc phải có đủ tần suất, chu kỳ và đơn vị chu kỳ.");
   }
 
@@ -168,7 +212,7 @@ function normalizeDosageInstruction(value: DosageInstruction): DosageInstruction
     doseQuantity: value.doseQuantity ? normalizeQuantity(value.doseQuantity) : undefined,
     frequency,
     period,
-    periodUnit: value.periodUnit
+    periodUnit
   };
 }
 
@@ -183,6 +227,54 @@ function normalizeQuantity(value: MedicationQuantity): MedicationQuantity {
     system: normalizeOptional(value.system),
     code: normalizeOptional(value.code)
   };
+}
+
+function normalizeMedicationCode(value: MedicationCode): MedicationCode {
+  return {
+    system: normalizeRequired(value.system, "Hệ mã thuốc không được để trống."),
+    code: normalizeRequired(value.code, "Mã thuốc không được để trống."),
+    display: normalizeRequired(value.display, "Tên thuốc không được để trống.")
+  };
+}
+
+function normalizeStatus(value: MedicationRequestStatus): MedicationRequestStatus {
+  if (!medicationRequestStatuses.has(value)) {
+    throw new DomainError("Trạng thái chỉ định thuốc không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizeIntent(value: MedicationRequestIntent): MedicationRequestIntent {
+  if (!medicationRequestIntents.has(value)) {
+    throw new DomainError("Mục đích chỉ định thuốc không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizeCategory(value: MedicationRequestCategory): MedicationRequestCategory {
+  if (!medicationRequestCategories.has(value)) {
+    throw new DomainError("Nhóm chỉ định thuốc không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizePriority(value: MedicationRequestPriority): MedicationRequestPriority {
+  if (!medicationRequestPriorities.has(value)) {
+    throw new DomainError("Mức ưu tiên chỉ định thuốc không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizeTimingUnit(value: MedicationTimingUnit): MedicationTimingUnit {
+  if (!medicationTimingUnits.has(value)) {
+    throw new DomainError("Đơn vị chu kỳ dùng thuốc không hợp lệ.");
+  }
+
+  return value;
 }
 
 function normalizePositiveNumber(value: number | undefined, message: string): number | undefined {
