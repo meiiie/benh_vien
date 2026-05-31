@@ -45,16 +45,19 @@ export function mapConditionToFhir(condition: Condition): FhirCondition {
     meta: {
       profile: ["http://hl7.org/fhir/StructureDefinition/Condition"]
     },
-    clinicalStatus: {
-      coding: [
-        {
-          system: "http://terminology.hl7.org/CodeSystem/condition-clinical",
-          code: snapshot.clinicalStatus,
-          display: clinicalStatusLabels[snapshot.clinicalStatus]
-        }
-      ],
-      text: clinicalStatusLabels[snapshot.clinicalStatus]
-    },
+    clinicalStatus:
+      snapshot.verificationStatus === "entered-in-error"
+        ? undefined
+        : {
+            coding: [
+              {
+                system: "http://terminology.hl7.org/CodeSystem/condition-clinical",
+                code: snapshot.clinicalStatus,
+                display: clinicalStatusLabels[snapshot.clinicalStatus]
+              }
+            ],
+            text: clinicalStatusLabels[snapshot.clinicalStatus]
+          },
     verificationStatus: {
       coding: [
         {

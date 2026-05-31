@@ -407,7 +407,7 @@ export type FhirCondition = {
   readonly meta?: {
     readonly profile?: readonly string[];
   };
-  readonly clinicalStatus: {
+  readonly clinicalStatus?: {
     readonly coding: readonly {
       readonly system: string;
       readonly code: string;

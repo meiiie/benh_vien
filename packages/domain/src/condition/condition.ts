@@ -19,6 +19,32 @@ export type ConditionVerificationStatus =
 export type ConditionCategory = "problem-list-item" | "encounter-diagnosis";
 export type ConditionSeverity = "mild" | "moderate" | "severe";
 
+const conditionClinicalStatuses = new Set<ConditionClinicalStatus>([
+  "active",
+  "recurrence",
+  "relapse",
+  "inactive",
+  "remission",
+  "resolved"
+]);
+const conditionVerificationStatuses = new Set<ConditionVerificationStatus>([
+  "unconfirmed",
+  "provisional",
+  "differential",
+  "confirmed",
+  "refuted",
+  "entered-in-error"
+]);
+const conditionCategories = new Set<ConditionCategory>([
+  "problem-list-item",
+  "encounter-diagnosis"
+]);
+const conditionSeverities = new Set<ConditionSeverity>([
+  "mild",
+  "moderate",
+  "severe"
+]);
+
 export type ConditionCode = {
   readonly system: string;
   readonly code: string;
@@ -67,15 +93,11 @@ export class Condition {
       id: normalizeRequired(input.id, "Mã chẩn đoán không được để trống."),
       patientId: normalizeRequired(input.patientId, "Chẩn đoán phải gắn với một bệnh nhân."),
       encounterId: normalizeOptional(input.encounterId),
-      clinicalStatus: input.clinicalStatus ?? "active",
-      verificationStatus: input.verificationStatus ?? "confirmed",
-      category: input.category,
-      code: {
-        system: normalizeRequired(input.code.system, "Hệ mã chẩn đoán không được để trống."),
-        code: normalizeRequired(input.code.code, "Mã chẩn đoán không được để trống."),
-        display: normalizeRequired(input.code.display, "Tên chẩn đoán không được để trống.")
-      },
-      severity: input.severity,
+      clinicalStatus: normalizeClinicalStatus(input.clinicalStatus ?? "active"),
+      verificationStatus: normalizeVerificationStatus(input.verificationStatus ?? "confirmed"),
+      category: normalizeCategory(input.category),
+      code: normalizeCode(input.code),
+      severity: input.severity ? normalizeSeverity(input.severity) : undefined,
       onsetAt: onsetAt?.toISOString(),
       recordedAt: recordedAt.toISOString(),
       recorderPractitionerId: normalizeRequired(
@@ -91,9 +113,28 @@ export class Condition {
   static rehydrate(snapshot: ConditionSnapshot): Condition {
     return new Condition({
       ...snapshot,
+      id: normalizeRequired(snapshot.id, "Mã chẩn đoán không được để trống."),
+      patientId: normalizeRequired(snapshot.patientId, "Chẩn đoán phải gắn với một bệnh nhân."),
       encounterId: normalizeOptional(snapshot.encounterId),
-      onsetAt: snapshot.onsetAt ? parseDate(snapshot.onsetAt, "Thời điểm khởi phát chẩn đoán không hợp lệ.").toISOString() : undefined,
-      note: normalizeOptional(snapshot.note)
+      clinicalStatus: normalizeClinicalStatus(snapshot.clinicalStatus),
+      verificationStatus: normalizeVerificationStatus(snapshot.verificationStatus),
+      category: normalizeCategory(snapshot.category),
+      code: normalizeCode(snapshot.code),
+      severity: snapshot.severity ? normalizeSeverity(snapshot.severity) : undefined,
+      onsetAt: snapshot.onsetAt
+        ? parseDate(snapshot.onsetAt, "Thời điểm khởi phát chẩn đoán không hợp lệ.").toISOString()
+        : undefined,
+      recordedAt: parseDate(
+        snapshot.recordedAt,
+        "Thời điểm ghi nhận chẩn đoán không hợp lệ."
+      ).toISOString(),
+      recorderPractitionerId: normalizeRequired(
+        snapshot.recorderPractitionerId,
+        "Nhân sự ghi nhận chẩn đoán không được để trống."
+      ),
+      note: normalizeOptional(snapshot.note),
+      createdAt: parseDate(snapshot.createdAt, "Thời điểm tạo chẩn đoán không hợp lệ.").toISOString(),
+      updatedAt: parseDate(snapshot.updatedAt, "Thời điểm cập nhật chẩn đoán không hợp lệ.").toISOString()
     });
   }
 
@@ -126,6 +167,48 @@ function normalizeRequired(value: string, message: string): string {
 function normalizeOptional(value: string | undefined): string | undefined {
   const normalized = value?.trim().replace(/\s+/g, " ");
   return normalized || undefined;
+}
+
+function normalizeCode(value: ConditionCode): ConditionCode {
+  return {
+    system: normalizeRequired(value.system, "Hệ mã chẩn đoán không được để trống."),
+    code: normalizeRequired(value.code, "Mã chẩn đoán không được để trống."),
+    display: normalizeRequired(value.display, "Tên chẩn đoán không được để trống.")
+  };
+}
+
+function normalizeClinicalStatus(value: ConditionClinicalStatus): ConditionClinicalStatus {
+  if (!conditionClinicalStatuses.has(value)) {
+    throw new DomainError("Trạng thái lâm sàng của chẩn đoán không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizeVerificationStatus(
+  value: ConditionVerificationStatus
+): ConditionVerificationStatus {
+  if (!conditionVerificationStatuses.has(value)) {
+    throw new DomainError("Trạng thái xác minh của chẩn đoán không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizeCategory(value: ConditionCategory): ConditionCategory {
+  if (!conditionCategories.has(value)) {
+    throw new DomainError("Nhóm chẩn đoán không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizeSeverity(value: ConditionSeverity): ConditionSeverity {
+  if (!conditionSeverities.has(value)) {
+    throw new DomainError("Mức độ nặng của chẩn đoán không hợp lệ.");
+  }
+
+  return value;
 }
 
 function parseDate(value: string, message: string): Date {
