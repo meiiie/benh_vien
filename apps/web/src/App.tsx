@@ -17,6 +17,7 @@ import {
 import { buildClinicalDocumentHandlers } from "./features/clinical-documents/clinicalDocumentHandlers.js";
 import { buildClinicalDocumentPanelRenderers } from "./features/clinical-documents/clinicalDocumentPanelRenderers.js";
 import { buildClinicalRecordPanelRenderers } from "./features/clinical-records/clinicalRecordPanelRenderers.js";
+import { useClinicalRecordState } from "./features/clinical-records/clinicalRecordState.js";
 import { buildCarePlanHandlers } from "./features/clinical-records/carePlanHandlers.js";
 import { buildMedicationHandlers } from "./features/clinical-records/medicationHandlers.js";
 import { buildClinicalEntryHandlers } from "./features/clinical-records/clinicalEntryHandlers.js";
@@ -49,18 +50,6 @@ import { buildDashboardMetrics } from "./pages/dashboardMetrics.js";
 import { buildWorkspaceSelection } from "./pages/workspaceSelection.js";
 
 import {
-  defaultAllergyIntoleranceForm,
-  defaultClinicalDocumentForm,
-  defaultConditionForm,
-  defaultDiagnosticReportForm,
-  defaultEncounterForm,
-  defaultImagingStudyForm,
-  defaultMedicationAdministrationForm,
-  defaultMedicationDispenseForm,
-  defaultMedicationRequestForm,
-  defaultObservationForm,
-  defaultProcedureForm,
-  defaultServiceRequestForm,
   defaultTransferContext,
   documentTaxonomy,
   referenceSignals,
@@ -68,60 +57,6 @@ import {
 } from "./config/demoClinicalDefaults.js";
 import type {
   AppRoute,
-  MedicationTimingUnit,
-  MedicationDispenseStatus,
-  ConsentStatus,
-  ConsentCategory,
-  RecordTransferStatus,
-  ProviderOrganizationType,
-  ProviderEndpointConnectionType,
-  ProviderIdentifier,
-  ProviderTelecom,
-  ProviderCoding,
-  ProviderOrganization,
-  ProviderPractitioner,
-  ProviderEndpoint,
-  ProviderPractitionerRole,
-  Encounter,
-  ClinicalDocument,
-  ObservationCode,
-  ConditionCode,
-  AllergyCode,
-  AllergyReaction,
-  AllergyIntolerance,
-  Condition,
-  ObservationQuantity,
-  Observation,
-  MedicationCode,
-  MedicationQuantity,
-  DosageInstruction,
-  MedicationRequest,
-  MedicationDispense,
-  MedicationAdministrationPerformer,
-  MedicationAdministrationEffectivePeriod,
-  MedicationAdministrationDosage,
-  MedicationAdministration,
-  ServiceRequestCode,
-  ServiceRequest,
-  WorkflowTask,
-  Procedure,
-  DiagnosticReportCode,
-  DiagnosticReport,
-  ImagingStudyCoding,
-  ImagingStudySeries,
-  ImagingStudy,
-  NewEncounterForm,
-  NewClinicalDocumentForm,
-  NewConditionForm,
-  NewAllergyIntoleranceForm,
-  NewObservationForm,
-  NewMedicationRequestForm,
-  NewMedicationDispenseForm,
-  NewMedicationAdministrationForm,
-  NewServiceRequestForm,
-  NewProcedureForm,
-  NewDiagnosticReportForm,
-  NewImagingStudyForm,
   AuthSession
 } from "./types/clinical.js";
 
@@ -144,91 +79,8 @@ export function App() {
   const fhirPreviewState = useFhirPreviewState();
   const auditState = useAuditState();
   const interoperabilityState = useInteroperabilityState();
-  const [encounters, setEncounters] = useState<readonly Encounter[]>([]);
-  const [selectedEncounterId, setSelectedEncounterId] = useState<string>();
-  const [clinicalDocuments, setClinicalDocuments] = useState<readonly ClinicalDocument[]>([]);
-  const [selectedDocumentId, setSelectedDocumentId] = useState<string>();
-  const [allergyIntolerances, setAllergyIntolerances] = useState<readonly AllergyIntolerance[]>([]);
-  const [selectedAllergyIntoleranceId, setSelectedAllergyIntoleranceId] = useState<string>();
-  const [conditions, setConditions] = useState<readonly Condition[]>([]);
-  const [selectedConditionId, setSelectedConditionId] = useState<string>();
-  const [observations, setObservations] = useState<readonly Observation[]>([]);
-  const [selectedObservationId, setSelectedObservationId] = useState<string>();
-  const [medicationRequests, setMedicationRequests] = useState<readonly MedicationRequest[]>([]);
-  const [selectedMedicationRequestId, setSelectedMedicationRequestId] = useState<string>();
-  const [medicationDispenses, setMedicationDispenses] =
-    useState<readonly MedicationDispense[]>([]);
-  const [selectedMedicationDispenseId, setSelectedMedicationDispenseId] =
-    useState<string>();
-  const [medicationAdministrations, setMedicationAdministrations] =
-    useState<readonly MedicationAdministration[]>([]);
-  const [selectedMedicationAdministrationId, setSelectedMedicationAdministrationId] =
-    useState<string>();
-  const [serviceRequests, setServiceRequests] = useState<readonly ServiceRequest[]>([]);
-  const [selectedServiceRequestId, setSelectedServiceRequestId] = useState<string>();
-  const [workflowTasks, setWorkflowTasks] = useState<readonly WorkflowTask[]>([]);
-  const [selectedWorkflowTaskId, setSelectedWorkflowTaskId] = useState<string>();
-  const [procedures, setProcedures] = useState<readonly Procedure[]>([]);
-  const [selectedProcedureId, setSelectedProcedureId] = useState<string>();
-  const [diagnosticReports, setDiagnosticReports] = useState<readonly DiagnosticReport[]>([]);
-  const [selectedDiagnosticReportId, setSelectedDiagnosticReportId] = useState<string>();
-  const [imagingStudies, setImagingStudies] = useState<readonly ImagingStudy[]>([]);
-  const [selectedImagingStudyId, setSelectedImagingStudyId] = useState<string>();
-  const [encounterForm, setEncounterForm] = useState<NewEncounterForm>(defaultEncounterForm);
-  const [documentForm, setDocumentForm] =
-    useState<NewClinicalDocumentForm>(defaultClinicalDocumentForm);
-  const [allergyIntoleranceForm, setAllergyIntoleranceForm] =
-    useState<NewAllergyIntoleranceForm>(defaultAllergyIntoleranceForm);
-  const [conditionForm, setConditionForm] =
-    useState<NewConditionForm>(defaultConditionForm);
-  const [observationForm, setObservationForm] =
-    useState<NewObservationForm>(defaultObservationForm);
-  const [medicationRequestForm, setMedicationRequestForm] =
-    useState<NewMedicationRequestForm>(defaultMedicationRequestForm);
-  const [medicationDispenseForm, setMedicationDispenseForm] =
-    useState<NewMedicationDispenseForm>(defaultMedicationDispenseForm);
-  const [medicationAdministrationForm, setMedicationAdministrationForm] =
-    useState<NewMedicationAdministrationForm>(defaultMedicationAdministrationForm);
-  const [serviceRequestForm, setServiceRequestForm] =
-    useState<NewServiceRequestForm>(defaultServiceRequestForm);
-  const [procedureForm, setProcedureForm] =
-    useState<NewProcedureForm>(defaultProcedureForm);
-  const [diagnosticReportForm, setDiagnosticReportForm] =
-    useState<NewDiagnosticReportForm>(defaultDiagnosticReportForm);
-  const [imagingStudyForm, setImagingStudyForm] =
-    useState<NewImagingStudyForm>(defaultImagingStudyForm);
+  const clinicalRecordState = useClinicalRecordState();
   const [statusMessage, setStatusMessage] = useState("Chưa đăng nhập.");
-  const [isLoadingEncounters, setIsLoadingEncounters] = useState(false);
-  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
-  const [isLoadingAllergyIntolerances, setIsLoadingAllergyIntolerances] = useState(false);
-  const [isLoadingConditions, setIsLoadingConditions] = useState(false);
-  const [isLoadingObservations, setIsLoadingObservations] = useState(false);
-  const [isLoadingMedicationRequests, setIsLoadingMedicationRequests] = useState(false);
-  const [isLoadingMedicationDispenses, setIsLoadingMedicationDispenses] =
-    useState(false);
-  const [isLoadingMedicationAdministrations, setIsLoadingMedicationAdministrations] =
-    useState(false);
-  const [isLoadingServiceRequests, setIsLoadingServiceRequests] = useState(false);
-  const [isLoadingWorkflowTasks, setIsLoadingWorkflowTasks] = useState(false);
-  const [isLoadingProcedures, setIsLoadingProcedures] = useState(false);
-  const [isLoadingDiagnosticReports, setIsLoadingDiagnosticReports] = useState(false);
-  const [isLoadingImagingStudies, setIsLoadingImagingStudies] = useState(false);
-  const [isSubmittingEncounter, setIsSubmittingEncounter] = useState(false);
-  const [isSubmittingDocument, setIsSubmittingDocument] = useState(false);
-  const [isSubmittingAllergyIntolerance, setIsSubmittingAllergyIntolerance] = useState(false);
-  const [isSubmittingCondition, setIsSubmittingCondition] = useState(false);
-  const [isSubmittingObservation, setIsSubmittingObservation] = useState(false);
-  const [isSubmittingMedicationRequest, setIsSubmittingMedicationRequest] = useState(false);
-  const [isSubmittingMedicationDispense, setIsSubmittingMedicationDispense] =
-    useState(false);
-  const [isSubmittingMedicationAdministration, setIsSubmittingMedicationAdministration] =
-    useState(false);
-  const [isSubmittingServiceRequest, setIsSubmittingServiceRequest] = useState(false);
-  const [isSubmittingProcedure, setIsSubmittingProcedure] = useState(false);
-  const [isSubmittingDiagnosticReport, setIsSubmittingDiagnosticReport] = useState(false);
-  const [isSubmittingImagingStudy, setIsSubmittingImagingStudy] = useState(false);
-  const [isSigningDocument, setIsSigningDocument] = useState(false);
-  const [isFinishingEncounter, setIsFinishingEncounter] = useState(false);
 
   const canMergePatients = authSession?.actor.role === "admin";
   const isIntegrationSession = authSession?.actor.role === "integration";
@@ -257,37 +109,13 @@ export function App() {
     setStatusMessage
   });
   const patientWorkspaceCollections = {
-    allergyIntolerances,
-    clinicalDocuments,
-    conditions,
-    diagnosticReports,
-    encounters,
-    imagingStudies,
-    medicationAdministrations,
-    medicationDispenses,
-    medicationRequests,
-    observations,
-    procedures,
+    ...clinicalRecordState,
     recordTransfers: interoperabilityState.recordTransfers,
-    serviceRequests,
-    workflowTasks
   };
   const workspaceSelection = buildWorkspaceSelection({
     ...patientWorkspaceCollections,
-    selectedAllergyIntoleranceId,
-    selectedConditionId,
-    selectedDiagnosticReportId,
-    selectedDocumentId,
-    selectedEncounterId,
-    selectedImagingStudyId,
-    selectedMedicationAdministrationId,
-    selectedMedicationDispenseId,
-    selectedMedicationRequestId,
-    selectedObservationId,
-    selectedProcedureId,
+    ...clinicalRecordState,
     selectedRecordTransferId: interoperabilityState.selectedRecordTransferId,
-    selectedServiceRequestId,
-    selectedWorkflowTaskId
   });
   const dashboardMetrics = buildDashboardMetrics({
     ...patientWorkspaceCollections,
@@ -424,46 +252,8 @@ export function App() {
     loadWorkflowTasks
   } = buildPatientWorkspaceCollectionLoaders({
     clinicalApi,
-    setAllergyIntolerances,
-    setClinicalDocuments,
-    setConditions,
-    setDiagnosticReports,
-    setEncounters,
-    setImagingStudies,
-    setIsLoadingAllergyIntolerances,
-    setIsLoadingConditions,
-    setIsLoadingDiagnosticReports,
-    setIsLoadingDocuments,
-    setIsLoadingEncounters,
-    setIsLoadingImagingStudies,
-    setIsLoadingMedicationAdministrations,
-    setIsLoadingMedicationDispenses,
-    setIsLoadingMedicationRequests,
-    setIsLoadingObservations,
-    setIsLoadingProcedures,
-    setIsLoadingServiceRequests,
-    setIsLoadingWorkflowTasks,
-    setMedicationAdministrations,
-    setMedicationDispenses,
-    setMedicationRequests,
-    setObservations,
-    setProcedures,
-    setSelectedAllergyIntoleranceId,
-    setSelectedConditionId,
-    setSelectedDiagnosticReportId,
-    setSelectedDocumentId,
-    setSelectedEncounterId,
-    setSelectedImagingStudyId,
-    setSelectedMedicationAdministrationId,
-    setSelectedMedicationDispenseId,
-    setSelectedMedicationRequestId,
-    setSelectedObservationId,
-    setSelectedProcedureId,
-    setSelectedServiceRequestId,
-    setSelectedWorkflowTaskId,
-    setServiceRequests,
-    setStatusMessage,
-    setWorkflowTasks
+    ...clinicalRecordState,
+    setStatusMessage
   });
   const {
     clearPatientWorkspaceState,
@@ -493,37 +283,12 @@ export function App() {
     loadServiceRequests,
     loadWorkflowTasks,
     ...fhirPreviewState,
-    setAllergyIntolerances,
+    ...clinicalRecordState,
     setAuditEvents: auditState.setAuditEvents,
     setAuditFhirBundlePreview: auditState.setAuditFhirBundlePreview,
     setAuditIntegrityReport: auditState.setAuditIntegrityReport,
     setCapabilityStatementPreview: platformState.setCapabilityStatementPreview,
-    setClinicalDocuments,
-    setConditions,
-    setDiagnosticReports,
-    setEncounters,
-    setImagingStudies,
-    setMedicationAdministrations,
-    setMedicationDispenses,
-    setMedicationRequests,
-    setObservations,
-    setProcedures,
     ...interoperabilityState,
-    setSelectedAllergyIntoleranceId,
-    setSelectedConditionId,
-    setSelectedDiagnosticReportId,
-    setSelectedDocumentId,
-    setSelectedEncounterId,
-    setSelectedImagingStudyId,
-    setSelectedMedicationAdministrationId,
-    setSelectedMedicationDispenseId,
-    setSelectedMedicationRequestId,
-    setSelectedObservationId,
-    setSelectedProcedureId,
-    setSelectedServiceRequestId,
-    setSelectedWorkflowTaskId,
-    setServiceRequests,
-    setWorkflowTasks
   });
   const {
     handleCreatePatient,
@@ -550,15 +315,13 @@ export function App() {
     handleFinishEncounter
   } = buildEncounterHandlers({
     clinicalApi,
-    encounterForm,
+    ...clinicalRecordState,
     ensureSelectedPatientWritable,
     loadAuditEvents,
     loadEncounterFhirPreview,
     loadEncounters,
     selectedPatient,
     setAppRoute,
-    setIsFinishingEncounter,
-    setIsSubmittingEncounter,
     setStatusMessage
   });
   const {
@@ -566,21 +329,16 @@ export function App() {
     handleCreateCondition,
     handleCreateObservation
   } = buildClinicalEntryHandlers({
-    allergyIntoleranceForm,
     clinicalApi,
-    conditionForm,
+    ...clinicalRecordState,
     ensureSelectedPatientWritable,
     loadAllergyIntolerances,
     loadAuditEvents,
     loadConditions,
     loadObservations,
     loadPatientFhirBundlePreview,
-    observationForm,
     selectedPatient,
     setAppRoute,
-    setIsSubmittingAllergyIntolerance,
-    setIsSubmittingCondition,
-    setIsSubmittingObservation,
     setStatusMessage
   });
   const {
@@ -596,14 +354,9 @@ export function App() {
     loadMedicationRequests,
     loadPatientFhirBundlePreview,
     loadPatientFhirDocumentBundlePreview,
-    medicationAdministrationForm,
-    medicationDispenseForm,
-    medicationRequestForm,
+    ...clinicalRecordState,
     selectedPatient,
     setAppRoute,
-    setIsSubmittingMedicationAdministration,
-    setIsSubmittingMedicationDispense,
-    setIsSubmittingMedicationRequest,
     setStatusMessage
   });
   const {
@@ -613,9 +366,8 @@ export function App() {
     handleCreateServiceRequest
   } = buildCarePlanHandlers({
     clinicalApi,
-    diagnosticReportForm,
+    ...clinicalRecordState,
     ensureSelectedPatientWritable,
-    imagingStudyForm,
     loadAuditEvents,
     loadDiagnosticReports,
     loadImagingStudies,
@@ -623,14 +375,8 @@ export function App() {
     loadPatientFhirDocumentBundlePreview,
     loadProcedures,
     loadServiceRequests,
-    procedureForm,
     selectedPatient,
-    serviceRequestForm,
     setAppRoute,
-    setIsSubmittingDiagnosticReport,
-    setIsSubmittingImagingStudy,
-    setIsSubmittingProcedure,
-    setIsSubmittingServiceRequest,
     setStatusMessage
   });
   const {
@@ -638,7 +384,7 @@ export function App() {
     handleSignClinicalDocument
   } = buildClinicalDocumentHandlers({
     clinicalApi,
-    documentForm,
+    ...clinicalRecordState,
     ensureSelectedPatientWritable,
     loadAuditEvents,
     loadClinicalDocuments,
@@ -646,8 +392,6 @@ export function App() {
     loadDocumentProvenanceFhirPreview,
     selectedPatient,
     setAppRoute,
-    setIsSigningDocument,
-    setIsSubmittingDocument,
     setStatusMessage
   });
   const {
@@ -754,17 +498,18 @@ export function App() {
   const clinicalRecordPanels = buildClinicalRecordPanelRenderers({
     collections: patientWorkspaceCollections,
     forms: {
-      allergyIntolerance: allergyIntoleranceForm,
-      condition: conditionForm,
-      diagnosticReport: diagnosticReportForm,
-      encounter: encounterForm,
-      imagingStudy: imagingStudyForm,
-      medicationAdministration: medicationAdministrationForm,
-      medicationDispense: medicationDispenseForm,
-      medicationRequest: medicationRequestForm,
-      observation: observationForm,
-      procedure: procedureForm,
-      serviceRequest: serviceRequestForm
+      allergyIntolerance: clinicalRecordState.allergyIntoleranceForm,
+      condition: clinicalRecordState.conditionForm,
+      diagnosticReport: clinicalRecordState.diagnosticReportForm,
+      encounter: clinicalRecordState.encounterForm,
+      imagingStudy: clinicalRecordState.imagingStudyForm,
+      medicationAdministration:
+        clinicalRecordState.medicationAdministrationForm,
+      medicationDispense: clinicalRecordState.medicationDispenseForm,
+      medicationRequest: clinicalRecordState.medicationRequestForm,
+      observation: clinicalRecordState.observationForm,
+      procedure: clinicalRecordState.procedureForm,
+      serviceRequest: clinicalRecordState.serviceRequestForm
     },
     handlers: {
       onCreateAllergyIntolerance: handleCreateAllergyIntolerance,
@@ -779,59 +524,69 @@ export function App() {
       onCreateProcedure: handleCreateProcedure,
       onCreateServiceRequest: handleCreateServiceRequest,
       onFinishEncounter: handleFinishEncounter,
-      onAllergyIntoleranceFormChange: setAllergyIntoleranceForm,
-      onConditionFormChange: setConditionForm,
-      onDiagnosticReportFormChange: setDiagnosticReportForm,
-      onEncounterFormChange: setEncounterForm,
-      onImagingStudyFormChange: setImagingStudyForm,
-      onMedicationAdministrationFormChange: setMedicationAdministrationForm,
-      onMedicationDispenseFormChange: setMedicationDispenseForm,
-      onMedicationRequestFormChange: setMedicationRequestForm,
-      onObservationFormChange: setObservationForm,
-      onProcedureFormChange: setProcedureForm,
-      onServiceRequestFormChange: setServiceRequestForm,
-      onSelectAllergyIntolerance: setSelectedAllergyIntoleranceId,
-      onSelectCondition: setSelectedConditionId,
-      onSelectDiagnosticReport: setSelectedDiagnosticReportId,
-      onSelectEncounter: setSelectedEncounterId,
-      onSelectImagingStudy: setSelectedImagingStudyId,
-      onSelectMedicationAdministration: setSelectedMedicationAdministrationId,
-      onSelectMedicationDispense: setSelectedMedicationDispenseId,
-      onSelectMedicationRequest: setSelectedMedicationRequestId,
-      onSelectObservation: setSelectedObservationId,
-      onSelectProcedure: setSelectedProcedureId,
-      onSelectServiceRequest: setSelectedServiceRequestId,
-      onSelectWorkflowTask: setSelectedWorkflowTaskId
+      onAllergyIntoleranceFormChange:
+        clinicalRecordState.setAllergyIntoleranceForm,
+      onConditionFormChange: clinicalRecordState.setConditionForm,
+      onDiagnosticReportFormChange: clinicalRecordState.setDiagnosticReportForm,
+      onEncounterFormChange: clinicalRecordState.setEncounterForm,
+      onImagingStudyFormChange: clinicalRecordState.setImagingStudyForm,
+      onMedicationAdministrationFormChange:
+        clinicalRecordState.setMedicationAdministrationForm,
+      onMedicationDispenseFormChange:
+        clinicalRecordState.setMedicationDispenseForm,
+      onMedicationRequestFormChange: clinicalRecordState.setMedicationRequestForm,
+      onObservationFormChange: clinicalRecordState.setObservationForm,
+      onProcedureFormChange: clinicalRecordState.setProcedureForm,
+      onServiceRequestFormChange: clinicalRecordState.setServiceRequestForm,
+      onSelectAllergyIntolerance:
+        clinicalRecordState.setSelectedAllergyIntoleranceId,
+      onSelectCondition: clinicalRecordState.setSelectedConditionId,
+      onSelectDiagnosticReport:
+        clinicalRecordState.setSelectedDiagnosticReportId,
+      onSelectEncounter: clinicalRecordState.setSelectedEncounterId,
+      onSelectImagingStudy: clinicalRecordState.setSelectedImagingStudyId,
+      onSelectMedicationAdministration:
+        clinicalRecordState.setSelectedMedicationAdministrationId,
+      onSelectMedicationDispense:
+        clinicalRecordState.setSelectedMedicationDispenseId,
+      onSelectMedicationRequest:
+        clinicalRecordState.setSelectedMedicationRequestId,
+      onSelectObservation: clinicalRecordState.setSelectedObservationId,
+      onSelectProcedure: clinicalRecordState.setSelectedProcedureId,
+      onSelectServiceRequest: clinicalRecordState.setSelectedServiceRequestId,
+      onSelectWorkflowTask: clinicalRecordState.setSelectedWorkflowTaskId
     },
-    isFinishingEncounter,
+    isFinishingEncounter: clinicalRecordState.isFinishingEncounter,
     isWriteDisabled: selectedPatientWriteDisabled,
     loading: {
-      allergyIntolerances: isLoadingAllergyIntolerances,
-      conditions: isLoadingConditions,
-      diagnosticReports: isLoadingDiagnosticReports,
-      encounters: isLoadingEncounters,
-      imagingStudies: isLoadingImagingStudies,
-      medicationAdministrations: isLoadingMedicationAdministrations,
-      medicationDispenses: isLoadingMedicationDispenses,
-      medicationRequests: isLoadingMedicationRequests,
-      observations: isLoadingObservations,
-      procedures: isLoadingProcedures,
-      serviceRequests: isLoadingServiceRequests,
-      workflowTasks: isLoadingWorkflowTasks
+      allergyIntolerances: clinicalRecordState.isLoadingAllergyIntolerances,
+      conditions: clinicalRecordState.isLoadingConditions,
+      diagnosticReports: clinicalRecordState.isLoadingDiagnosticReports,
+      encounters: clinicalRecordState.isLoadingEncounters,
+      imagingStudies: clinicalRecordState.isLoadingImagingStudies,
+      medicationAdministrations:
+        clinicalRecordState.isLoadingMedicationAdministrations,
+      medicationDispenses: clinicalRecordState.isLoadingMedicationDispenses,
+      medicationRequests: clinicalRecordState.isLoadingMedicationRequests,
+      observations: clinicalRecordState.isLoadingObservations,
+      procedures: clinicalRecordState.isLoadingProcedures,
+      serviceRequests: clinicalRecordState.isLoadingServiceRequests,
+      workflowTasks: clinicalRecordState.isLoadingWorkflowTasks
     },
     selectedIds: {
-      allergyIntolerance: selectedAllergyIntoleranceId,
-      condition: selectedConditionId,
-      diagnosticReport: selectedDiagnosticReportId,
-      encounter: selectedEncounterId,
-      imagingStudy: selectedImagingStudyId,
-      medicationAdministration: selectedMedicationAdministrationId,
-      medicationDispense: selectedMedicationDispenseId,
-      medicationRequest: selectedMedicationRequestId,
-      observation: selectedObservationId,
-      procedure: selectedProcedureId,
-      serviceRequest: selectedServiceRequestId,
-      workflowTask: selectedWorkflowTaskId
+      allergyIntolerance: clinicalRecordState.selectedAllergyIntoleranceId,
+      condition: clinicalRecordState.selectedConditionId,
+      diagnosticReport: clinicalRecordState.selectedDiagnosticReportId,
+      encounter: clinicalRecordState.selectedEncounterId,
+      imagingStudy: clinicalRecordState.selectedImagingStudyId,
+      medicationAdministration:
+        clinicalRecordState.selectedMedicationAdministrationId,
+      medicationDispense: clinicalRecordState.selectedMedicationDispenseId,
+      medicationRequest: clinicalRecordState.selectedMedicationRequestId,
+      observation: clinicalRecordState.selectedObservationId,
+      procedure: clinicalRecordState.selectedProcedureId,
+      serviceRequest: clinicalRecordState.selectedServiceRequestId,
+      workflowTask: clinicalRecordState.selectedWorkflowTaskId
     },
     selections: {
       selectedAllergyIntolerance: workspaceSelection.selectedAllergyIntolerance,
@@ -849,34 +604,35 @@ export function App() {
       selectedWorkflowTask: workspaceSelection.selectedWorkflowTask
     },
     submitting: {
-      allergyIntolerance: isSubmittingAllergyIntolerance,
-      condition: isSubmittingCondition,
-      diagnosticReport: isSubmittingDiagnosticReport,
-      encounter: isSubmittingEncounter,
-      imagingStudy: isSubmittingImagingStudy,
-      medicationAdministration: isSubmittingMedicationAdministration,
-      medicationDispense: isSubmittingMedicationDispense,
-      medicationRequest: isSubmittingMedicationRequest,
-      observation: isSubmittingObservation,
-      procedure: isSubmittingProcedure,
-      serviceRequest: isSubmittingServiceRequest
+      allergyIntolerance: clinicalRecordState.isSubmittingAllergyIntolerance,
+      condition: clinicalRecordState.isSubmittingCondition,
+      diagnosticReport: clinicalRecordState.isSubmittingDiagnosticReport,
+      encounter: clinicalRecordState.isSubmittingEncounter,
+      imagingStudy: clinicalRecordState.isSubmittingImagingStudy,
+      medicationAdministration:
+        clinicalRecordState.isSubmittingMedicationAdministration,
+      medicationDispense: clinicalRecordState.isSubmittingMedicationDispense,
+      medicationRequest: clinicalRecordState.isSubmittingMedicationRequest,
+      observation: clinicalRecordState.isSubmittingObservation,
+      procedure: clinicalRecordState.isSubmittingProcedure,
+      serviceRequest: clinicalRecordState.isSubmittingServiceRequest
     }
   });
   const clinicalDocumentPanels = buildClinicalDocumentPanelRenderers({
-    clinicalDocuments,
+    clinicalDocuments: clinicalRecordState.clinicalDocuments,
     documentTaxonomy,
-    encounters,
-    form: documentForm,
-    isLoading: isLoadingDocuments,
+    encounters: clinicalRecordState.encounters,
+    form: clinicalRecordState.documentForm,
+    isLoading: clinicalRecordState.isLoadingDocuments,
     isSelectedPatientMerged,
-    isSigningDocument,
-    isSubmitting: isSubmittingDocument,
+    isSigningDocument: clinicalRecordState.isSigningDocument,
+    isSubmitting: clinicalRecordState.isSubmittingDocument,
     isWriteDisabled: selectedPatientWriteDisabled,
     selectedDocument: workspaceSelection.selectedDocument,
-    selectedDocumentId,
+    selectedDocumentId: clinicalRecordState.selectedDocumentId,
     onCreateDocument: handleCreateClinicalDocument,
-    onDocumentFormChange: setDocumentForm,
-    onSelectDocument: setSelectedDocumentId,
+    onDocumentFormChange: clinicalRecordState.setDocumentForm,
+    onSelectDocument: clinicalRecordState.setSelectedDocumentId,
     onSignDocument: handleSignClinicalDocument
   });
   const routePanels = buildAppRoutePanels({
@@ -902,19 +658,8 @@ export function App() {
     loadRecordTransferFhirTaskPreview,
     loadServiceRequestFhirPreview,
     loadWorkflowTaskFhirPreview,
-    selectedAllergyIntoleranceId,
-    selectedConditionId,
-    selectedDiagnosticReportId,
-    selectedDocumentId,
+    ...clinicalRecordState,
     selectedDocumentStatus: workspaceSelection.selectedDocument?.status,
-    selectedImagingStudyId,
-    selectedMedicationAdministrationId,
-    selectedMedicationDispenseId,
-    selectedMedicationRequestId,
-    selectedObservationId,
-    selectedProcedureId,
-    selectedServiceRequestId,
-    selectedWorkflowTaskId,
     ...fhirPreviewState,
     ...interoperabilityState
   });
@@ -939,19 +684,8 @@ export function App() {
 
   useEncounterScopedFormEffects({
     loadEncounterFhirPreview,
-    selectedEncounterId,
-    setAllergyIntoleranceForm,
-    setConditionForm,
-    setDiagnosticReportForm,
-    setDocumentForm,
+    ...clinicalRecordState,
     setEncounterFhirPreview: fhirPreviewState.setEncounterFhirPreview,
-    setImagingStudyForm,
-    setMedicationAdministrationForm,
-    setMedicationDispenseForm,
-    setMedicationRequestForm,
-    setObservationForm,
-    setProcedureForm,
-    setServiceRequestForm
   });
 
   if (!isAuthenticated) {
@@ -1022,7 +756,7 @@ export function App() {
         isSubmittingGatewayAcknowledgement={
           interoperabilityState.isSubmittingGatewayAcknowledgement
         }
-        latestEncounterServiceType={encounters[0]?.serviceType}
+        latestEncounterServiceType={clinicalRecordState.encounters[0]?.serviceType}
         loginForm={loginForm}
         panels={routePanels}
         referenceSignals={referenceSignals}
