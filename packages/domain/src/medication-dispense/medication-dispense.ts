@@ -22,6 +22,25 @@ export type MedicationDispenseCategory =
   | "community"
   | "discharge";
 
+const medicationDispenseStatuses = new Set<MedicationDispenseStatus>([
+  "preparation",
+  "in-progress",
+  "cancelled",
+  "on-hold",
+  "completed",
+  "entered-in-error",
+  "stopped",
+  "declined",
+  "unknown"
+]);
+const medicationDispenseCategories = new Set<MedicationDispenseCategory>([
+  "inpatient",
+  "outpatient",
+  "community",
+  "discharge"
+]);
+const medicationTimingUnits = new Set(["h", "d", "wk"]);
+
 export type MedicationDispenseSnapshot = {
   readonly id: string;
   readonly patientId: string;
@@ -60,16 +79,23 @@ export class MedicationDispense {
     const whenHandedOver = input.whenHandedOver
       ? parseDate(input.whenHandedOver, "Thời điểm bàn giao thuốc không hợp lệ.").toISOString()
       : undefined;
+    const status = normalizeStatus(input.status);
+    const quantity = input.quantity
+      ? normalizeQuantity(input.quantity, "Số lượng cấp phát")
+      : undefined;
+    const daysSupply = input.daysSupply
+      ? normalizeQuantity(input.daysSupply, "Số ngày cấp thuốc")
+      : undefined;
 
     if (whenPrepared && whenHandedOver && new Date(whenHandedOver).getTime() < new Date(whenPrepared).getTime()) {
       throw new DomainError("Thời điểm bàn giao thuốc không được trước thời điểm chuẩn bị thuốc.");
     }
 
-    if (input.status === "completed" && !whenHandedOver) {
+    if (status === "completed" && !whenHandedOver) {
       throw new DomainError("Cấp phát thuốc đã hoàn tất cần có thời điểm bàn giao thuốc.");
     }
 
-    if (input.status === "completed" && !input.quantity) {
+    if (status === "completed" && !quantity) {
       throw new DomainError("Cấp phát thuốc đã hoàn tất cần có số lượng cấp phát.");
     }
 
@@ -78,12 +104,12 @@ export class MedicationDispense {
       patientId: normalizeRequired(input.patientId, "Cấp phát thuốc phải gắn với bệnh nhân."),
       encounterId: normalizeOptional(input.encounterId),
       medicationRequestId: normalizeOptional(input.medicationRequestId),
-      status: input.status,
+      status,
       statusReason: normalizeCoding(input.statusReason),
-      category: input.category,
+      category: normalizeCategory(input.category),
       medicationCode: normalizeRequiredCoding(input.medicationCode),
-      quantity: input.quantity ? normalizeQuantity(input.quantity, "Số lượng cấp phát") : undefined,
-      daysSupply: input.daysSupply ? normalizeQuantity(input.daysSupply, "Số ngày cấp thuốc") : undefined,
+      quantity,
+      daysSupply,
       whenPrepared,
       whenHandedOver,
       dispenserPractitionerId: normalizeOptional(input.dispenserPractitionerId),
@@ -99,31 +125,55 @@ export class MedicationDispense {
   }
 
   static rehydrate(snapshot: MedicationDispenseSnapshot): MedicationDispense {
+    const status = normalizeStatus(snapshot.status);
+    const quantity = snapshot.quantity
+      ? normalizeQuantity(snapshot.quantity, "Số lượng cấp phát")
+      : undefined;
+    const daysSupply = snapshot.daysSupply
+      ? normalizeQuantity(snapshot.daysSupply, "Số ngày cấp thuốc")
+      : undefined;
+    const whenPrepared = snapshot.whenPrepared
+      ? parseDate(snapshot.whenPrepared, "Thời điểm chuẩn bị thuốc không hợp lệ.").toISOString()
+      : undefined;
+    const whenHandedOver = snapshot.whenHandedOver
+      ? parseDate(snapshot.whenHandedOver, "Thời điểm bàn giao thuốc không hợp lệ.").toISOString()
+      : undefined;
+
+    if (whenPrepared && whenHandedOver && new Date(whenHandedOver).getTime() < new Date(whenPrepared).getTime()) {
+      throw new DomainError("Thời điểm bàn giao thuốc không được trước thời điểm chuẩn bị thuốc.");
+    }
+
+    if (status === "completed" && !whenHandedOver) {
+      throw new DomainError("Cấp phát thuốc đã hoàn tất cần có thời điểm bàn giao thuốc.");
+    }
+
+    if (status === "completed" && !quantity) {
+      throw new DomainError("Cấp phát thuốc đã hoàn tất cần có số lượng cấp phát.");
+    }
+
     return new MedicationDispense({
       ...snapshot,
+      id: normalizeRequired(snapshot.id, "Mã cấp phát thuốc không được để trống."),
+      patientId: normalizeRequired(snapshot.patientId, "Cấp phát thuốc phải gắn với bệnh nhân."),
       encounterId: normalizeOptional(snapshot.encounterId),
       medicationRequestId: normalizeOptional(snapshot.medicationRequestId),
+      status,
       statusReason: normalizeCoding(snapshot.statusReason),
+      category: normalizeCategory(snapshot.category),
       medicationCode: normalizeRequiredCoding(snapshot.medicationCode),
-      quantity: snapshot.quantity
-        ? normalizeQuantity(snapshot.quantity, "Số lượng cấp phát")
-        : undefined,
-      daysSupply: snapshot.daysSupply
-        ? normalizeQuantity(snapshot.daysSupply, "Số ngày cấp thuốc")
-        : undefined,
-      whenPrepared: snapshot.whenPrepared
-        ? parseDate(snapshot.whenPrepared, "Thời điểm chuẩn bị thuốc không hợp lệ.").toISOString()
-        : undefined,
-      whenHandedOver: snapshot.whenHandedOver
-        ? parseDate(snapshot.whenHandedOver, "Thời điểm bàn giao thuốc không hợp lệ.").toISOString()
-        : undefined,
+      quantity,
+      daysSupply,
+      whenPrepared,
+      whenHandedOver,
       dispenserPractitionerId: normalizeOptional(snapshot.dispenserPractitionerId),
       destinationLocationId: normalizeOptional(snapshot.destinationLocationId),
       receiverPractitionerId: normalizeOptional(snapshot.receiverPractitionerId),
       dosageInstruction: snapshot.dosageInstruction
         ? normalizeDosageInstruction(snapshot.dosageInstruction)
         : undefined,
-      note: normalizeOptional(snapshot.note)
+      note: normalizeOptional(snapshot.note),
+      createdAt: parseDate(snapshot.createdAt, "Thời điểm tạo cấp phát thuốc không hợp lệ.").toISOString(),
+      updatedAt: parseDate(snapshot.updatedAt, "Thời điểm cập nhật cấp phát thuốc không hợp lệ.").toISOString()
     });
   }
 
@@ -182,16 +232,70 @@ function normalizeQuantity(quantity: MedicationQuantity, label: string): Medicat
 function normalizeDosageInstruction(
   dosageInstruction: DosageInstruction
 ): DosageInstruction {
+  const frequency = normalizePositiveNumber(
+    dosageInstruction.frequency,
+    "Tần suất dùng thuốc phải lớn hơn 0."
+  );
+  const period = normalizePositiveNumber(
+    dosageInstruction.period,
+    "Chu kỳ dùng thuốc phải lớn hơn 0."
+  );
+  const periodUnit = dosageInstruction.periodUnit
+    ? normalizeTimingUnit(dosageInstruction.periodUnit)
+    : undefined;
+
+  if ((frequency || period) && !(frequency && period && periodUnit)) {
+    throw new DomainError("Thông tin nhịp dùng thuốc phải có đủ tần suất, chu kỳ và đơn vị chu kỳ.");
+  }
+
   return {
     text: normalizeRequired(dosageInstruction.text, "Hướng dẫn dùng thuốc không được để trống."),
     route: normalizeOptional(dosageInstruction.route),
     doseQuantity: dosageInstruction.doseQuantity
       ? normalizeQuantity(dosageInstruction.doseQuantity, "Liều dùng")
       : undefined,
-    frequency: dosageInstruction.frequency,
-    period: dosageInstruction.period,
-    periodUnit: dosageInstruction.periodUnit
+    frequency,
+    period,
+    periodUnit
   };
+}
+
+function normalizeStatus(value: MedicationDispenseStatus): MedicationDispenseStatus {
+  if (!medicationDispenseStatuses.has(value)) {
+    throw new DomainError("Trạng thái cấp phát thuốc không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizeCategory(value: MedicationDispenseCategory): MedicationDispenseCategory {
+  if (!medicationDispenseCategories.has(value)) {
+    throw new DomainError("Nhóm cấp phát thuốc không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizeTimingUnit(
+  value: NonNullable<DosageInstruction["periodUnit"]>
+): NonNullable<DosageInstruction["periodUnit"]> {
+  if (!medicationTimingUnits.has(value)) {
+    throw new DomainError("Đơn vị chu kỳ dùng thuốc không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizePositiveNumber(value: number | undefined, message: string): number | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new DomainError(message);
+  }
+
+  return value;
 }
 
 function normalizeRequired(value: string, message: string): string {
