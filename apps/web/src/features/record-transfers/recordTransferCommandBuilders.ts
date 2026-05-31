@@ -1,5 +1,9 @@
-import type { GatewayAcknowledgementForm } from "../../types/clinical.js";
 import type {
+  GatewayAcknowledgementForm,
+  NewRecordTransferForm
+} from "../../types/clinical.js";
+import type {
+  CreateRecordTransferCommand,
   GatewayAcknowledgementCommand,
   RecordTransferFailCommand,
   RecordTransferLifecycleCommand
@@ -11,6 +15,20 @@ export type GatewayAcknowledgementDraft = {
   readonly acknowledgementReference: string;
   readonly command: GatewayAcknowledgementCommand;
 };
+
+export function buildCreateRecordTransferCommand(
+  form: NewRecordTransferForm
+): CreateRecordTransferCommand {
+  return {
+    priority: form.priority,
+    bundleType: form.bundleType,
+    sourceOrganizationId: form.sourceOrganizationId,
+    recipientOrganizationId: form.recipientOrganizationId,
+    consentReference: form.consentReference,
+    reason: form.reason,
+    note: form.note || undefined
+  };
+}
 
 export function buildSendRecordTransferCommand(): RecordTransferLifecycleCommand {
   return {
@@ -61,6 +79,7 @@ export function buildGatewayAcknowledgementDraft(
 }
 
 export const recordTransferCommands = {
+  create: buildCreateRecordTransferCommand,
   fail: buildFailRecordTransferCommand,
   gatewayAcknowledgementDraft: buildGatewayAcknowledgementDraft,
   receive: buildReceiveRecordTransferCommand,

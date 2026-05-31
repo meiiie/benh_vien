@@ -2,11 +2,22 @@ import type { ClinicalApiClient } from "../../api/clinicalApi.js";
 import { toApiDateTime } from "../../lib/clinicalFormatters.js";
 import type {
   GatewayAcknowledgementForm,
-  NewRecordTransferForm,
   RecordTransfer,
+  RecordTransferBundleType,
   RecordTransferDeliveryAttemptsResponse,
+  RecordTransferPriority,
   RecordTransfersResponse
 } from "../../types/clinical.js";
+
+export type CreateRecordTransferCommand = {
+  readonly priority: RecordTransferPriority;
+  readonly bundleType: RecordTransferBundleType;
+  readonly sourceOrganizationId: string;
+  readonly recipientOrganizationId: string;
+  readonly consentReference: string;
+  readonly reason: string;
+  readonly note?: string;
+};
 
 export type RecordTransferLifecycleCommand = {
   readonly note: string;
@@ -54,20 +65,12 @@ export function listRecordTransferDeliveryAttempts(
 export function createRecordTransfer(
   api: ClinicalApiClient,
   patientId: string,
-  form: NewRecordTransferForm
+  command: CreateRecordTransferCommand
 ): Promise<RecordTransfer> {
   return api.requestJson<RecordTransfer>(`/patients/${patientId}/record-transfers`, {
     method: "POST",
     purposeOfUse: "TREATMENT",
-    json: {
-      priority: form.priority,
-      bundleType: form.bundleType,
-      sourceOrganizationId: form.sourceOrganizationId,
-      recipientOrganizationId: form.recipientOrganizationId,
-      consentReference: form.consentReference,
-      reason: form.reason,
-      note: form.note || undefined
-    }
+    json: command
   });
 }
 

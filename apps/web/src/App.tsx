@@ -1836,7 +1836,7 @@ export function App() {
       const createdTransfer = await createRecordTransfer(
         clinicalApi,
         selectedPatient.id,
-        recordTransferForm
+        recordTransferCommands.create(recordTransferForm)
       );
       await loadRecordTransfers(selectedPatient.id, createdTransfer.id);
       setStatusMessage(
