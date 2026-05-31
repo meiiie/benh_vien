@@ -81,6 +81,7 @@ export class DiagnosticReport {
     const presentedFormUrl = normalizeOptional(input.presentedFormUrl);
     const presentedFormTitle = normalizeOptional(input.presentedFormTitle);
     assertReportContent(resultObservationIds, conclusion, presentedFormUrl, presentedFormTitle);
+    validateTimeline({ effectiveAt, issuedAt, createdAt: now, updatedAt: now });
 
     return new DiagnosticReport({
       id: normalizeRequired(input.id, "Mã báo cáo chẩn đoán không được để trống."),
@@ -104,11 +105,28 @@ export class DiagnosticReport {
   }
 
   static rehydrate(snapshot: DiagnosticReportSnapshot): DiagnosticReport {
+    const effectiveAt = parseDate(
+      snapshot.effectiveAt,
+      "Thời điểm hiệu lực báo cáo không hợp lệ."
+    );
+    const issuedAt = parseDate(
+      snapshot.issuedAt,
+      "Thời điểm phát hành báo cáo không hợp lệ."
+    );
+    const createdAt = parseDate(
+      snapshot.createdAt,
+      "Thời điểm tạo báo cáo chẩn đoán không hợp lệ."
+    );
+    const updatedAt = parseDate(
+      snapshot.updatedAt,
+      "Thời điểm cập nhật báo cáo chẩn đoán không hợp lệ."
+    );
     const resultObservationIds = normalizeIdList(snapshot.resultObservationIds);
     const conclusion = normalizeOptional(snapshot.conclusion);
     const presentedFormUrl = normalizeOptional(snapshot.presentedFormUrl);
     const presentedFormTitle = normalizeOptional(snapshot.presentedFormTitle);
     assertReportContent(resultObservationIds, conclusion, presentedFormUrl, presentedFormTitle);
+    validateTimeline({ effectiveAt, issuedAt, createdAt, updatedAt });
 
     return new DiagnosticReport({
       ...snapshot,
@@ -119,22 +137,16 @@ export class DiagnosticReport {
       status: normalizeStatus(snapshot.status),
       category: normalizeCategory(snapshot.category),
       code: normalizeCode(snapshot.code),
-      effectiveAt: parseDate(
-        snapshot.effectiveAt,
-        "Thời điểm hiệu lực báo cáo không hợp lệ."
-      ).toISOString(),
-      issuedAt: parseDate(
-        snapshot.issuedAt,
-        "Thời điểm phát hành báo cáo không hợp lệ."
-      ).toISOString(),
+      effectiveAt: effectiveAt.toISOString(),
+      issuedAt: issuedAt.toISOString(),
       performerOrganizationId: normalizeOptional(snapshot.performerOrganizationId),
       resultsInterpreterPractitionerId: normalizeOptional(snapshot.resultsInterpreterPractitionerId),
       resultObservationIds,
       conclusion,
       presentedFormUrl,
       presentedFormTitle,
-      createdAt: parseDate(snapshot.createdAt, "Thời điểm tạo báo cáo chẩn đoán không hợp lệ.").toISOString(),
-      updatedAt: parseDate(snapshot.updatedAt, "Thời điểm cập nhật báo cáo chẩn đoán không hợp lệ.").toISOString()
+      createdAt: createdAt.toISOString(),
+      updatedAt: updatedAt.toISOString()
     });
   }
 
@@ -187,6 +199,21 @@ function assertReportContent(
 
   if (presentedFormTitle && !presentedFormUrl) {
     throw new DomainError("Tiêu đề tệp báo cáo chỉ hợp lệ khi có đường dẫn tệp.");
+  }
+}
+
+function validateTimeline(input: {
+  readonly effectiveAt: Date;
+  readonly issuedAt: Date;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+}): void {
+  if (input.issuedAt < input.effectiveAt) {
+    throw new DomainError("Thời điểm phát hành báo cáo không được trước thời điểm hiệu lực.");
+  }
+
+  if (input.updatedAt < input.createdAt) {
+    throw new DomainError("Thời điểm cập nhật báo cáo không được trước thời điểm tạo báo cáo.");
   }
 }
 

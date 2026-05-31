@@ -105,6 +105,24 @@ describe("DiagnosticReport", () => {
     ).toThrow(DomainError);
   });
 
+  it("rejects reports issued before their effective time", () => {
+    expect(() =>
+      DiagnosticReport.issue({
+        id: "diagnostic-report-invalid-timeline-001",
+        patientId: "patient-001",
+        category: "laboratory",
+        code: {
+          system: "http://loinc.org",
+          code: "58410-2",
+          display: "Complete blood count panel"
+        },
+        effectiveAt: "2026-05-28T03:00:00.000Z",
+        issuedAt: "2026-05-28T02:59:59.000Z",
+        resultObservationIds: ["observation-001"]
+      })
+    ).toThrow(DomainError);
+  });
+
   it("rejects invalid rehydrated diagnostic report metadata", () => {
     const snapshot = DiagnosticReport.issue({
       id: "diagnostic-report-005",
@@ -182,6 +200,20 @@ describe("DiagnosticReport", () => {
       DiagnosticReport.rehydrate({
         ...snapshot,
         createdAt: "not-a-date"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      DiagnosticReport.rehydrate({
+        ...snapshot,
+        issuedAt: "2026-05-28T02:29:59.000Z"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      DiagnosticReport.rehydrate({
+        ...snapshot,
+        updatedAt: "1999-01-01T00:00:00.000Z"
       })
     ).toThrow(DomainError);
   });
