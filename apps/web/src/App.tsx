@@ -34,6 +34,7 @@ import { buildPatientWorkspaceLifecycle } from "./features/patient-workspace/pat
 import { buildPlatformLoaders } from "./features/platform/platformLoaders.js";
 import { usePlatformState } from "./features/platform/platformState.js";
 import { buildFhirPreviewLoaders } from "./features/fhir-preview/fhirPreviewLoaders.js";
+import { useFhirPreviewState } from "./features/fhir-preview/fhirPreviewState.js";
 import { useSelectedFhirPreviewEffects } from "./features/fhir-preview/selectedFhirPreviewEffects.js";
 import { buildRecordTransferHandlers } from "./features/record-transfers/recordTransferHandlers.js";
 import { buildRecordTransferLoaders } from "./features/record-transfers/recordTransferLoaders.js";
@@ -147,6 +148,7 @@ export function App() {
   const [loginForm, setLoginForm] = useState<LoginForm>(loginPresets.clinician);
   const [loginError, setLoginError] = useState<string>();
   const platformState = usePlatformState();
+  const fhirPreviewState = useFhirPreviewState();
   const [encounters, setEncounters] = useState<readonly Encounter[]>([]);
   const [selectedEncounterId, setSelectedEncounterId] = useState<string>();
   const [clinicalDocuments, setClinicalDocuments] = useState<readonly ClinicalDocument[]>([]);
@@ -190,29 +192,6 @@ export function App() {
     useState<readonly RecordTransferDeliveryAttempt[]>([]);
   const [recordTransferDeliveryAttemptWarning, setRecordTransferDeliveryAttemptWarning] =
     useState<string>();
-  const [patientFhirPreview, setPatientFhirPreview] = useState<unknown>();
-  const [patientFhirBundlePreview, setPatientFhirBundlePreview] = useState<unknown>();
-  const [patientFhirDocumentBundlePreview, setPatientFhirDocumentBundlePreview] = useState<unknown>();
-  const [consentFhirPreview, setConsentFhirPreview] = useState<unknown>();
-  const [recordTransferFhirTaskPreview, setRecordTransferFhirTaskPreview] =
-    useState<unknown>();
-  const [encounterFhirPreview, setEncounterFhirPreview] = useState<unknown>();
-  const [documentFhirPreview, setDocumentFhirPreview] = useState<unknown>();
-  const [documentProvenanceFhirPreview, setDocumentProvenanceFhirPreview] =
-    useState<unknown>();
-  const [allergyIntoleranceFhirPreview, setAllergyIntoleranceFhirPreview] = useState<unknown>();
-  const [conditionFhirPreview, setConditionFhirPreview] = useState<unknown>();
-  const [observationFhirPreview, setObservationFhirPreview] = useState<unknown>();
-  const [medicationRequestFhirPreview, setMedicationRequestFhirPreview] = useState<unknown>();
-  const [medicationDispenseFhirPreview, setMedicationDispenseFhirPreview] =
-    useState<unknown>();
-  const [medicationAdministrationFhirPreview, setMedicationAdministrationFhirPreview] =
-    useState<unknown>();
-  const [serviceRequestFhirPreview, setServiceRequestFhirPreview] = useState<unknown>();
-  const [workflowTaskFhirPreview, setWorkflowTaskFhirPreview] = useState<unknown>();
-  const [procedureFhirPreview, setProcedureFhirPreview] = useState<unknown>();
-  const [diagnosticReportFhirPreview, setDiagnosticReportFhirPreview] = useState<unknown>();
-  const [imagingStudyFhirPreview, setImagingStudyFhirPreview] = useState<unknown>();
   const [recordTransferForm, setRecordTransferForm] =
     useState<NewRecordTransferForm>(defaultRecordTransferForm);
   const [gatewayAcknowledgementForm, setGatewayAcknowledgementForm] =
@@ -391,29 +370,11 @@ export function App() {
     canReadAudit,
     clinicalApi,
     isAuditOnlySession,
-    setAllergyIntoleranceFhirPreview,
+    ...fhirPreviewState,
     setAuditFhirBundlePreview,
-    setConditionFhirPreview,
-    setConsentFhirPreview,
-    setDiagnosticReportFhirPreview,
-    setDocumentFhirPreview,
-    setDocumentProvenanceFhirPreview,
-    setEncounterFhirPreview,
-    setImagingStudyFhirPreview,
     setIsExportingAuditFhir,
-    setMedicationAdministrationFhirPreview,
-    setMedicationDispenseFhirPreview,
-    setMedicationRequestFhirPreview,
-    setObservationFhirPreview,
-    setPatientFhirBundlePreview,
-    setPatientFhirDocumentBundlePreview,
-    setPatientFhirPreview,
-    setProcedureFhirPreview,
     setProviderDirectoryFhirPreview: platformState.setProviderDirectoryFhirPreview,
-    setRecordTransferFhirTaskPreview,
-    setServiceRequestFhirPreview,
-    setStatusMessage,
-    setWorkflowTaskFhirPreview
+    setStatusMessage
   });
   const {
     loadAuditEvents,
@@ -455,7 +416,8 @@ export function App() {
     setIsLoadingRecordTransfers,
     setRecordTransferDeliveryAttempts,
     setRecordTransferDeliveryAttemptWarning,
-    setRecordTransferFhirTaskPreview,
+    setRecordTransferFhirTaskPreview:
+      fhirPreviewState.setRecordTransferFhirTaskPreview,
     setRecordTransfers,
     setSelectedRecordTransferId,
     setStatusMessage
@@ -582,40 +544,25 @@ export function App() {
     loadRecordTransfers,
     loadServiceRequests,
     loadWorkflowTasks,
-    setAllergyIntoleranceFhirPreview,
+    ...fhirPreviewState,
     setAllergyIntolerances,
     setAuditEvents,
     setAuditFhirBundlePreview,
     setAuditIntegrityReport,
     setCapabilityStatementPreview: platformState.setCapabilityStatementPreview,
     setClinicalDocuments,
-    setConditionFhirPreview,
     setConditions,
-    setConsentFhirPreview,
     setConsents,
-    setDiagnosticReportFhirPreview,
     setDiagnosticReports,
-    setDocumentFhirPreview,
-    setEncounterFhirPreview,
     setEncounters,
     setImagingStudies,
-    setImagingStudyFhirPreview,
-    setMedicationAdministrationFhirPreview,
     setMedicationAdministrations,
-    setMedicationDispenseFhirPreview,
     setMedicationDispenses,
-    setMedicationRequestFhirPreview,
     setMedicationRequests,
-    setObservationFhirPreview,
     setObservations,
-    setPatientFhirBundlePreview,
-    setPatientFhirDocumentBundlePreview,
-    setPatientFhirPreview,
-    setProcedureFhirPreview,
     setProcedures,
     setRecordTransferDeliveryAttempts,
     setRecordTransferDeliveryAttemptWarning,
-    setRecordTransferFhirTaskPreview,
     setRecordTransfers,
     setSelectedAllergyIntoleranceId,
     setSelectedConditionId,
@@ -631,9 +578,7 @@ export function App() {
     setSelectedRecordTransferId,
     setSelectedServiceRequestId,
     setSelectedWorkflowTaskId,
-    setServiceRequestFhirPreview,
     setServiceRequests,
-    setWorkflowTaskFhirPreview,
     setWorkflowTasks
   });
   const {
@@ -1024,23 +969,10 @@ export function App() {
     selectedRecordTransferId,
     selectedServiceRequestId,
     selectedWorkflowTaskId,
-    setAllergyIntoleranceFhirPreview,
-    setConditionFhirPreview,
-    setDiagnosticReportFhirPreview,
-    setDocumentFhirPreview,
-    setDocumentProvenanceFhirPreview,
-    setImagingStudyFhirPreview,
+    ...fhirPreviewState,
     setIsLoadingRecordTransferDeliveryAttempts,
-    setMedicationAdministrationFhirPreview,
-    setMedicationDispenseFhirPreview,
-    setMedicationRequestFhirPreview,
-    setObservationFhirPreview,
-    setProcedureFhirPreview,
     setRecordTransferDeliveryAttempts,
-    setRecordTransferDeliveryAttemptWarning,
-    setRecordTransferFhirTaskPreview,
-    setServiceRequestFhirPreview,
-    setWorkflowTaskFhirPreview
+    setRecordTransferDeliveryAttemptWarning
   });
   useAppLifecycleEffects({
     actorRole: authSession?.actor.role,
@@ -1068,7 +1000,7 @@ export function App() {
     setConditionForm,
     setDiagnosticReportForm,
     setDocumentForm,
-    setEncounterFhirPreview,
+    setEncounterFhirPreview: fhirPreviewState.setEncounterFhirPreview,
     setImagingStudyForm,
     setMedicationAdministrationForm,
     setMedicationDispenseForm,
@@ -1114,27 +1046,29 @@ export function App() {
         canViewRuntimeInfo={canViewRuntimeInfo}
         dashboardMetrics={dashboardMetrics}
         fhirPreviews={{
-          allergyIntolerance: allergyIntoleranceFhirPreview,
+          allergyIntolerance: fhirPreviewState.allergyIntoleranceFhirPreview,
           capabilityStatement: platformState.capabilityStatementPreview,
-          condition: conditionFhirPreview,
-          consent: consentFhirPreview,
-          diagnosticReport: diagnosticReportFhirPreview,
-          document: documentFhirPreview,
-          documentProvenance: documentProvenanceFhirPreview,
-          encounter: encounterFhirPreview,
-          imagingStudy: imagingStudyFhirPreview,
-          medicationAdministration: medicationAdministrationFhirPreview,
-          medicationDispense: medicationDispenseFhirPreview,
-          medicationRequest: medicationRequestFhirPreview,
-          observation: observationFhirPreview,
-          patient: patientFhirPreview,
-          patientBundle: patientFhirBundlePreview,
-          patientDocumentBundle: patientFhirDocumentBundlePreview,
-          procedure: procedureFhirPreview,
+          condition: fhirPreviewState.conditionFhirPreview,
+          consent: fhirPreviewState.consentFhirPreview,
+          diagnosticReport: fhirPreviewState.diagnosticReportFhirPreview,
+          document: fhirPreviewState.documentFhirPreview,
+          documentProvenance: fhirPreviewState.documentProvenanceFhirPreview,
+          encounter: fhirPreviewState.encounterFhirPreview,
+          imagingStudy: fhirPreviewState.imagingStudyFhirPreview,
+          medicationAdministration:
+            fhirPreviewState.medicationAdministrationFhirPreview,
+          medicationDispense: fhirPreviewState.medicationDispenseFhirPreview,
+          medicationRequest: fhirPreviewState.medicationRequestFhirPreview,
+          observation: fhirPreviewState.observationFhirPreview,
+          patient: fhirPreviewState.patientFhirPreview,
+          patientBundle: fhirPreviewState.patientFhirBundlePreview,
+          patientDocumentBundle:
+            fhirPreviewState.patientFhirDocumentBundlePreview,
+          procedure: fhirPreviewState.procedureFhirPreview,
           providerDirectory: platformState.providerDirectoryFhirPreview,
-          recordTransferTask: recordTransferFhirTaskPreview,
-          serviceRequest: serviceRequestFhirPreview,
-          workflowTask: workflowTaskFhirPreview
+          recordTransferTask: fhirPreviewState.recordTransferFhirTaskPreview,
+          serviceRequest: fhirPreviewState.serviceRequestFhirPreview,
+          workflowTask: fhirPreviewState.workflowTaskFhirPreview
         }}
         gatewayAcknowledgementForm={gatewayAcknowledgementForm}
         gatewayAcknowledgementResult={gatewayAcknowledgementResult}
