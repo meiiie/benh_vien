@@ -1926,16 +1926,8 @@ export function App() {
       gatewayAcknowledgementForm
     );
 
-    if (
-      !acknowledgementDraft.recordTransferId ||
-      !acknowledgementDraft.recipientOrganizationId ||
-      !acknowledgementDraft.acknowledgementReference
-    ) {
-      setStatusMessage(
-        "Callback gateway cần mã gói chuyển, cơ sở nhận và mã biên nhận tiếp nhận."
-      );
-      return;
-    }
+    if (!acknowledgementDraft.ok) { setStatusMessage(acknowledgementDraft.message); return; }
+    const { acknowledgementReference, payload, recordTransferId } = acknowledgementDraft.command;
 
     setIsSubmittingGatewayAcknowledgement(true);
     setGatewayAcknowledgementResult(undefined);
@@ -1943,12 +1935,12 @@ export function App() {
     try {
       const acknowledgedTransfer = await acknowledgeRecordTransfer(
         clinicalApi,
-        acknowledgementDraft.recordTransferId,
-        acknowledgementDraft.command
+        recordTransferId,
+        payload
       );
       setGatewayAcknowledgementResult(acknowledgedTransfer);
       setStatusMessage(
-        `Gateway đã xác nhận tiếp nhận gói ${acknowledgedTransfer.id} bằng biên nhận ${acknowledgedTransfer.acknowledgementReference ?? acknowledgementDraft.acknowledgementReference}.`
+        `Gateway đã xác nhận tiếp nhận gói ${acknowledgedTransfer.id} bằng biên nhận ${acknowledgedTransfer.acknowledgementReference ?? acknowledgementReference}.`
       );
     } catch (error) {
       setStatusMessage(

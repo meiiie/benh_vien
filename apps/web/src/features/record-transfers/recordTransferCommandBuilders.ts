@@ -1,4 +1,5 @@
-import { toApiDateTime } from "../../lib/clinicalFormatters.js";
+import type { CommandDraft } from "../../lib/commandDrafts.js";
+import { parseOptionalApiDateTime } from "../../lib/commandDrafts.js";
 import type {
   GatewayAcknowledgementForm,
   NewRecordTransferForm
@@ -14,7 +15,7 @@ export type GatewayAcknowledgementDraft = {
   readonly recordTransferId: string;
   readonly recipientOrganizationId: string;
   readonly acknowledgementReference: string;
-  readonly command: GatewayAcknowledgementCommand;
+  readonly payload: GatewayAcknowledgementCommand;
 };
 
 export function buildCreateRecordTransferCommand(
@@ -58,29 +59,48 @@ export function buildRetryRecordTransferCommand(): RecordTransferLifecycleComman
 
 export function buildGatewayAcknowledgementDraft(
   form: GatewayAcknowledgementForm
-): GatewayAcknowledgementDraft {
+): CommandDraft<GatewayAcknowledgementDraft> {
   const recordTransferId = form.recordTransferId.trim();
   const recipientOrganizationId = form.recipientOrganizationId.trim();
   const acknowledgementReference = form.acknowledgementReference.trim();
 
+  if (!recordTransferId || !recipientOrganizationId || !acknowledgementReference) {
+    return {
+      ok: false,
+      message: "Callback gateway cần mã gói chuyển, cơ sở nhận và mã biên nhận tiếp nhận."
+    };
+  }
+
+  const receivedAt = parseOptionalApiDateTime(
+    form.receivedAt,
+    "Thời điểm gateway xác nhận tiếp nhận phải là ngày giờ hợp lệ."
+  );
+
+  if (!receivedAt.ok) {
+    return receivedAt;
+  }
+
   return {
-    recordTransferId,
-    recipientOrganizationId,
-    acknowledgementReference,
+    ok: true,
     command: {
+      recordTransferId,
       recipientOrganizationId,
       acknowledgementReference,
-      ...(form.receivedAt.trim() ? { receivedAt: toApiDateTime(form.receivedAt) } : {}),
-      ...(form.receivedByActorId.trim()
-        ? { receivedByActorId: form.receivedByActorId.trim() }
-        : {}),
-      ...(form.targetEndpointId.trim()
-        ? { targetEndpointId: form.targetEndpointId.trim() }
-        : {}),
-      ...(form.deliveryIdempotencyKey.trim()
-        ? { deliveryIdempotencyKey: form.deliveryIdempotencyKey.trim() }
-        : {}),
-      ...(form.note.trim() ? { note: form.note.trim() } : {})
+      payload: {
+        recipientOrganizationId,
+        acknowledgementReference,
+        ...(receivedAt.value ? { receivedAt: receivedAt.value } : {}),
+        ...(form.receivedByActorId.trim()
+          ? { receivedByActorId: form.receivedByActorId.trim() }
+          : {}),
+        ...(form.targetEndpointId.trim()
+          ? { targetEndpointId: form.targetEndpointId.trim() }
+          : {}),
+        ...(form.deliveryIdempotencyKey.trim()
+          ? { deliveryIdempotencyKey: form.deliveryIdempotencyKey.trim() }
+          : {}),
+        ...(form.note.trim() ? { note: form.note.trim() } : {})
+      }
     }
   };
 }
