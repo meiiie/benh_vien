@@ -17,14 +17,11 @@ import { createClinicalDocument, signClinicalDocument } from "./features/clinica
 import { buildCreateClinicalDocumentCommandDraft } from "./features/clinical-documents/clinicalDocumentCommandBuilders.js";
 import { buildClinicalDocumentPanelRenderers } from "./features/clinical-documents/clinicalDocumentPanelRenderers.js";
 import {
-  createAllergyIntolerance,
-  createCondition,
   createDiagnosticReport,
   createImagingStudy,
   createMedicationAdministration,
   createMedicationDispense,
   createMedicationRequest,
-  createObservation,
   createProcedure,
   createServiceRequest
 } from "./features/clinical-records/clinicalRecordApi.js";
@@ -40,11 +37,7 @@ import {
   buildProcedureCommand,
   buildServiceRequestCommand
 } from "./features/clinical-records/carePlanCommandBuilders.js";
-import {
-  buildAllergyIntoleranceCommand,
-  buildConditionCommand,
-  buildObservationCommandDraft
-} from "./features/clinical-records/clinicalEntryCommandBuilders.js";
+import { buildClinicalEntryHandlers } from "./features/clinical-records/clinicalEntryHandlers.js";
 import { buildEncounterScopedFormUpdater } from "./features/clinical-records/encounterScopedFormUpdater.js";
 import { buildEncounterHandlers } from "./features/clinical-records/encounterHandlers.js";
 import { buildConsentLoaders } from "./features/consents/consentLoaders.js";
@@ -637,6 +630,28 @@ export function App() {
     setIsSubmittingEncounter,
     setStatusMessage
   });
+  const {
+    handleCreateAllergyIntolerance,
+    handleCreateCondition,
+    handleCreateObservation
+  } = buildClinicalEntryHandlers({
+    allergyIntoleranceForm,
+    clinicalApi,
+    conditionForm,
+    ensureSelectedPatientWritable,
+    loadAllergyIntolerances,
+    loadAuditEvents,
+    loadConditions,
+    loadObservations,
+    loadPatientFhirBundlePreview,
+    observationForm,
+    selectedPatient,
+    setAppRoute,
+    setIsSubmittingAllergyIntolerance,
+    setIsSubmittingCondition,
+    setIsSubmittingObservation,
+    setStatusMessage
+  });
   const patientPanels = buildPatientPanelRenderers({
     patients,
     visiblePatients,
@@ -1190,123 +1205,6 @@ export function App() {
     setProviderDirectoryFhirPreview(undefined);
     setSelectedPatientId(undefined);
     setTransitioningRecordTransferId(undefined);
-  }
-
-  async function handleCreateAllergyIntolerance(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!selectedPatient) {
-      setStatusMessage("Cần chọn bệnh nhân trước khi ghi nhận dị ứng/cảnh báo.");
-      return;
-    }
-
-    if (!ensureSelectedPatientWritable()) {
-      return;
-    }
-
-    setIsSubmittingAllergyIntolerance(true);
-
-    try {
-      const createdAllergyIntolerance = await createAllergyIntolerance(
-        clinicalApi,
-        selectedPatient.id,
-        buildAllergyIntoleranceCommand(allergyIntoleranceForm)
-      );
-      await loadAllergyIntolerances(selectedPatient.id, createdAllergyIntolerance.id);
-      await loadPatientFhirBundlePreview(selectedPatient.id);
-      await loadAuditEvents(selectedPatient.id, { silent: true });
-      setAppRoute("workspace");
-      setStatusMessage(
-        `Đã ghi nhận dị ứng/cảnh báo "${createdAllergyIntolerance.code.display}" cho ${selectedPatient.fullName}.`
-      );
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể ghi nhận dị ứng/cảnh báo: ${error.message}`
-          : "Không thể ghi nhận dị ứng/cảnh báo."
-      );
-    } finally {
-      setIsSubmittingAllergyIntolerance(false);
-    }
-  }
-
-  async function handleCreateCondition(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!selectedPatient) {
-      setStatusMessage("Cần chọn bệnh nhân trước khi ghi nhận chẩn đoán.");
-      return;
-    }
-
-    if (!ensureSelectedPatientWritable()) {
-      return;
-    }
-
-    setIsSubmittingCondition(true);
-
-    try {
-      const createdCondition = await createCondition(
-        clinicalApi,
-        selectedPatient.id,
-        buildConditionCommand(conditionForm)
-      );
-      await loadConditions(selectedPatient.id, createdCondition.id);
-      await loadPatientFhirBundlePreview(selectedPatient.id);
-      await loadAuditEvents(selectedPatient.id, { silent: true });
-      setAppRoute("workspace");
-      setStatusMessage(`Đã ghi nhận chẩn đoán "${createdCondition.code.display}" cho ${selectedPatient.fullName}.`);
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể ghi nhận chẩn đoán: ${error.message}`
-          : "Không thể ghi nhận chẩn đoán."
-      );
-    } finally {
-      setIsSubmittingCondition(false);
-    }
-  }
-
-  async function handleCreateObservation(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!selectedPatient) {
-      setStatusMessage("Cần chọn bệnh nhân trước khi ghi nhận chỉ số lâm sàng.");
-      return;
-    }
-
-    if (!ensureSelectedPatientWritable()) {
-      return;
-    }
-
-    const commandDraft = buildObservationCommandDraft(observationForm);
-
-    if (!commandDraft.ok) {
-      setStatusMessage(commandDraft.message);
-      return;
-    }
-
-    setIsSubmittingObservation(true);
-
-    try {
-      const createdObservation = await createObservation(
-        clinicalApi,
-        selectedPatient.id,
-        commandDraft.command
-      );
-      await loadObservations(selectedPatient.id, createdObservation.id);
-      await loadPatientFhirBundlePreview(selectedPatient.id);
-      await loadAuditEvents(selectedPatient.id, { silent: true });
-      setAppRoute("workspace");
-      setStatusMessage(`Đã ghi nhận "${createdObservation.code.display}" cho ${selectedPatient.fullName}.`);
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể ghi nhận chỉ số lâm sàng: ${error.message}`
-          : "Không thể ghi nhận chỉ số lâm sàng."
-      );
-    } finally {
-      setIsSubmittingObservation(false);
-    }
   }
 
   async function handleCreateMedicationRequest(event: FormEvent<HTMLFormElement>) {
