@@ -9,11 +9,7 @@ import {
   createClinicalApiClient,
   isApiHttpError
 } from "./api/clinicalApi.js";
-import {
-  listGlobalAuditEvents,
-  listPatientAuditEvents,
-  verifyPatientAuditIntegrity
-} from "./features/audit/auditApi.js";
+import { buildAuditLoaders } from "./features/audit/auditLoaders.js";
 import { buildAuditPanelRenderers } from "./features/audit/auditPanelRenderers.js";
 import {
   AuthenticatedLayout,
@@ -82,7 +78,6 @@ import {
 } from "./features/record-transfers/recordTransferApi.js";
 import { buildFhirPreviewLoaders } from "./features/fhir-preview/fhirPreviewLoaders.js";
 import { recordTransferCommands } from "./features/record-transfers/recordTransferCommandBuilders.js";
-import { formatAuditIntegrityReason } from "./lib/auditFormatters.js";
 import {
   formatDateTime,
   isMissingRecordTransferDeliveryAttemptsRoute,
@@ -473,6 +468,22 @@ export function App() {
     setServiceRequestFhirPreview,
     setStatusMessage,
     setWorkflowTaskFhirPreview
+  });
+  const {
+    loadAuditEvents,
+    loadGlobalAuditEvents,
+    verifyAuditIntegrity
+  } = buildAuditLoaders({
+    canReadAudit,
+    clinicalApi,
+    setAuditEvents,
+    setAuditFhirBundlePreview,
+    setAuditIntegrityReport,
+    setGlobalAuditEvents,
+    setIsLoadingAuditEvents,
+    setIsLoadingGlobalAuditEvents,
+    setIsVerifyingAuditIntegrity,
+    setStatusMessage
   });
   const {
     loadApiRuntimeInfo,
@@ -1070,107 +1081,6 @@ export function App() {
     }
 
     await Promise.all(workspaceTasks);
-  }
-
-  async function loadAuditEvents(patientId: string, options: { readonly silent?: boolean } = {}) {
-    if (!canReadAudit) {
-      setAuditEvents([]);
-      setAuditIntegrityReport(undefined);
-      setAuditFhirBundlePreview(undefined);
-
-      if (!options.silent) {
-        setStatusMessage("Nhật ký kiểm toán chỉ mở cho vai trò kiểm toán hoặc quản trị.");
-      }
-
-      return;
-    }
-
-    setIsLoadingAuditEvents(true);
-
-    try {
-      const data = await listPatientAuditEvents(clinicalApi, patientId);
-      setAuditEvents(data.items);
-    } catch (error) {
-      setAuditEvents([]);
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tải nhật ký kiểm toán: ${error.message}`
-          : "Không thể tải nhật ký kiểm toán."
-      );
-    } finally {
-      setIsLoadingAuditEvents(false);
-    }
-  }
-
-  async function loadGlobalAuditEvents(options: { readonly silent?: boolean } = {}) {
-    if (!canReadAudit) {
-      setGlobalAuditEvents([]);
-
-      if (!options.silent) {
-        setStatusMessage("Nhật ký bảo mật toàn hệ thống chỉ mở cho kiểm toán viên hoặc quản trị viên.");
-      }
-
-      return;
-    }
-
-    setIsLoadingGlobalAuditEvents(true);
-
-    try {
-      const data = await listGlobalAuditEvents(clinicalApi);
-      setGlobalAuditEvents(data.items);
-
-      if (!options.silent) {
-        setStatusMessage(`Đã tải ${data.items.length} bản ghi kiểm toán toàn hệ thống.`);
-      }
-    } catch (error) {
-      setGlobalAuditEvents([]);
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tải nhật ký bảo mật toàn hệ thống: ${error.message}`
-          : "Không thể tải nhật ký bảo mật toàn hệ thống."
-      );
-    } finally {
-      setIsLoadingGlobalAuditEvents(false);
-    }
-  }
-
-  async function verifyAuditIntegrity(
-    patientId: string,
-    options: { readonly silent?: boolean } = {}
-  ) {
-    if (!canReadAudit) {
-      setAuditIntegrityReport(undefined);
-
-      if (!options.silent) {
-        setStatusMessage("Kiểm tra toàn vẹn audit chỉ mở cho vai trò kiểm toán hoặc quản trị.");
-      }
-
-      return;
-    }
-
-    setIsVerifyingAuditIntegrity(true);
-
-    try {
-      const data = await verifyPatientAuditIntegrity(clinicalApi, patientId);
-      setAuditIntegrityReport(data);
-
-      if (!options.silent) {
-        setStatusMessage(
-          data.verified
-            ? "Chuỗi audit đã được xác minh toàn vẹn."
-            : `Chuỗi audit cần kiểm tra: ${formatAuditIntegrityReason(data.brokenReason)}.`
-        );
-      }
-    } catch (error) {
-      setAuditIntegrityReport(undefined);
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể kiểm tra toàn vẹn audit: ${error.message}`
-          : "Không thể kiểm tra toàn vẹn audit."
-      );
-    } finally {
-      setIsVerifyingAuditIntegrity(false);
-    }
   }
 
   async function loadConsents(patientId: string) {
