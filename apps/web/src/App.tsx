@@ -1,11 +1,9 @@
 import { buildAuthSessionHandlers } from "./auth/authSessionHandlers.js";
 import { createClinicalApiClient } from "./api/clinicalApi.js";
 import { buildAuditLoaders } from "./features/audit/auditLoaders.js";
-import { buildAuditPanelRenderers } from "./features/audit/auditPanelRenderers.js";
 import { useAuditState } from "./features/audit/auditState.js";
 import { AuthenticatedLayout } from "./components/AppShell.js";
 import { buildClinicalDocumentHandlers } from "./features/clinical-documents/clinicalDocumentHandlers.js";
-import { buildClinicalDocumentPanelRenderers } from "./features/clinical-documents/clinicalDocumentPanelRenderers.js";
 import { useClinicalRecordState } from "./features/clinical-records/clinicalRecordState.js";
 import { buildCarePlanHandlers } from "./features/clinical-records/carePlanHandlers.js";
 import { buildMedicationHandlers } from "./features/clinical-records/medicationHandlers.js";
@@ -13,11 +11,9 @@ import { buildClinicalEntryHandlers } from "./features/clinical-records/clinical
 import { useEncounterScopedFormEffects } from "./features/clinical-records/encounterScopedFormEffects.js";
 import { buildEncounterHandlers } from "./features/clinical-records/encounterHandlers.js";
 import { buildConsentLoaders } from "./features/consents/consentLoaders.js";
-import { buildInteropPanelRenderers } from "./features/interoperability/interopPanelRenderers.js";
 import { useInteroperabilityState } from "./features/interoperability/interoperabilityState.js";
 import { buildPatientRegistryHandlers } from "./features/patient-registry/patientRegistryHandlers.js";
 import { buildPatientRegistryLoaders } from "./features/patient-registry/patientRegistryLoaders.js";
-import { buildPatientPanelRenderers } from "./features/patient-registry/patientPanelRenderers.js";
 import { buildPatientRegistrySelection } from "./features/patient-registry/patientRegistrySelectors.js";
 import { usePatientRegistryState } from "./features/patient-registry/patientRegistryState.js";
 import { buildPatientWriteGuard } from "./features/patient-registry/patientWriteGuard.js";
@@ -33,6 +29,7 @@ import { buildRecordTransferLoaders } from "./features/record-transfers/recordTr
 import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { AppRouteRenderer } from "./pages/AppRouteRenderer.js";
+import { buildAuditPanels } from "./pages/auditPanelContext.js";
 import {
   buildAppAccessContext,
   buildAppRouteRuntimeContext,
@@ -41,11 +38,13 @@ import {
 import { useAppLifecycleEffects } from "./pages/appLifecycleEffects.js";
 import { useAppShellState } from "./pages/appShellState.js";
 import { buildAppRoutePanels } from "./pages/appRoutePanels.js";
+import { buildClinicalDocumentPanels } from "./pages/clinicalDocumentPanelContext.js";
 import { buildClinicalRecordPanels } from "./pages/clinicalRecordPanelContext.js";
+import { buildInteropPanels } from "./pages/interopPanelContext.js";
+import { buildPatientPanels } from "./pages/patientPanelContext.js";
 
 import {
   defaultTransferContext,
-  documentTaxonomy,
   referenceSignals,
   workflowSteps
 } from "./config/demoClinicalDefaults.js";
@@ -420,84 +419,44 @@ export function App() {
     setTransitioningRecordTransferId:
       interoperabilityState.setTransitioningRecordTransferId
   });
-  const patientPanels = buildPatientPanelRenderers({
-    patients: patientRegistryState.patients,
-    visiblePatients,
-    selectedPatient,
-    selectedPatientId: patientRegistryState.selectedPatientId,
-    selectedPatientMergeTarget,
-    patientMergeCandidates,
-    patientMergeConfirmationCode,
-    patientMergeForm: patientRegistryState.patientMergeForm,
-    patientMergeTargetId,
-    patientForm: patientRegistryState.patientForm,
-    searchTerm: patientRegistryState.patientSearchTerm,
-    statusFilter: patientRegistryState.patientStatusFilter,
-    hasFilter: hasPatientListFilter,
-    isLoadingPatients: patientRegistryState.isLoadingPatients,
-    isMergingPatient: patientRegistryState.isMergingPatient,
+  const patientPanels = buildPatientPanels({
+    hasPatientListFilter,
     isPatientMergeConfirmationValid,
     isSelectedPatientMerged,
-    isSubmittingPatient: patientRegistryState.isSubmittingPatient,
-    onClearPatientFilters: patientRegistryState.clearPatientFilters,
     onCreatePatient: handleCreatePatient,
     onMergePatient: handleMergeSelectedPatient,
-    onPatientFormChange: patientRegistryState.setPatientForm,
-    onPatientMergeFormChange: patientRegistryState.setPatientMergeForm,
     onPatientRefresh: loadPatients,
-    onPatientSearchTermChange: patientRegistryState.setPatientSearchTerm,
-    onPatientSelect: patientRegistryState.setSelectedPatientId,
-    onPatientStatusFilterChange: patientRegistryState.setPatientStatusFilter
+    patientMergeCandidates,
+    patientMergeConfirmationCode,
+    patientMergeTargetId,
+    patientRegistryState,
+    selectedPatient,
+    selectedPatientMergeTarget,
+    visiblePatients
   });
-  const interopPanels = buildInteropPanelRenderers({
-    consentReference: defaultTransferContext.consentReference,
-    consents: interoperabilityState.consents,
-    deliveryAttemptWarning:
-      interoperabilityState.recordTransferDeliveryAttemptWarning,
-    deliveryAttempts: interoperabilityState.recordTransferDeliveryAttempts,
-    form: interoperabilityState.recordTransferForm,
-    isLoadingConsents: interoperabilityState.isLoadingConsents,
-    isLoadingDeliveryAttempts:
-      interoperabilityState.isLoadingRecordTransferDeliveryAttempts,
-    isLoadingProviderDirectory: platformState.isLoadingProviderDirectory,
-    isLoadingRecordTransfers: interoperabilityState.isLoadingRecordTransfers,
-    isPatientMerged: isSelectedPatientMerged,
-    isSubmittingRecordTransfer: interoperabilityState.isSubmittingRecordTransfer,
-    isWriteDisabled: selectedPatientWriteDisabled,
-    providerDirectory: platformState.providerDirectory,
-    recipientOrganizationId: defaultTransferContext.recipientOrganizationId,
-    recordTransfers: interoperabilityState.recordTransfers,
-    revokingConsentId: interoperabilityState.revokingConsentId,
-    selectedRecordTransfer: workspaceSelection.selectedRecordTransfer,
-    selectedRecordTransferId: interoperabilityState.selectedRecordTransferId,
-    transitioningRecordTransferId:
-      interoperabilityState.transitioningRecordTransferId,
+  const interopPanels = buildInteropPanels({
+    interoperabilityState,
+    isSelectedPatientMerged,
     onCreateRecordTransfer: handleCreateRecordTransfer,
     onFailRecordTransfer: handleFailRecordTransfer,
     onLoadConsentFhirPreview: loadConsentFhirPreview,
     onProviderDirectoryRefresh: loadProviderDirectory,
     onReceiveRecordTransfer: handleReceiveRecordTransfer,
-    onRecordTransferFormChange: interoperabilityState.setRecordTransferForm,
     onRetryRecordTransfer: handleRetryRecordTransfer,
     onRevokeConsent: handleRevokeConsent,
-    onSelectRecordTransfer: interoperabilityState.setSelectedRecordTransferId,
-    onSendRecordTransfer: handleSendRecordTransfer
+    onSendRecordTransfer: handleSendRecordTransfer,
+    platformState,
+    selectedPatientWriteDisabled,
+    workspaceSelection
   });
-  const auditPanels = buildAuditPanelRenderers({
-    auditEvents: auditState.auditEvents,
-    auditFhirBundlePreview: auditState.auditFhirBundlePreview,
-    auditIntegrityReport: auditState.auditIntegrityReport,
+  const auditPanels = buildAuditPanels({
+    auditState,
     canReadAudit,
-    globalAuditEvents: auditState.globalAuditEvents,
-    isExportingAuditFhir: auditState.isExportingAuditFhir,
-    isLoadingAuditEvents: auditState.isLoadingAuditEvents,
-    isLoadingGlobalAuditEvents: auditState.isLoadingGlobalAuditEvents,
-    isVerifyingAuditIntegrity: auditState.isVerifyingAuditIntegrity,
-    selectedPatientId: selectedPatient?.id,
     onExportAuditFhir: loadAuditFhirBundle,
     onLoadAuditEvents: loadAuditEvents,
     onReloadGlobalAuditEvents: loadGlobalAuditEvents,
-    onVerifyAuditIntegrity: verifyAuditIntegrity
+    onVerifyAuditIntegrity: verifyAuditIntegrity,
+    selectedPatient
   });
   const clinicalRecordPanels = buildClinicalRecordPanels({
     clinicalRecordState,
@@ -550,22 +509,13 @@ export function App() {
     patientWorkspaceCollections,
     workspaceSelection
   });
-  const clinicalDocumentPanels = buildClinicalDocumentPanelRenderers({
-    clinicalDocuments: clinicalRecordState.clinicalDocuments,
-    documentTaxonomy,
-    encounters: clinicalRecordState.encounters,
-    form: clinicalRecordState.documentForm,
-    isLoading: clinicalRecordState.isLoadingDocuments,
+  const clinicalDocumentPanels = buildClinicalDocumentPanels({
+    clinicalRecordState,
     isSelectedPatientMerged,
-    isSigningDocument: clinicalRecordState.isSigningDocument,
-    isSubmitting: clinicalRecordState.isSubmittingDocument,
     isWriteDisabled: selectedPatientWriteDisabled,
-    selectedDocument: workspaceSelection.selectedDocument,
-    selectedDocumentId: clinicalRecordState.selectedDocumentId,
     onCreateDocument: handleCreateClinicalDocument,
-    onDocumentFormChange: clinicalRecordState.setDocumentForm,
-    onSelectDocument: clinicalRecordState.setSelectedDocumentId,
-    onSignDocument: handleSignClinicalDocument
+    onSignDocument: handleSignClinicalDocument,
+    workspaceSelection
   });
   const routePanels = buildAppRoutePanels({
     auditPanels,
