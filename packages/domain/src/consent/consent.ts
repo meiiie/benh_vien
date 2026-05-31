@@ -3,6 +3,9 @@ import { DomainError } from "../shared/domain-error.js";
 export type ConsentStatus = "active" | "revoked" | "expired";
 export type ConsentCategory = "record-sharing";
 
+const consentStatuses = new Set<ConsentStatus>(["active", "revoked", "expired"]);
+const consentCategories = new Set<ConsentCategory>(["record-sharing"]);
+
 export type ConsentSnapshot = {
   readonly id: string;
   readonly patientId: string;
@@ -45,9 +48,8 @@ export class Consent {
       ? parseDate(input.validUntil, "Thời điểm hết hiệu lực consent không hợp lệ.")
       : undefined;
 
-    if (validUntil && validUntil <= validFrom) {
-      throw new DomainError("Thời điểm hết hiệu lực consent phải sau thời điểm bắt đầu.");
-    }
+    assertValidPeriod(validFrom, validUntil);
+    assertValidCategory(input.category);
 
     return new Consent({
       id: normalizeRequired(input.id, "Mã consent không được để trống."),
@@ -68,11 +70,21 @@ export class Consent {
   }
 
   static rehydrate(snapshot: ConsentSnapshot): Consent {
+    const validFrom = parseDate(snapshot.validFrom, "Thời điểm hiệu lực consent không hợp lệ.");
+    const validUntil = snapshot.validUntil
+      ? parseDate(snapshot.validUntil, "Thời điểm hết hiệu lực consent không hợp lệ.")
+      : undefined;
+    const createdAt = parseDate(snapshot.createdAt, "Thời điểm tạo consent không hợp lệ.");
+    const updatedAt = parseDate(snapshot.updatedAt, "Thời điểm cập nhật consent không hợp lệ.");
     const revokedByActorId = normalizeOptional(snapshot.revokedByActorId);
     const revokedAt = snapshot.revokedAt
       ? parseDate(snapshot.revokedAt, "Thời điểm thu hồi consent không hợp lệ.").toISOString()
       : undefined;
     const revocationReason = normalizeOptional(snapshot.revocationReason);
+
+    assertValidPeriod(validFrom, validUntil);
+    assertValidStatus(snapshot.status);
+    assertValidCategory(snapshot.category);
 
     if (snapshot.status === "revoked" && (!revokedByActorId || !revokedAt)) {
       throw new DomainError("Consent đã thu hồi phải có người thu hồi và thời điểm thu hồi.");
@@ -84,10 +96,24 @@ export class Consent {
 
     return new Consent({
       ...snapshot,
+      id: normalizeRequired(snapshot.id, "Mã consent không được để trống."),
+      patientId: normalizeRequired(snapshot.patientId, "Consent phải gắn với một bệnh nhân."),
+      granteeOrganizationId: normalizeRequired(
+        snapshot.granteeOrganizationId,
+        "Consent phải có đơn vị nhận dữ liệu."
+      ),
+      grantorActorId: normalizeRequired(
+        snapshot.grantorActorId,
+        "Consent phải có người/cơ chế ghi nhận."
+      ),
       evidenceDocumentId: normalizeOptional(snapshot.evidenceDocumentId),
       revokedByActorId,
       revokedAt,
-      revocationReason
+      revocationReason,
+      validFrom: validFrom.toISOString(),
+      validUntil: validUntil?.toISOString(),
+      createdAt: createdAt.toISOString(),
+      updatedAt: updatedAt.toISOString()
     });
   }
 
@@ -108,7 +134,10 @@ export class Consent {
       throw new DomainError("Chỉ consent đang hiệu lực mới được thu hồi.");
     }
 
-    const revokedAt = input.revokedAt ?? new Date();
+    const revokedAt = normalizeDate(
+      input.revokedAt ?? new Date(),
+      "Thời điểm thu hồi consent không hợp lệ."
+    );
 
     this.props.status = "revoked";
     this.props.revokedByActorId = normalizeRequired(
@@ -164,9 +193,31 @@ function normalizeOptional(value: string | undefined): string | undefined {
 function parseDate(value: string, message: string): Date {
   const date = new Date(value);
 
-  if (Number.isNaN(date.getTime())) {
+  return normalizeDate(date, message);
+}
+
+function normalizeDate(value: Date, message: string): Date {
+  if (Number.isNaN(value.getTime())) {
     throw new DomainError(message);
   }
 
-  return date;
+  return value;
+}
+
+function assertValidPeriod(validFrom: Date, validUntil: Date | undefined): void {
+  if (validUntil && validUntil <= validFrom) {
+    throw new DomainError("Thời điểm hết hiệu lực consent phải sau thời điểm bắt đầu.");
+  }
+}
+
+function assertValidStatus(status: ConsentStatus): void {
+  if (!consentStatuses.has(status)) {
+    throw new DomainError("Trạng thái consent không hợp lệ.");
+  }
+}
+
+function assertValidCategory(category: ConsentCategory): void {
+  if (!consentCategories.has(category)) {
+    throw new DomainError("Loại consent không hợp lệ.");
+  }
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mapConsentToFhir } from "../fhir/map-consent-to-fhir.js";
+import { DomainError } from "../shared/domain-error.js";
 import { Consent } from "./consent.js";
 
 describe("Consent", () => {
@@ -187,5 +188,63 @@ describe("Consent", () => {
         updatedAt: "2026-05-28T00:00:00.000Z"
       })
     ).toThrow("Consent đã thu hồi phải có người thu hồi và thời điểm thu hồi.");
+  });
+
+  it("rejects invalid rehydrated consent lifecycle data", () => {
+    const snapshot = Consent.grant({
+      id: "consent-test-007",
+      patientId: "patient-test-001",
+      category: "record-sharing",
+      granteeOrganizationId: "hospital-recipient",
+      grantorActorId: "practitioner-test",
+      validFrom: "2026-05-28T00:00:00.000Z",
+      validUntil: "2026-05-29T00:00:00.000Z"
+    }).toSnapshot();
+
+    expect(() =>
+      Consent.rehydrate({
+        ...snapshot,
+        status: "unknown" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Consent.rehydrate({
+        ...snapshot,
+        category: "marketing" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Consent.rehydrate({
+        ...snapshot,
+        validUntil: "2026-05-27T00:00:00.000Z"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Consent.rehydrate({
+        ...snapshot,
+        createdAt: "not-a-date"
+      })
+    ).toThrow(DomainError);
+  });
+
+  it("rejects invalid revocation timestamps", () => {
+    const consent = Consent.grant({
+      id: "consent-test-008",
+      patientId: "patient-test-001",
+      category: "record-sharing",
+      granteeOrganizationId: "hospital-recipient",
+      grantorActorId: "practitioner-test",
+      validFrom: "2026-05-28T00:00:00.000Z"
+    });
+
+    expect(() =>
+      consent.revoke({
+        revokedByActorId: "practitioner-test",
+        revokedAt: new Date("not-a-date")
+      })
+    ).toThrow(DomainError);
   });
 });
