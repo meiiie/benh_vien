@@ -40,7 +40,9 @@ import {
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
 import {
+  buildPatientRecordBundleAuditMetadata,
   findPatientIdentifierConflict,
+  loadPatientRecordBundleCollections,
   readBundleTransferContext,
   sendPatientIdentifierConflict,
   toPatientResponse
@@ -432,88 +434,40 @@ export async function registerPatientRoutes(
       });
     }
 
-    const [
-      encounters,
-      allergyIntolerances,
-      documents,
-      conditions,
-      observations,
-      diagnosticReports,
-      imagingStudies,
-      medicationRequests,
-      medicationDispenses,
-      medicationAdministrations,
-      serviceRequests,
-      workflowTasks,
-      procedures,
-      providerDirectory
-    ] = await Promise.all([
-      encounterRepository.findByPatientId(params.id),
-      allergyIntoleranceRepository.findByPatientId(params.id),
-      documentRepository.findByPatientId(params.id),
-      conditionRepository.findByPatientId(params.id),
-      observationRepository.findByPatientId(params.id),
-      diagnosticReportRepository.findByPatientId(params.id),
-      imagingStudyRepository.findByPatientId(params.id),
-      medicationRequestRepository.findByPatientId(params.id),
-      medicationDispenseRepository.findByPatientId(params.id),
-      medicationAdministrationRepository.findByPatientId(params.id),
-      serviceRequestRepository.findByPatientId(params.id),
-      workflowTaskRepository.findByPatientId(params.id),
-      procedureRepository.findByPatientId(params.id),
-      providerDirectoryRepository.findDirectory()
-    ]);
+    const collections = await loadPatientRecordBundleCollections({
+      patientId: params.id,
+      encounterRepository,
+      allergyIntoleranceRepository,
+      documentRepository,
+      conditionRepository,
+      observationRepository,
+      diagnosticReportRepository,
+      imagingStudyRepository,
+      medicationRequestRepository,
+      medicationDispenseRepository,
+      medicationAdministrationRepository,
+      serviceRequestRepository,
+      workflowTaskRepository,
+      procedureRepository,
+      providerDirectoryRepository
+    });
 
     await recordAuditEvent(auditRepository, request, {
       action: "patient.fhir-bundle-export",
       resourceType: "Patient",
       resourceId: patient.id,
       patientId: patient.id,
-      metadata: {
-        standard: "HL7 FHIR R4",
-        resourceType: "Bundle",
+      metadata: buildPatientRecordBundleAuditMetadata({
         bundleType: "collection",
-        consentReference: transferContext.consentReference,
-        recipientOrganizationId: transferContext.recipientOrganizationId,
-        encounterCount: encounters.length,
-        allergyIntoleranceCount: allergyIntolerances.length,
-        conditionCount: conditions.length,
-        observationCount: observations.length,
-        diagnosticReportCount: diagnosticReports.length,
-        imagingStudyCount: imagingStudies.length,
-        medicationRequestCount: medicationRequests.length,
-        medicationDispenseCount: medicationDispenses.length,
-        medicationAdministrationCount: medicationAdministrations.length,
-        serviceRequestCount: serviceRequests.length,
-        workflowTaskCount: workflowTasks.length,
-        procedureCount: procedures.length,
-        consentResourceCount: 1,
-        documentCount: documents.length,
-        providerDirectoryEntryCount:
-          providerDirectory.toSnapshot().organizations.length +
-          providerDirectory.toSnapshot().practitioners.length +
-          providerDirectory.toSnapshot().practitionerRoles.length +
-          providerDirectory.toSnapshot().endpoints.length
-      }
+        transferContext,
+        collections
+      })
     });
 
     return mapPatientRecordToFhirBundle({
       patient,
-      encounters,
-      allergyIntolerances,
-      conditions,
-      observations,
-      diagnosticReports,
-      imagingStudies,
-      medicationRequests,
-      medicationDispenses,
-      medicationAdministrations,
-      serviceRequests,
-      workflowTasks,
-      procedures,
+      ...collections,
       consents: [consent],
-      documents,
-      providerDirectory
     });
   });
 
@@ -592,89 +546,41 @@ export async function registerPatientRoutes(
       });
     }
 
-    const [
-      encounters,
-      allergyIntolerances,
-      documents,
-      conditions,
-      observations,
-      diagnosticReports,
-      imagingStudies,
-      medicationRequests,
-      medicationDispenses,
-      medicationAdministrations,
-      serviceRequests,
-      workflowTasks,
-      procedures,
-      providerDirectory
-    ] = await Promise.all([
-      encounterRepository.findByPatientId(params.id),
-      allergyIntoleranceRepository.findByPatientId(params.id),
-      documentRepository.findByPatientId(params.id),
-      conditionRepository.findByPatientId(params.id),
-      observationRepository.findByPatientId(params.id),
-      diagnosticReportRepository.findByPatientId(params.id),
-      imagingStudyRepository.findByPatientId(params.id),
-      medicationRequestRepository.findByPatientId(params.id),
-      medicationDispenseRepository.findByPatientId(params.id),
-      medicationAdministrationRepository.findByPatientId(params.id),
-      serviceRequestRepository.findByPatientId(params.id),
-      workflowTaskRepository.findByPatientId(params.id),
-      procedureRepository.findByPatientId(params.id),
-      providerDirectoryRepository.findDirectory()
-    ]);
+    const collections = await loadPatientRecordBundleCollections({
+      patientId: params.id,
+      encounterRepository,
+      allergyIntoleranceRepository,
+      documentRepository,
+      conditionRepository,
+      observationRepository,
+      diagnosticReportRepository,
+      imagingStudyRepository,
+      medicationRequestRepository,
+      medicationDispenseRepository,
+      medicationAdministrationRepository,
+      serviceRequestRepository,
+      workflowTaskRepository,
+      procedureRepository,
+      providerDirectoryRepository
+    });
 
     await recordAuditEvent(auditRepository, request, {
       action: "patient.fhir-document-bundle-export",
       resourceType: "Patient",
       resourceId: patient.id,
       patientId: patient.id,
-      metadata: {
-        standard: "HL7 FHIR R4",
-        resourceType: "Bundle",
+      metadata: buildPatientRecordBundleAuditMetadata({
         bundleType: "document",
         compositionResourceType: "Composition",
-        consentReference: transferContext.consentReference,
-        recipientOrganizationId: transferContext.recipientOrganizationId,
-        encounterCount: encounters.length,
-        allergyIntoleranceCount: allergyIntolerances.length,
-        conditionCount: conditions.length,
-        observationCount: observations.length,
-        diagnosticReportCount: diagnosticReports.length,
-        imagingStudyCount: imagingStudies.length,
-        medicationRequestCount: medicationRequests.length,
-        medicationDispenseCount: medicationDispenses.length,
-        medicationAdministrationCount: medicationAdministrations.length,
-        serviceRequestCount: serviceRequests.length,
-        workflowTaskCount: workflowTasks.length,
-        procedureCount: procedures.length,
-        consentResourceCount: 1,
-        documentCount: documents.length,
-        providerDirectoryEntryCount:
-          providerDirectory.toSnapshot().organizations.length +
-          providerDirectory.toSnapshot().practitioners.length +
-          providerDirectory.toSnapshot().practitionerRoles.length +
-          providerDirectory.toSnapshot().endpoints.length
-      }
+        transferContext,
+        collections
+      })
     });
 
     return mapPatientRecordToFhirDocumentBundle({
       patient,
-      encounters,
-      allergyIntolerances,
-      conditions,
-      observations,
-      diagnosticReports,
-      imagingStudies,
-      medicationRequests,
-      medicationDispenses,
-      medicationAdministrations,
-      serviceRequests,
-      workflowTasks,
-      procedures,
+      ...collections,
       consents: [consent],
-      documents,
-      providerDirectory,
       authorPractitionerId: actor.actorId
     });
   });
