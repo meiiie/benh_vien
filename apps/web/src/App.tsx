@@ -38,6 +38,7 @@ import { buildRecordTransferLoaders } from "./features/record-transfers/recordTr
 import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { AppRouteRenderer } from "./pages/AppRouteRenderer.js";
+import { useAppLifecycleEffects } from "./pages/appLifecycleEffects.js";
 import { buildAppRoutePanels } from "./pages/appRoutePanels.js";
 import { buildDashboardMetrics } from "./pages/dashboardMetrics.js";
 import { buildWorkspaceSelection } from "./pages/workspaceSelection.js";
@@ -1063,45 +1064,24 @@ export function App() {
     setServiceRequestFhirPreview,
     setWorkflowTaskFhirPreview
   });
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      return;
-    }
-
-    if (isIntegrationSession) {
-      void loadCapabilityStatement();
-      return;
-    }
-
-    void loadPatients();
-    void loadCapabilityStatement();
-    if (canViewRuntimeInfo) {
-      void loadApiRuntimeInfo();
-    } else {
-      setApiRuntimeInfo(undefined);
-      setApiRuntimeWarning(undefined);
-    }
-    void loadProviderDirectory();
-  }, [canViewRuntimeInfo, isAuthenticated, isIntegrationSession]);
-
-  useEffect(() => {
-    if (!isAuthenticated || !canReadAudit) {
-      setGlobalAuditEvents([]);
-      return;
-    }
-
-    void loadGlobalAuditEvents({ silent: true });
-  }, [isAuthenticated, authSession?.actor.role]);
-
-  useEffect(() => {
-    if (!isAuthenticated || !selectedPatientId) {
-      clearPatientWorkspaceState();
-      return;
-    }
-
-    void loadPatientWorkspace(selectedPatientId);
-  }, [isAuthenticated, selectedPatientId]);
+  useAppLifecycleEffects({
+    actorRole: authSession?.actor.role,
+    canReadAudit,
+    canViewRuntimeInfo,
+    clearPatientWorkspaceState,
+    isAuthenticated,
+    isIntegrationSession,
+    loadApiRuntimeInfo,
+    loadCapabilityStatement,
+    loadGlobalAuditEvents,
+    loadPatients,
+    loadPatientWorkspace,
+    loadProviderDirectory,
+    selectedPatientId,
+    setApiRuntimeInfo,
+    setApiRuntimeWarning,
+    setGlobalAuditEvents
+  });
 
   useEffect(() => {
     const updateEncounterScopedForm = buildEncounterScopedFormUpdater(selectedEncounterId);
