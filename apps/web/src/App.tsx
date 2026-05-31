@@ -20,15 +20,13 @@ import {
   createAllergyIntolerance,
   createCondition,
   createDiagnosticReport,
-  createEncounter,
   createImagingStudy,
   createMedicationAdministration,
   createMedicationDispense,
   createMedicationRequest,
   createObservation,
   createProcedure,
-  createServiceRequest,
-  finishEncounter
+  createServiceRequest
 } from "./features/clinical-records/clinicalRecordApi.js";
 import { buildClinicalRecordPanelRenderers } from "./features/clinical-records/clinicalRecordPanelRenderers.js";
 import {
@@ -45,10 +43,10 @@ import {
 import {
   buildAllergyIntoleranceCommand,
   buildConditionCommand,
-  buildEncounterCommand,
   buildObservationCommandDraft
 } from "./features/clinical-records/clinicalEntryCommandBuilders.js";
 import { buildEncounterScopedFormUpdater } from "./features/clinical-records/encounterScopedFormUpdater.js";
+import { buildEncounterHandlers } from "./features/clinical-records/encounterHandlers.js";
 import { buildConsentLoaders } from "./features/consents/consentLoaders.js";
 import { buildInteropPanelRenderers } from "./features/interoperability/interopPanelRenderers.js";
 import { buildPatientRegistryHandlers } from "./features/patient-registry/patientRegistryHandlers.js";
@@ -623,6 +621,22 @@ export function App() {
     setStatusMessage,
     setWorkflowTasks
   });
+  const {
+    handleCreateEncounter,
+    handleFinishEncounter
+  } = buildEncounterHandlers({
+    clinicalApi,
+    encounterForm,
+    ensureSelectedPatientWritable,
+    loadAuditEvents,
+    loadEncounterFhirPreview,
+    loadEncounters,
+    selectedPatient,
+    setAppRoute,
+    setIsFinishingEncounter,
+    setIsSubmittingEncounter,
+    setStatusMessage
+  });
   const patientPanels = buildPatientPanelRenderers({
     patients,
     visiblePatients,
@@ -1176,69 +1190,6 @@ export function App() {
     setProviderDirectoryFhirPreview(undefined);
     setSelectedPatientId(undefined);
     setTransitioningRecordTransferId(undefined);
-  }
-
-  async function handleCreateEncounter(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!selectedPatient) {
-      setStatusMessage("Cần chọn bệnh nhân trước khi mở lượt khám.");
-      return;
-    }
-
-    if (!ensureSelectedPatientWritable()) {
-      return;
-    }
-
-    setIsSubmittingEncounter(true);
-
-    try {
-      const createdEncounter = await createEncounter(
-        clinicalApi,
-        selectedPatient.id,
-        buildEncounterCommand(encounterForm)
-      );
-      await loadEncounters(selectedPatient.id, createdEncounter.id);
-      await loadAuditEvents(selectedPatient.id, { silent: true });
-      setAppRoute("workspace");
-      setStatusMessage(`Đã mở lượt khám "${createdEncounter.serviceType}" cho ${selectedPatient.fullName}.`);
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể mở lượt khám: ${error.message}`
-          : "Không thể mở lượt khám."
-      );
-    } finally {
-      setIsSubmittingEncounter(false);
-    }
-  }
-
-  async function handleFinishEncounter(encounterId: string) {
-    if (!selectedPatient) {
-      return;
-    }
-
-    if (!ensureSelectedPatientWritable()) {
-      return;
-    }
-
-    setIsFinishingEncounter(true);
-
-    try {
-      const finishedEncounter = await finishEncounter(clinicalApi, encounterId);
-      await loadEncounters(selectedPatient.id, finishedEncounter.id);
-      await loadEncounterFhirPreview(finishedEncounter.id);
-      await loadAuditEvents(selectedPatient.id, { silent: true });
-      setStatusMessage(`Đã kết thúc lượt khám "${finishedEncounter.serviceType}".`);
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể kết thúc lượt khám: ${error.message}`
-          : "Không thể kết thúc lượt khám."
-      );
-    } finally {
-      setIsFinishingEncounter(false);
-    }
   }
 
   async function handleCreateAllergyIntolerance(event: FormEvent<HTMLFormElement>) {
