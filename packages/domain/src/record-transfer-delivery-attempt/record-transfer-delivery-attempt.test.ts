@@ -205,6 +205,13 @@ describe("RecordTransferDeliveryAttempt", () => {
         bundleType: "binary" as never
       })
     ).toThrow(DomainError);
+
+    expect(() =>
+      RecordTransferDeliveryAttempt.rehydrate({
+        ...snapshot,
+        updatedAt: "1999-01-01T00:00:00.000Z"
+      })
+    ).toThrow(DomainError);
   });
 
   it("rejects invalid endpoint addresses and attempt numbers", () => {

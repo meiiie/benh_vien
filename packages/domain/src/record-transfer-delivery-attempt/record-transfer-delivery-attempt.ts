@@ -112,6 +112,11 @@ export class RecordTransferDeliveryAttempt {
       snapshot.httpStatus === undefined ? undefined : normalizeHttpStatus(snapshot.httpStatus);
     const responseBodyPreview = normalizeResponseBodyPreview(snapshot.responseBodyPreview);
     const errorMessage = normalizeOptional(snapshot.errorMessage);
+    const createdAt = parseDate(snapshot.createdAt, "Thời điểm tạo lần gửi không hợp lệ.");
+    const updatedAt = parseDate(
+      snapshot.updatedAt,
+      "Thời điểm cập nhật lần gửi không hợp lệ."
+    );
 
     validateTerminalState({
       status,
@@ -121,6 +126,7 @@ export class RecordTransferDeliveryAttempt {
       responseBodyPreview,
       errorMessage
     });
+    validatePersistenceTimeline({ queuedAt, createdAt, updatedAt });
 
     return new RecordTransferDeliveryAttempt({
       ...snapshot,
@@ -148,11 +154,8 @@ export class RecordTransferDeliveryAttempt {
       httpStatus,
       responseBodyPreview,
       errorMessage,
-      createdAt: parseDate(snapshot.createdAt, "Thời điểm tạo lần gửi không hợp lệ.").toISOString(),
-      updatedAt: parseDate(
-        snapshot.updatedAt,
-        "Thời điểm cập nhật lần gửi không hợp lệ."
-      ).toISOString()
+      createdAt: createdAt.toISOString(),
+      updatedAt: updatedAt.toISOString()
     });
   }
 
@@ -344,6 +347,20 @@ function validateTerminalState(input: {
 
   if (input.status === "failed" && input.httpStatus !== undefined && input.httpStatus >= 200 && input.httpStatus <= 299) {
     throw new DomainError("Lần gửi lỗi không được có HTTP status 2xx.");
+  }
+}
+
+function validatePersistenceTimeline(input: {
+  readonly queuedAt: Date;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+}): void {
+  if (input.updatedAt < input.createdAt) {
+    throw new DomainError("Thời điểm cập nhật lần gửi không được trước thời điểm tạo lần gửi.");
+  }
+
+  if (input.updatedAt < input.queuedAt) {
+    throw new DomainError("Thời điểm cập nhật lần gửi không được trước thời điểm xếp hàng.");
   }
 }
 
