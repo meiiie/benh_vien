@@ -1,7 +1,8 @@
 import type { FormEvent } from "react";
 import { formatDemoRole } from "../auth/demoLogin.js";
 import { Info, PageHeader } from "../components/AppShell.js";
-import { formatDateTime, formatRecordTransferStatus } from "../lib/clinicalFormatters.js";
+import { formatRecordTransferStatus } from "../features/record-transfers/recordTransferFormatters.js";
+import { formatDateTime } from "../lib/clinicalFormatters.js";
 import type {
   AuthSession,
   GatewayAcknowledgementForm,

@@ -1,14 +1,14 @@
 import type { FormEvent } from "react";
 import { Info } from "../../components/AppShell.js";
+import { formatDateTime } from "../../lib/clinicalFormatters.js";
 import {
   buildRecordTransferOperationalSummary,
-  formatDateTime,
   formatRecordTransferBundleType,
   formatRecordTransferDeliveryAttemptStatus,
   formatRecordTransferPriority,
   formatRecordTransferRetryCount,
   formatRecordTransferStatus
-} from "../../lib/clinicalFormatters.js";
+} from "./recordTransferFormatters.js";
 import type {
   NewRecordTransferForm,
   RecordTransfer,

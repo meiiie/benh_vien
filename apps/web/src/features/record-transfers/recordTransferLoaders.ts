@@ -5,7 +5,7 @@ import {
 import {
   isMissingRecordTransferDeliveryAttemptsRoute,
   resolveSelectedRecordTransferId
-} from "../../lib/clinicalFormatters.js";
+} from "./recordTransferFormatters.js";
 import type {
   RecordTransfer,
   RecordTransferDeliveryAttempt
