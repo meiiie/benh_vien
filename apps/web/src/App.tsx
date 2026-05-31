@@ -99,7 +99,7 @@ import {
   listPatients,
   mergePatient
 } from "./features/patient-registry/patientRegistryApi.js";
-import { buildCreatePatientCommand } from "./features/patient-registry/patientRegistryCommandBuilders.js";
+import { buildCreatePatientCommand, buildMergePatientCommand } from "./features/patient-registry/patientRegistryCommandBuilders.js";
 import { buildPatientPanelRenderers } from "./features/patient-registry/patientPanelRenderers.js";
 import { buildPatientRegistrySelection } from "./features/patient-registry/patientRegistrySelectors.js";
 import {
@@ -126,8 +126,7 @@ import { formatAuditIntegrityReason } from "./lib/auditFormatters.js";
 import {
   formatDateTime,
   isMissingRecordTransferDeliveryAttemptsRoute,
-  resolveSelectedRecordTransferId,
-  toApiDateTime
+  resolveSelectedRecordTransferId
 } from "./lib/clinicalFormatters.js";
 import { loadFhirPreview } from "./lib/fhirPreviewLoader.js";
 import { loadPatientScopedCollection } from "./lib/patientScopedCollectionLoader.js";
@@ -1855,10 +1854,11 @@ export function App() {
     setIsMergingPatient(true);
 
     try {
-      const mergedPatient = await mergePatient(clinicalApi, selectedPatient.id, {
-        targetPatientId: patientMergeTargetId,
-        reason: patientMergeForm.reason.trim()
-      });
+      const mergedPatient = await mergePatient(
+        clinicalApi,
+        selectedPatient.id,
+        buildMergePatientCommand(patientMergeForm, patientMergeTargetId)
+      );
       await loadPatients(mergedPatient.id);
       await loadPatientWorkspace(mergedPatient.id);
       setPatientMergeForm({

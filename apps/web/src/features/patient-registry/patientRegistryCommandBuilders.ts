@@ -1,7 +1,8 @@
-import type { NewPatientForm } from "../../types/clinical.js";
-import type { createPatient } from "./patientRegistryApi.js";
+import type { NewPatientForm, PatientMergeForm } from "../../types/clinical.js";
+import type { createPatient, mergePatient } from "./patientRegistryApi.js";
 
 type CreatePatientCommand = Parameters<typeof createPatient>[1];
+type MergePatientCommand = Parameters<typeof mergePatient>[2];
 
 export function buildCreatePatientCommand(form: NewPatientForm): CreatePatientCommand {
   return {
@@ -23,5 +24,15 @@ export function buildCreatePatientCommand(form: NewPatientForm): CreatePatientCo
     address: form.address || undefined,
     phone: form.phone || undefined,
     managingOrganizationId: form.managingOrganizationId
+  };
+}
+
+export function buildMergePatientCommand(
+  form: PatientMergeForm,
+  targetPatientId: string
+): MergePatientCommand {
+  return {
+    targetPatientId,
+    reason: form.reason.trim()
   };
 }
