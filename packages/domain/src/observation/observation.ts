@@ -98,8 +98,17 @@ export class Observation {
     const valueQuantity = snapshot.valueQuantity
       ? normalizeQuantity(snapshot.valueQuantity)
       : undefined;
+    const createdAt = parseDate(
+      snapshot.createdAt,
+      "Thời điểm tạo observation không hợp lệ."
+    );
+    const updatedAt = parseDate(
+      snapshot.updatedAt,
+      "Thời điểm cập nhật observation không hợp lệ."
+    );
 
     validateObservationValue(valueText, valueQuantity);
+    validatePersistenceTimeline(createdAt, updatedAt);
 
     return new Observation({
       ...snapshot,
@@ -117,8 +126,8 @@ export class Observation {
       valueQuantity,
       valueText,
       performerPractitionerId: normalizeOptional(snapshot.performerPractitionerId),
-      createdAt: parseDate(snapshot.createdAt, "Thời điểm tạo observation không hợp lệ.").toISOString(),
-      updatedAt: parseDate(snapshot.updatedAt, "Thời điểm cập nhật observation không hợp lệ.").toISOString()
+      createdAt: createdAt.toISOString(),
+      updatedAt: updatedAt.toISOString()
     });
   }
 
@@ -162,6 +171,12 @@ function validateObservationValue(
 
   if (valueText && valueQuantity) {
     throw new DomainError("Observation chỉ được có một kiểu giá trị trong lát cắt hiện tại.");
+  }
+}
+
+function validatePersistenceTimeline(createdAt: Date, updatedAt: Date): void {
+  if (updatedAt < createdAt) {
+    throw new DomainError("Thời điểm cập nhật observation không được trước thời điểm tạo observation.");
   }
 }
 
