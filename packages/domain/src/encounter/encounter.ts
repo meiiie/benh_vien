@@ -9,6 +9,20 @@ export type EncounterStatus =
   | "cancelled"
   | "entered-in-error";
 
+const encounterClasses = new Set<EncounterClass>([
+  "ambulatory",
+  "inpatient",
+  "emergency",
+  "virtual"
+]);
+const encounterStatuses = new Set<EncounterStatus>([
+  "planned",
+  "in-progress",
+  "finished",
+  "cancelled",
+  "entered-in-error"
+]);
+
 export type EncounterSnapshot = {
   readonly id: string;
   readonly patientId: string;
@@ -61,13 +75,15 @@ export class Encounter {
       throw new DomainError("Thời điểm kết thúc không được trước thời điểm bắt đầu.");
     }
 
-    const status = input.status ?? (endedAt ? "finished" : "in-progress");
+    const status = normalizeStatus(input.status ?? (endedAt ? "finished" : "in-progress"));
+    const encounterClass = normalizeClass(input.class);
+    validateLifecycle(status, startedAt, endedAt);
 
     return new Encounter({
       id: normalizeRequired(input.id, "Mã lượt khám không được để trống."),
       patientId: normalizeRequired(input.patientId, "Lượt khám phải gắn với một bệnh nhân."),
       status,
-      class: input.class,
+      class: encounterClass,
       serviceType: normalizeRequired(input.serviceType, "Dịch vụ/khoa khám không được để trống."),
       reasonText: normalizeRequired(input.reasonText, "Lý do khám không được để trống."),
       departmentId: normalizeOptional(input.departmentId),
@@ -83,19 +99,33 @@ export class Encounter {
   }
 
   static rehydrate(snapshot: EncounterSnapshot): Encounter {
+    const startedAt = parseDate(
+      snapshot.startedAt,
+      "Thời điểm bắt đầu lượt khám không hợp lệ."
+    );
+    const endedAt = snapshot.endedAt
+      ? parseDate(snapshot.endedAt, "Thời điểm kết thúc lượt khám không hợp lệ.")
+      : undefined;
+    const status = normalizeStatus(snapshot.status);
+
+    validateLifecycle(status, startedAt, endedAt);
+
     return new Encounter({
-      id: snapshot.id,
-      patientId: snapshot.patientId,
-      status: snapshot.status,
-      class: snapshot.class,
-      serviceType: snapshot.serviceType,
-      reasonText: snapshot.reasonText,
-      departmentId: snapshot.departmentId,
-      attendingPractitionerId: snapshot.attendingPractitionerId,
-      startedAt: new Date(snapshot.startedAt),
-      endedAt: snapshot.endedAt ? new Date(snapshot.endedAt) : undefined,
-      createdAt: new Date(snapshot.createdAt),
-      updatedAt: new Date(snapshot.updatedAt)
+      id: normalizeRequired(snapshot.id, "Mã lượt khám không được để trống."),
+      patientId: normalizeRequired(snapshot.patientId, "Lượt khám phải gắn với một bệnh nhân."),
+      status,
+      class: normalizeClass(snapshot.class),
+      serviceType: normalizeRequired(snapshot.serviceType, "Dịch vụ/khoa khám không được để trống."),
+      reasonText: normalizeRequired(snapshot.reasonText, "Lý do khám không được để trống."),
+      departmentId: normalizeOptional(snapshot.departmentId),
+      attendingPractitionerId: normalizeRequired(
+        snapshot.attendingPractitionerId,
+        "Bác sĩ hoặc nhân sự phụ trách không được để trống."
+      ),
+      startedAt,
+      endedAt,
+      createdAt: parseDate(snapshot.createdAt, "Thời điểm tạo lượt khám không hợp lệ."),
+      updatedAt: parseDate(snapshot.updatedAt, "Thời điểm cập nhật lượt khám không hợp lệ.")
     });
   }
 
@@ -114,6 +144,10 @@ export class Encounter {
   finish(endedAt = new Date()): void {
     if (this.props.status !== "in-progress" && this.props.status !== "planned") {
       throw new DomainError("Chỉ lượt khám đang mở hoặc đã hẹn mới được kết thúc.");
+    }
+
+    if (Number.isNaN(endedAt.getTime())) {
+      throw new DomainError("Thời điểm kết thúc lượt khám không hợp lệ.");
     }
 
     if (endedAt < this.props.startedAt) {
@@ -170,4 +204,38 @@ function parseDate(value: string, message: string): Date {
   }
 
   return date;
+}
+
+function normalizeStatus(value: EncounterStatus): EncounterStatus {
+  if (!encounterStatuses.has(value)) {
+    throw new DomainError("Trạng thái lượt khám không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizeClass(value: EncounterClass): EncounterClass {
+  if (!encounterClasses.has(value)) {
+    throw new DomainError("Phân loại lượt khám không hợp lệ.");
+  }
+
+  return value;
+}
+
+function validateLifecycle(
+  status: EncounterStatus,
+  startedAt: Date,
+  endedAt: Date | undefined
+): void {
+  if (endedAt && endedAt < startedAt) {
+    throw new DomainError("Thời điểm kết thúc không được trước thời điểm bắt đầu.");
+  }
+
+  if (status === "finished" && !endedAt) {
+    throw new DomainError("Lượt khám đã hoàn tất phải có thời điểm kết thúc.");
+  }
+
+  if ((status === "planned" || status === "in-progress") && endedAt) {
+    throw new DomainError("Lượt khám chưa hoàn tất không được có thời điểm kết thúc.");
+  }
 }
