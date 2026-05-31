@@ -68,11 +68,7 @@ import { buildCreatePatientCommand, buildMergePatientCommand } from "./features/
 import { buildPatientPanelRenderers } from "./features/patient-registry/patientPanelRenderers.js";
 import { buildPatientRegistrySelection } from "./features/patient-registry/patientRegistrySelectors.js";
 import { buildPatientWorkspaceCollectionLoaders } from "./features/patient-workspace/patientWorkspaceCollectionLoaders.js";
-import {
-  getApiRuntimeInfo,
-  getFhirCapabilityStatement
-} from "./features/platform/platformApi.js";
-import { getProviderDirectory } from "./features/provider-directory/providerDirectoryApi.js";
+import { buildPlatformLoaders } from "./features/platform/platformLoaders.js";
 import {
   acknowledgeRecordTransfer,
   createRecordTransfer,
@@ -477,6 +473,22 @@ export function App() {
     setServiceRequestFhirPreview,
     setStatusMessage,
     setWorkflowTaskFhirPreview
+  });
+  const {
+    loadApiRuntimeInfo,
+    loadCapabilityStatement,
+    loadProviderDirectory
+  } = buildPlatformLoaders({
+    authSession,
+    clinicalApi,
+    isAuditOnlySession,
+    loadProviderDirectoryFhirPreview,
+    setApiRuntimeInfo,
+    setApiRuntimeWarning,
+    setCapabilityStatementPreview,
+    setIsLoadingProviderDirectory,
+    setProviderDirectory,
+    setProviderDirectoryFhirPreview
   });
   const {
     loadAllergyIntolerances,
@@ -1019,74 +1031,6 @@ export function App() {
       );
     } finally {
       setIsLoadingPatients(false);
-    }
-  }
-
-  async function loadProviderDirectory() {
-    setIsLoadingProviderDirectory(true);
-
-    try {
-      if (isAuditOnlySession) {
-        const directory = await getProviderDirectory(clinicalApi, "AUDIT");
-        setProviderDirectory(directory);
-        setProviderDirectoryFhirPreview({
-          note: "Phiên kiểm toán chỉ tải danh bạ vận hành; không xuất FHIR Provider Directory."
-        });
-        return;
-      }
-
-      const directory = await getProviderDirectory(clinicalApi, "TREATMENT");
-      setProviderDirectory(directory);
-      await loadProviderDirectoryFhirPreview();
-    } catch (error) {
-      setProviderDirectory(undefined);
-      setProviderDirectoryFhirPreview({
-        error:
-          error instanceof Error
-            ? `Không thể tải Provider Directory: ${error.message}`
-            : "Không thể tải Provider Directory."
-      });
-    } finally {
-      setIsLoadingProviderDirectory(false);
-    }
-  }
-
-  async function loadCapabilityStatement() {
-    try {
-      setCapabilityStatementPreview(await getFhirCapabilityStatement(clinicalApi));
-    } catch (error) {
-      setCapabilityStatementPreview({
-        error:
-          error instanceof Error
-            ? `Không thể tải FHIR CapabilityStatement: ${error.message}`
-            : "Không thể tải FHIR CapabilityStatement."
-      });
-    }
-  }
-
-  async function loadApiRuntimeInfo() {
-    try {
-      const runtimeInfo = await getApiRuntimeInfo(
-        clinicalApi,
-        authSession ? (authSession.actor.role === "auditor" ? "AUDIT" : "OPERATIONS") : undefined
-      );
-      setApiRuntimeInfo(runtimeInfo);
-      setApiRuntimeWarning(undefined);
-    } catch (error) {
-      if (isApiHttpError(error) && error.status === 404) {
-        setApiRuntimeInfo(undefined);
-        setApiRuntimeWarning(
-          "API runtime metadata chưa có trong backend đang chạy. Hãy khởi động lại backend mới nhất nếu cần kiểm tra phiên bản và trạng thái worker."
-        );
-        return;
-      }
-
-      setApiRuntimeInfo(undefined);
-      setApiRuntimeWarning(
-        error instanceof Error
-          ? `Không thể đọc runtime metadata: ${error.message}`
-          : "Không thể đọc runtime metadata."
-      );
     }
   }
 
