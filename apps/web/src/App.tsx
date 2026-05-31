@@ -70,7 +70,7 @@ import {
 } from "./features/clinical-records/medicationCommandBuilders.js";
 import {
   buildDiagnosticReportCommand,
-  buildImagingStudyCommand,
+  buildImagingStudyCommandDraft,
   buildProcedureCommand,
   buildServiceRequestCommand
 } from "./features/clinical-records/carePlanCommandBuilders.js";
@@ -2472,9 +2472,9 @@ export function App() {
       return;
     }
 
-    if (!ensureSelectedPatientWritable()) {
-      return;
-    }
+    if (!ensureSelectedPatientWritable()) return;
+    const commandDraft = buildImagingStudyCommandDraft(imagingStudyForm);
+    if (!commandDraft.ok) { setStatusMessage(commandDraft.message); return; }
 
     setIsSubmittingImagingStudy(true);
 
@@ -2482,7 +2482,7 @@ export function App() {
       const createdImagingStudy = await createImagingStudy(
         clinicalApi,
         selectedPatient.id,
-        buildImagingStudyCommand(imagingStudyForm)
+        commandDraft.command
       );
       await loadImagingStudies(selectedPatient.id, createdImagingStudy.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);

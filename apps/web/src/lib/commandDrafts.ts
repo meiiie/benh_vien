@@ -83,3 +83,29 @@ export function parseOptionalPositiveInteger(
 
   return parsedValue;
 }
+
+export function parseOptionalNonNegativeInteger(
+  rawValue: string,
+  message: string
+): NumberDraft | { readonly ok: true; readonly value: undefined } {
+  if (!rawValue) {
+    return {
+      ok: true,
+      value: undefined
+    };
+  }
+
+  const value = Number(rawValue);
+
+  if (!Number.isFinite(value) || !Number.isInteger(value) || value < 0) {
+    return {
+      ok: false,
+      message
+    };
+  }
+
+  return {
+    ok: true,
+    value
+  };
+}

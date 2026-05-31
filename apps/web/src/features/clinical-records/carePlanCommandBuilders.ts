@@ -1,4 +1,6 @@
 import { toApiDateTime } from "../../lib/clinicalFormatters.js";
+import type { CommandDraft } from "../../lib/commandDrafts.js";
+import { parseOptionalNonNegativeInteger } from "../../lib/commandDrafts.js";
 import type {
   NewDiagnosticReportForm,
   NewImagingStudyForm,
@@ -133,7 +135,11 @@ export function buildDiagnosticReportCommand(
 }
 
 export function buildImagingStudyCommand(
-  form: NewImagingStudyForm
+  form: NewImagingStudyForm,
+  options: {
+    readonly seriesNumber?: number;
+    readonly numberOfInstances?: number;
+  } = {}
 ): CreateImagingStudyCommand {
   return {
     encounterId: form.encounterId || undefined,
@@ -149,18 +155,14 @@ export function buildImagingStudyCommand(
     series: [
       {
         uid: form.seriesUid,
-        number: form.seriesNumber
-          ? Number.parseInt(form.seriesNumber, 10)
-          : undefined,
+        number: options.seriesNumber,
         modality: {
           system: form.modalitySystem,
           code: form.modalityCode,
           display: form.modalityDisplay
         },
         description: form.seriesDescription || undefined,
-        numberOfInstances: form.numberOfInstances
-          ? Number.parseInt(form.numberOfInstances, 10)
-          : undefined,
+        numberOfInstances: options.numberOfInstances,
         bodySite:
           form.bodySiteCode || form.bodySiteDisplay
             ? {
@@ -171,5 +173,35 @@ export function buildImagingStudyCommand(
             : undefined
       }
     ]
+  };
+}
+
+export function buildImagingStudyCommandDraft(
+  form: NewImagingStudyForm
+): CommandDraft<CreateImagingStudyCommand> {
+  const seriesNumber = parseOptionalNonNegativeInteger(
+    form.seriesNumber,
+    "Số thứ tự series phải là số nguyên không âm."
+  );
+
+  if (!seriesNumber.ok) {
+    return seriesNumber;
+  }
+
+  const numberOfInstances = parseOptionalNonNegativeInteger(
+    form.numberOfInstances,
+    "Số ảnh trong series phải là số nguyên không âm."
+  );
+
+  if (!numberOfInstances.ok) {
+    return numberOfInstances;
+  }
+
+  return {
+    ok: true,
+    command: buildImagingStudyCommand(form, {
+      numberOfInstances: numberOfInstances.value,
+      seriesNumber: seriesNumber.value
+    })
   };
 }
