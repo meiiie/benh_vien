@@ -1,6 +1,10 @@
 import type { ClinicalApiClient } from "../../api/clinicalApi.js";
 import type { Consent, ConsentsResponse } from "../../types/clinical.js";
 
+export type RevokeConsentCommand = {
+  readonly reason: string;
+};
+
 export function listPatientConsents(
   api: ClinicalApiClient,
   patientId: string
@@ -23,13 +27,11 @@ export function revokePatientConsent(
   api: ClinicalApiClient,
   patientId: string,
   consentId: string,
-  reason: string
+  command: RevokeConsentCommand
 ): Promise<Consent> {
   return api.requestJson<Consent>(`/patients/${patientId}/consents/${consentId}/revoke`, {
     method: "POST",
     purposeOfUse: "TREATMENT",
-    json: {
-      reason
-    }
+    json: command
   });
 }

@@ -86,11 +86,8 @@ import {
   buildObservationCommandDraft
 } from "./features/clinical-records/clinicalEntryCommandBuilders.js";
 import { buildEncounterScopedFormUpdater } from "./features/clinical-records/encounterScopedFormUpdater.js";
-import {
-  exportConsentFhir,
-  listPatientConsents,
-  revokePatientConsent
-} from "./features/consents/consentApi.js";
+import { exportConsentFhir, listPatientConsents, revokePatientConsent } from "./features/consents/consentApi.js";
+import { buildRevokeConsentCommand } from "./features/consents/consentCommandBuilders.js";
 import { buildInteropPanelRenderers } from "./features/interoperability/interopPanelRenderers.js";
 import {
   createPatient,
@@ -1398,7 +1395,7 @@ export function App() {
         clinicalApi,
         selectedPatient.id,
         consent.id,
-        "Thu hồi theo yêu cầu người bệnh trong phiên demo."
+        buildRevokeConsentCommand()
       );
       await loadConsents(selectedPatient.id);
       await loadConsentFhirPreview(revokedConsent.id);

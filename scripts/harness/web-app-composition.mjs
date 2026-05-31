@@ -38,6 +38,7 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/clinicalRecordApi.ts",
   "apps/web/src/features/consents/ConsentInteropPanel.tsx",
   "apps/web/src/features/consents/consentApi.ts",
+  "apps/web/src/features/consents/consentCommandBuilders.ts",
   "apps/web/src/features/interoperability/interopPanelRenderers.tsx",
   "apps/web/src/features/patient-registry/CreatePatientPanel.tsx",
   "apps/web/src/features/patient-registry/PatientDetailPanel.tsx",
@@ -72,7 +73,7 @@ const requiredModules = [
   "apps/web/src/pages/workspaceSelection.ts",
   "apps/web/src/types/clinical.ts"
 ];
-const maxAppLines = 2_657;
+const maxAppLines = 2_654;
 
 const appSource = await readFile(appPath, "utf8");
 const appLineCount = appSource.split(/\r?\n/).length;
