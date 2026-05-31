@@ -2,13 +2,8 @@ import { buildAuthSessionHandlers } from "./auth/authSessionHandlers.js";
 import { createClinicalApiClient } from "./api/clinicalApi.js";
 import { useAuditState } from "./features/audit/auditState.js";
 import { AuthenticatedLayout } from "./components/AppShell.js";
-import { buildClinicalDocumentHandlers } from "./features/clinical-documents/clinicalDocumentHandlers.js";
 import { useClinicalRecordState } from "./features/clinical-records/clinicalRecordState.js";
-import { buildCarePlanHandlers } from "./features/clinical-records/carePlanHandlers.js";
-import { buildMedicationHandlers } from "./features/clinical-records/medicationHandlers.js";
-import { buildClinicalEntryHandlers } from "./features/clinical-records/clinicalEntryHandlers.js";
 import { useEncounterScopedFormEffects } from "./features/clinical-records/encounterScopedFormEffects.js";
-import { buildEncounterHandlers } from "./features/clinical-records/encounterHandlers.js";
 import { buildConsentLoaders } from "./features/consents/consentLoaders.js";
 import { useInteroperabilityState } from "./features/interoperability/interoperabilityState.js";
 import { buildPatientRegistryHandlers } from "./features/patient-registry/patientRegistryHandlers.js";
@@ -31,6 +26,7 @@ import {
   buildAppRouteRuntimeContext,
   buildAppWorkspaceContext
 } from "./pages/appDerivedContext.js";
+import { buildAppClinicalRecordHandlers } from "./pages/appClinicalRecordHandlers.js";
 import { buildAppFhirPreviewLoaders } from "./pages/appFhirPreviewLoaders.js";
 import { buildAppPatientRegistryLoaders } from "./pages/appPatientRegistryLoaders.js";
 import { buildAppPatientWorkspaceLoaders } from "./pages/appPatientWorkspaceLoaders.js";
@@ -299,85 +295,42 @@ export function App() {
     setStatusMessage
   });
   const {
-    handleCreateEncounter,
-    handleFinishEncounter
-  } = buildEncounterHandlers({
-    clinicalApi,
-    ...clinicalRecordState,
-    ensureSelectedPatientWritable,
-    loadAuditEvents,
-    loadEncounterFhirPreview,
-    loadEncounters,
-    selectedPatient,
-    setAppRoute,
-    setStatusMessage
-  });
-  const {
     handleCreateAllergyIntolerance,
+    handleCreateClinicalDocument,
     handleCreateCondition,
-    handleCreateObservation
-  } = buildClinicalEntryHandlers({
+    handleCreateDiagnosticReport,
+    handleCreateEncounter,
+    handleCreateImagingStudy,
+    handleCreateMedicationAdministration,
+    handleCreateMedicationDispense,
+    handleCreateMedicationRequest,
+    handleCreateObservation,
+    handleCreateProcedure,
+    handleCreateServiceRequest,
+    handleFinishEncounter,
+    handleSignClinicalDocument
+  } = buildAppClinicalRecordHandlers({
     clinicalApi,
-    ...clinicalRecordState,
+    clinicalRecordState,
     ensureSelectedPatientWritable,
     loadAllergyIntolerances,
     loadAuditEvents,
+    loadClinicalDocuments,
     loadConditions,
-    loadObservations,
-    loadPatientFhirBundlePreview,
-    selectedPatient,
-    setAppRoute,
-    setStatusMessage
-  });
-  const {
-    handleCreateMedicationAdministration,
-    handleCreateMedicationDispense,
-    handleCreateMedicationRequest
-  } = buildMedicationHandlers({
-    clinicalApi,
-    ensureSelectedPatientWritable,
-    loadAuditEvents,
+    loadDiagnosticReports,
+    loadDocumentFhirPreview,
+    loadDocumentProvenanceFhirPreview,
+    loadEncounterFhirPreview,
+    loadEncounters,
+    loadImagingStudies,
     loadMedicationAdministrations,
     loadMedicationDispenses,
     loadMedicationRequests,
-    loadPatientFhirBundlePreview,
-    loadPatientFhirDocumentBundlePreview,
-    ...clinicalRecordState,
-    selectedPatient,
-    setAppRoute,
-    setStatusMessage
-  });
-  const {
-    handleCreateDiagnosticReport,
-    handleCreateImagingStudy,
-    handleCreateProcedure,
-    handleCreateServiceRequest
-  } = buildCarePlanHandlers({
-    clinicalApi,
-    ...clinicalRecordState,
-    ensureSelectedPatientWritable,
-    loadAuditEvents,
-    loadDiagnosticReports,
-    loadImagingStudies,
+    loadObservations,
     loadPatientFhirBundlePreview,
     loadPatientFhirDocumentBundlePreview,
     loadProcedures,
     loadServiceRequests,
-    selectedPatient,
-    setAppRoute,
-    setStatusMessage
-  });
-  const {
-    handleCreateClinicalDocument,
-    handleSignClinicalDocument
-  } = buildClinicalDocumentHandlers({
-    clinicalApi,
-    ...clinicalRecordState,
-    ensureSelectedPatientWritable,
-    loadAuditEvents,
-    loadClinicalDocuments,
-    loadDocumentFhirPreview,
-    loadDocumentProvenanceFhirPreview,
     selectedPatient,
     setAppRoute,
     setStatusMessage
