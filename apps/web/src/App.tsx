@@ -8,6 +8,7 @@ import { buildAuthSessionHandlers } from "./auth/authSessionHandlers.js";
 import { createClinicalApiClient } from "./api/clinicalApi.js";
 import { buildAuditLoaders } from "./features/audit/auditLoaders.js";
 import { buildAuditPanelRenderers } from "./features/audit/auditPanelRenderers.js";
+import { useAuditState } from "./features/audit/auditState.js";
 import {
   AuthenticatedLayout,
   Info,
@@ -110,8 +111,6 @@ import type {
   ImagingStudyCoding,
   ImagingStudySeries,
   ImagingStudy,
-  AuditEvent,
-  AuditIntegrityReport,
   Consent,
   RecordTransfer,
   RecordTransferDeliveryAttempt,
@@ -149,6 +148,7 @@ export function App() {
   const [loginError, setLoginError] = useState<string>();
   const platformState = usePlatformState();
   const fhirPreviewState = useFhirPreviewState();
+  const auditState = useAuditState();
   const [encounters, setEncounters] = useState<readonly Encounter[]>([]);
   const [selectedEncounterId, setSelectedEncounterId] = useState<string>();
   const [clinicalDocuments, setClinicalDocuments] = useState<readonly ClinicalDocument[]>([]);
@@ -179,11 +179,6 @@ export function App() {
   const [selectedDiagnosticReportId, setSelectedDiagnosticReportId] = useState<string>();
   const [imagingStudies, setImagingStudies] = useState<readonly ImagingStudy[]>([]);
   const [selectedImagingStudyId, setSelectedImagingStudyId] = useState<string>();
-  const [auditEvents, setAuditEvents] = useState<readonly AuditEvent[]>([]);
-  const [globalAuditEvents, setGlobalAuditEvents] = useState<readonly AuditEvent[]>([]);
-  const [auditIntegrityReport, setAuditIntegrityReport] =
-    useState<AuditIntegrityReport>();
-  const [auditFhirBundlePreview, setAuditFhirBundlePreview] = useState<unknown>();
   const [consents, setConsents] = useState<readonly Consent[]>([]);
   const [recordTransfers, setRecordTransfers] = useState<readonly RecordTransfer[]>([]);
   const [selectedRecordTransferId, setSelectedRecordTransferId] = useState<string>();
@@ -237,10 +232,6 @@ export function App() {
   const [isLoadingProcedures, setIsLoadingProcedures] = useState(false);
   const [isLoadingDiagnosticReports, setIsLoadingDiagnosticReports] = useState(false);
   const [isLoadingImagingStudies, setIsLoadingImagingStudies] = useState(false);
-  const [isLoadingAuditEvents, setIsLoadingAuditEvents] = useState(false);
-  const [isLoadingGlobalAuditEvents, setIsLoadingGlobalAuditEvents] = useState(false);
-  const [isVerifyingAuditIntegrity, setIsVerifyingAuditIntegrity] = useState(false);
-  const [isExportingAuditFhir, setIsExportingAuditFhir] = useState(false);
   const [isLoadingConsents, setIsLoadingConsents] = useState(false);
   const [isLoadingRecordTransfers, setIsLoadingRecordTransfers] = useState(false);
   const [isLoadingRecordTransferDeliveryAttempts, setIsLoadingRecordTransferDeliveryAttempts] =
@@ -371,8 +362,8 @@ export function App() {
     clinicalApi,
     isAuditOnlySession,
     ...fhirPreviewState,
-    setAuditFhirBundlePreview,
-    setIsExportingAuditFhir,
+    setAuditFhirBundlePreview: auditState.setAuditFhirBundlePreview,
+    setIsExportingAuditFhir: auditState.setIsExportingAuditFhir,
     setProviderDirectoryFhirPreview: platformState.setProviderDirectoryFhirPreview,
     setStatusMessage
   });
@@ -383,13 +374,13 @@ export function App() {
   } = buildAuditLoaders({
     canReadAudit,
     clinicalApi,
-    setAuditEvents,
-    setAuditFhirBundlePreview,
-    setAuditIntegrityReport,
-    setGlobalAuditEvents,
-    setIsLoadingAuditEvents,
-    setIsLoadingGlobalAuditEvents,
-    setIsVerifyingAuditIntegrity,
+    setAuditEvents: auditState.setAuditEvents,
+    setAuditFhirBundlePreview: auditState.setAuditFhirBundlePreview,
+    setAuditIntegrityReport: auditState.setAuditIntegrityReport,
+    setGlobalAuditEvents: auditState.setGlobalAuditEvents,
+    setIsLoadingAuditEvents: auditState.setIsLoadingAuditEvents,
+    setIsLoadingGlobalAuditEvents: auditState.setIsLoadingGlobalAuditEvents,
+    setIsVerifyingAuditIntegrity: auditState.setIsVerifyingAuditIntegrity,
     setStatusMessage
   });
   const {
@@ -546,9 +537,9 @@ export function App() {
     loadWorkflowTasks,
     ...fhirPreviewState,
     setAllergyIntolerances,
-    setAuditEvents,
-    setAuditFhirBundlePreview,
-    setAuditIntegrityReport,
+    setAuditEvents: auditState.setAuditEvents,
+    setAuditFhirBundlePreview: auditState.setAuditFhirBundlePreview,
+    setAuditIntegrityReport: auditState.setAuditIntegrityReport,
     setCapabilityStatementPreview: platformState.setCapabilityStatementPreview,
     setClinicalDocuments,
     setConditions,
@@ -717,7 +708,7 @@ export function App() {
     setApiRuntimeWarning: platformState.setApiRuntimeWarning,
     setAppRoute,
     setAuthSession,
-    setGlobalAuditEvents,
+    setGlobalAuditEvents: auditState.setGlobalAuditEvents,
     setIsAuthenticated,
     setLoginError,
     setPatients: patientRegistryState.setPatients,
@@ -788,15 +779,15 @@ export function App() {
     onSendRecordTransfer: handleSendRecordTransfer
   });
   const auditPanels = buildAuditPanelRenderers({
-    auditEvents,
-    auditFhirBundlePreview,
-    auditIntegrityReport,
+    auditEvents: auditState.auditEvents,
+    auditFhirBundlePreview: auditState.auditFhirBundlePreview,
+    auditIntegrityReport: auditState.auditIntegrityReport,
     canReadAudit,
-    globalAuditEvents,
-    isExportingAuditFhir,
-    isLoadingAuditEvents,
-    isLoadingGlobalAuditEvents,
-    isVerifyingAuditIntegrity,
+    globalAuditEvents: auditState.globalAuditEvents,
+    isExportingAuditFhir: auditState.isExportingAuditFhir,
+    isLoadingAuditEvents: auditState.isLoadingAuditEvents,
+    isLoadingGlobalAuditEvents: auditState.isLoadingGlobalAuditEvents,
+    isVerifyingAuditIntegrity: auditState.isVerifyingAuditIntegrity,
     selectedPatientId: selectedPatient?.id,
     onExportAuditFhir: loadAuditFhirBundle,
     onLoadAuditEvents: loadAuditEvents,
@@ -990,7 +981,7 @@ export function App() {
     selectedPatientId: patientRegistryState.selectedPatientId,
     setApiRuntimeInfo: platformState.setApiRuntimeInfo,
     setApiRuntimeWarning: platformState.setApiRuntimeWarning,
-    setGlobalAuditEvents
+    setGlobalAuditEvents: auditState.setGlobalAuditEvents
   });
 
   useEncounterScopedFormEffects({
