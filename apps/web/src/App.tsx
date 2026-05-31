@@ -2,7 +2,6 @@ import { createClinicalApiClient } from "./api/clinicalApi.js";
 import { useAuditState } from "./features/audit/auditState.js";
 import { AuthenticatedLayout } from "./components/AppShell.js";
 import { useClinicalRecordState } from "./features/clinical-records/clinicalRecordState.js";
-import { useEncounterScopedFormEffects } from "./features/clinical-records/encounterScopedFormEffects.js";
 import { buildConsentLoaders } from "./features/consents/consentLoaders.js";
 import { useInteroperabilityState } from "./features/interoperability/interoperabilityState.js";
 import { buildPatientRegistrySelection } from "./features/patient-registry/patientRegistrySelectors.js";
@@ -10,7 +9,6 @@ import { usePatientRegistryState } from "./features/patient-registry/patientRegi
 import { buildPatientWriteGuard } from "./features/patient-registry/patientWriteGuard.js";
 import { usePlatformState } from "./features/platform/platformState.js";
 import { useFhirPreviewState } from "./features/fhir-preview/fhirPreviewState.js";
-import { useSelectedFhirPreviewEffects } from "./features/fhir-preview/selectedFhirPreviewEffects.js";
 import { buildRecordTransferLoaders } from "./features/record-transfers/recordTransferLoaders.js";
 import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
@@ -31,7 +29,7 @@ import { buildAppPatientWorkspaceLifecycle } from "./pages/appPatientWorkspaceLi
 import { buildAppPatientWorkspaceLoaders } from "./pages/appPatientWorkspaceLoaders.js";
 import { buildAppPlatformLoaders } from "./pages/appPlatformLoaders.js";
 import { buildAppRecordTransferHandlers } from "./pages/appRecordTransferHandlers.js";
-import { useAppLifecycleEffects } from "./pages/appLifecycleEffects.js";
+import { useAppRuntimeEffects } from "./pages/appRuntimeEffects.js";
 import { useAppShellState } from "./pages/appShellState.js";
 import { buildAppRoutePanels } from "./pages/appRoutePanels.js";
 import { buildClinicalDocumentPanels } from "./pages/clinicalDocumentPanelContext.js";
@@ -446,50 +444,42 @@ export function App() {
     interopPanels,
     patientPanels
   });
-  useSelectedFhirPreviewEffects({
+  useAppRuntimeEffects({
+    auditState,
+    authSession,
+    canReadAudit,
+    canViewRuntimeInfo,
+    clearPatientWorkspaceState,
+    clinicalRecordState,
+    fhirPreviewState,
+    interoperabilityState,
+    isAuthenticated,
+    isIntegrationSession,
     loadAllergyIntoleranceFhirPreview,
+    loadApiRuntimeInfo,
+    loadCapabilityStatement,
     loadConditionFhirPreview,
     loadDiagnosticReportFhirPreview,
     loadDocumentFhirPreview,
     loadDocumentProvenanceFhirPreview,
+    loadEncounterFhirPreview,
+    loadGlobalAuditEvents,
     loadImagingStudyFhirPreview,
     loadMedicationAdministrationFhirPreview,
     loadMedicationDispenseFhirPreview,
     loadMedicationRequestFhirPreview,
     loadObservationFhirPreview,
+    loadPatientWorkspace,
+    loadPatients,
     loadProcedureFhirPreview,
+    loadProviderDirectory,
     loadRecordTransferDeliveryAttempts,
     loadRecordTransferFhirTaskPreview,
     loadServiceRequestFhirPreview,
     loadWorkflowTaskFhirPreview,
-    ...clinicalRecordState,
-    selectedDocumentStatus: workspaceSelection.selectedDocument?.status,
-    ...fhirPreviewState,
-    ...interoperabilityState
-  });
-  useAppLifecycleEffects({
-    actorRole: authSession?.actor.role,
-    canReadAudit,
-    canViewRuntimeInfo,
-    clearPatientWorkspaceState,
-    isAuthenticated,
-    isIntegrationSession,
-    loadApiRuntimeInfo,
-    loadCapabilityStatement,
-    loadGlobalAuditEvents,
-    loadPatients,
-    loadPatientWorkspace,
-    loadProviderDirectory,
-    selectedPatientId: patientRegistryState.selectedPatientId,
-    setApiRuntimeInfo: platformState.setApiRuntimeInfo,
-    setApiRuntimeWarning: platformState.setApiRuntimeWarning,
-    setGlobalAuditEvents: auditState.setGlobalAuditEvents
-  });
-
-  useEncounterScopedFormEffects({
-    loadEncounterFhirPreview,
-    ...clinicalRecordState,
-    setEncounterFhirPreview: fhirPreviewState.setEncounterFhirPreview,
+    patientRegistryState,
+    platformState,
+    workspaceSelection
   });
 
   if (!isAuthenticated) {
