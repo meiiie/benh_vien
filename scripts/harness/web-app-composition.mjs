@@ -71,7 +71,7 @@ const requiredModules = [
   "apps/web/src/pages/workspaceSelection.ts",
   "apps/web/src/types/clinical.ts"
 ];
-const maxAppLines = 2_720;
+const maxAppLines = 2_657;
 
 const appSource = await readFile(appPath, "utf8");
 const appLineCount = appSource.split(/\r?\n/).length;

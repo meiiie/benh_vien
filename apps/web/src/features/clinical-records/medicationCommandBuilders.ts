@@ -18,7 +18,7 @@ type CreateMedicationAdministrationCommand = Parameters<
 
 type MedicationRequestNumericValues = {
   readonly doseValue: number;
-  readonly expectedSupplyDurationDays: number;
+  readonly expectedSupplyDurationDays?: number;
   readonly frequency: number;
   readonly period: number;
 };
@@ -34,6 +34,72 @@ type MedicationDispenseNumericValues = {
 type MedicationAdministrationNumericValues = {
   readonly doseValue: number;
 };
+
+type CommandDraft<TCommand> =
+  | {
+      readonly ok: true;
+      readonly command: TCommand;
+    }
+  | {
+      readonly ok: false;
+      readonly message: string;
+    };
+
+type NumberDraft =
+  | {
+      readonly ok: true;
+      readonly value: number;
+    }
+  | {
+      readonly ok: false;
+      readonly message: string;
+    };
+
+export function buildMedicationRequestCommandDraft(
+  form: NewMedicationRequestForm
+): CommandDraft<CreateMedicationRequestCommand> {
+  const doseValue = parsePositiveNumber(
+    form.doseValue,
+    "Liều lượng thuốc phải là số lớn hơn 0."
+  );
+  if (!doseValue.ok) {
+    return doseValue;
+  }
+
+  const frequency = parsePositiveNumber(
+    form.frequency,
+    "Nhịp dùng thuốc phải có tần suất và chu kỳ lớn hơn 0."
+  );
+  if (!frequency.ok) {
+    return frequency;
+  }
+
+  const period = parsePositiveNumber(
+    form.period,
+    "Nhịp dùng thuốc phải có tần suất và chu kỳ lớn hơn 0."
+  );
+  if (!period.ok) {
+    return period;
+  }
+
+  const expectedSupplyDurationDays = parseOptionalPositiveNumber(
+    form.expectedSupplyDurationDays,
+    "Số ngày cấp thuốc phải là số lớn hơn 0."
+  );
+  if (!expectedSupplyDurationDays.ok) {
+    return expectedSupplyDurationDays;
+  }
+
+  return {
+    ok: true,
+    command: buildMedicationRequestCommand(form, {
+      doseValue: doseValue.value,
+      expectedSupplyDurationDays: expectedSupplyDurationDays.value,
+      frequency: frequency.value,
+      period: period.value
+    })
+  };
+}
 
 export function buildMedicationRequestCommand(
   form: NewMedicationRequestForm,
@@ -69,10 +135,70 @@ export function buildMedicationRequestCommand(
     },
     authoredOn: form.authoredOn ? toApiDateTime(form.authoredOn) : undefined,
     requesterPractitionerId: form.requesterPractitionerId,
-    expectedSupplyDurationDays: form.expectedSupplyDurationDays
-      ? expectedSupplyDurationDays
-      : undefined,
+    expectedSupplyDurationDays,
     note: form.note || undefined
+  };
+}
+
+export function buildMedicationDispenseCommandDraft(
+  form: NewMedicationDispenseForm
+): CommandDraft<CreateMedicationDispenseCommand> {
+  const quantityValue = parsePositiveNumber(
+    form.quantityValue,
+    "Số lượng thuốc cấp phát phải là số lớn hơn 0."
+  );
+  if (!quantityValue.ok) {
+    return quantityValue;
+  }
+
+  const daysSupplyValue = parsePositiveNumber(
+    form.daysSupplyValue,
+    "Số ngày cấp thuốc phải là số lớn hơn 0."
+  );
+  if (!daysSupplyValue.ok) {
+    return daysSupplyValue;
+  }
+
+  const doseValue = parsePositiveNumber(
+    form.doseValue,
+    "Liều hướng dẫn sau cấp phát phải là số lớn hơn 0."
+  );
+  if (!doseValue.ok) {
+    return doseValue;
+  }
+
+  const frequency = parsePositiveNumber(
+    form.frequency,
+    "Nhịp dùng thuốc sau cấp phát phải có tần suất và chu kỳ lớn hơn 0."
+  );
+  if (!frequency.ok) {
+    return frequency;
+  }
+
+  const period = parsePositiveNumber(
+    form.period,
+    "Nhịp dùng thuốc sau cấp phát phải có tần suất và chu kỳ lớn hơn 0."
+  );
+  if (!period.ok) {
+    return period;
+  }
+
+  if (!form.whenHandedOver) {
+    return {
+      ok: false,
+      message: "Cần nhập thời điểm bàn giao thuốc khi trạng thái là đã hoàn tất."
+    };
+  }
+
+  return {
+    ok: true,
+    command: buildMedicationDispenseCommand(form, {
+      daysSupplyValue: daysSupplyValue.value,
+      doseValue: doseValue.value,
+      frequency: frequency.value,
+      period: period.value,
+      quantityValue: quantityValue.value
+    })
   };
 }
 
@@ -129,6 +255,39 @@ export function buildMedicationDispenseCommand(
   };
 }
 
+export function buildMedicationAdministrationCommandDraft(
+  form: NewMedicationAdministrationForm
+): CommandDraft<CreateMedicationAdministrationCommand> {
+  const doseValue = parsePositiveNumber(
+    form.doseValue,
+    "Liều dùng thực tế phải là số lớn hơn 0."
+  );
+  if (!doseValue.ok) {
+    return doseValue;
+  }
+
+  if (!form.effectiveStart) {
+    return {
+      ok: false,
+      message: "Cần nhập thời điểm dùng thuốc thực tế."
+    };
+  }
+
+  if (!form.performerActorId.trim()) {
+    return {
+      ok: false,
+      message: "Cần nhập người hoặc thiết bị xác nhận dùng thuốc."
+    };
+  }
+
+  return {
+    ok: true,
+    command: buildMedicationAdministrationCommand(form, {
+      doseValue: doseValue.value
+    })
+  };
+}
+
 export function buildMedicationAdministrationCommand(
   form: NewMedicationAdministrationForm,
   { doseValue }: MedicationAdministrationNumericValues
@@ -178,4 +337,34 @@ export function buildMedicationAdministrationCommand(
     },
     note: form.note || undefined
   };
+}
+
+function parsePositiveNumber(rawValue: string, message: string): NumberDraft {
+  const value = Number(rawValue);
+
+  if (!Number.isFinite(value) || value <= 0) {
+    return {
+      ok: false,
+      message
+    };
+  }
+
+  return {
+    ok: true,
+    value
+  };
+}
+
+function parseOptionalPositiveNumber(
+  rawValue: string,
+  message: string
+): NumberDraft | { readonly ok: true; readonly value: undefined } {
+  if (!rawValue) {
+    return {
+      ok: true,
+      value: undefined
+    };
+  }
+
+  return parsePositiveNumber(rawValue, message);
 }

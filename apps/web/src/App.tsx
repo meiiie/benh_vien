@@ -69,9 +69,9 @@ import {
 } from "./features/clinical-records/clinicalRecordApi.js";
 import { buildClinicalRecordPanelRenderers } from "./features/clinical-records/clinicalRecordPanelRenderers.js";
 import {
-  buildMedicationAdministrationCommand,
-  buildMedicationDispenseCommand,
-  buildMedicationRequestCommand
+  buildMedicationAdministrationCommandDraft,
+  buildMedicationDispenseCommandDraft,
+  buildMedicationRequestCommandDraft
 } from "./features/clinical-records/medicationCommandBuilders.js";
 import {
   buildDiagnosticReportCommand,
@@ -2227,28 +2227,10 @@ export function App() {
       return;
     }
 
-    const doseValue = Number(medicationRequestForm.doseValue);
-    const frequency = Number(medicationRequestForm.frequency);
-    const period = Number(medicationRequestForm.period);
-    const expectedSupplyDurationDays = Number(
-      medicationRequestForm.expectedSupplyDurationDays
-    );
+    const commandDraft = buildMedicationRequestCommandDraft(medicationRequestForm);
 
-    if (!Number.isFinite(doseValue) || doseValue <= 0) {
-      setStatusMessage("Liều lượng thuốc phải là số lớn hơn 0.");
-      return;
-    }
-
-    if (!Number.isFinite(frequency) || frequency <= 0 || !Number.isFinite(period) || period <= 0) {
-      setStatusMessage("Nhịp dùng thuốc phải có tần suất và chu kỳ lớn hơn 0.");
-      return;
-    }
-
-    if (
-      medicationRequestForm.expectedSupplyDurationDays &&
-      (!Number.isFinite(expectedSupplyDurationDays) || expectedSupplyDurationDays <= 0)
-    ) {
-      setStatusMessage("Số ngày cấp thuốc phải là số lớn hơn 0.");
+    if (!commandDraft.ok) {
+      setStatusMessage(commandDraft.message);
       return;
     }
 
@@ -2258,12 +2240,7 @@ export function App() {
       const createdMedicationRequest = await createMedicationRequest(
         clinicalApi,
         selectedPatient.id,
-        buildMedicationRequestCommand(medicationRequestForm, {
-          doseValue,
-          expectedSupplyDurationDays,
-          frequency,
-          period
-        })
+        commandDraft.command
       );
       await loadMedicationRequests(selectedPatient.id, createdMedicationRequest.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
@@ -2295,34 +2272,10 @@ export function App() {
       return;
     }
 
-    const quantityValue = Number(medicationDispenseForm.quantityValue);
-    const daysSupplyValue = Number(medicationDispenseForm.daysSupplyValue);
-    const doseValue = Number(medicationDispenseForm.doseValue);
-    const frequency = Number(medicationDispenseForm.frequency);
-    const period = Number(medicationDispenseForm.period);
+    const commandDraft = buildMedicationDispenseCommandDraft(medicationDispenseForm);
 
-    if (!Number.isFinite(quantityValue) || quantityValue <= 0) {
-      setStatusMessage("Số lượng thuốc cấp phát phải là số lớn hơn 0.");
-      return;
-    }
-
-    if (!Number.isFinite(daysSupplyValue) || daysSupplyValue <= 0) {
-      setStatusMessage("Số ngày cấp thuốc phải là số lớn hơn 0.");
-      return;
-    }
-
-    if (!Number.isFinite(doseValue) || doseValue <= 0) {
-      setStatusMessage("Liều hướng dẫn sau cấp phát phải là số lớn hơn 0.");
-      return;
-    }
-
-    if (!Number.isFinite(frequency) || frequency <= 0 || !Number.isFinite(period) || period <= 0) {
-      setStatusMessage("Nhịp dùng thuốc sau cấp phát phải có tần suất và chu kỳ lớn hơn 0.");
-      return;
-    }
-
-    if (!medicationDispenseForm.whenHandedOver) {
-      setStatusMessage("Cần nhập thời điểm bàn giao thuốc khi trạng thái là đã hoàn tất.");
+    if (!commandDraft.ok) {
+      setStatusMessage(commandDraft.message);
       return;
     }
 
@@ -2332,13 +2285,7 @@ export function App() {
       const createdMedicationDispense = await createMedicationDispense(
         clinicalApi,
         selectedPatient.id,
-        buildMedicationDispenseCommand(medicationDispenseForm, {
-          daysSupplyValue,
-          doseValue,
-          frequency,
-          period,
-          quantityValue
-        })
+        commandDraft.command
       );
       await loadMedicationDispenses(selectedPatient.id, createdMedicationDispense.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
@@ -2371,20 +2318,12 @@ export function App() {
       return;
     }
 
-    const doseValue = Number(medicationAdministrationForm.doseValue);
+    const commandDraft = buildMedicationAdministrationCommandDraft(
+      medicationAdministrationForm
+    );
 
-    if (!Number.isFinite(doseValue) || doseValue <= 0) {
-      setStatusMessage("Liều dùng thực tế phải là số lớn hơn 0.");
-      return;
-    }
-
-    if (!medicationAdministrationForm.effectiveStart) {
-      setStatusMessage("Cần nhập thời điểm dùng thuốc thực tế.");
-      return;
-    }
-
-    if (!medicationAdministrationForm.performerActorId.trim()) {
-      setStatusMessage("Cần nhập người hoặc thiết bị xác nhận dùng thuốc.");
+    if (!commandDraft.ok) {
+      setStatusMessage(commandDraft.message);
       return;
     }
 
@@ -2394,9 +2333,7 @@ export function App() {
       const createdMedicationAdministration = await createMedicationAdministration(
         clinicalApi,
         selectedPatient.id,
-        buildMedicationAdministrationCommand(medicationAdministrationForm, {
-          doseValue
-        })
+        commandDraft.command
       );
       await loadMedicationAdministrations(
         selectedPatient.id,
