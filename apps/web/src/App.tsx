@@ -19,18 +19,11 @@ import { buildClinicalDocumentPanelRenderers } from "./features/clinical-documen
 import {
   createDiagnosticReport,
   createImagingStudy,
-  createMedicationAdministration,
-  createMedicationDispense,
-  createMedicationRequest,
   createProcedure,
   createServiceRequest
 } from "./features/clinical-records/clinicalRecordApi.js";
 import { buildClinicalRecordPanelRenderers } from "./features/clinical-records/clinicalRecordPanelRenderers.js";
-import {
-  buildMedicationAdministrationCommandDraft,
-  buildMedicationDispenseCommandDraft,
-  buildMedicationRequestCommandDraft
-} from "./features/clinical-records/medicationCommandBuilders.js";
+import { buildMedicationHandlers } from "./features/clinical-records/medicationHandlers.js";
 import {
   buildDiagnosticReportCommand,
   buildImagingStudyCommandDraft,
@@ -652,6 +645,29 @@ export function App() {
     setIsSubmittingObservation,
     setStatusMessage
   });
+  const {
+    handleCreateMedicationAdministration,
+    handleCreateMedicationDispense,
+    handleCreateMedicationRequest
+  } = buildMedicationHandlers({
+    clinicalApi,
+    ensureSelectedPatientWritable,
+    loadAuditEvents,
+    loadMedicationAdministrations,
+    loadMedicationDispenses,
+    loadMedicationRequests,
+    loadPatientFhirBundlePreview,
+    loadPatientFhirDocumentBundlePreview,
+    medicationAdministrationForm,
+    medicationDispenseForm,
+    medicationRequestForm,
+    selectedPatient,
+    setAppRoute,
+    setIsSubmittingMedicationAdministration,
+    setIsSubmittingMedicationDispense,
+    setIsSubmittingMedicationRequest,
+    setStatusMessage
+  });
   const patientPanels = buildPatientPanelRenderers({
     patients,
     visiblePatients,
@@ -1205,148 +1221,6 @@ export function App() {
     setProviderDirectoryFhirPreview(undefined);
     setSelectedPatientId(undefined);
     setTransitioningRecordTransferId(undefined);
-  }
-
-  async function handleCreateMedicationRequest(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!selectedPatient) {
-      setStatusMessage("Cần chọn bệnh nhân trước khi kê/chỉ định thuốc.");
-      return;
-    }
-
-    if (!ensureSelectedPatientWritable()) {
-      return;
-    }
-
-    const commandDraft = buildMedicationRequestCommandDraft(medicationRequestForm);
-
-    if (!commandDraft.ok) {
-      setStatusMessage(commandDraft.message);
-      return;
-    }
-
-    setIsSubmittingMedicationRequest(true);
-
-    try {
-      const createdMedicationRequest = await createMedicationRequest(
-        clinicalApi,
-        selectedPatient.id,
-        commandDraft.command
-      );
-      await loadMedicationRequests(selectedPatient.id, createdMedicationRequest.id);
-      await loadPatientFhirBundlePreview(selectedPatient.id);
-      await loadAuditEvents(selectedPatient.id, { silent: true });
-      setAppRoute("workspace");
-      setStatusMessage(
-        `Đã ghi nhận chỉ định thuốc "${createdMedicationRequest.medicationCode.display}" cho ${selectedPatient.fullName}.`
-      );
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể ghi nhận chỉ định thuốc: ${error.message}`
-          : "Không thể ghi nhận chỉ định thuốc."
-      );
-    } finally {
-      setIsSubmittingMedicationRequest(false);
-    }
-  }
-
-  async function handleCreateMedicationDispense(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!selectedPatient) {
-      setStatusMessage("Cần chọn bệnh nhân trước khi ghi nhận cấp phát thuốc.");
-      return;
-    }
-
-    if (!ensureSelectedPatientWritable()) {
-      return;
-    }
-
-    const commandDraft = buildMedicationDispenseCommandDraft(medicationDispenseForm);
-
-    if (!commandDraft.ok) {
-      setStatusMessage(commandDraft.message);
-      return;
-    }
-
-    setIsSubmittingMedicationDispense(true);
-
-    try {
-      const createdMedicationDispense = await createMedicationDispense(
-        clinicalApi,
-        selectedPatient.id,
-        commandDraft.command
-      );
-      await loadMedicationDispenses(selectedPatient.id, createdMedicationDispense.id);
-      await loadPatientFhirBundlePreview(selectedPatient.id);
-      await loadPatientFhirDocumentBundlePreview(selectedPatient.id);
-      await loadAuditEvents(selectedPatient.id, { silent: true });
-      setAppRoute("workspace");
-      setStatusMessage(
-        `Đã ghi nhận cấp phát thuốc "${createdMedicationDispense.medicationCode.display}" cho ${selectedPatient.fullName}.`
-      );
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể ghi nhận cấp phát thuốc: ${error.message}`
-          : "Không thể ghi nhận cấp phát thuốc."
-      );
-    } finally {
-      setIsSubmittingMedicationDispense(false);
-    }
-  }
-
-  async function handleCreateMedicationAdministration(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!selectedPatient) {
-      setStatusMessage("Cần chọn bệnh nhân trước khi ghi nhận dùng thuốc thực tế.");
-      return;
-    }
-
-    if (!ensureSelectedPatientWritable()) {
-      return;
-    }
-
-    const commandDraft = buildMedicationAdministrationCommandDraft(
-      medicationAdministrationForm
-    );
-
-    if (!commandDraft.ok) {
-      setStatusMessage(commandDraft.message);
-      return;
-    }
-
-    setIsSubmittingMedicationAdministration(true);
-
-    try {
-      const createdMedicationAdministration = await createMedicationAdministration(
-        clinicalApi,
-        selectedPatient.id,
-        commandDraft.command
-      );
-      await loadMedicationAdministrations(
-        selectedPatient.id,
-        createdMedicationAdministration.id
-      );
-      await loadPatientFhirBundlePreview(selectedPatient.id);
-      await loadPatientFhirDocumentBundlePreview(selectedPatient.id);
-      await loadAuditEvents(selectedPatient.id, { silent: true });
-      setAppRoute("workspace");
-      setStatusMessage(
-        `Đã ghi nhận dùng thuốc "${createdMedicationAdministration.medicationCode.display}" cho ${selectedPatient.fullName}.`
-      );
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể ghi nhận dùng thuốc thực tế: ${error.message}`
-          : "Không thể ghi nhận dùng thuốc thực tế."
-      );
-    } finally {
-      setIsSubmittingMedicationAdministration(false);
-    }
   }
 
   async function handleCreateServiceRequest(event: FormEvent<HTMLFormElement>) {
