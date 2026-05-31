@@ -32,6 +32,7 @@ import { recordAuditEvent } from "../audit-events/audit-context.js";
 import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
 import { verifyRecordTransferCallbackSignature } from "./record-transfer-callback-signature.js";
 import { validateRecordTransferEndpointForDelivery } from "./record-transfer-endpoint-policy.js";
+import { loadRecordTransferForPatientAccess } from "./record-transfer-route-access.js";
 import {
   buildAcknowledgementReference,
   buildBundleId,
@@ -204,24 +205,17 @@ export async function registerRecordTransferRoutes(
     }
 
     const params = RecordTransferIdParamsSchema.parse(request.params);
-    const recordTransfer = await recordTransferRepository.findById(params.id);
+    const recordTransfer = await loadRecordTransferForPatientAccess({
+      request,
+      reply,
+      actor,
+      recordTransferId: params.id,
+      recordTransferRepository,
+      patientRepository,
+      providerDirectoryRepository
+    });
 
     if (!recordTransfer) {
-      return reply.status(404).send({
-        error: "RECORD_TRANSFER_NOT_FOUND"
-      });
-    }
-
-    if (
-      !(await requirePatientRecordAccessByPatientId(
-        request,
-        reply,
-        actor,
-        recordTransfer.patientId,
-        patientRepository,
-        providerDirectoryRepository
-      ))
-    ) {
       return;
     }
 
@@ -252,25 +246,18 @@ export async function registerRecordTransferRoutes(
     }
 
     const params = RecordTransferIdParamsSchema.parse(request.params);
-    const recordTransfer = await recordTransferRepository.findById(params.id);
+    const recordTransfer = await loadRecordTransferForPatientAccess({
+      request,
+      reply,
+      actor,
+      recordTransferId: params.id,
+      recordTransferRepository,
+      patientRepository,
+      providerDirectoryRepository,
+      notFoundMessage: "Không tìm thấy yêu cầu chuyển hồ sơ."
+    });
 
     if (!recordTransfer) {
-      return reply.status(404).send({
-        error: "RECORD_TRANSFER_NOT_FOUND",
-        message: "Không tìm thấy yêu cầu chuyển hồ sơ."
-      });
-    }
-
-    if (
-      !(await requirePatientRecordAccessByPatientId(
-        request,
-        reply,
-        actor,
-        recordTransfer.patientId,
-        patientRepository,
-        providerDirectoryRepository
-      ))
-    ) {
       return;
     }
 
@@ -298,24 +285,17 @@ export async function registerRecordTransferRoutes(
       throw parsed.error;
     }
 
-    const recordTransfer = await recordTransferRepository.findById(params.id);
+    const recordTransfer = await loadRecordTransferForPatientAccess({
+      request,
+      reply,
+      actor,
+      recordTransferId: params.id,
+      recordTransferRepository,
+      patientRepository,
+      providerDirectoryRepository
+    });
 
     if (!recordTransfer) {
-      return reply.status(404).send({
-        error: "RECORD_TRANSFER_NOT_FOUND"
-      });
-    }
-
-    if (
-      !(await requirePatientRecordAccessByPatientId(
-        request,
-        reply,
-        actor,
-        recordTransfer.patientId,
-        patientRepository,
-        providerDirectoryRepository
-      ))
-    ) {
       return;
     }
 
@@ -420,24 +400,17 @@ export async function registerRecordTransferRoutes(
       throw parsed.error;
     }
 
-    const recordTransfer = await recordTransferRepository.findById(params.id);
+    const recordTransfer = await loadRecordTransferForPatientAccess({
+      request,
+      reply,
+      actor,
+      recordTransferId: params.id,
+      recordTransferRepository,
+      patientRepository,
+      providerDirectoryRepository
+    });
 
     if (!recordTransfer) {
-      return reply.status(404).send({
-        error: "RECORD_TRANSFER_NOT_FOUND"
-      });
-    }
-
-    if (
-      !(await requirePatientRecordAccessByPatientId(
-        request,
-        reply,
-        actor,
-        recordTransfer.patientId,
-        patientRepository,
-        providerDirectoryRepository
-      ))
-    ) {
       return;
     }
 
@@ -677,24 +650,17 @@ export async function registerRecordTransferRoutes(
       throw parsed.error;
     }
 
-    const recordTransfer = await recordTransferRepository.findById(params.id);
+    const recordTransfer = await loadRecordTransferForPatientAccess({
+      request,
+      reply,
+      actor,
+      recordTransferId: params.id,
+      recordTransferRepository,
+      patientRepository,
+      providerDirectoryRepository
+    });
 
     if (!recordTransfer) {
-      return reply.status(404).send({
-        error: "RECORD_TRANSFER_NOT_FOUND"
-      });
-    }
-
-    if (
-      !(await requirePatientRecordAccessByPatientId(
-        request,
-        reply,
-        actor,
-        recordTransfer.patientId,
-        patientRepository,
-        providerDirectoryRepository
-      ))
-    ) {
       return;
     }
 
@@ -743,24 +709,17 @@ export async function registerRecordTransferRoutes(
       throw parsed.error;
     }
 
-    const recordTransfer = await recordTransferRepository.findById(params.id);
+    const recordTransfer = await loadRecordTransferForPatientAccess({
+      request,
+      reply,
+      actor,
+      recordTransferId: params.id,
+      recordTransferRepository,
+      patientRepository,
+      providerDirectoryRepository
+    });
 
     if (!recordTransfer) {
-      return reply.status(404).send({
-        error: "RECORD_TRANSFER_NOT_FOUND"
-      });
-    }
-
-    if (
-      !(await requirePatientRecordAccessByPatientId(
-        request,
-        reply,
-        actor,
-        recordTransfer.patientId,
-        patientRepository,
-        providerDirectoryRepository
-      ))
-    ) {
       return;
     }
 
