@@ -1,11 +1,5 @@
 import cors from "@fastify/cors";
 import Fastify from "fastify";
-import type { FastifyRequest } from "fastify";
-import {
-  rememberDeniedAccessForAudit,
-  recordDeniedAccessAuditEvent,
-  type DeniedAccessPayload
-} from "./modules/audit-events/denied-access-audit.js";
 import { assertAuthConfiguration } from "./modules/auth/auth-session.js";
 import {
   createLoginRateLimiterFromEnv,
@@ -30,6 +24,7 @@ import {
   resolveRecordTransferDeliveryWorkerConfig,
   resolveRecordTransferRetryWorkerConfig
 } from "./modules/http/runtime-config.js";
+import { registerDeniedAccessAuditHooks } from "./modules/http/denied-access-audit-hooks.js";
 import { registerSystemRoutes } from "./modules/http/system-routes.js";
 import { startRecordTransferWorkers } from "./modules/http/record-transfer-workers.js";
 import { assertRecordTransferCallbackSignatureConfiguration } from "./modules/record-transfers/record-transfer-callback-signature.js";
@@ -122,33 +117,7 @@ export async function buildServer(options: ServerOptions = {}) {
       delivery: resolveRecordTransferDeliveryWorkerConfig()
     }
   );
-  const deniedAccessPayloads = new WeakMap<FastifyRequest, DeniedAccessPayload>();
-
-  app.addHook("onSend", (request, reply, payload, done) => {
-    rememberDeniedAccessForAudit(
-      deniedAccessPayloads,
-      request,
-      reply.statusCode,
-      payload
-    );
-
-    done(null, payload);
-  });
-  app.addHook("onResponse", async (request, reply) => {
-    const deniedAccess = deniedAccessPayloads.get(request);
-
-    if (!deniedAccess) {
-      return;
-    }
-
-    deniedAccessPayloads.delete(request);
-    await recordDeniedAccessAuditEvent(
-      auditEventRepository,
-      request,
-      reply.statusCode,
-      deniedAccess
-    );
-  });
+  registerDeniedAccessAuditHooks(app, auditEventRepository);
 
   app.addHook("onClose", async () => {
     recordTransferWorkers.close();
