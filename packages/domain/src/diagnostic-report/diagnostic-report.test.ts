@@ -104,4 +104,85 @@ describe("DiagnosticReport", () => {
       })
     ).toThrow(DomainError);
   });
+
+  it("rejects invalid rehydrated diagnostic report metadata", () => {
+    const snapshot = DiagnosticReport.issue({
+      id: "diagnostic-report-005",
+      patientId: "patient-001",
+      encounterId: "encounter-001",
+      basedOnServiceRequestId: "service-request-001",
+      category: "laboratory",
+      code: {
+        system: "http://loinc.org",
+        code: "58410-2",
+        display: "Complete blood count panel"
+      },
+      effectiveAt: "2026-05-28T02:30:00.000Z",
+      issuedAt: "2026-05-28T03:00:00.000Z",
+      resultObservationIds: ["observation-001"],
+      conclusion: "Within expected range for the clinical context."
+    }).toSnapshot();
+
+    expect(() =>
+      DiagnosticReport.rehydrate({
+        ...snapshot,
+        status: "signed" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      DiagnosticReport.rehydrate({
+        ...snapshot,
+        category: "microbiology" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      DiagnosticReport.rehydrate({
+        ...snapshot,
+        code: {
+          ...snapshot.code,
+          code: " "
+        }
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      DiagnosticReport.rehydrate({
+        ...snapshot,
+        effectiveAt: "not-a-date"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      DiagnosticReport.rehydrate({
+        ...snapshot,
+        resultObservationIds: [],
+        conclusion: " ",
+        presentedFormUrl: undefined
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      DiagnosticReport.rehydrate({
+        ...snapshot,
+        presentedFormUrl: undefined,
+        presentedFormTitle: "Signed PDF"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      DiagnosticReport.rehydrate({
+        ...snapshot,
+        patientId: " "
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      DiagnosticReport.rehydrate({
+        ...snapshot,
+        createdAt: "not-a-date"
+      })
+    ).toThrow(DomainError);
+  });
 });

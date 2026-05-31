@@ -14,6 +14,25 @@ export type DiagnosticReportStatus =
 
 export type DiagnosticReportCategory = "laboratory" | "imaging" | "pathology" | "other";
 
+const diagnosticReportStatuses = new Set<DiagnosticReportStatus>([
+  "registered",
+  "partial",
+  "preliminary",
+  "final",
+  "amended",
+  "corrected",
+  "appended",
+  "cancelled",
+  "entered-in-error",
+  "unknown"
+]);
+const diagnosticReportCategories = new Set<DiagnosticReportCategory>([
+  "laboratory",
+  "imaging",
+  "pathology",
+  "other"
+]);
+
 export type DiagnosticReportCode = {
   readonly system: string;
   readonly code: string;
@@ -61,24 +80,15 @@ export class DiagnosticReport {
     const conclusion = normalizeOptional(input.conclusion);
     const presentedFormUrl = normalizeOptional(input.presentedFormUrl);
     const presentedFormTitle = normalizeOptional(input.presentedFormTitle);
-
-    if (resultObservationIds.length === 0 && !conclusion && !presentedFormUrl) {
-      throw new DomainError(
-        "DiagnosticReport phải có Observation kết quả, kết luận hoặc tệp báo cáo đính kèm."
-      );
-    }
-
-    if (presentedFormTitle && !presentedFormUrl) {
-      throw new DomainError("Tiêu đề tệp báo cáo chỉ hợp lệ khi có đường dẫn tệp.");
-    }
+    assertReportContent(resultObservationIds, conclusion, presentedFormUrl, presentedFormTitle);
 
     return new DiagnosticReport({
       id: normalizeRequired(input.id, "Mã báo cáo chẩn đoán không được để trống."),
       patientId: normalizeRequired(input.patientId, "DiagnosticReport phải gắn với bệnh nhân."),
       encounterId: normalizeOptional(input.encounterId),
       basedOnServiceRequestId: normalizeOptional(input.basedOnServiceRequestId),
-      status: input.status ?? "final",
-      category: input.category,
+      status: normalizeStatus(input.status ?? "final"),
+      category: normalizeCategory(input.category),
       code: normalizeCode(input.code),
       effectiveAt: effectiveAt.toISOString(),
       issuedAt: issuedAt.toISOString(),
@@ -94,10 +104,20 @@ export class DiagnosticReport {
   }
 
   static rehydrate(snapshot: DiagnosticReportSnapshot): DiagnosticReport {
+    const resultObservationIds = normalizeIdList(snapshot.resultObservationIds);
+    const conclusion = normalizeOptional(snapshot.conclusion);
+    const presentedFormUrl = normalizeOptional(snapshot.presentedFormUrl);
+    const presentedFormTitle = normalizeOptional(snapshot.presentedFormTitle);
+    assertReportContent(resultObservationIds, conclusion, presentedFormUrl, presentedFormTitle);
+
     return new DiagnosticReport({
       ...snapshot,
+      id: normalizeRequired(snapshot.id, "Mã báo cáo chẩn đoán không được để trống."),
+      patientId: normalizeRequired(snapshot.patientId, "DiagnosticReport phải gắn với bệnh nhân."),
       encounterId: normalizeOptional(snapshot.encounterId),
       basedOnServiceRequestId: normalizeOptional(snapshot.basedOnServiceRequestId),
+      status: normalizeStatus(snapshot.status),
+      category: normalizeCategory(snapshot.category),
       code: normalizeCode(snapshot.code),
       effectiveAt: parseDate(
         snapshot.effectiveAt,
@@ -109,10 +129,12 @@ export class DiagnosticReport {
       ).toISOString(),
       performerOrganizationId: normalizeOptional(snapshot.performerOrganizationId),
       resultsInterpreterPractitionerId: normalizeOptional(snapshot.resultsInterpreterPractitionerId),
-      resultObservationIds: normalizeIdList(snapshot.resultObservationIds),
-      conclusion: normalizeOptional(snapshot.conclusion),
-      presentedFormUrl: normalizeOptional(snapshot.presentedFormUrl),
-      presentedFormTitle: normalizeOptional(snapshot.presentedFormTitle)
+      resultObservationIds,
+      conclusion,
+      presentedFormUrl,
+      presentedFormTitle,
+      createdAt: parseDate(snapshot.createdAt, "Thời điểm tạo báo cáo chẩn đoán không hợp lệ.").toISOString(),
+      updatedAt: parseDate(snapshot.updatedAt, "Thời điểm cập nhật báo cáo chẩn đoán không hợp lệ.").toISOString()
     });
   }
 
@@ -149,6 +171,39 @@ function normalizeIdList(values: readonly string[] | undefined): readonly string
       )
     )
   ];
+}
+
+function assertReportContent(
+  resultObservationIds: readonly string[],
+  conclusion: string | undefined,
+  presentedFormUrl: string | undefined,
+  presentedFormTitle: string | undefined
+): void {
+  if (resultObservationIds.length === 0 && !conclusion && !presentedFormUrl) {
+    throw new DomainError(
+      "DiagnosticReport phải có Observation kết quả, kết luận hoặc tệp báo cáo đính kèm."
+    );
+  }
+
+  if (presentedFormTitle && !presentedFormUrl) {
+    throw new DomainError("Tiêu đề tệp báo cáo chỉ hợp lệ khi có đường dẫn tệp.");
+  }
+}
+
+function normalizeStatus(value: DiagnosticReportStatus): DiagnosticReportStatus {
+  if (!diagnosticReportStatuses.has(value)) {
+    throw new DomainError("Trạng thái báo cáo chẩn đoán không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizeCategory(value: DiagnosticReportCategory): DiagnosticReportCategory {
+  if (!diagnosticReportCategories.has(value)) {
+    throw new DomainError("Nhóm báo cáo chẩn đoán không hợp lệ.");
+  }
+
+  return value;
 }
 
 function normalizeRequired(value: string, message: string): string {
