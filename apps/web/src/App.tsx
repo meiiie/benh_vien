@@ -29,6 +29,7 @@ import { buildPatientPanelRenderers } from "./features/patient-registry/patientP
 import { buildPatientRegistrySelection } from "./features/patient-registry/patientRegistrySelectors.js";
 import { buildPatientWriteGuard } from "./features/patient-registry/patientWriteGuard.js";
 import { buildPatientWorkspaceCollectionLoaders } from "./features/patient-workspace/patientWorkspaceCollectionLoaders.js";
+import { buildPatientWorkspaceLifecycle } from "./features/patient-workspace/patientWorkspaceLifecycle.js";
 import { buildPlatformLoaders } from "./features/platform/platformLoaders.js";
 import { buildFhirPreviewLoaders } from "./features/fhir-preview/fhirPreviewLoaders.js";
 import { useSelectedFhirPreviewEffects } from "./features/fhir-preview/selectedFhirPreviewEffects.js";
@@ -387,26 +388,6 @@ export function App() {
     setStatusMessage
   });
   const {
-    handleCreatePatient,
-    handleMergeSelectedPatient
-  } = buildPatientRegistryHandlers({
-    canMergePatients,
-    clinicalApi,
-    isPatientMergeConfirmationValid,
-    loadPatients,
-    loadPatientWorkspace,
-    patientForm,
-    patientMergeConfirmationCode,
-    patientMergeForm,
-    patientMergeTargetId,
-    selectedPatient,
-    setAppRoute,
-    setIsMergingPatient,
-    setIsSubmittingPatient,
-    setPatientMergeForm,
-    setStatusMessage
-  });
-  const {
     loadAllergyIntoleranceFhirPreview,
     loadAuditFhirBundle,
     loadConditionFhirPreview,
@@ -594,6 +575,107 @@ export function App() {
     setServiceRequests,
     setStatusMessage,
     setWorkflowTasks
+  });
+  const {
+    clearPatientWorkspaceState,
+    loadPatientWorkspace
+  } = buildPatientWorkspaceLifecycle({
+    canReadAudit,
+    consentReference: defaultTransferContext.consentReference,
+    isAuditOnlySession,
+    loadAllergyIntolerances,
+    loadAuditEvents,
+    loadClinicalDocuments,
+    loadConditions,
+    loadConsentFhirPreview,
+    loadConsents,
+    loadDiagnosticReports,
+    loadEncounters,
+    loadImagingStudies,
+    loadMedicationAdministrations,
+    loadMedicationDispenses,
+    loadMedicationRequests,
+    loadObservations,
+    loadPatientFhirBundlePreview,
+    loadPatientFhirDocumentBundlePreview,
+    loadPatientFhirPreview,
+    loadProcedures,
+    loadRecordTransfers,
+    loadServiceRequests,
+    loadWorkflowTasks,
+    setAllergyIntoleranceFhirPreview,
+    setAllergyIntolerances,
+    setAuditEvents,
+    setAuditFhirBundlePreview,
+    setAuditIntegrityReport,
+    setCapabilityStatementPreview,
+    setClinicalDocuments,
+    setConditionFhirPreview,
+    setConditions,
+    setConsentFhirPreview,
+    setConsents,
+    setDiagnosticReportFhirPreview,
+    setDiagnosticReports,
+    setDocumentFhirPreview,
+    setEncounterFhirPreview,
+    setEncounters,
+    setImagingStudies,
+    setImagingStudyFhirPreview,
+    setMedicationAdministrationFhirPreview,
+    setMedicationAdministrations,
+    setMedicationDispenseFhirPreview,
+    setMedicationDispenses,
+    setMedicationRequestFhirPreview,
+    setMedicationRequests,
+    setObservationFhirPreview,
+    setObservations,
+    setPatientFhirBundlePreview,
+    setPatientFhirDocumentBundlePreview,
+    setPatientFhirPreview,
+    setProcedureFhirPreview,
+    setProcedures,
+    setRecordTransferDeliveryAttempts,
+    setRecordTransferDeliveryAttemptWarning,
+    setRecordTransferFhirTaskPreview,
+    setRecordTransfers,
+    setSelectedAllergyIntoleranceId,
+    setSelectedConditionId,
+    setSelectedDiagnosticReportId,
+    setSelectedDocumentId,
+    setSelectedEncounterId,
+    setSelectedImagingStudyId,
+    setSelectedMedicationAdministrationId,
+    setSelectedMedicationDispenseId,
+    setSelectedMedicationRequestId,
+    setSelectedObservationId,
+    setSelectedProcedureId,
+    setSelectedRecordTransferId,
+    setSelectedServiceRequestId,
+    setSelectedWorkflowTaskId,
+    setServiceRequestFhirPreview,
+    setServiceRequests,
+    setWorkflowTaskFhirPreview,
+    setWorkflowTasks
+  });
+  const {
+    handleCreatePatient,
+    handleMergeSelectedPatient
+  } = buildPatientRegistryHandlers({
+    canMergePatients,
+    clinicalApi,
+    isPatientMergeConfirmationValid,
+    loadPatients,
+    loadPatientWorkspace,
+    patientForm,
+    patientMergeConfirmationCode,
+    patientMergeForm,
+    patientMergeTargetId,
+    selectedPatient,
+    setAppRoute,
+    setIsMergingPatient,
+    setIsSubmittingPatient,
+    setPatientMergeForm,
+    setStatusMessage
   });
   const {
     handleCreateEncounter,
@@ -1043,100 +1125,6 @@ export function App() {
 
     void loadEncounterFhirPreview(selectedEncounterId);
   }, [selectedEncounterId]);
-
-  function clearPatientWorkspaceState() {
-    setPatientFhirPreview(undefined);
-    setPatientFhirBundlePreview(undefined);
-    setPatientFhirDocumentBundlePreview(undefined);
-    setCapabilityStatementPreview(undefined);
-    setConsentFhirPreview(undefined);
-    setEncounterFhirPreview(undefined);
-    setRecordTransferFhirTaskPreview(undefined);
-    setDocumentFhirPreview(undefined);
-    setAllergyIntoleranceFhirPreview(undefined);
-    setConditionFhirPreview(undefined);
-    setObservationFhirPreview(undefined);
-    setMedicationRequestFhirPreview(undefined);
-    setMedicationDispenseFhirPreview(undefined);
-    setMedicationAdministrationFhirPreview(undefined);
-    setServiceRequestFhirPreview(undefined);
-    setWorkflowTaskFhirPreview(undefined);
-    setProcedureFhirPreview(undefined);
-    setDiagnosticReportFhirPreview(undefined);
-    setImagingStudyFhirPreview(undefined);
-    setEncounters([]);
-    setClinicalDocuments([]);
-    setAllergyIntolerances([]);
-    setConditions([]);
-    setObservations([]);
-    setMedicationRequests([]);
-    setMedicationDispenses([]);
-    setMedicationAdministrations([]);
-    setServiceRequests([]);
-    setWorkflowTasks([]);
-    setProcedures([]);
-    setDiagnosticReports([]);
-    setImagingStudies([]);
-    setAuditEvents([]);
-    setAuditIntegrityReport(undefined);
-    setAuditFhirBundlePreview(undefined);
-    setConsents([]);
-    setRecordTransfers([]);
-    setRecordTransferDeliveryAttempts([]);
-    setRecordTransferDeliveryAttemptWarning(undefined);
-    setSelectedEncounterId(undefined);
-    setSelectedDocumentId(undefined);
-    setSelectedAllergyIntoleranceId(undefined);
-    setSelectedConditionId(undefined);
-    setSelectedObservationId(undefined);
-    setSelectedMedicationRequestId(undefined);
-    setSelectedMedicationDispenseId(undefined);
-    setSelectedMedicationAdministrationId(undefined);
-    setSelectedServiceRequestId(undefined);
-    setSelectedWorkflowTaskId(undefined);
-    setSelectedProcedureId(undefined);
-    setSelectedDiagnosticReportId(undefined);
-    setSelectedImagingStudyId(undefined);
-    setSelectedRecordTransferId(undefined);
-  }
-
-  async function loadPatientWorkspace(patientId: string) {
-    if (isAuditOnlySession) {
-      await loadAuditEvents(patientId, { silent: true });
-      return;
-    }
-
-    const workspaceTasks = [
-      loadPatientFhirPreview(patientId),
-      loadPatientFhirBundlePreview(patientId),
-      loadPatientFhirDocumentBundlePreview(patientId),
-      loadEncounters(patientId),
-      loadAllergyIntolerances(patientId),
-      loadConditions(patientId),
-      loadObservations(patientId),
-      loadMedicationRequests(patientId),
-      loadMedicationDispenses(patientId),
-      loadMedicationAdministrations(patientId),
-      loadServiceRequests(patientId),
-      loadWorkflowTasks(patientId),
-      loadProcedures(patientId),
-      loadDiagnosticReports(patientId),
-      loadImagingStudies(patientId),
-      loadClinicalDocuments(patientId),
-      loadConsents(patientId),
-      loadConsentFhirPreview(defaultTransferContext.consentReference),
-      loadRecordTransfers(patientId)
-    ];
-
-    if (canReadAudit) {
-      workspaceTasks.push(loadAuditEvents(patientId, { silent: true }));
-    } else {
-      setAuditEvents([]);
-      setAuditIntegrityReport(undefined);
-    }
-
-    await Promise.all(workspaceTasks);
-  }
 
   if (!isAuthenticated) {
     if (appRoute === "login") {
