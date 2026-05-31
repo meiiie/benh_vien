@@ -14,6 +14,7 @@ const deliveryAttemptBundleTypes = new Set<RecordTransferDeliveryAttemptBundleTy
   "collection",
   "document"
 ]);
+const maxResponseBodyPreviewLength = 2_000;
 
 export type RecordTransferDeliveryAttemptSnapshot = {
   readonly id: string;
@@ -66,10 +67,9 @@ export class RecordTransferDeliveryAttempt {
   private constructor(private props: RecordTransferDeliveryAttemptSnapshot) {}
 
   static queue(input: QueueRecordTransferDeliveryAttemptInput): RecordTransferDeliveryAttempt {
-    const now = new Date();
     const queuedAt = input.queuedAt
       ? parseDate(input.queuedAt, "Thời điểm xếp hàng gửi hồ sơ không hợp lệ.")
-      : now;
+      : new Date();
 
     return new RecordTransferDeliveryAttempt({
       id: normalizeRequired(input.id, "Mã lần gửi hồ sơ không được để trống."),
@@ -92,8 +92,8 @@ export class RecordTransferDeliveryAttempt {
       attemptNumber: normalizeAttemptNumber(input.attemptNumber),
       status: "queued",
       queuedAt: queuedAt.toISOString(),
-      createdAt: now.toISOString(),
-      updatedAt: now.toISOString()
+      createdAt: queuedAt.toISOString(),
+      updatedAt: queuedAt.toISOString()
     });
   }
 
@@ -110,7 +110,7 @@ export class RecordTransferDeliveryAttempt {
       : undefined;
     const httpStatus =
       snapshot.httpStatus === undefined ? undefined : normalizeHttpStatus(snapshot.httpStatus);
-    const responseBodyPreview = normalizeOptional(snapshot.responseBodyPreview);
+    const responseBodyPreview = normalizeResponseBodyPreview(snapshot.responseBodyPreview);
     const errorMessage = normalizeOptional(snapshot.errorMessage);
 
     validateTerminalState({
@@ -186,7 +186,7 @@ export class RecordTransferDeliveryAttempt {
       status: "succeeded",
       completedAt: completedAt.toISOString(),
       httpStatus,
-      responseBodyPreview: normalizeOptional(input.responseBodyPreview),
+      responseBodyPreview: normalizeResponseBodyPreview(input.responseBodyPreview),
       errorMessage: undefined,
       updatedAt: completedAt.toISOString()
     };
@@ -206,7 +206,7 @@ export class RecordTransferDeliveryAttempt {
       completedAt: completedAt.toISOString(),
       httpStatus:
         input.httpStatus === undefined ? undefined : normalizeHttpStatus(input.httpStatus),
-      responseBodyPreview: normalizeOptional(input.responseBodyPreview),
+      responseBodyPreview: normalizeResponseBodyPreview(input.responseBodyPreview),
       errorMessage: normalizeRequired(input.errorMessage, "Cần có lý do lỗi gửi hồ sơ."),
       updatedAt: completedAt.toISOString()
     };
@@ -238,6 +238,16 @@ function normalizeRequired(value: string, message: string): string {
 function normalizeOptional(value: string | undefined): string | undefined {
   const normalized = value?.trim().replace(/\s+/g, " ");
   return normalized || undefined;
+}
+
+function normalizeResponseBodyPreview(value: string | undefined): string | undefined {
+  const normalized = value?.trim();
+
+  if (!normalized) {
+    return undefined;
+  }
+
+  return normalized.slice(0, maxResponseBodyPreviewLength);
 }
 
 function normalizeEndpointAddress(value: string): string {

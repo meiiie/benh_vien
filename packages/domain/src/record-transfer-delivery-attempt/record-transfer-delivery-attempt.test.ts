@@ -23,6 +23,8 @@ describe("RecordTransferDeliveryAttempt", () => {
       status: "queued",
       attemptNumber: 1,
       queuedAt: "2026-05-28T06:00:00.000Z",
+      createdAt: "2026-05-28T06:00:00.000Z",
+      updatedAt: "2026-05-28T06:00:00.000Z",
       targetEndpointAddress: "https://fhir.recipient.example/fhir"
     });
   });
@@ -83,6 +85,36 @@ describe("RecordTransferDeliveryAttempt", () => {
       responseBodyPreview: "Service unavailable",
       errorMessage: "FHIR endpoint returned HTTP 503."
     });
+  });
+
+  it("keeps response body previews bounded at the domain boundary", () => {
+    const attempt = RecordTransferDeliveryAttempt.queue({
+      id: "record-transfer-delivery-test-preview-limit",
+      recordTransferId: "record-transfer-test-001",
+      patientId: "patient-test-001",
+      targetEndpointId: "endpoint-fhir-recipient",
+      targetEndpointAddress: "https://fhir.recipient.example/fhir",
+      bundleId: "patient-document-patient-test-001",
+      bundleType: "document",
+      idempotencyKey: "wiiicare-record-transfer-test-preview-limit",
+      attemptNumber: 1,
+      queuedAt: "2026-05-28T06:00:00.000Z"
+    });
+
+    attempt.markFailed({
+      completedAt: "2026-05-28T06:00:03.000Z",
+      httpStatus: 503,
+      responseBodyPreview: "x".repeat(2_100),
+      errorMessage: "FHIR endpoint returned HTTP 503."
+    });
+
+    expect(attempt.toSnapshot().responseBodyPreview).toHaveLength(2_000);
+    expect(
+      RecordTransferDeliveryAttempt.rehydrate({
+        ...attempt.toSnapshot(),
+        responseBodyPreview: "y".repeat(2_100)
+      }).toSnapshot().responseBodyPreview
+    ).toHaveLength(2_000);
   });
 
   it("rejects terminal timestamps before the queued timestamp", () => {
