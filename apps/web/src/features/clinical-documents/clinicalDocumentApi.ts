@@ -1,10 +1,17 @@
 import type { ClinicalApiClient } from "../../api/clinicalApi.js";
-import { toApiDateTime } from "../../lib/clinicalFormatters.js";
-import type {
-  ClinicalDocument,
-  ClinicalDocumentsResponse,
-  NewClinicalDocumentForm
-} from "../../types/clinical.js";
+import type { ClinicalDocument, ClinicalDocumentsResponse } from "../../types/clinical.js";
+
+export type CreateClinicalDocumentCommand = {
+  readonly encounterId?: string;
+  readonly type: ClinicalDocument["type"];
+  readonly title: string;
+  readonly storageUri: string;
+  readonly attachmentContentType?: string;
+  readonly attachmentSizeBytes?: number;
+  readonly attachmentHashSha1Base64?: string;
+  readonly attachmentCreatedAt?: string;
+  readonly authorPractitionerId: string;
+};
 
 export function listClinicalDocuments(
   api: ClinicalApiClient,
@@ -36,26 +43,12 @@ export function exportClinicalDocumentProvenanceFhir(
 export function createClinicalDocument(
   api: ClinicalApiClient,
   patientId: string,
-  form: NewClinicalDocumentForm
+  command: CreateClinicalDocumentCommand
 ): Promise<ClinicalDocument> {
   return api.requestJson<ClinicalDocument>(`/patients/${patientId}/documents`, {
     method: "POST",
     purposeOfUse: "TREATMENT",
-    json: {
-      encounterId: form.encounterId || undefined,
-      type: form.type,
-      title: form.title,
-      storageUri: form.storageUri.replace("/current/", `/${patientId}/`),
-      attachmentContentType: form.attachmentContentType || undefined,
-      attachmentSizeBytes: form.attachmentSizeBytes
-        ? Number(form.attachmentSizeBytes)
-        : undefined,
-      attachmentHashSha1Base64: form.attachmentHashSha1Base64 || undefined,
-      attachmentCreatedAt: form.attachmentCreatedAt
-        ? toApiDateTime(form.attachmentCreatedAt)
-        : undefined,
-      authorPractitionerId: form.authorPractitionerId
-    }
+    json: command
   });
 }
 

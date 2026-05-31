@@ -21,13 +21,8 @@ import {
   Info,
   PageHeader
 } from "./components/AppShell.js";
-import {
-  createClinicalDocument,
-  exportClinicalDocumentFhir,
-  exportClinicalDocumentProvenanceFhir,
-  listClinicalDocuments,
-  signClinicalDocument
-} from "./features/clinical-documents/clinicalDocumentApi.js";
+import { createClinicalDocument, exportClinicalDocumentFhir, exportClinicalDocumentProvenanceFhir, listClinicalDocuments, signClinicalDocument } from "./features/clinical-documents/clinicalDocumentApi.js";
+import { buildCreateClinicalDocumentCommand } from "./features/clinical-documents/clinicalDocumentCommandBuilders.js";
 import { buildClinicalDocumentPanelRenderers } from "./features/clinical-documents/clinicalDocumentPanelRenderers.js";
 import {
   createAllergyIntolerance,
@@ -2525,7 +2520,7 @@ export function App() {
       const createdDocument = await createClinicalDocument(
         clinicalApi,
         selectedPatient.id,
-        documentForm
+        buildCreateClinicalDocumentCommand(documentForm, selectedPatient.id)
       );
       await loadClinicalDocuments(selectedPatient.id, createdDocument.id);
       await loadAuditEvents(selectedPatient.id, { silent: true });
