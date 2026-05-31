@@ -49,7 +49,7 @@ Kết quả mong muốn là resource `CapabilityStatement` có `fhirVersion = "4
 
 ## Đăng nhập và lấy token
 
-Các API nghiệp vụ yêu cầu `Authorization: Bearer <token>`. Header `x-purpose-of-use` vẫn được giữ để khai báo mục đích truy cập dữ liệu y tế.
+Các API nghiệp vụ yêu cầu `Authorization: Bearer <token>`. Header `x-purpose-of-use` vẫn được giữ để khai báo mục đích truy cập dữ liệu y tế. Nếu header này bị thiếu hoặc để trống, API mặc định là `TREATMENT`; nếu client gửi giá trị khác `TREATMENT`, `AUDIT` hoặc `OPERATIONS`, API trả `400 INVALID_PURPOSE_OF_USE` hoặc FHIR `OperationOutcome` khi client yêu cầu `Accept: application/fhir+json`.
 
 ```bash
 TOKEN=$(curl -s -X POST http://localhost:7310/api/v1/auth/login \
@@ -999,7 +999,7 @@ curl http://localhost:7310/api/v1/patients/patient-demo-001/audit-events/fhir-bu
   -H "x-purpose-of-use: AUDIT"
 ```
 
-Kết quả mong muốn là FHIR `Bundle` dạng `collection`, gồm các resource `AuditEvent` có `type`, `subtype`, `action`, `recorded`, `agent`, `source`, `entity` và các `detail` về `payloadHash`/`integrityHash`. Endpoint này dùng quyền `audit-event:fhir-export`, chỉ mở cho vai trò kiểm toán hoặc quản trị với mục đích sử dụng `AUDIT`.
+Kết quả mong muốn là FHIR `Bundle` dạng `collection`, gồm các resource `AuditEvent` có `type`, `subtype`, `action`, `recorded`, `agent`, `source`, `entity` và các `detail` về `payloadHash`/`integrityHash`. Endpoint này dùng quyền `audit-event:fhir-export`, chỉ mở cho vai trò kiểm toán hoặc quản trị với mục đích sử dụng `AUDIT`. Với actor hoặc resource nội bộ không phải FHIR id hợp lệ, ví dụ `anonymous` hoặc `auth/login`, mapper dùng `Reference.identifier`/`display` thay vì tạo `reference` giả.
 
 ## Kiểm tra toàn vẹn chuỗi audit
 

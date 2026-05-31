@@ -43,6 +43,7 @@ Tích cực:
 - Mỗi `AuditEvent` mới được niêm phong bằng chuỗi băm `sha256` gồm `previousHash`, `payloadHash` và `integrityHash` để phát hiện sửa/xóa log ở mức prototype.
 - API có endpoint `/api/v1/patients/:patientId/audit-integrity` cho vai trò kiểm toán/quản trị kiểm tra chuỗi audit theo bệnh nhân.
 - API có endpoint `/api/v1/patients/:patientId/audit-events/fhir-bundle` để kiểm toán viên xuất log dưới dạng FHIR `AuditEvent` Bundle.
+- FHIR `AuditEvent` không tạo `Reference.reference` cho actor/resource chỉ là định danh nội bộ không hợp lệ theo FHIR id; các trường hợp như `anonymous` hoặc `auth/login` được biểu diễn bằng logical `identifier` và `display`.
 - Harness có smoke check cho `AuditEvent` và trạng thái toàn vẹn audit, không chỉ FHIR mapping.
 
 Giới hạn còn lại:

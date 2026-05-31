@@ -25,7 +25,7 @@ API vẫn đọc `x-purpose-of-use` để xác định mục đích sử dụng 
 - `AUDIT`: xem nhật ký kiểm toán.
 - `OPERATIONS`: dự phòng cho vận hành, chưa mở rộng trong lát cắt hiện tại.
 
-Nếu role/purpose không phù hợp, API trả `403 FORBIDDEN` trước khi đọc hoặc ghi dữ liệu nghiệp vụ.
+Nếu role/purpose không phù hợp, API trả `403 FORBIDDEN` trước khi đọc hoặc ghi dữ liệu nghiệp vụ. Nếu `x-purpose-of-use` được gửi lên nhưng không thuộc `TREATMENT`, `AUDIT` hoặc `OPERATIONS`, API trả `400 INVALID_PURPOSE_OF_USE` thay vì tự rơi về `TREATMENT`, để audit trail không ghi sai mục đích truy cập.
 
 ## Hệ Quả
 
