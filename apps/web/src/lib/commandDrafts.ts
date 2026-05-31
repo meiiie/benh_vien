@@ -18,6 +18,16 @@ export type NumberDraft =
       readonly message: string;
     };
 
+export type OptionalStringDraft =
+  | {
+      readonly ok: true;
+      readonly value: string | undefined;
+    }
+  | {
+      readonly ok: false;
+      readonly message: string;
+    };
+
 export function parseFiniteNumber(rawValue: string, message: string): NumberDraft {
   const value = Number(rawValue);
 
@@ -107,5 +117,31 @@ export function parseOptionalNonNegativeInteger(
   return {
     ok: true,
     value
+  };
+}
+
+export function parseOptionalApiDateTime(
+  rawValue: string,
+  message: string
+): OptionalStringDraft {
+  if (!rawValue) {
+    return {
+      ok: true,
+      value: undefined
+    };
+  }
+
+  const date = new Date(rawValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return {
+      ok: false,
+      message
+    };
+  }
+
+  return {
+    ok: true,
+    value: date.toISOString()
   };
 }

@@ -1,6 +1,9 @@
 import { toApiDateTime } from "../../lib/clinicalFormatters.js";
 import type { CommandDraft } from "../../lib/commandDrafts.js";
-import { parseOptionalNonNegativeInteger } from "../../lib/commandDrafts.js";
+import {
+  parseOptionalApiDateTime,
+  parseOptionalNonNegativeInteger
+} from "../../lib/commandDrafts.js";
 import type {
   NewDiagnosticReportForm,
   NewImagingStudyForm,
@@ -137,6 +140,7 @@ export function buildDiagnosticReportCommand(
 export function buildImagingStudyCommand(
   form: NewImagingStudyForm,
   options: {
+    readonly startedAt?: string;
     readonly seriesNumber?: number;
     readonly numberOfInstances?: number;
   } = {}
@@ -148,7 +152,8 @@ export function buildImagingStudyCommand(
     studyInstanceUid: form.studyInstanceUid,
     accessionNumber: form.accessionNumber || undefined,
     description: form.description || undefined,
-    startedAt: form.startedAt ? toApiDateTime(form.startedAt) : undefined,
+    startedAt:
+      options.startedAt ?? (form.startedAt ? toApiDateTime(form.startedAt) : undefined),
     referrerPractitionerId: form.referrerPractitionerId || undefined,
     interpreterPractitionerId: form.interpreterPractitionerId || undefined,
     endpointId: form.endpointId || undefined,
@@ -197,10 +202,20 @@ export function buildImagingStudyCommandDraft(
     return numberOfInstances;
   }
 
+  const startedAt = parseOptionalApiDateTime(
+    form.startedAt,
+    "Thời điểm bắt đầu nghiên cứu hình ảnh phải là ngày giờ hợp lệ."
+  );
+
+  if (!startedAt.ok) {
+    return startedAt;
+  }
+
   return {
     ok: true,
     command: buildImagingStudyCommand(form, {
       numberOfInstances: numberOfInstances.value,
+      startedAt: startedAt.value,
       seriesNumber: seriesNumber.value
     })
   };
