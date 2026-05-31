@@ -10,7 +10,6 @@ import {
   isApiHttpError
 } from "./api/clinicalApi.js";
 import {
-  exportPatientAuditFhirBundle,
   listGlobalAuditEvents,
   listPatientAuditEvents,
   verifyPatientAuditIntegrity
@@ -21,7 +20,7 @@ import {
   Info,
   PageHeader
 } from "./components/AppShell.js";
-import { createClinicalDocument, exportClinicalDocumentFhir, exportClinicalDocumentProvenanceFhir, listClinicalDocuments, signClinicalDocument } from "./features/clinical-documents/clinicalDocumentApi.js";
+import { createClinicalDocument, listClinicalDocuments, signClinicalDocument } from "./features/clinical-documents/clinicalDocumentApi.js";
 import { buildCreateClinicalDocumentCommandDraft } from "./features/clinical-documents/clinicalDocumentCommandBuilders.js";
 import { buildClinicalDocumentPanelRenderers } from "./features/clinical-documents/clinicalDocumentPanelRenderers.js";
 import {
@@ -36,18 +35,6 @@ import {
   createObservation,
   createProcedure,
   createServiceRequest,
-  exportAllergyIntoleranceFhir,
-  exportConditionFhir,
-  exportDiagnosticReportFhir,
-  exportEncounterFhir,
-  exportImagingStudyFhir,
-  exportMedicationAdministrationFhir,
-  exportMedicationDispenseFhir,
-  exportMedicationRequestFhir,
-  exportObservationFhir,
-  exportProcedureFhir,
-  exportServiceRequestFhir,
-  exportWorkflowTaskFhir,
   finishEncounter,
   listAllergyIntolerances,
   listConditions,
@@ -81,14 +68,11 @@ import {
   buildObservationCommandDraft
 } from "./features/clinical-records/clinicalEntryCommandBuilders.js";
 import { buildEncounterScopedFormUpdater } from "./features/clinical-records/encounterScopedFormUpdater.js";
-import { exportConsentFhir, listPatientConsents, revokePatientConsent } from "./features/consents/consentApi.js";
+import { listPatientConsents, revokePatientConsent } from "./features/consents/consentApi.js";
 import { buildRevokeConsentCommand } from "./features/consents/consentCommandBuilders.js";
 import { buildInteropPanelRenderers } from "./features/interoperability/interopPanelRenderers.js";
 import {
   createPatient,
-  exportPatientFhir,
-  exportPatientFhirBundle,
-  exportPatientFhirDocumentBundle,
   listPatients,
   mergePatient
 } from "./features/patient-registry/patientRegistryApi.js";
@@ -99,10 +83,7 @@ import {
   getApiRuntimeInfo,
   getFhirCapabilityStatement
 } from "./features/platform/platformApi.js";
-import {
-  exportProviderDirectoryFhir,
-  getProviderDirectory
-} from "./features/provider-directory/providerDirectoryApi.js";
+import { getProviderDirectory } from "./features/provider-directory/providerDirectoryApi.js";
 import {
   acknowledgeRecordTransfer,
   createRecordTransfer,
@@ -114,6 +95,7 @@ import {
   retryRecordTransfer,
   sendRecordTransfer
 } from "./features/record-transfers/recordTransferApi.js";
+import { buildFhirPreviewLoaders } from "./features/fhir-preview/fhirPreviewLoaders.js";
 import { recordTransferCommands } from "./features/record-transfers/recordTransferCommandBuilders.js";
 import { formatAuditIntegrityReason } from "./lib/auditFormatters.js";
 import {
@@ -121,7 +103,6 @@ import {
   isMissingRecordTransferDeliveryAttemptsRoute,
   resolveSelectedRecordTransferId
 } from "./lib/clinicalFormatters.js";
-import { loadFhirPreview } from "./lib/fhirPreviewLoader.js";
 import { loadPatientScopedCollection } from "./lib/patientScopedCollectionLoader.js";
 import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
@@ -460,6 +441,55 @@ export function App() {
   const canReadAudit = authSession?.actor.role === "auditor" || authSession?.actor.role === "admin";
   const canViewRuntimeInfo = canReadAudit;
   const isAuditOnlySession = authSession?.actor.role === "auditor";
+  const {
+    loadAllergyIntoleranceFhirPreview,
+    loadAuditFhirBundle,
+    loadConditionFhirPreview,
+    loadConsentFhirPreview,
+    loadDiagnosticReportFhirPreview,
+    loadDocumentFhirPreview,
+    loadDocumentProvenanceFhirPreview,
+    loadEncounterFhirPreview,
+    loadImagingStudyFhirPreview,
+    loadMedicationAdministrationFhirPreview,
+    loadMedicationDispenseFhirPreview,
+    loadMedicationRequestFhirPreview,
+    loadObservationFhirPreview,
+    loadPatientFhirBundlePreview,
+    loadPatientFhirDocumentBundlePreview,
+    loadPatientFhirPreview,
+    loadProcedureFhirPreview,
+    loadProviderDirectoryFhirPreview,
+    loadServiceRequestFhirPreview,
+    loadWorkflowTaskFhirPreview
+  } = buildFhirPreviewLoaders({
+    canReadAudit,
+    clinicalApi,
+    isAuditOnlySession,
+    setAllergyIntoleranceFhirPreview,
+    setAuditFhirBundlePreview,
+    setConditionFhirPreview,
+    setConsentFhirPreview,
+    setDiagnosticReportFhirPreview,
+    setDocumentFhirPreview,
+    setDocumentProvenanceFhirPreview,
+    setEncounterFhirPreview,
+    setImagingStudyFhirPreview,
+    setIsExportingAuditFhir,
+    setMedicationAdministrationFhirPreview,
+    setMedicationDispenseFhirPreview,
+    setMedicationRequestFhirPreview,
+    setObservationFhirPreview,
+    setPatientFhirBundlePreview,
+    setPatientFhirDocumentBundlePreview,
+    setPatientFhirPreview,
+    setProcedureFhirPreview,
+    setProviderDirectoryFhirPreview,
+    setRecordTransferFhirTaskPreview,
+    setServiceRequestFhirPreview,
+    setStatusMessage,
+    setWorkflowTaskFhirPreview
+  });
   const patientPanels = buildPatientPanelRenderers({
     patients,
     visiblePatients,
@@ -960,13 +990,9 @@ export function App() {
         return;
       }
 
-      const [directory, fhirPreview] = await Promise.all([
-        getProviderDirectory(clinicalApi, "TREATMENT"),
-        exportProviderDirectoryFhir(clinicalApi)
-      ]);
-
+      const directory = await getProviderDirectory(clinicalApi, "TREATMENT");
       setProviderDirectory(directory);
-      setProviderDirectoryFhirPreview(fhirPreview);
+      await loadProviderDirectoryFhirPreview();
     } catch (error) {
       setProviderDirectory(undefined);
       setProviderDirectoryFhirPreview({
@@ -1332,30 +1358,6 @@ export function App() {
     }
   }
 
-  async function loadAuditFhirBundle(patientId: string) {
-    if (!canReadAudit) {
-      setAuditFhirBundlePreview(undefined);
-      setStatusMessage("Xuất FHIR AuditEvent chỉ mở cho vai trò kiểm toán hoặc quản trị.");
-      return;
-    }
-
-    setIsExportingAuditFhir(true);
-
-    try {
-      setAuditFhirBundlePreview(await exportPatientAuditFhirBundle(clinicalApi, patientId));
-      setStatusMessage("Đã xuất FHIR AuditEvent Bundle cho nhật ký kiểm toán.");
-    } catch (error) {
-      setAuditFhirBundlePreview({
-        error:
-          error instanceof Error
-            ? `Không thể xuất FHIR AuditEvent Bundle: ${error.message}`
-            : "Không thể xuất FHIR AuditEvent Bundle."
-      });
-    } finally {
-      setIsExportingAuditFhir(false);
-    }
-  }
-
   async function loadConsents(patientId: string) {
     setIsLoadingConsents(true);
 
@@ -1511,14 +1513,6 @@ export function App() {
     return selectedRecordTransferIdRef.current === recordTransferId;
   }
 
-  async function loadConsentFhirPreview(consentId: string) {
-    await loadFhirPreview({
-      errorMessage: "Không thể xuất FHIR Consent",
-      exportPreview: () => exportConsentFhir(clinicalApi, consentId),
-      setPreview: setConsentFhirPreview
-    });
-  }
-
   function buildSelectedPatientMergedReadOnlyMessage(): string {
     if (!selectedPatient) {
       return "Chưa chọn hồ sơ bệnh nhân.";
@@ -1538,151 +1532,6 @@ export function App() {
 
     setStatusMessage(buildSelectedPatientMergedReadOnlyMessage());
     return false;
-  }
-
-  async function loadPatientFhirPreview(patientId: string) {
-    await loadFhirPreview({
-      errorMessage: "Không thể xuất FHIR Patient",
-      exportPreview: () =>
-        exportPatientFhir(
-          clinicalApi,
-          patientId,
-          isAuditOnlySession ? "AUDIT" : "TREATMENT"
-        ),
-      setPreview: setPatientFhirPreview
-    });
-  }
-
-  async function loadPatientFhirBundlePreview(patientId: string) {
-    await loadFhirPreview({
-      errorMessage: "Không thể xuất FHIR Bundle",
-      exportPreview: () => exportPatientFhirBundle(clinicalApi, patientId),
-      setPreview: setPatientFhirBundlePreview
-    });
-  }
-
-  async function loadPatientFhirDocumentBundlePreview(patientId: string) {
-    await loadFhirPreview({
-      errorMessage: "Không thể xuất FHIR document Bundle",
-      exportPreview: () => exportPatientFhirDocumentBundle(clinicalApi, patientId),
-      setPreview: setPatientFhirDocumentBundlePreview
-    });
-  }
-
-  async function loadEncounterFhirPreview(encounterId: string) {
-    await loadFhirPreview({
-      errorMessage: "Không thể xuất FHIR Encounter",
-      exportPreview: () => exportEncounterFhir(clinicalApi, encounterId),
-      setPreview: setEncounterFhirPreview
-    });
-  }
-
-  async function loadDocumentFhirPreview(documentId: string) {
-    await loadFhirPreview({
-      errorMessage: "Không thể xuất FHIR DocumentReference",
-      exportPreview: () => exportClinicalDocumentFhir(clinicalApi, documentId),
-      setPreview: setDocumentFhirPreview
-    });
-  }
-
-  async function loadDocumentProvenanceFhirPreview(documentId: string) {
-    await loadFhirPreview({
-      errorMessage: "Không thể xuất FHIR Provenance",
-      exportPreview: () => exportClinicalDocumentProvenanceFhir(clinicalApi, documentId),
-      setPreview: setDocumentProvenanceFhirPreview
-    });
-  }
-
-  async function loadConditionFhirPreview(conditionId: string) {
-    await loadFhirPreview({
-      errorMessage: "Không thể xuất FHIR Condition",
-      exportPreview: () => exportConditionFhir(clinicalApi, conditionId),
-      setPreview: setConditionFhirPreview
-    });
-  }
-
-  async function loadAllergyIntoleranceFhirPreview(allergyIntoleranceId: string) {
-    await loadFhirPreview({
-      errorMessage: "Không thể xuất FHIR AllergyIntolerance",
-      exportPreview: () =>
-        exportAllergyIntoleranceFhir(clinicalApi, allergyIntoleranceId),
-      setPreview: setAllergyIntoleranceFhirPreview
-    });
-  }
-
-  async function loadObservationFhirPreview(observationId: string) {
-    await loadFhirPreview({
-      errorMessage: "Không thể xuất FHIR Observation",
-      exportPreview: () => exportObservationFhir(clinicalApi, observationId),
-      setPreview: setObservationFhirPreview
-    });
-  }
-
-  async function loadMedicationRequestFhirPreview(medicationRequestId: string) {
-    await loadFhirPreview({
-      errorMessage: "Không thể xuất FHIR MedicationRequest",
-      exportPreview: () => exportMedicationRequestFhir(clinicalApi, medicationRequestId),
-      setPreview: setMedicationRequestFhirPreview
-    });
-  }
-
-  async function loadMedicationDispenseFhirPreview(medicationDispenseId: string) {
-    await loadFhirPreview({
-      errorMessage: "Không thể xuất FHIR MedicationDispense",
-      exportPreview: () => exportMedicationDispenseFhir(clinicalApi, medicationDispenseId),
-      setPreview: setMedicationDispenseFhirPreview
-    });
-  }
-
-  async function loadMedicationAdministrationFhirPreview(
-    medicationAdministrationId: string
-  ) {
-    await loadFhirPreview({
-      errorMessage: "Không thể xuất FHIR MedicationAdministration",
-      exportPreview: () =>
-        exportMedicationAdministrationFhir(clinicalApi, medicationAdministrationId),
-      setPreview: setMedicationAdministrationFhirPreview
-    });
-  }
-
-  async function loadServiceRequestFhirPreview(serviceRequestId: string) {
-    await loadFhirPreview({
-      errorMessage: "Không thể xuất FHIR ServiceRequest",
-      exportPreview: () => exportServiceRequestFhir(clinicalApi, serviceRequestId),
-      setPreview: setServiceRequestFhirPreview
-    });
-  }
-
-  async function loadWorkflowTaskFhirPreview(taskId: string) {
-    await loadFhirPreview({
-      errorMessage: "Không thể xuất FHIR Task",
-      exportPreview: () => exportWorkflowTaskFhir(clinicalApi, taskId),
-      setPreview: setWorkflowTaskFhirPreview
-    });
-  }
-
-  async function loadProcedureFhirPreview(procedureId: string) {
-    await loadFhirPreview({
-      errorMessage: "Không thể xuất FHIR Procedure",
-      exportPreview: () => exportProcedureFhir(clinicalApi, procedureId),
-      setPreview: setProcedureFhirPreview
-    });
-  }
-
-  async function loadDiagnosticReportFhirPreview(diagnosticReportId: string) {
-    await loadFhirPreview({
-      errorMessage: "Không thể xuất FHIR DiagnosticReport",
-      exportPreview: () => exportDiagnosticReportFhir(clinicalApi, diagnosticReportId),
-      setPreview: setDiagnosticReportFhirPreview
-    });
-  }
-
-  async function loadImagingStudyFhirPreview(imagingStudyId: string) {
-    await loadFhirPreview({
-      errorMessage: "Không thể xuất FHIR ImagingStudy",
-      exportPreview: () => exportImagingStudyFhir(clinicalApi, imagingStudyId),
-      setPreview: setImagingStudyFhirPreview
-    });
   }
 
   async function handleLogin(event?: FormEvent<HTMLFormElement>) {

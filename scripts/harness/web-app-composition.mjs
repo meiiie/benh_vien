@@ -39,6 +39,7 @@ const requiredModules = [
   "apps/web/src/features/consents/ConsentInteropPanel.tsx",
   "apps/web/src/features/consents/consentApi.ts",
   "apps/web/src/features/consents/consentCommandBuilders.ts",
+  "apps/web/src/features/fhir-preview/fhirPreviewLoaders.ts",
   "apps/web/src/features/interoperability/interopPanelRenderers.tsx",
   "apps/web/src/features/patient-registry/CreatePatientPanel.tsx",
   "apps/web/src/features/patient-registry/PatientDetailPanel.tsx",
