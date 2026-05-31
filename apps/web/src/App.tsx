@@ -99,6 +99,7 @@ import {
   listPatients,
   mergePatient
 } from "./features/patient-registry/patientRegistryApi.js";
+import { buildCreatePatientCommand } from "./features/patient-registry/patientRegistryCommandBuilders.js";
 import { buildPatientPanelRenderers } from "./features/patient-registry/patientPanelRenderers.js";
 import { buildPatientRegistrySelection } from "./features/patient-registry/patientRegistrySelectors.js";
 import {
@@ -176,7 +177,6 @@ import type {
   ProviderEndpoint,
   ProviderPractitionerRole,
   ProviderDirectory,
-  PatientIdentifier,
   Patient,
   PatientStatusFilter,
   Encounter,
@@ -1799,29 +1799,11 @@ export function App() {
     event.preventDefault();
     setIsSubmittingPatient(true);
 
-    const identifiers: PatientIdentifier[] = [
-      {
-        system: "urn:gov:vietnam:national-id",
-        value: patientForm.nationalId,
-        type: "national-id"
-      },
-      {
-        system: "urn:benh-vien-so:mrn",
-        value: patientForm.hospitalMrn,
-        type: "hospital-mrn"
-      }
-    ];
-
     try {
-      const createdPatient = await createPatient(clinicalApi, {
-        identifiers,
-        fullName: patientForm.fullName,
-        birthDate: patientForm.birthDate || undefined,
-        gender: patientForm.gender,
-        address: patientForm.address || undefined,
-        phone: patientForm.phone || undefined,
-        managingOrganizationId: patientForm.managingOrganizationId
-      });
+      const createdPatient = await createPatient(
+        clinicalApi,
+        buildCreatePatientCommand(patientForm)
+      );
       await loadPatients(createdPatient.id);
       setAppRoute("workspace");
       setStatusMessage(`Đã tạo hồ sơ ${createdPatient.fullName} và chọn ngay trên workspace.`);
