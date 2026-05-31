@@ -3,11 +3,7 @@ import { createClinicalApiClient } from "./api/clinicalApi.js";
 import { buildAuditLoaders } from "./features/audit/auditLoaders.js";
 import { buildAuditPanelRenderers } from "./features/audit/auditPanelRenderers.js";
 import { useAuditState } from "./features/audit/auditState.js";
-import {
-  AuthenticatedLayout,
-  Info,
-  PageHeader
-} from "./components/AppShell.js";
+import { AuthenticatedLayout } from "./components/AppShell.js";
 import { buildClinicalDocumentHandlers } from "./features/clinical-documents/clinicalDocumentHandlers.js";
 import { buildClinicalDocumentPanelRenderers } from "./features/clinical-documents/clinicalDocumentPanelRenderers.js";
 import { buildClinicalRecordPanelRenderers } from "./features/clinical-records/clinicalRecordPanelRenderers.js";
@@ -38,11 +34,13 @@ import { buildRecordTransferLoaders } from "./features/record-transfers/recordTr
 import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { AppRouteRenderer } from "./pages/AppRouteRenderer.js";
+import {
+  buildAppAccessContext,
+  buildAppWorkspaceContext
+} from "./pages/appDerivedContext.js";
 import { useAppLifecycleEffects } from "./pages/appLifecycleEffects.js";
 import { useAppShellState } from "./pages/appShellState.js";
 import { buildAppRoutePanels } from "./pages/appRoutePanels.js";
-import { buildDashboardMetrics } from "./pages/dashboardMetrics.js";
-import { buildWorkspaceSelection } from "./pages/workspaceSelection.js";
 
 import {
   defaultTransferContext,
@@ -80,8 +78,13 @@ export function App() {
   const interoperabilityState = useInteroperabilityState();
   const clinicalRecordState = useClinicalRecordState();
 
-  const canMergePatients = authSession?.actor.role === "admin";
-  const isIntegrationSession = authSession?.actor.role === "integration";
+  const {
+    canMergePatients,
+    canReadAudit,
+    canViewRuntimeInfo,
+    isAuditOnlySession,
+    isIntegrationSession
+  } = buildAppAccessContext({ authSession });
   const {
     hasPatientListFilter,
     isPatientMergeConfirmationValid,
@@ -106,23 +109,17 @@ export function App() {
     selectedPatientWriteDisabled,
     setStatusMessage
   });
-  const patientWorkspaceCollections = {
-    ...clinicalRecordState,
-    recordTransfers: interoperabilityState.recordTransfers,
-  };
-  const workspaceSelection = buildWorkspaceSelection({
-    ...patientWorkspaceCollections,
-    ...clinicalRecordState,
-    selectedRecordTransferId: interoperabilityState.selectedRecordTransferId,
-  });
-  const dashboardMetrics = buildDashboardMetrics({
-    ...patientWorkspaceCollections,
+  const {
+    dashboardMetrics,
+    patientWorkspaceCollections,
+    workspaceSelection
+  } = buildAppWorkspaceContext({
+    clinicalRecordState,
     patients: patientRegistryState.patients,
-    providerDirectory: platformState.providerDirectory
+    providerDirectory: platformState.providerDirectory,
+    recordTransfers: interoperabilityState.recordTransfers,
+    selectedRecordTransferId: interoperabilityState.selectedRecordTransferId
   });
-  const canReadAudit = authSession?.actor.role === "auditor" || authSession?.actor.role === "admin";
-  const canViewRuntimeInfo = canReadAudit;
-  const isAuditOnlySession = authSession?.actor.role === "auditor";
   const { loadPatients } = buildPatientRegistryLoaders({
     clinicalApi,
     isAuditOnlySession,
