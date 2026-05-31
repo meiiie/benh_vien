@@ -121,6 +121,7 @@ import {
   retryRecordTransfer,
   sendRecordTransfer
 } from "./features/record-transfers/recordTransferApi.js";
+import { recordTransferCommands } from "./features/record-transfers/recordTransferCommandBuilders.js";
 import { formatAuditIntegrityReason } from "./lib/auditFormatters.js";
 import {
   formatDateTime,
@@ -1926,9 +1927,11 @@ export function App() {
     setTransitioningRecordTransferId(recordTransfer.id);
 
     try {
-      const updatedTransfer = await sendRecordTransfer(clinicalApi, recordTransfer.id, {
-        note: "Đã gửi gói hồ sơ qua gateway liên thông demo."
-      });
+      const updatedTransfer = await sendRecordTransfer(
+        clinicalApi,
+        recordTransfer.id,
+        recordTransferCommands.send()
+      );
       await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
       await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
       await loadRecordTransferDeliveryAttempts(updatedTransfer.id);
@@ -1957,9 +1960,11 @@ export function App() {
     setTransitioningRecordTransferId(recordTransfer.id);
 
     try {
-      const updatedTransfer = await receiveRecordTransfer(clinicalApi, recordTransfer.id, {
-        note: "Bệnh viện nhận đã xác nhận tiếp nhận qua giao diện demo."
-      });
+      const updatedTransfer = await receiveRecordTransfer(
+        clinicalApi,
+        recordTransfer.id,
+        recordTransferCommands.receive()
+      );
       await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
       await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
       await loadRecordTransferDeliveryAttempts(updatedTransfer.id);
@@ -1978,13 +1983,15 @@ export function App() {
   async function handleGatewayAcknowledgementSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const recordTransferId = gatewayAcknowledgementForm.recordTransferId.trim();
-    const recipientOrganizationId =
-      gatewayAcknowledgementForm.recipientOrganizationId.trim();
-    const acknowledgementReference =
-      gatewayAcknowledgementForm.acknowledgementReference.trim();
+    const acknowledgementDraft = recordTransferCommands.gatewayAcknowledgementDraft(
+      gatewayAcknowledgementForm
+    );
 
-    if (!recordTransferId || !recipientOrganizationId || !acknowledgementReference) {
+    if (
+      !acknowledgementDraft.recordTransferId ||
+      !acknowledgementDraft.recipientOrganizationId ||
+      !acknowledgementDraft.acknowledgementReference
+    ) {
       setStatusMessage(
         "Callback gateway cần mã gói chuyển, cơ sở nhận và mã biên nhận tiếp nhận."
       );
@@ -1997,20 +2004,12 @@ export function App() {
     try {
       const acknowledgedTransfer = await acknowledgeRecordTransfer(
         clinicalApi,
-        recordTransferId,
-        {
-          recipientOrganizationId,
-          acknowledgementReference,
-          receivedAt: gatewayAcknowledgementForm.receivedAt,
-          receivedByActorId: gatewayAcknowledgementForm.receivedByActorId,
-          targetEndpointId: gatewayAcknowledgementForm.targetEndpointId,
-          deliveryIdempotencyKey: gatewayAcknowledgementForm.deliveryIdempotencyKey,
-          note: gatewayAcknowledgementForm.note
-        }
+        acknowledgementDraft.recordTransferId,
+        acknowledgementDraft.command
       );
       setGatewayAcknowledgementResult(acknowledgedTransfer);
       setStatusMessage(
-        `Gateway đã xác nhận tiếp nhận gói ${acknowledgedTransfer.id} bằng biên nhận ${acknowledgedTransfer.acknowledgementReference ?? acknowledgementReference}.`
+        `Gateway đã xác nhận tiếp nhận gói ${acknowledgedTransfer.id} bằng biên nhận ${acknowledgedTransfer.acknowledgementReference ?? acknowledgementDraft.acknowledgementReference}.`
       );
     } catch (error) {
       setStatusMessage(
@@ -2036,10 +2035,11 @@ export function App() {
     setTransitioningRecordTransferId(recordTransfer.id);
 
     try {
-      const updatedTransfer = await failRecordTransfer(clinicalApi, recordTransfer.id, {
-        failureReason: "Gateway liên thông demo tạm thời không phản hồi.",
-        note: "Đã ghi nhận lỗi gửi để thử lại sau."
-      });
+      const updatedTransfer = await failRecordTransfer(
+        clinicalApi,
+        recordTransfer.id,
+        recordTransferCommands.fail()
+      );
       await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
       await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
       await loadRecordTransferDeliveryAttempts(updatedTransfer.id);
@@ -2068,9 +2068,11 @@ export function App() {
     setTransitioningRecordTransferId(recordTransfer.id);
 
     try {
-      const updatedTransfer = await retryRecordTransfer(clinicalApi, recordTransfer.id, {
-        note: "Đưa lại gói hồ sơ vào hàng đợi gửi."
-      });
+      const updatedTransfer = await retryRecordTransfer(
+        clinicalApi,
+        recordTransfer.id,
+        recordTransferCommands.retry()
+      );
       await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
       await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
       await loadRecordTransferDeliveryAttempts(updatedTransfer.id);

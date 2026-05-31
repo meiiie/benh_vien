@@ -8,13 +8,18 @@ import type {
   RecordTransfersResponse
 } from "../../types/clinical.js";
 
-type RecordTransferLifecycleCommand = {
+export type RecordTransferLifecycleCommand = {
   readonly note: string;
 };
 
-type RecordTransferFailCommand = RecordTransferLifecycleCommand & {
+export type RecordTransferFailCommand = RecordTransferLifecycleCommand & {
   readonly failureReason: string;
 };
+
+export type GatewayAcknowledgementCommand = Omit<
+  GatewayAcknowledgementForm,
+  "recordTransferId"
+>;
 
 export function listRecordTransfers(
   api: ClinicalApiClient,
@@ -101,7 +106,7 @@ export function retryRecordTransfer(
 export function acknowledgeRecordTransfer(
   api: ClinicalApiClient,
   recordTransferId: string,
-  form: Omit<GatewayAcknowledgementForm, "recordTransferId">
+  form: GatewayAcknowledgementCommand
 ): Promise<RecordTransfer> {
   return api.requestJson<RecordTransfer>(
     `/record-transfers/${recordTransferId}/acknowledgement-callback`,

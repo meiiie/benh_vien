@@ -50,6 +50,7 @@ const requiredModules = [
   "apps/web/src/features/provider-directory/providerDirectoryApi.ts",
   "apps/web/src/features/record-transfers/RecordTransferInteropPanel.tsx",
   "apps/web/src/features/record-transfers/recordTransferApi.ts",
+  "apps/web/src/features/record-transfers/recordTransferCommandBuilders.ts",
   "apps/web/src/lib/auditFormatters.ts",
   "apps/web/src/lib/clinicalFormatters.ts",
   "apps/web/src/lib/fhirPreviewLoader.ts",
@@ -69,7 +70,7 @@ const requiredModules = [
   "apps/web/src/pages/workspaceSelection.ts",
   "apps/web/src/types/clinical.ts"
 ];
-const maxAppLines = 2_775;
+const maxAppLines = 2_773;
 
 const appSource = await readFile(appPath, "utf8");
 const appLineCount = appSource.split(/\r?\n/).length;
