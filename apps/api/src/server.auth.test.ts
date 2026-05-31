@@ -156,6 +156,43 @@ describe("API auth and RBAC boundary", () => {
     expect(patientResponse.statusCode).toBe(200);
   });
 
+  it("rejects invalid purpose-of-use headers instead of silently defaulting to treatment", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const jsonResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients",
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        "x-purpose-of-use": "BREAK_GLASS",
+        "x-request-id": "invalid-purpose-json-001"
+      }
+    });
+    const fhirResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001/fhir",
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        accept: "application/fhir+json",
+        "x-purpose-of-use": "BREAK_GLASS",
+        "x-request-id": "invalid-purpose-fhir-001"
+      }
+    });
+
+    expect(jsonResponse.statusCode).toBe(400);
+    expect(jsonResponse.json()).toMatchObject({
+      error: "INVALID_PURPOSE_OF_USE",
+      requestId: "invalid-purpose-json-001",
+      allowedPurposeOfUse: ["TREATMENT", "AUDIT", "OPERATIONS"]
+    });
+    expectOperationOutcome(fhirResponse, {
+      statusCode: 400,
+      code: "invalid",
+      detailsCode: "INVALID_PURPOSE_OF_USE"
+    });
+  });
+
   it("disables demo login by default in production", async () => {
     process.env.NODE_ENV = "production";
     delete process.env.BVS_DEMO_AUTH_ENABLED;

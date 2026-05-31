@@ -15,19 +15,48 @@ import { verifyAccessToken } from "../auth/auth-session.js";
 import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
 
 export function readActorContext(request: FastifyRequest): ActorContext | undefined {
+  const actorResult = readActorContextResult(request);
+
+  return actorResult.kind === "actor" ? actorResult.actor : undefined;
+}
+
+type ActorContextReadResult =
+  | {
+      readonly kind: "actor";
+      readonly actor: ActorContext;
+    }
+  | {
+      readonly kind: "invalid-purpose-of-use";
+    }
+  | {
+      readonly kind: "missing";
+    };
+
+function readActorContextResult(request: FastifyRequest): ActorContextReadResult {
   const token = readBearerToken(request.headers.authorization);
   const session = token ? verifyAccessToken(token) : undefined;
 
   if (!session) {
-    return undefined;
+    return {
+      kind: "missing"
+    };
   }
 
-  const rawPurposeOfUse = readHeader(request.headers["x-purpose-of-use"]) ?? "TREATMENT";
+  const purposeOfUse = readHeader(request.headers["x-purpose-of-use"])?.trim() || "TREATMENT";
+
+  if (!isPurposeOfUse(purposeOfUse)) {
+    return {
+      kind: "invalid-purpose-of-use"
+    };
+  }
 
   return {
-    actorId: session.actor.actorId,
-    role: session.actor.role,
-    purposeOfUse: isPurposeOfUse(rawPurposeOfUse) ? rawPurposeOfUse : "TREATMENT"
+    kind: "actor",
+    actor: {
+      actorId: session.actor.actorId,
+      role: session.actor.role,
+      purposeOfUse
+    }
   };
 }
 
@@ -36,9 +65,14 @@ export function requirePermission(
   reply: FastifyReply,
   permission: Permission
 ): ActorContext | undefined {
-  const actor = readActorContext(request);
+  const actorResult = readActorContextResult(request);
 
-  if (!actor) {
+  if (actorResult.kind === "invalid-purpose-of-use") {
+    sendInvalidPurposeOfUseResponse(request, reply);
+    return undefined;
+  }
+
+  if (actorResult.kind === "missing") {
     reply.header("WWW-Authenticate", "Bearer");
 
     if (acceptsFhirJson(request)) {
@@ -65,6 +99,8 @@ export function requirePermission(
 
     return undefined;
   }
+
+  const actor = actorResult.actor;
 
   if (canAccess(actor, permission)) {
     return actor;
@@ -267,6 +303,36 @@ function sendMergedPatientRecordConflict(
     patientId: patient.id,
     mergedIntoPatientId: snapshot.mergedIntoPatientId,
     mergedAt: snapshot.mergedAt
+  });
+}
+
+function sendInvalidPurposeOfUseResponse(
+  request: FastifyRequest,
+  reply: FastifyReply
+): void {
+  const message = "x-purpose-of-use phải là một trong các giá trị TREATMENT, AUDIT hoặc OPERATIONS.";
+
+  if (acceptsFhirJson(request)) {
+    sendFhirOperationOutcome(reply, {
+      statusCode: 400,
+      code: "invalid",
+      diagnostics: `requestId=${request.id}; allowedPurposeOfUse=TREATMENT,AUDIT,OPERATIONS`,
+      expression: ["x-purpose-of-use"],
+      details: {
+        code: "INVALID_PURPOSE_OF_USE",
+        display: "Invalid purpose of use",
+        text: message
+      }
+    });
+
+    return;
+  }
+
+  reply.status(400).send({
+    error: "INVALID_PURPOSE_OF_USE",
+    message,
+    requestId: request.id,
+    allowedPurposeOfUse: ["TREATMENT", "AUDIT", "OPERATIONS"]
   });
 }
 
