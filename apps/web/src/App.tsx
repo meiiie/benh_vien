@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   loginPresets,
   type DemoRole,
@@ -19,7 +19,7 @@ import { buildClinicalRecordPanelRenderers } from "./features/clinical-records/c
 import { buildCarePlanHandlers } from "./features/clinical-records/carePlanHandlers.js";
 import { buildMedicationHandlers } from "./features/clinical-records/medicationHandlers.js";
 import { buildClinicalEntryHandlers } from "./features/clinical-records/clinicalEntryHandlers.js";
-import { buildEncounterScopedFormUpdater } from "./features/clinical-records/encounterScopedFormUpdater.js";
+import { useEncounterScopedFormEffects } from "./features/clinical-records/encounterScopedFormEffects.js";
 import { buildEncounterHandlers } from "./features/clinical-records/encounterHandlers.js";
 import { buildConsentLoaders } from "./features/consents/consentLoaders.js";
 import { buildInteropPanelRenderers } from "./features/interoperability/interopPanelRenderers.js";
@@ -1083,28 +1083,22 @@ export function App() {
     setGlobalAuditEvents
   });
 
-  useEffect(() => {
-    const updateEncounterScopedForm = buildEncounterScopedFormUpdater(selectedEncounterId);
-
-    setDocumentForm(updateEncounterScopedForm);
-    setAllergyIntoleranceForm(updateEncounterScopedForm);
-    setConditionForm(updateEncounterScopedForm);
-    setObservationForm(updateEncounterScopedForm);
-    setMedicationRequestForm(updateEncounterScopedForm);
-    setMedicationDispenseForm(updateEncounterScopedForm);
-    setMedicationAdministrationForm(updateEncounterScopedForm);
-    setServiceRequestForm(updateEncounterScopedForm);
-    setProcedureForm(updateEncounterScopedForm);
-    setDiagnosticReportForm(updateEncounterScopedForm);
-    setImagingStudyForm(updateEncounterScopedForm);
-
-    if (!selectedEncounterId) {
-      setEncounterFhirPreview(undefined);
-      return;
-    }
-
-    void loadEncounterFhirPreview(selectedEncounterId);
-  }, [selectedEncounterId]);
+  useEncounterScopedFormEffects({
+    loadEncounterFhirPreview,
+    selectedEncounterId,
+    setAllergyIntoleranceForm,
+    setConditionForm,
+    setDiagnosticReportForm,
+    setDocumentForm,
+    setEncounterFhirPreview,
+    setImagingStudyForm,
+    setMedicationAdministrationForm,
+    setMedicationDispenseForm,
+    setMedicationRequestForm,
+    setObservationForm,
+    setProcedureForm,
+    setServiceRequestForm
+  });
 
   if (!isAuthenticated) {
     if (appRoute === "login") {
