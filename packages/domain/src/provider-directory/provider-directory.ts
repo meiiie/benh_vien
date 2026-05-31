@@ -43,6 +43,41 @@ export type ProviderEndpointConnectionType =
   | "ihe-xds"
   | "other";
 
+const providerOrganizationTypes = new Set<ProviderOrganizationType>([
+  "hospital",
+  "department",
+  "laboratory",
+  "imaging",
+  "payer",
+  "government",
+  "other"
+]);
+
+const providerEndpointStatuses = new Set<ProviderEndpointStatus>([
+  "active",
+  "suspended",
+  "error",
+  "off",
+  "entered-in-error",
+  "test"
+]);
+
+const providerEndpointConnectionTypes = new Set<ProviderEndpointConnectionType>([
+  "hl7-fhir-rest",
+  "dicom-wado-rs",
+  "hl7v2-mllp",
+  "direct-project",
+  "ihe-xds",
+  "other"
+]);
+
+const providerTelecomSystems = new Set<ProviderTelecom["system"]>(["phone", "email", "url"]);
+const providerTelecomUses = new Set<NonNullable<ProviderTelecom["use"]>>([
+  "work",
+  "mobile",
+  "home"
+]);
+
 export type ProviderOrganizationSnapshot = {
   readonly id: string;
   readonly identifiers: readonly ProviderIdentifier[];
@@ -117,6 +152,7 @@ export class ProviderDirectory {
 
   static assemble(input: ProviderDirectoryInput): ProviderDirectory {
     const now = input.generatedAt ?? new Date();
+    assertValidDate(now, "Thời điểm tạo Provider Directory không hợp lệ.");
     const organizations = input.organizations.map((organization) =>
       normalizeOrganization(organization, now)
     );
@@ -144,18 +180,27 @@ export class ProviderDirectory {
   }
 
   static rehydrate(snapshot: ProviderDirectorySnapshot): ProviderDirectory {
-    validateUniqueIds("Organization", snapshot.organizations.map((organization) => organization.id));
-    validateUniqueIds("Practitioner", snapshot.practitioners.map((practitioner) => practitioner.id));
-    validateUniqueIds("Endpoint", snapshot.endpoints.map((endpoint) => endpoint.id));
-    validateUniqueIds("PractitionerRole", snapshot.practitionerRoles.map((role) => role.id));
-    validateReferences(snapshot);
+    const organizations = snapshot.organizations.map(normalizePersistedOrganization);
+    const practitioners = snapshot.practitioners.map(normalizePersistedPractitioner);
+    const endpoints = snapshot.endpoints.map(normalizePersistedEndpoint);
+    const practitionerRoles = snapshot.practitionerRoles.map(normalizePersistedPractitionerRole);
+    const generatedAt = normalizeTimestamp(
+      snapshot.generatedAt,
+      "Thời điểm sinh Provider Directory không hợp lệ."
+    );
+
+    validateUniqueIds("Organization", organizations.map((organization) => organization.id));
+    validateUniqueIds("Practitioner", practitioners.map((practitioner) => practitioner.id));
+    validateUniqueIds("Endpoint", endpoints.map((endpoint) => endpoint.id));
+    validateUniqueIds("PractitionerRole", practitionerRoles.map((role) => role.id));
+    validateReferences({ organizations, practitioners, practitionerRoles, endpoints });
 
     return new ProviderDirectory({
-      organizations: snapshot.organizations.map(cloneOrganization),
-      practitioners: snapshot.practitioners.map(clonePractitioner),
-      practitionerRoles: snapshot.practitionerRoles.map(clonePractitionerRole),
-      endpoints: snapshot.endpoints.map(cloneEndpoint),
-      generatedAt: snapshot.generatedAt
+      organizations,
+      practitioners,
+      practitionerRoles,
+      endpoints,
+      generatedAt
     });
   }
 
@@ -181,7 +226,7 @@ function normalizeOrganization(
     id,
     identifiers: input.identifiers.map(normalizeIdentifier),
     active: input.active,
-    type: input.type,
+    type: normalizeOrganizationType(input.type),
     name,
     alias: normalizeTextList(input.alias),
     address: normalizeOptional(input.address),
@@ -229,8 +274,8 @@ function normalizeEndpoint(
       input.managingOrganizationId,
       "Endpoint phải thuộc một cơ sở y tế quản lý."
     ),
-    status: input.status,
-    connectionType: input.connectionType,
+    status: normalizeEndpointStatus(input.status),
+    connectionType: normalizeEndpointConnectionType(input.connectionType),
     name,
     address,
     payloadTypes: input.payloadTypes.map(normalizeCoding),
@@ -245,6 +290,7 @@ function normalizePractitionerRole(
   now: Date
 ): ProviderPractitionerRoleSnapshot {
   const id = normalizeRequired(input.id, "Mã vai trò nhân sự không được để trống.");
+  const period = normalizeRolePeriod(input.periodStart, input.periodEnd);
 
   return {
     id,
@@ -258,10 +304,60 @@ function normalizePractitionerRole(
     specialty: input.specialty ? normalizeCoding(input.specialty) : undefined,
     endpointIds: normalizeTextList(input.endpointIds),
     telecom: input.telecom?.map(normalizeTelecom),
-    periodStart: normalizeOptional(input.periodStart),
-    periodEnd: normalizeOptional(input.periodEnd),
+    periodStart: period.periodStart,
+    periodEnd: period.periodEnd,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString()
+  };
+}
+
+function normalizePersistedOrganization(
+  snapshot: ProviderOrganizationSnapshot
+): ProviderOrganizationSnapshot {
+  return {
+    ...normalizeOrganization(
+      snapshot,
+      parseDate(snapshot.createdAt, "createdAt của Organization không hợp lệ.")
+    ),
+    createdAt: normalizeTimestamp(snapshot.createdAt, "createdAt của Organization không hợp lệ."),
+    updatedAt: normalizeTimestamp(snapshot.updatedAt, "updatedAt của Organization không hợp lệ.")
+  };
+}
+
+function normalizePersistedPractitioner(
+  snapshot: ProviderPractitionerSnapshot
+): ProviderPractitionerSnapshot {
+  return {
+    ...normalizePractitioner(
+      snapshot,
+      parseDate(snapshot.createdAt, "createdAt của Practitioner không hợp lệ.")
+    ),
+    createdAt: normalizeTimestamp(snapshot.createdAt, "createdAt của Practitioner không hợp lệ."),
+    updatedAt: normalizeTimestamp(snapshot.updatedAt, "updatedAt của Practitioner không hợp lệ.")
+  };
+}
+
+function normalizePersistedEndpoint(snapshot: ProviderEndpointSnapshot): ProviderEndpointSnapshot {
+  return {
+    ...normalizeEndpoint(
+      snapshot,
+      parseDate(snapshot.createdAt, "createdAt của Endpoint không hợp lệ.")
+    ),
+    createdAt: normalizeTimestamp(snapshot.createdAt, "createdAt của Endpoint không hợp lệ."),
+    updatedAt: normalizeTimestamp(snapshot.updatedAt, "updatedAt của Endpoint không hợp lệ.")
+  };
+}
+
+function normalizePersistedPractitionerRole(
+  snapshot: ProviderPractitionerRoleSnapshot
+): ProviderPractitionerRoleSnapshot {
+  return {
+    ...normalizePractitionerRole(
+      snapshot,
+      parseDate(snapshot.createdAt, "createdAt của PractitionerRole không hợp lệ.")
+    ),
+    createdAt: normalizeTimestamp(snapshot.createdAt, "createdAt của PractitionerRole không hợp lệ."),
+    updatedAt: normalizeTimestamp(snapshot.updatedAt, "updatedAt của PractitionerRole không hợp lệ.")
   };
 }
 
@@ -326,9 +422,9 @@ function normalizeIdentifier(identifier: ProviderIdentifier): ProviderIdentifier
 
 function normalizeTelecom(telecom: ProviderTelecom): ProviderTelecom {
   return {
-    system: telecom.system,
+    system: normalizeTelecomSystem(telecom.system),
     value: normalizeRequired(telecom.value, "Thông tin liên hệ không được để trống."),
-    use: telecom.use
+    use: telecom.use ? normalizeTelecomUse(telecom.use) : undefined
   };
 }
 
@@ -361,6 +457,90 @@ function normalizeTextList(values: readonly string[] | undefined): string[] | un
     | undefined;
 
   return normalized && normalized.length > 0 ? normalized : undefined;
+}
+
+function normalizeOrganizationType(type: ProviderOrganizationType): ProviderOrganizationType {
+  if (!providerOrganizationTypes.has(type)) {
+    throw new DomainError("Loại cơ sở y tế trong Provider Directory không hợp lệ.");
+  }
+
+  return type;
+}
+
+function normalizeEndpointStatus(status: ProviderEndpointStatus): ProviderEndpointStatus {
+  if (!providerEndpointStatuses.has(status)) {
+    throw new DomainError("Trạng thái Endpoint trong Provider Directory không hợp lệ.");
+  }
+
+  return status;
+}
+
+function normalizeEndpointConnectionType(
+  connectionType: ProviderEndpointConnectionType
+): ProviderEndpointConnectionType {
+  if (!providerEndpointConnectionTypes.has(connectionType)) {
+    throw new DomainError("Loại kết nối Endpoint trong Provider Directory không hợp lệ.");
+  }
+
+  return connectionType;
+}
+
+function normalizeTelecomSystem(system: ProviderTelecom["system"]): ProviderTelecom["system"] {
+  if (!providerTelecomSystems.has(system)) {
+    throw new DomainError("Hệ thống liên hệ trong Provider Directory không hợp lệ.");
+  }
+
+  return system;
+}
+
+function normalizeTelecomUse(
+  use: NonNullable<ProviderTelecom["use"]>
+): NonNullable<ProviderTelecom["use"]> {
+  if (!providerTelecomUses.has(use)) {
+    throw new DomainError("Mục đích liên hệ trong Provider Directory không hợp lệ.");
+  }
+
+  return use;
+}
+
+function normalizeRolePeriod(
+  periodStart: string | undefined,
+  periodEnd: string | undefined
+): Pick<ProviderPractitionerRoleSnapshot, "periodStart" | "periodEnd"> {
+  const normalizedStart = normalizeOptional(periodStart);
+  const normalizedEnd = normalizeOptional(periodEnd);
+  const start = normalizedStart
+    ? parseDate(normalizedStart, "Thời điểm bắt đầu vai trò nhân sự không hợp lệ.")
+    : undefined;
+  const end = normalizedEnd
+    ? parseDate(normalizedEnd, "Thời điểm kết thúc vai trò nhân sự không hợp lệ.")
+    : undefined;
+
+  if (start && end && end.getTime() < start.getTime()) {
+    throw new DomainError("Thời điểm kết thúc vai trò nhân sự không được trước thời điểm bắt đầu.");
+  }
+
+  return {
+    periodStart: normalizedStart,
+    periodEnd: normalizedEnd
+  };
+}
+
+function normalizeTimestamp(value: string, message: string): string {
+  return parseDate(value, message).toISOString();
+}
+
+function parseDate(value: string, message: string): Date {
+  const date = new Date(normalizeRequired(value, message));
+  assertValidDate(date, message);
+
+  return date;
+}
+
+function assertValidDate(value: Date, message: string): void {
+  if (Number.isNaN(value.getTime())) {
+    throw new DomainError(message);
+  }
 }
 
 function cloneOrganization(snapshot: ProviderOrganizationSnapshot): ProviderOrganizationSnapshot {
