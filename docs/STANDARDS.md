@@ -23,6 +23,8 @@ HL7 FHIR là chuẩn trao đổi dữ liệu y tế. Bản R4 vẫn là lựa ch
 Nguồn:
 
 - [HL7 FHIR R4 Specification](https://hl7.org/fhir/R4/)
+- [HL7 FHIR R4 Modules](https://hl7.org/fhir/R4/modules.html)
+- [HL7 FHIR R4 Security](https://hl7.org/fhir/R4/security.html)
 - [FHIR Patient Resource](https://hl7.org/fhir/R4/patient.html)
 - [FHIR Organization Resource](https://hl7.org/fhir/R4/organization.html)
 - [FHIR Practitioner Resource](https://hl7.org/fhir/R4/practitioner.html)
@@ -121,10 +123,11 @@ Hàm ý cho dự án:
 
 ## Bảo mật và kiểm toán
 
-OWASP API Security Top 10 2023 là nền kiểm tra rủi ro API. NIST SP 800-207 là tài liệu chính thức về Zero Trust Architecture. Với hệ thống bệnh án, hai hướng này giúp tránh thiết kế dựa vào niềm tin mạng nội bộ.
+OWASP API Security Top 10 2023 là nền kiểm tra rủi ro API. OWASP ASVS 5.0.0 là baseline để biến yêu cầu bảo mật web/API thành các yêu cầu có thể kiểm chứng, thay vì chỉ nói chung chung "hệ thống an toàn". NIST SP 800-207 là tài liệu chính thức về Zero Trust Architecture. Với hệ thống bệnh án, các hướng này giúp tránh thiết kế dựa vào niềm tin mạng nội bộ.
 
 Nguồn:
 
+- [OWASP Application Security Verification Standard 5.0.0](https://owasp.org/www-project-application-security-verification-standard/)
 - [OWASP API Security Top 10 2023](https://owasp.org/API-Security/editions/2023/en/0x00-header/)
 - [NIST SP 800-207 - Zero Trust Architecture](https://www.nist.gov/publications/zero-trust-architecture-0)
 - [NIST Cybersecurity Framework](https://www.nist.gov/cyberframework)
@@ -134,6 +137,7 @@ Hàm ý cho dự án:
 - Mọi API cần xác thực, phân quyền và kiểm soát truy cập theo đối tượng dữ liệu.
 - Cần chống lộ dữ liệu quá mức, truy cập sai bệnh nhân, thiếu rate limit và thiếu logging.
 - Không mặc định tin cậy request chỉ vì nó đến từ mạng nội bộ.
+- Các yêu cầu bảo mật quan trọng nên được ghi theo mã kiểm chứng cụ thể khi có thể, ví dụ `v5.0.0-...` của ASVS, để review và audit không phụ thuộc vào diễn giải miệng.
 
 ## ISO 27799
 

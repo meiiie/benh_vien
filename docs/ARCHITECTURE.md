@@ -13,6 +13,17 @@ Kiến trúc khởi đầu là **modular monolith theo DDD**. Lý do:
 - Giao tiếp nội bộ trước mắt dùng module boundary trong mã nguồn; giao tiếp liên thông bên ngoài dùng API và chuẩn FHIR.
 - Các thành phần hạ tầng như HAPI FHIR, Orthanc, PostgreSQL, Redis/Valkey và MinIO được để trong `infra/` như môi trường thử nghiệm, không tự bật.
 
+## Ranh giới web client
+
+Frontend được tổ chức theo hướng modular monolith ở tầng UI/application để tránh `App.tsx` trở thành nơi chứa toàn bộ nghiệp vụ. Ranh giới chính:
+
+- `apps/web/src/pages` chỉ làm nhiệm vụ route/page renderer và layout hiển thị.
+- `apps/web/src/application` điều phối state, loader, command handler, runtime effect, derived context và panel context của ứng dụng.
+- `apps/web/src/features` sở hữu UI panel, API adapter, selector, command builder và helper của từng nghiệp vụ.
+- `apps/web/src/api`, `apps/web/src/auth`, `apps/web/src/lib`, `apps/web/src/types` và `apps/web/src/config` giữ phần client hạ tầng, xác thực, helper dùng chung, kiểu dữ liệu và cấu hình.
+
+`App.tsx` chỉ còn là composition root của web client: khởi tạo state cấp ứng dụng, tạo API client, nối các composition function, dựng auth gate và chuyển context cho route renderer. Nó không được chứa direct `fetch`, không gọi API route nghiệp vụ trực tiếp, không chứa mapper FHIR và không ôm ma trận handler của từng feature. Quyết định này được ghi tại [ADR-0005](decisions/ADR-0005-web-application-layer-boundary.md) và được kiểm chứng bằng `scripts/harness/web-app-composition.mjs`.
+
 ## Bounded context
 
 | Context | Vai trò | Có thể tách service khi nào |
