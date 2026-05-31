@@ -63,3 +63,23 @@ export function parseOptionalPositiveNumber(
 
   return parsePositiveNumber(rawValue, message);
 }
+
+export function parseOptionalPositiveInteger(
+  rawValue: string,
+  message: string
+): NumberDraft | { readonly ok: true; readonly value: undefined } {
+  const parsedValue = parseOptionalPositiveNumber(rawValue, message);
+
+  if (!parsedValue.ok || parsedValue.value === undefined) {
+    return parsedValue;
+  }
+
+  if (!Number.isInteger(parsedValue.value)) {
+    return {
+      ok: false,
+      message
+    };
+  }
+
+  return parsedValue;
+}

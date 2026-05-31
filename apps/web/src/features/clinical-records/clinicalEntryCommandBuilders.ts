@@ -1,4 +1,6 @@
 import { toApiDateTime } from "../../lib/clinicalFormatters.js";
+import type { CommandDraft } from "../../lib/commandDrafts.js";
+import { parseFiniteNumber } from "../../lib/commandDrafts.js";
 import type {
   NewAllergyIntoleranceForm,
   NewConditionForm,
@@ -11,8 +13,6 @@ import type {
   createEncounter,
   createObservation
 } from "./clinicalRecordApi.js";
-import type { CommandDraft } from "./clinicalRecordCommandDrafts.js";
-import { parseFiniteNumber } from "./clinicalRecordCommandDrafts.js";
 
 type CreateEncounterCommand = Parameters<typeof createEncounter>[2];
 type CreateAllergyIntoleranceCommand = Parameters<

@@ -1,10 +1,34 @@
 import { toApiDateTime } from "../../lib/clinicalFormatters.js";
+import type { CommandDraft } from "../../lib/commandDrafts.js";
+import { parseOptionalPositiveInteger } from "../../lib/commandDrafts.js";
 import type { NewClinicalDocumentForm } from "../../types/clinical.js";
 import type { CreateClinicalDocumentCommand } from "./clinicalDocumentApi.js";
 
-export function buildCreateClinicalDocumentCommand(
+export function buildCreateClinicalDocumentCommandDraft(
   form: NewClinicalDocumentForm,
   patientId: string
+): CommandDraft<CreateClinicalDocumentCommand> {
+  const attachmentSizeBytes = parseOptionalPositiveInteger(
+    form.attachmentSizeBytes,
+    "Kích thước tệp đính kèm phải là số nguyên lớn hơn 0."
+  );
+
+  if (!attachmentSizeBytes.ok) {
+    return attachmentSizeBytes;
+  }
+
+  return {
+    ok: true,
+    command: buildCreateClinicalDocumentCommand(form, patientId, {
+      attachmentSizeBytes: attachmentSizeBytes.value
+    })
+  };
+}
+
+export function buildCreateClinicalDocumentCommand(
+  form: NewClinicalDocumentForm,
+  patientId: string,
+  options: { readonly attachmentSizeBytes?: number } = {}
 ): CreateClinicalDocumentCommand {
   return {
     encounterId: form.encounterId || undefined,
@@ -12,9 +36,7 @@ export function buildCreateClinicalDocumentCommand(
     title: form.title,
     storageUri: form.storageUri.replace("/current/", `/${patientId}/`),
     attachmentContentType: form.attachmentContentType || undefined,
-    attachmentSizeBytes: form.attachmentSizeBytes
-      ? Number(form.attachmentSizeBytes)
-      : undefined,
+    attachmentSizeBytes: options.attachmentSizeBytes,
     attachmentHashSha1Base64: form.attachmentHashSha1Base64 || undefined,
     attachmentCreatedAt: form.attachmentCreatedAt
       ? toApiDateTime(form.attachmentCreatedAt)
