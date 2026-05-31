@@ -28,41 +28,28 @@ import {
   recordDeniedAccessAuditEvent,
   type DeniedAccessPayload
 } from "./modules/audit-events/denied-access-audit.js";
-import { registerAuditEventRoutes } from "./modules/audit-events/audit-event-routes.js";
 import { createAllergyIntoleranceRepository } from "./modules/allergy-intolerances/create-allergy-intolerance.repository.js";
-import { registerAllergyIntoleranceRoutes } from "./modules/allergy-intolerances/allergy-intolerance-routes.js";
-import { registerAuthRoutes } from "./modules/auth/auth-routes.js";
 import { assertAuthConfiguration } from "./modules/auth/auth-session.js";
 import {
   createLoginRateLimiterFromEnv,
   type LoginRateLimiter
 } from "./modules/auth/login-rate-limit.js";
 import { createClinicalDocumentRepository } from "./modules/clinical-documents/create-clinical-document.repository.js";
-import { registerClinicalDocumentRoutes } from "./modules/clinical-documents/clinical-document-routes.js";
 import { createConditionRepository } from "./modules/conditions/create-condition.repository.js";
-import { registerConditionRoutes } from "./modules/conditions/condition-routes.js";
 import { createConsentRepository } from "./modules/consents/create-consent.repository.js";
-import { registerConsentRoutes } from "./modules/consents/consent-routes.js";
 import { createDiagnosticReportRepository } from "./modules/diagnostic-reports/create-diagnostic-report.repository.js";
-import { registerDiagnosticReportRoutes } from "./modules/diagnostic-reports/diagnostic-report-routes.js";
 import { createEncounterRepository } from "./modules/encounters/create-encounter.repository.js";
-import { registerEncounterRoutes } from "./modules/encounters/encounter-routes.js";
 import { createImagingStudyRepository } from "./modules/imaging-studies/create-imaging-study.repository.js";
-import { registerImagingStudyRoutes } from "./modules/imaging-studies/imaging-study-routes.js";
 import { createMedicationAdministrationRepository } from "./modules/medication-administrations/create-medication-administration.repository.js";
-import { registerMedicationAdministrationRoutes } from "./modules/medication-administrations/medication-administration-routes.js";
 import { createMedicationDispenseRepository } from "./modules/medication-dispenses/create-medication-dispense.repository.js";
-import { registerMedicationDispenseRoutes } from "./modules/medication-dispenses/medication-dispense-routes.js";
 import { createMedicationRequestRepository } from "./modules/medication-requests/create-medication-request.repository.js";
-import { registerMedicationRequestRoutes } from "./modules/medication-requests/medication-request-routes.js";
 import { createObservationRepository } from "./modules/observations/create-observation.repository.js";
-import { registerObservationRoutes } from "./modules/observations/observation-routes.js";
 import { createPatientRepository } from "./modules/patients/create-patient.repository.js";
-import { registerPatientRoutes } from "./modules/patients/patient-routes.js";
 import {
   createRequestId,
   registerHttpBoundary
 } from "./modules/http/http-boundary.js";
+import { registerApiRoutes } from "./modules/http/api-routes.js";
 import { registerApiDocs } from "./modules/http/api-docs.js";
 import {
   assertRepositoryConfiguration,
@@ -73,23 +60,15 @@ import {
   resolveRecordTransferDeliveryWorkerConfig,
   resolveRecordTransferRetryWorkerConfig
 } from "./modules/http/runtime-config.js";
-import {
-  registerApiSystemRoutes,
-  registerSystemRoutes
-} from "./modules/http/system-routes.js";
+import { registerSystemRoutes } from "./modules/http/system-routes.js";
 import { startRecordTransferWorkers } from "./modules/http/record-transfer-workers.js";
 import { createProcedureRepository } from "./modules/procedures/create-procedure.repository.js";
-import { registerProcedureRoutes } from "./modules/procedures/procedure-routes.js";
 import { createProviderDirectoryRepository } from "./modules/provider-directory/create-provider-directory.repository.js";
-import { registerProviderDirectoryRoutes } from "./modules/provider-directory/provider-directory-routes.js";
 import { createRecordTransferDeliveryAttemptRepository } from "./modules/record-transfer-delivery-attempts/create-record-transfer-delivery-attempt.repository.js";
 import { createRecordTransferRepository } from "./modules/record-transfers/create-record-transfer.repository.js";
 import { assertRecordTransferCallbackSignatureConfiguration } from "./modules/record-transfers/record-transfer-callback-signature.js";
-import { registerRecordTransferRoutes } from "./modules/record-transfers/record-transfer-routes.js";
 import { createServiceRequestRepository } from "./modules/service-requests/create-service-request.repository.js";
-import { registerServiceRequestRoutes } from "./modules/service-requests/service-request-routes.js";
 import { createWorkflowTaskRepository } from "./modules/workflow-tasks/create-workflow-task.repository.js";
-import { registerWorkflowTaskRoutes } from "./modules/workflow-tasks/workflow-task-routes.js";
 
 export type ServerOptions = {
   readonly patientRepository?: PatientRepository;
@@ -276,188 +255,37 @@ export async function buildServer(options: ServerOptions = {}) {
     loginRateLimiter
   });
 
-  await app.register(
-    async (api) => {
-      registerApiSystemRoutes(api, {
-        apiVersion,
-        publicApiBaseUrl,
-        httpBodyLimitBytes,
-        apiDocsEnabled,
-        recordTransferDeliveryWorkerEnabled: recordTransferWorkers.deliveryWorkerEnabled,
-        recordTransferRetryWorkerEnabled: recordTransferWorkers.retryWorkerEnabled
-      });
-
-      await registerAuthRoutes(api, {
-        auditRepository: auditEventRepository,
-        loginRateLimiter
-      });
-      await registerPatientRoutes(
-        api,
-        patientRepository,
-        encounterRepository,
-        allergyIntoleranceRepository,
-        clinicalDocumentRepository,
-        conditionRepository,
-        observationRepository,
-        medicationRequestRepository,
-        medicationDispenseRepository,
-        medicationAdministrationRepository,
-        serviceRequestRepository,
-        diagnosticReportRepository,
-        imagingStudyRepository,
-        providerDirectoryRepository,
-        workflowTaskRepository,
-        procedureRepository,
-        consentRepository,
-        auditEventRepository
-      );
-      await registerProviderDirectoryRoutes(
-        api,
-        providerDirectoryRepository,
-        auditEventRepository
-      );
-      await registerConsentRoutes(
-        api,
-        patientRepository,
-        consentRepository,
-        providerDirectoryRepository,
-        auditEventRepository
-      );
-      await registerRecordTransferRoutes(
-        api,
-        patientRepository,
-        consentRepository,
-        recordTransferRepository,
-        recordTransferDeliveryAttemptRepository,
-        providerDirectoryRepository,
-        auditEventRepository
-      );
-      await registerEncounterRoutes(
-        api,
-        patientRepository,
-        encounterRepository,
-        providerDirectoryRepository,
-        auditEventRepository
-      );
-      await registerAllergyIntoleranceRoutes(
-        api,
-        patientRepository,
-        encounterRepository,
-        allergyIntoleranceRepository,
-        providerDirectoryRepository,
-        auditEventRepository
-      );
-      await registerConditionRoutes(
-        api,
-        patientRepository,
-        encounterRepository,
-        conditionRepository,
-        providerDirectoryRepository,
-        auditEventRepository
-      );
-      await registerObservationRoutes(
-        api,
-        patientRepository,
-        encounterRepository,
-        observationRepository,
-        providerDirectoryRepository,
-        auditEventRepository
-      );
-      await registerMedicationRequestRoutes(
-        api,
-        patientRepository,
-        encounterRepository,
-        conditionRepository,
-        medicationRequestRepository,
-        providerDirectoryRepository,
-        auditEventRepository
-      );
-      await registerMedicationDispenseRoutes(
-        api,
-        patientRepository,
-        encounterRepository,
-        medicationRequestRepository,
-        medicationDispenseRepository,
-        providerDirectoryRepository,
-        auditEventRepository
-      );
-      await registerMedicationAdministrationRoutes(
-        api,
-        patientRepository,
-        encounterRepository,
-        conditionRepository,
-        medicationRequestRepository,
-        medicationAdministrationRepository,
-        providerDirectoryRepository,
-        auditEventRepository
-      );
-      await registerServiceRequestRoutes(
-        api,
-        patientRepository,
-        encounterRepository,
-        conditionRepository,
-        serviceRequestRepository,
-        providerDirectoryRepository,
-        auditEventRepository
-      );
-      await registerWorkflowTaskRoutes(
-        api,
-        patientRepository,
-        encounterRepository,
-        serviceRequestRepository,
-        workflowTaskRepository,
-        providerDirectoryRepository,
-        auditEventRepository
-      );
-      await registerProcedureRoutes(
-        api,
-        patientRepository,
-        encounterRepository,
-        conditionRepository,
-        serviceRequestRepository,
-        diagnosticReportRepository,
-        clinicalDocumentRepository,
-        procedureRepository,
-        providerDirectoryRepository,
-        auditEventRepository
-      );
-      await registerDiagnosticReportRoutes(
-        api,
-        patientRepository,
-        encounterRepository,
-        serviceRequestRepository,
-        observationRepository,
-        diagnosticReportRepository,
-        providerDirectoryRepository,
-        auditEventRepository
-      );
-      await registerImagingStudyRoutes(
-        api,
-        patientRepository,
-        encounterRepository,
-        serviceRequestRepository,
-        diagnosticReportRepository,
-        imagingStudyRepository,
-        providerDirectoryRepository,
-        auditEventRepository
-      );
-      await registerClinicalDocumentRoutes(
-        api,
-        patientRepository,
-        encounterRepository,
-        clinicalDocumentRepository,
-        providerDirectoryRepository,
-        auditEventRepository
-      );
-      await registerAuditEventRoutes(
-        api,
-        patientRepository,
-        providerDirectoryRepository,
-        auditEventRepository
-      );
+  await registerApiRoutes(
+    app,
+    {
+      patientRepository,
+      providerDirectoryRepository,
+      encounterRepository,
+      allergyIntoleranceRepository,
+      conditionRepository,
+      observationRepository,
+      medicationRequestRepository,
+      medicationDispenseRepository,
+      medicationAdministrationRepository,
+      serviceRequestRepository,
+      workflowTaskRepository,
+      procedureRepository,
+      diagnosticReportRepository,
+      imagingStudyRepository,
+      clinicalDocumentRepository,
+      consentRepository,
+      recordTransferRepository,
+      recordTransferDeliveryAttemptRepository,
+      auditEventRepository,
+      loginRateLimiter
     },
     {
-      prefix: "/api/v1"
+      apiVersion,
+      publicApiBaseUrl,
+      httpBodyLimitBytes,
+      apiDocsEnabled,
+      recordTransferDeliveryWorkerEnabled: recordTransferWorkers.deliveryWorkerEnabled,
+      recordTransferRetryWorkerEnabled: recordTransferWorkers.retryWorkerEnabled
     }
   );
 
