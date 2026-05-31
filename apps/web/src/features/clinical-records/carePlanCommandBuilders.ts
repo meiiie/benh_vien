@@ -1,6 +1,7 @@
 import { toApiDateTime } from "../../lib/clinicalFormatters.js";
 import type { CommandDraft } from "../../lib/commandDrafts.js";
 import {
+  parseDicomUid,
   parseOptionalApiDateTime,
   parseOptionalFhirUnsignedInt
 } from "../../lib/commandDrafts.js";
@@ -143,13 +144,15 @@ export function buildImagingStudyCommand(
     readonly startedAt?: string;
     readonly seriesNumber?: number;
     readonly numberOfInstances?: number;
+    readonly seriesUid?: string;
+    readonly studyInstanceUid?: string;
   } = {}
 ): CreateImagingStudyCommand {
   return {
     encounterId: form.encounterId || undefined,
     basedOnServiceRequestId: form.basedOnServiceRequestId || undefined,
     diagnosticReportId: form.diagnosticReportId || undefined,
-    studyInstanceUid: form.studyInstanceUid,
+    studyInstanceUid: options.studyInstanceUid ?? form.studyInstanceUid,
     accessionNumber: form.accessionNumber || undefined,
     description: form.description || undefined,
     startedAt:
@@ -159,7 +162,7 @@ export function buildImagingStudyCommand(
     endpointId: form.endpointId || undefined,
     series: [
       {
-        uid: form.seriesUid,
+        uid: options.seriesUid ?? form.seriesUid,
         number: options.seriesNumber,
         modality: {
           system: form.modalitySystem,
@@ -211,12 +214,32 @@ export function buildImagingStudyCommandDraft(
     return startedAt;
   }
 
+  const studyInstanceUid = parseDicomUid(
+    form.studyInstanceUid,
+    "DICOM Study Instance UID không hợp lệ."
+  );
+
+  if (!studyInstanceUid.ok) {
+    return studyInstanceUid;
+  }
+
+  const seriesUid = parseDicomUid(
+    form.seriesUid,
+    "DICOM Series Instance UID không hợp lệ."
+  );
+
+  if (!seriesUid.ok) {
+    return seriesUid;
+  }
+
   return {
     ok: true,
     command: buildImagingStudyCommand(form, {
       numberOfInstances: numberOfInstances.value,
+      seriesUid: seriesUid.value,
       startedAt: startedAt.value,
-      seriesNumber: seriesNumber.value
+      seriesNumber: seriesNumber.value,
+      studyInstanceUid: studyInstanceUid.value
     })
   };
 }

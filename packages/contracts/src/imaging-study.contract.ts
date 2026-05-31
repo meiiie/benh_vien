@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DicomUidSchema } from "./dicom.contract.js";
 import { FhirUnsignedIntSchema } from "./fhir-primitives.contract.js";
 
 export const ImagingStudyStatusSchema = z.enum([
@@ -16,7 +17,7 @@ export const ImagingStudyCodingSchema = z.object({
 });
 
 export const ImagingStudySeriesSchema = z.object({
-  uid: z.string().min(1),
+  uid: DicomUidSchema,
   number: FhirUnsignedIntSchema.optional(),
   modality: ImagingStudyCodingSchema,
   description: z.string().min(1).optional(),
@@ -39,7 +40,7 @@ export const CreateImagingStudyRequestSchema = z
     basedOnServiceRequestId: z.string().min(1).optional(),
     diagnosticReportId: z.string().min(1).optional(),
     status: ImagingStudyStatusSchema.optional(),
-    studyInstanceUid: z.string().min(1),
+    studyInstanceUid: DicomUidSchema,
     accessionNumber: z.string().min(1).optional(),
     description: z.string().min(1).optional(),
     startedAt: z.string().datetime().optional(),

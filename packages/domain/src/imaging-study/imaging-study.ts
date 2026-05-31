@@ -1,4 +1,5 @@
 import { DomainError } from "../shared/domain-error.js";
+import { normalizeDicomUid } from "../shared/dicom-uid.js";
 import { normalizeFhirUnsignedInt } from "../shared/fhir-primitives.js";
 
 export type ImagingStudyStatus =
@@ -93,9 +94,9 @@ export class ImagingStudy {
       basedOnServiceRequestId: normalizeOptional(input.basedOnServiceRequestId),
       diagnosticReportId: normalizeOptional(input.diagnosticReportId),
       status: input.status ?? "available",
-      studyInstanceUid: normalizeRequired(
+      studyInstanceUid: normalizeDicomUid(
         input.studyInstanceUid,
-        "DICOM Study Instance UID không được để trống."
+        "DICOM Study Instance UID không hợp lệ."
       ),
       accessionNumber: normalizeOptional(input.accessionNumber),
       description: normalizeOptional(input.description),
@@ -123,9 +124,9 @@ export class ImagingStudy {
       encounterId: normalizeOptional(snapshot.encounterId),
       basedOnServiceRequestId: normalizeOptional(snapshot.basedOnServiceRequestId),
       diagnosticReportId: normalizeOptional(snapshot.diagnosticReportId),
-      studyInstanceUid: normalizeRequired(
+      studyInstanceUid: normalizeDicomUid(
         snapshot.studyInstanceUid,
-        "DICOM Study Instance UID không được để trống."
+        "DICOM Study Instance UID không hợp lệ."
       ),
       accessionNumber: normalizeOptional(snapshot.accessionNumber),
       description: normalizeOptional(snapshot.description),
@@ -177,7 +178,7 @@ function normalizeSeries(values: readonly CreateImagingStudySeriesInput[]): read
   const seenUids = new Set<string>();
 
   return values.map((value) => {
-    const uid = normalizeRequired(value.uid, "DICOM Series Instance UID không được để trống.");
+    const uid = normalizeDicomUid(value.uid, "DICOM Series Instance UID không hợp lệ.");
 
     if (seenUids.has(uid)) {
       throw new DomainError("DICOM Series Instance UID không được trùng lặp trong cùng ImagingStudy.");

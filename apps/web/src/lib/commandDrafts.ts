@@ -18,6 +18,16 @@ export type NumberDraft =
       readonly message: string;
     };
 
+export type StringDraft =
+  | {
+      readonly ok: true;
+      readonly value: string;
+    }
+  | {
+      readonly ok: false;
+      readonly message: string;
+    };
+
 export type OptionalStringDraft =
   | {
       readonly ok: true;
@@ -29,6 +39,8 @@ export type OptionalStringDraft =
     };
 
 export const fhirUnsignedIntMax = 2_147_483_647;
+
+const dicomUidPattern = /^(?:0|[1-9]\d*)(?:\.(?:0|[1-9]\d*))*$/;
 
 export function parseFiniteNumber(rawValue: string, message: string): NumberDraft {
   const value = Number(rawValue);
@@ -132,5 +144,21 @@ export function parseOptionalApiDateTime(
   return {
     ok: true,
     value: date.toISOString()
+  };
+}
+
+export function parseDicomUid(rawValue: string, message: string): StringDraft {
+  const value = rawValue.trim();
+
+  if (!value || value.length > 64 || !dicomUidPattern.test(value)) {
+    return {
+      ok: false,
+      message
+    };
+  }
+
+  return {
+    ok: true,
+    value
   };
 }

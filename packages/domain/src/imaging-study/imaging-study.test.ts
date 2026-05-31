@@ -115,6 +115,38 @@ describe("ImagingStudy", () => {
     ).toThrow(DomainError);
   });
 
+  it("rejects malformed DICOM UIDs", () => {
+    expect(() =>
+      ImagingStudy.record({
+        id: "imaging-study-bad-uid-001",
+        patientId: "patient-001",
+        studyInstanceUid: "1.2.826.0.01.3680043.10.543.7",
+        series: [
+          {
+            uid: "1.2.826.0.1.3680043.10.543.7.1",
+            modality: dicomModality,
+            numberOfInstances: 1
+          }
+        ]
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      ImagingStudy.record({
+        id: "imaging-study-bad-uid-002",
+        patientId: "patient-001",
+        studyInstanceUid: "1.2.826.0.1.3680043.10.543.8",
+        series: [
+          {
+            uid: "1.2.826.0.1.3680043.10.543.8.",
+            modality: dicomModality,
+            numberOfInstances: 1
+          }
+        ]
+      })
+    ).toThrow(DomainError);
+  });
+
   it("rejects inconsistent series and instance counts", () => {
     expect(() =>
       ImagingStudy.record({

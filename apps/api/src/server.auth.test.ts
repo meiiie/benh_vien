@@ -2815,6 +2815,71 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 
+  it("rejects malformed DICOM UIDs at the request boundary", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const invalidStudyUidResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/imaging-studies",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json",
+        "x-request-id": "imaging-study-invalid-study-uid-001"
+      },
+      payload: {
+        studyInstanceUid: "1.2.826.0.01.3680043.10.543.202605270101",
+        series: [
+          {
+            uid: "1.2.826.0.1.3680043.10.543.202605270101.1",
+            modality: {
+              system: "http://dicom.nema.org/resources/ontology/DCM",
+              code: "DX",
+              display: "Digital Radiography"
+            },
+            numberOfInstances: 1
+          }
+        ]
+      }
+    });
+
+    expect(invalidStudyUidResponse.statusCode).toBe(400);
+    expect(invalidStudyUidResponse.json()).toMatchObject({
+      error: "VALIDATION_ERROR",
+      requestId: "imaging-study-invalid-study-uid-001"
+    });
+
+    const invalidSeriesUidResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/imaging-studies",
+      headers: {
+        ...treatmentHeaders(accessToken),
+        "content-type": "application/json",
+        "x-request-id": "imaging-study-invalid-series-uid-001"
+      },
+      payload: {
+        studyInstanceUid: "1.2.826.0.1.3680043.10.543.202605270102",
+        series: [
+          {
+            uid: "1.2.826.0.1.3680043.10.543.202605270102.",
+            modality: {
+              system: "http://dicom.nema.org/resources/ontology/DCM",
+              code: "DX",
+              display: "Digital Radiography"
+            },
+            numberOfInstances: 1
+          }
+        ]
+      }
+    });
+
+    expect(invalidSeriesUidResponse.statusCode).toBe(400);
+    expect(invalidSeriesUidResponse.json()).toMatchObject({
+      error: "VALIDATION_ERROR",
+      requestId: "imaging-study-invalid-series-uid-001"
+    });
+  });
+
   it("returns provider directory and FHIR Endpoint resources", async () => {
     app = await readyServer();
     const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
