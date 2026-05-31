@@ -20,7 +20,7 @@ import {
   Info,
   PageHeader
 } from "./components/AppShell.js";
-import { createClinicalDocument, listClinicalDocuments, signClinicalDocument } from "./features/clinical-documents/clinicalDocumentApi.js";
+import { createClinicalDocument, signClinicalDocument } from "./features/clinical-documents/clinicalDocumentApi.js";
 import { buildCreateClinicalDocumentCommandDraft } from "./features/clinical-documents/clinicalDocumentCommandBuilders.js";
 import { buildClinicalDocumentPanelRenderers } from "./features/clinical-documents/clinicalDocumentPanelRenderers.js";
 import {
@@ -35,19 +35,7 @@ import {
   createObservation,
   createProcedure,
   createServiceRequest,
-  finishEncounter,
-  listAllergyIntolerances,
-  listConditions,
-  listDiagnosticReports,
-  listEncounters,
-  listImagingStudies,
-  listMedicationAdministrations,
-  listMedicationDispenses,
-  listMedicationRequests,
-  listObservations,
-  listProcedures,
-  listServiceRequests,
-  listWorkflowTasks
+  finishEncounter
 } from "./features/clinical-records/clinicalRecordApi.js";
 import { buildClinicalRecordPanelRenderers } from "./features/clinical-records/clinicalRecordPanelRenderers.js";
 import {
@@ -79,6 +67,7 @@ import {
 import { buildCreatePatientCommand, buildMergePatientCommand } from "./features/patient-registry/patientRegistryCommandBuilders.js";
 import { buildPatientPanelRenderers } from "./features/patient-registry/patientPanelRenderers.js";
 import { buildPatientRegistrySelection } from "./features/patient-registry/patientRegistrySelectors.js";
+import { buildPatientWorkspaceCollectionLoaders } from "./features/patient-workspace/patientWorkspaceCollectionLoaders.js";
 import {
   getApiRuntimeInfo,
   getFhirCapabilityStatement
@@ -103,7 +92,6 @@ import {
   isMissingRecordTransferDeliveryAttemptsRoute,
   resolveSelectedRecordTransferId
 } from "./lib/clinicalFormatters.js";
-import { loadPatientScopedCollection } from "./lib/patientScopedCollectionLoader.js";
 import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { AppRouteRenderer } from "./pages/AppRouteRenderer.js";
@@ -489,6 +477,63 @@ export function App() {
     setServiceRequestFhirPreview,
     setStatusMessage,
     setWorkflowTaskFhirPreview
+  });
+  const {
+    loadAllergyIntolerances,
+    loadClinicalDocuments,
+    loadConditions,
+    loadDiagnosticReports,
+    loadEncounters,
+    loadImagingStudies,
+    loadMedicationAdministrations,
+    loadMedicationDispenses,
+    loadMedicationRequests,
+    loadObservations,
+    loadProcedures,
+    loadServiceRequests,
+    loadWorkflowTasks
+  } = buildPatientWorkspaceCollectionLoaders({
+    clinicalApi,
+    setAllergyIntolerances,
+    setClinicalDocuments,
+    setConditions,
+    setDiagnosticReports,
+    setEncounters,
+    setImagingStudies,
+    setIsLoadingAllergyIntolerances,
+    setIsLoadingConditions,
+    setIsLoadingDiagnosticReports,
+    setIsLoadingDocuments,
+    setIsLoadingEncounters,
+    setIsLoadingImagingStudies,
+    setIsLoadingMedicationAdministrations,
+    setIsLoadingMedicationDispenses,
+    setIsLoadingMedicationRequests,
+    setIsLoadingObservations,
+    setIsLoadingProcedures,
+    setIsLoadingServiceRequests,
+    setIsLoadingWorkflowTasks,
+    setMedicationAdministrations,
+    setMedicationDispenses,
+    setMedicationRequests,
+    setObservations,
+    setProcedures,
+    setSelectedAllergyIntoleranceId,
+    setSelectedConditionId,
+    setSelectedDiagnosticReportId,
+    setSelectedDocumentId,
+    setSelectedEncounterId,
+    setSelectedImagingStudyId,
+    setSelectedMedicationAdministrationId,
+    setSelectedMedicationDispenseId,
+    setSelectedMedicationRequestId,
+    setSelectedObservationId,
+    setSelectedProcedureId,
+    setSelectedServiceRequestId,
+    setSelectedWorkflowTaskId,
+    setServiceRequests,
+    setStatusMessage,
+    setWorkflowTasks
   });
   const patientPanels = buildPatientPanelRenderers({
     patients,
@@ -1081,180 +1126,6 @@ export function App() {
     }
 
     await Promise.all(workspaceTasks);
-  }
-
-  async function loadEncounters(patientId: string, nextSelectedEncounterId?: string) {
-    await loadPatientScopedCollection({
-      errorMessage: "Không thể tải lượt khám",
-      listItems: () => listEncounters(clinicalApi, patientId),
-      nextSelectedId: nextSelectedEncounterId,
-      setItems: setEncounters,
-      setLoading: setIsLoadingEncounters,
-      setSelectedId: setSelectedEncounterId,
-      setStatusMessage
-    });
-  }
-
-  async function loadClinicalDocuments(patientId: string, nextSelectedDocumentId?: string) {
-    await loadPatientScopedCollection({
-      errorMessage: "Không thể tải tài liệu bệnh án",
-      listItems: () => listClinicalDocuments(clinicalApi, patientId),
-      nextSelectedId: nextSelectedDocumentId,
-      setItems: setClinicalDocuments,
-      setLoading: setIsLoadingDocuments,
-      setSelectedId: setSelectedDocumentId,
-      setStatusMessage
-    });
-  }
-
-  async function loadAllergyIntolerances(
-    patientId: string,
-    nextSelectedAllergyIntoleranceId?: string
-  ) {
-    await loadPatientScopedCollection({
-      errorMessage: "Không thể tải dị ứng/cảnh báo",
-      listItems: () => listAllergyIntolerances(clinicalApi, patientId),
-      nextSelectedId: nextSelectedAllergyIntoleranceId,
-      setItems: setAllergyIntolerances,
-      setLoading: setIsLoadingAllergyIntolerances,
-      setSelectedId: setSelectedAllergyIntoleranceId,
-      setStatusMessage
-    });
-  }
-
-  async function loadConditions(patientId: string, nextSelectedConditionId?: string) {
-    await loadPatientScopedCollection({
-      errorMessage: "Không thể tải chẩn đoán/vấn đề sức khỏe",
-      listItems: () => listConditions(clinicalApi, patientId),
-      nextSelectedId: nextSelectedConditionId,
-      setItems: setConditions,
-      setLoading: setIsLoadingConditions,
-      setSelectedId: setSelectedConditionId,
-      setStatusMessage
-    });
-  }
-
-  async function loadObservations(patientId: string, nextSelectedObservationId?: string) {
-    await loadPatientScopedCollection({
-      errorMessage: "Không thể tải chỉ số lâm sàng",
-      listItems: () => listObservations(clinicalApi, patientId),
-      nextSelectedId: nextSelectedObservationId,
-      setItems: setObservations,
-      setLoading: setIsLoadingObservations,
-      setSelectedId: setSelectedObservationId,
-      setStatusMessage
-    });
-  }
-
-  async function loadMedicationRequests(
-    patientId: string,
-    nextSelectedMedicationRequestId?: string
-  ) {
-    await loadPatientScopedCollection({
-      errorMessage: "Không thể tải chỉ định thuốc",
-      listItems: () => listMedicationRequests(clinicalApi, patientId),
-      nextSelectedId: nextSelectedMedicationRequestId,
-      setItems: setMedicationRequests,
-      setLoading: setIsLoadingMedicationRequests,
-      setSelectedId: setSelectedMedicationRequestId,
-      setStatusMessage
-    });
-  }
-
-  async function loadMedicationDispenses(
-    patientId: string,
-    nextSelectedMedicationDispenseId?: string
-  ) {
-    await loadPatientScopedCollection({
-      errorMessage: "Không thể tải cấp phát thuốc",
-      listItems: () => listMedicationDispenses(clinicalApi, patientId),
-      nextSelectedId: nextSelectedMedicationDispenseId,
-      setItems: setMedicationDispenses,
-      setLoading: setIsLoadingMedicationDispenses,
-      setSelectedId: setSelectedMedicationDispenseId,
-      setStatusMessage
-    });
-  }
-
-  async function loadMedicationAdministrations(
-    patientId: string,
-    nextSelectedMedicationAdministrationId?: string
-  ) {
-    await loadPatientScopedCollection({
-      errorMessage: "Không thể tải lần dùng thuốc",
-      listItems: () => listMedicationAdministrations(clinicalApi, patientId),
-      nextSelectedId: nextSelectedMedicationAdministrationId,
-      setItems: setMedicationAdministrations,
-      setLoading: setIsLoadingMedicationAdministrations,
-      setSelectedId: setSelectedMedicationAdministrationId,
-      setStatusMessage
-    });
-  }
-
-  async function loadServiceRequests(
-    patientId: string,
-    nextSelectedServiceRequestId?: string
-  ) {
-    await loadPatientScopedCollection({
-      errorMessage: "Không thể tải chỉ định dịch vụ",
-      listItems: () => listServiceRequests(clinicalApi, patientId),
-      nextSelectedId: nextSelectedServiceRequestId,
-      setItems: setServiceRequests,
-      setLoading: setIsLoadingServiceRequests,
-      setSelectedId: setSelectedServiceRequestId,
-      setStatusMessage
-    });
-  }
-
-  async function loadWorkflowTasks(patientId: string, nextSelectedWorkflowTaskId?: string) {
-    await loadPatientScopedCollection({
-      errorMessage: "Không thể tải hàng đợi công việc",
-      listItems: () => listWorkflowTasks(clinicalApi, patientId),
-      nextSelectedId: nextSelectedWorkflowTaskId,
-      setItems: setWorkflowTasks,
-      setLoading: setIsLoadingWorkflowTasks,
-      setSelectedId: setSelectedWorkflowTaskId,
-      setStatusMessage
-    });
-  }
-
-  async function loadProcedures(patientId: string, nextSelectedProcedureId?: string) {
-    await loadPatientScopedCollection({
-      errorMessage: "Không thể tải thủ thuật/hoạt động đã thực hiện",
-      listItems: () => listProcedures(clinicalApi, patientId),
-      nextSelectedId: nextSelectedProcedureId,
-      setItems: setProcedures,
-      setLoading: setIsLoadingProcedures,
-      setSelectedId: setSelectedProcedureId,
-      setStatusMessage
-    });
-  }
-
-  async function loadDiagnosticReports(
-    patientId: string,
-    nextSelectedDiagnosticReportId?: string
-  ) {
-    await loadPatientScopedCollection({
-      errorMessage: "Không thể tải báo cáo kết quả",
-      listItems: () => listDiagnosticReports(clinicalApi, patientId),
-      nextSelectedId: nextSelectedDiagnosticReportId,
-      setItems: setDiagnosticReports,
-      setLoading: setIsLoadingDiagnosticReports,
-      setSelectedId: setSelectedDiagnosticReportId,
-      setStatusMessage
-    });
-  }
-
-  async function loadImagingStudies(patientId: string, nextSelectedImagingStudyId?: string) {
-    await loadPatientScopedCollection({
-      errorMessage: "Không thể tải nghiên cứu hình ảnh/PACS",
-      listItems: () => listImagingStudies(clinicalApi, patientId),
-      nextSelectedId: nextSelectedImagingStudyId,
-      setItems: setImagingStudies,
-      setLoading: setIsLoadingImagingStudies,
-      setSelectedId: setSelectedImagingStudyId,
-      setStatusMessage
-    });
   }
 
   async function loadAuditEvents(patientId: string, options: { readonly silent?: boolean } = {}) {

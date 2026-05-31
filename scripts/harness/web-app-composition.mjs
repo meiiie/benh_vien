@@ -49,6 +49,7 @@ const requiredModules = [
   "apps/web/src/features/patient-registry/patientRegistryCommandBuilders.ts",
   "apps/web/src/features/patient-registry/patientRegistryApi.ts",
   "apps/web/src/features/patient-registry/patientRegistrySelectors.ts",
+  "apps/web/src/features/patient-workspace/patientWorkspaceCollectionLoaders.ts",
   "apps/web/src/features/platform/platformApi.ts",
   "apps/web/src/features/provider-directory/ProviderDirectoryPanel.tsx",
   "apps/web/src/features/provider-directory/providerDirectoryApi.ts",
