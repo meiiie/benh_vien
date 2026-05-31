@@ -1,5 +1,8 @@
 import type { DemoRole } from "../auth/demoLogin.js";
 
+export * from "./providerDirectory.js";
+export * from "./recordTransfers.js";
+
 export type AppRoute =
   | "landing"
   | "login"
@@ -196,112 +199,6 @@ export type ImagingStudyStatus =
 export type PurposeOfUse = "TREATMENT" | "AUDIT" | "OPERATIONS";
 export type ConsentStatus = "active" | "revoked" | "expired";
 export type ConsentCategory = "record-sharing";
-export type RecordTransferStatus =
-  | "draft"
-  | "requested"
-  | "ready"
-  | "in-progress"
-  | "completed"
-  | "cancelled"
-  | "failed"
-  | "dead-lettered";
-export type RecordTransferPriority = "routine" | "urgent" | "asap" | "stat";
-export type RecordTransferBundleType = "collection" | "document";
-export type RecordTransferDeliveryAttemptStatus = "queued" | "succeeded" | "failed";
-export type ProviderOrganizationType =
-  | "hospital"
-  | "department"
-  | "laboratory"
-  | "imaging"
-  | "payer"
-  | "government"
-  | "other";
-export type ProviderEndpointConnectionType =
-  | "hl7-fhir-rest"
-  | "dicom-wado-rs"
-  | "hl7v2-mllp"
-  | "direct-project"
-  | "ihe-xds"
-  | "other";
-
-export type ProviderIdentifier = {
-  readonly system: string;
-  readonly value: string;
-  readonly type?: string;
-};
-
-export type ProviderTelecom = {
-  readonly system: "phone" | "email" | "url";
-  readonly value: string;
-  readonly use?: "work" | "mobile" | "home";
-};
-
-export type ProviderCoding = {
-  readonly system: string;
-  readonly code: string;
-  readonly display: string;
-};
-
-export type ProviderOrganization = {
-  readonly id: string;
-  readonly identifiers: readonly ProviderIdentifier[];
-  readonly active: boolean;
-  readonly type: ProviderOrganizationType;
-  readonly name: string;
-  readonly alias?: readonly string[];
-  readonly address?: string;
-  readonly telecom?: readonly ProviderTelecom[];
-  readonly partOfOrganizationId?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type ProviderPractitioner = {
-  readonly id: string;
-  readonly identifiers: readonly ProviderIdentifier[];
-  readonly active: boolean;
-  readonly fullName: string;
-  readonly telecom?: readonly ProviderTelecom[];
-  readonly qualification?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type ProviderEndpoint = {
-  readonly id: string;
-  readonly managingOrganizationId: string;
-  readonly status: "active" | "suspended" | "error" | "off" | "entered-in-error" | "test";
-  readonly connectionType: ProviderEndpointConnectionType;
-  readonly name: string;
-  readonly address: string;
-  readonly payloadTypes: readonly ProviderCoding[];
-  readonly contact?: readonly ProviderTelecom[];
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type ProviderPractitionerRole = {
-  readonly id: string;
-  readonly practitionerId?: string;
-  readonly organizationId: string;
-  readonly active: boolean;
-  readonly code: ProviderCoding;
-  readonly specialty?: ProviderCoding;
-  readonly endpointIds?: readonly string[];
-  readonly telecom?: readonly ProviderTelecom[];
-  readonly periodStart?: string;
-  readonly periodEnd?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type ProviderDirectory = {
-  readonly organizations: readonly ProviderOrganization[];
-  readonly practitioners: readonly ProviderPractitioner[];
-  readonly practitionerRoles: readonly ProviderPractitionerRole[];
-  readonly endpoints: readonly ProviderEndpoint[];
-  readonly generatedAt: string;
-};
 
 export type PatientIdentifier = {
   readonly system: string;
@@ -877,67 +774,6 @@ export type Consent = {
   readonly updatedAt: string;
 };
 
-export type RecordTransfer = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly status: RecordTransferStatus;
-  readonly priority: RecordTransferPriority;
-  readonly bundleType: RecordTransferBundleType;
-  readonly bundleId: string;
-  readonly sourceOrganizationId: string;
-  readonly recipientOrganizationId: string;
-  readonly consentReference: string;
-  readonly requestedByActorId: string;
-  readonly reason: string;
-  readonly requestedAt: string;
-  readonly sentAt?: string;
-  readonly receivedAt?: string;
-  readonly receivedByActorId?: string;
-  readonly acknowledgementReference?: string;
-  readonly failedAt?: string;
-  readonly failureReason?: string;
-  readonly nextRetryAt?: string;
-  readonly retryCount?: number;
-  readonly deadLetteredAt?: string;
-  readonly note?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type RecordTransferDeliveryAttempt = {
-  readonly id: string;
-  readonly recordTransferId: string;
-  readonly patientId: string;
-  readonly targetEndpointId: string;
-  readonly targetEndpointAddress: string;
-  readonly bundleId: string;
-  readonly bundleType: RecordTransferBundleType;
-  readonly idempotencyKey: string;
-  readonly attemptNumber: number;
-  readonly status: RecordTransferDeliveryAttemptStatus;
-  readonly queuedAt: string;
-  readonly completedAt?: string;
-  readonly httpStatus?: number;
-  readonly responseBodyPreview?: string;
-  readonly errorMessage?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type RecordTransferOperationalSeverity = "info" | "success" | "warning" | "danger";
-
-export type RecordTransferOperationalSummary = {
-  readonly severity: RecordTransferOperationalSeverity;
-  readonly title: string;
-  readonly description: string;
-  readonly nextAction: string;
-  readonly technicalSignal: string;
-  readonly attemptCount: number;
-  readonly failedAttemptCount: number;
-  readonly lastHttpStatus: string;
-  readonly nextRetry: string;
-};
-
 export type ApiRuntimeInfo = {
   readonly service: string;
   readonly product: string;
@@ -1025,14 +861,6 @@ export type ConsentsResponse = {
   readonly items: readonly Consent[];
 };
 
-export type RecordTransfersResponse = {
-  readonly items: readonly RecordTransfer[];
-};
-
-export type RecordTransferDeliveryAttemptsResponse = {
-  readonly items: readonly RecordTransferDeliveryAttempt[];
-};
-
 export type NewPatientForm = {
   fullName: string;
   birthDate: string;
@@ -1048,27 +876,6 @@ export type PatientMergeForm = {
   targetPatientId: string;
   reason: string;
   confirmationText: string;
-};
-
-export type NewRecordTransferForm = {
-  priority: RecordTransferPriority;
-  bundleType: RecordTransferBundleType;
-  sourceOrganizationId: string;
-  recipientOrganizationId: string;
-  consentReference: string;
-  reason: string;
-  note: string;
-};
-
-export type GatewayAcknowledgementForm = {
-  recordTransferId: string;
-  recipientOrganizationId: string;
-  acknowledgementReference: string;
-  receivedAt: string;
-  receivedByActorId: string;
-  targetEndpointId: string;
-  deliveryIdempotencyKey: string;
-  note: string;
 };
 
 export type NewEncounterForm = {
