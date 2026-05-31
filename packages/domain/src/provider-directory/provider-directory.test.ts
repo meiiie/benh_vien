@@ -193,6 +193,13 @@ describe("ProviderDirectory", () => {
           createdAt: "not-a-date"
         }),
         message: "createdAt của Endpoint"
+      },
+      {
+        name: "endpoint persistence timeline",
+        snapshot: withFirstEndpoint(createProviderDirectorySnapshot(), {
+          updatedAt: "1999-01-01T00:00:00.000Z"
+        }),
+        message: "Endpoint có updatedAt trước createdAt"
       }
     ];
 

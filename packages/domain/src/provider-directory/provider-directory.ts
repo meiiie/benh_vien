@@ -314,50 +314,66 @@ function normalizePractitionerRole(
 function normalizePersistedOrganization(
   snapshot: ProviderOrganizationSnapshot
 ): ProviderOrganizationSnapshot {
+  const createdAt = parseDate(snapshot.createdAt, "createdAt của Organization không hợp lệ.");
+  const updatedAt = parseDate(snapshot.updatedAt, "updatedAt của Organization không hợp lệ.");
+  assertPersistenceTimeline(createdAt, updatedAt, "Organization");
+
   return {
     ...normalizeOrganization(
       snapshot,
-      parseDate(snapshot.createdAt, "createdAt của Organization không hợp lệ.")
+      createdAt
     ),
-    createdAt: normalizeTimestamp(snapshot.createdAt, "createdAt của Organization không hợp lệ."),
-    updatedAt: normalizeTimestamp(snapshot.updatedAt, "updatedAt của Organization không hợp lệ.")
+    createdAt: createdAt.toISOString(),
+    updatedAt: updatedAt.toISOString()
   };
 }
 
 function normalizePersistedPractitioner(
   snapshot: ProviderPractitionerSnapshot
 ): ProviderPractitionerSnapshot {
+  const createdAt = parseDate(snapshot.createdAt, "createdAt của Practitioner không hợp lệ.");
+  const updatedAt = parseDate(snapshot.updatedAt, "updatedAt của Practitioner không hợp lệ.");
+  assertPersistenceTimeline(createdAt, updatedAt, "Practitioner");
+
   return {
     ...normalizePractitioner(
       snapshot,
-      parseDate(snapshot.createdAt, "createdAt của Practitioner không hợp lệ.")
+      createdAt
     ),
-    createdAt: normalizeTimestamp(snapshot.createdAt, "createdAt của Practitioner không hợp lệ."),
-    updatedAt: normalizeTimestamp(snapshot.updatedAt, "updatedAt của Practitioner không hợp lệ.")
+    createdAt: createdAt.toISOString(),
+    updatedAt: updatedAt.toISOString()
   };
 }
 
 function normalizePersistedEndpoint(snapshot: ProviderEndpointSnapshot): ProviderEndpointSnapshot {
+  const createdAt = parseDate(snapshot.createdAt, "createdAt của Endpoint không hợp lệ.");
+  const updatedAt = parseDate(snapshot.updatedAt, "updatedAt của Endpoint không hợp lệ.");
+  assertPersistenceTimeline(createdAt, updatedAt, "Endpoint");
+
   return {
     ...normalizeEndpoint(
       snapshot,
-      parseDate(snapshot.createdAt, "createdAt của Endpoint không hợp lệ.")
+      createdAt
     ),
-    createdAt: normalizeTimestamp(snapshot.createdAt, "createdAt của Endpoint không hợp lệ."),
-    updatedAt: normalizeTimestamp(snapshot.updatedAt, "updatedAt của Endpoint không hợp lệ.")
+    createdAt: createdAt.toISOString(),
+    updatedAt: updatedAt.toISOString()
   };
 }
 
 function normalizePersistedPractitionerRole(
   snapshot: ProviderPractitionerRoleSnapshot
 ): ProviderPractitionerRoleSnapshot {
+  const createdAt = parseDate(snapshot.createdAt, "createdAt của PractitionerRole không hợp lệ.");
+  const updatedAt = parseDate(snapshot.updatedAt, "updatedAt của PractitionerRole không hợp lệ.");
+  assertPersistenceTimeline(createdAt, updatedAt, "PractitionerRole");
+
   return {
     ...normalizePractitionerRole(
       snapshot,
-      parseDate(snapshot.createdAt, "createdAt của PractitionerRole không hợp lệ.")
+      createdAt
     ),
-    createdAt: normalizeTimestamp(snapshot.createdAt, "createdAt của PractitionerRole không hợp lệ."),
-    updatedAt: normalizeTimestamp(snapshot.updatedAt, "updatedAt của PractitionerRole không hợp lệ.")
+    createdAt: createdAt.toISOString(),
+    updatedAt: updatedAt.toISOString()
   };
 }
 
@@ -528,6 +544,12 @@ function normalizeRolePeriod(
 
 function normalizeTimestamp(value: string, message: string): string {
   return parseDate(value, message).toISOString();
+}
+
+function assertPersistenceTimeline(createdAt: Date, updatedAt: Date, resourceType: string): void {
+  if (updatedAt < createdAt) {
+    throw new DomainError(`${resourceType} có updatedAt trước createdAt.`);
+  }
 }
 
 function parseDate(value: string, message: string): Date {
