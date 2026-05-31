@@ -140,6 +140,15 @@ export class Patient {
     const mergedAt = snapshot.mergedAt
       ? parseDate(snapshot.mergedAt, "Thời điểm merge hồ sơ không hợp lệ.")
       : undefined;
+    const createdAt = parseDate(
+      snapshot.createdAt,
+      "Thời điểm tạo hồ sơ bệnh nhân không hợp lệ."
+    );
+    const updatedAt = parseDate(
+      snapshot.updatedAt,
+      "Thời điểm cập nhật hồ sơ bệnh nhân không hợp lệ."
+    );
+
     assertMergeState({
       id,
       status,
@@ -148,6 +157,7 @@ export class Patient {
       mergedByActorId: snapshot.mergedByActorId,
       mergeReason: snapshot.mergeReason
     });
+    validateTimeline({ createdAt, updatedAt, mergedAt });
 
     return new Patient({
       id,
@@ -166,8 +176,8 @@ export class Patient {
       mergedAt,
       mergedByActorId: normalizeOptionalText(snapshot.mergedByActorId),
       mergeReason: normalizeOptionalText(snapshot.mergeReason),
-      createdAt: parseDate(snapshot.createdAt, "Thời điểm tạo hồ sơ bệnh nhân không hợp lệ."),
-      updatedAt: parseDate(snapshot.updatedAt, "Thời điểm cập nhật hồ sơ bệnh nhân không hợp lệ.")
+      createdAt,
+      updatedAt
     });
   }
 
@@ -255,6 +265,10 @@ export class Patient {
 
     const mergedAt = input.mergedAt ?? new Date();
     assertValidDate(mergedAt, "Thời điểm merge hồ sơ không hợp lệ.");
+
+    if (mergedAt < this.props.createdAt) {
+      throw new DomainError("Thời điểm merge hồ sơ không được trước thời điểm tạo hồ sơ.");
+    }
 
     this.props.status = "merged";
     this.props.mergedIntoPatientId = targetPatientId;
@@ -354,6 +368,20 @@ function assertMergeState(input: {
 
   if (hasMergeMetadata) {
     throw new DomainError("Chỉ hồ sơ ở trạng thái merged mới được có thông tin merge.");
+  }
+}
+
+function validateTimeline(input: {
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+  readonly mergedAt?: Date;
+}): void {
+  if (input.updatedAt < input.createdAt) {
+    throw new DomainError("Thời điểm cập nhật hồ sơ không được trước thời điểm tạo hồ sơ.");
+  }
+
+  if (input.mergedAt && input.mergedAt < input.createdAt) {
+    throw new DomainError("Thời điểm merge hồ sơ không được trước thời điểm tạo hồ sơ.");
   }
 }
 

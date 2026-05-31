@@ -48,7 +48,7 @@ describe("Patient", () => {
   });
 
   it("marks a duplicate patient as merged into a canonical record", () => {
-    const patient = Patient.register({
+    const patient = Patient.rehydrate({
       id: "patient-test-merge-source",
       identifiers: [
         {
@@ -58,7 +58,11 @@ describe("Patient", () => {
         }
       ],
       fullName: "Duplicate Patient",
-      managingOrganizationId: "hospital-demo"
+      gender: "unknown",
+      managingOrganizationId: "hospital-demo",
+      status: "active",
+      createdAt: "2026-05-28T00:00:00.000Z",
+      updatedAt: "2026-05-28T00:00:00.000Z"
     });
 
     patient.markMerged({
@@ -226,6 +230,67 @@ describe("Patient", () => {
       Patient.rehydrate({
         ...snapshot,
         createdAt: "not-a-date"
+      })
+    ).toThrow(DomainError);
+  });
+
+  it("rejects invalid rehydrated patient lifecycle timestamps", () => {
+    const snapshot = Patient.register({
+      id: "patient-test-lifecycle-001",
+      identifiers: [
+        {
+          system: "urn:gov:vietnam:national-id",
+          value: "000000000004",
+          type: "national-id"
+        }
+      ],
+      fullName: "Lifecycle Patient",
+      managingOrganizationId: "hospital-demo"
+    }).toSnapshot();
+
+    expect(() =>
+      Patient.rehydrate({
+        ...snapshot,
+        updatedAt: "1999-01-01T00:00:00.000Z"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Patient.rehydrate({
+        ...snapshot,
+        status: "merged",
+        mergedIntoPatientId: "patient-test-canonical",
+        mergedAt: "1999-01-01T00:00:00.000Z",
+        mergedByActorId: "admin-test",
+        mergeReason: "Duplicate registration"
+      })
+    ).toThrow(DomainError);
+  });
+
+  it("rejects merging a patient before it was created", () => {
+    const patient = Patient.rehydrate({
+      id: "patient-test-lifecycle-002",
+      identifiers: [
+        {
+          system: "urn:gov:vietnam:national-id",
+          value: "000000000005",
+          type: "national-id"
+        }
+      ],
+      fullName: "Precreated Merge Patient",
+      gender: "unknown",
+      managingOrganizationId: "hospital-demo",
+      status: "active",
+      createdAt: "2026-05-28T02:00:00.000Z",
+      updatedAt: "2026-05-28T02:00:00.000Z"
+    });
+
+    expect(() =>
+      patient.markMerged({
+        targetPatientId: "patient-test-canonical",
+        mergedByActorId: "admin-test",
+        reason: "Duplicate registration",
+        mergedAt: new Date("2026-05-28T01:59:59.000Z")
       })
     ).toThrow(DomainError);
   });
