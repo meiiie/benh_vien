@@ -85,6 +85,7 @@ import {
   buildEncounterCommand,
   buildObservationCommand
 } from "./features/clinical-records/clinicalEntryCommandBuilders.js";
+import { buildEncounterScopedFormUpdater } from "./features/clinical-records/encounterScopedFormUpdater.js";
 import {
   exportConsentFhir,
   listPatientConsents,
@@ -771,33 +772,25 @@ export function App() {
   }, [isAuthenticated, selectedPatientId]);
 
   useEffect(() => {
+    const updateEncounterScopedForm = buildEncounterScopedFormUpdater(selectedEncounterId);
+
+    setDocumentForm(updateEncounterScopedForm);
+    setAllergyIntoleranceForm(updateEncounterScopedForm);
+    setConditionForm(updateEncounterScopedForm);
+    setObservationForm(updateEncounterScopedForm);
+    setMedicationRequestForm(updateEncounterScopedForm);
+    setMedicationDispenseForm(updateEncounterScopedForm);
+    setMedicationAdministrationForm(updateEncounterScopedForm);
+    setServiceRequestForm(updateEncounterScopedForm);
+    setProcedureForm(updateEncounterScopedForm);
+    setDiagnosticReportForm(updateEncounterScopedForm);
+    setImagingStudyForm(updateEncounterScopedForm);
+
     if (!selectedEncounterId) {
       setEncounterFhirPreview(undefined);
-      setDocumentForm((current) => ({ ...current, encounterId: "" }));
-      setAllergyIntoleranceForm((current) => ({ ...current, encounterId: "" }));
-      setConditionForm((current) => ({ ...current, encounterId: "" }));
-      setObservationForm((current) => ({ ...current, encounterId: "" }));
-      setMedicationRequestForm((current) => ({ ...current, encounterId: "" }));
-      setMedicationDispenseForm((current) => ({ ...current, encounterId: "" }));
-      setMedicationAdministrationForm((current) => ({ ...current, encounterId: "" }));
-      setServiceRequestForm((current) => ({ ...current, encounterId: "" }));
-      setProcedureForm((current) => ({ ...current, encounterId: "" }));
-      setDiagnosticReportForm((current) => ({ ...current, encounterId: "" }));
-      setImagingStudyForm((current) => ({ ...current, encounterId: "" }));
       return;
     }
 
-    setDocumentForm((current) => ({ ...current, encounterId: selectedEncounterId }));
-    setAllergyIntoleranceForm((current) => ({ ...current, encounterId: selectedEncounterId }));
-    setConditionForm((current) => ({ ...current, encounterId: selectedEncounterId }));
-    setObservationForm((current) => ({ ...current, encounterId: selectedEncounterId }));
-    setMedicationRequestForm((current) => ({ ...current, encounterId: selectedEncounterId }));
-    setMedicationDispenseForm((current) => ({ ...current, encounterId: selectedEncounterId }));
-    setMedicationAdministrationForm((current) => ({ ...current, encounterId: selectedEncounterId }));
-    setServiceRequestForm((current) => ({ ...current, encounterId: selectedEncounterId }));
-    setProcedureForm((current) => ({ ...current, encounterId: selectedEncounterId }));
-    setDiagnosticReportForm((current) => ({ ...current, encounterId: selectedEncounterId }));
-    setImagingStudyForm((current) => ({ ...current, encounterId: selectedEncounterId }));
     void loadEncounterFhirPreview(selectedEncounterId);
   }, [selectedEncounterId]);
 
