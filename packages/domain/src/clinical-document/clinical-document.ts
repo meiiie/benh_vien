@@ -4,6 +4,12 @@ import { normalizeFhirUnsignedInt } from "../shared/fhir-primitives.js";
 const mimeTypePattern =
   /^[A-Za-z0-9!#$&^_.+-]+\/[A-Za-z0-9!#$&^_.+-]+(?:\s*;\s*[A-Za-z0-9!#$&^_.+-]+=(?:"[^"]+"|[A-Za-z0-9!#$&^_.+-]+))*$/;
 const sha1Base64Pattern = /^[A-Za-z0-9+/]{27}=$/;
+const clinicalDocumentStatuses = new Set<ClinicalDocumentStatus>([
+  "draft",
+  "signed",
+  "superseded",
+  "entered-in-error"
+]);
 
 export type ClinicalDocumentType =
   | "admission-note"
@@ -104,13 +110,18 @@ export class ClinicalDocument {
   }
 
   static rehydrate(snapshot: ClinicalDocumentSnapshot): ClinicalDocument {
+    const signedAt = parseOptionalDate(
+      snapshot.signedAt,
+      "Thời điểm ký tài liệu không hợp lệ."
+    );
+
     return new ClinicalDocument({
       id: snapshot.id,
       patientId: snapshot.patientId,
       encounterId: snapshot.encounterId,
       type: snapshot.type,
       title: snapshot.title,
-      status: snapshot.status,
+      status: normalizeStatus(snapshot.status, signedAt),
       storageUri: snapshot.storageUri,
       attachmentContentType: normalizeAttachmentContentType(
         snapshot.attachmentContentType
@@ -124,10 +135,7 @@ export class ClinicalDocument {
         "Thời điểm tạo tệp đính kèm không hợp lệ."
       ),
       authorPractitionerId: snapshot.authorPractitionerId,
-      signedAt: parseOptionalDate(
-        snapshot.signedAt,
-        "Thời điểm ký tài liệu không hợp lệ."
-      ),
+      signedAt,
       createdAt: parseRequiredDate(
         snapshot.createdAt,
         "Thời điểm tạo tài liệu không hợp lệ."
@@ -156,8 +164,13 @@ export class ClinicalDocument {
       throw new DomainError("Chỉ tài liệu ở trạng thái nháp mới được ký.");
     }
 
+    const normalizedSignedAt = normalizeDate(
+      signedAt,
+      "Thời điểm ký tài liệu không hợp lệ."
+    );
+
     this.props.status = "signed";
-    this.props.signedAt = signedAt;
+    this.props.signedAt = normalizedSignedAt;
     this.touch();
   }
 
@@ -217,6 +230,21 @@ function normalizeAttachmentHash(value: string | undefined): string | undefined 
   return normalized;
 }
 
+function normalizeStatus(
+  status: ClinicalDocumentStatus,
+  signedAt: Date | undefined
+): ClinicalDocumentStatus {
+  if (!clinicalDocumentStatuses.has(status)) {
+    throw new DomainError("Trạng thái tài liệu lâm sàng không hợp lệ.");
+  }
+
+  if (status === "signed" && !signedAt) {
+    throw new DomainError("Tài liệu đã ký phải có thời điểm ký.");
+  }
+
+  return status;
+}
+
 function parseOptionalDate(value: string | undefined, message: string): Date | undefined {
   return value ? parseRequiredDate(value, message) : undefined;
 }
@@ -224,9 +252,13 @@ function parseOptionalDate(value: string | undefined, message: string): Date | u
 function parseRequiredDate(value: string, message: string): Date {
   const date = new Date(value);
 
-  if (Number.isNaN(date.getTime())) {
+  return normalizeDate(date, message);
+}
+
+function normalizeDate(value: Date, message: string): Date {
+  if (Number.isNaN(value.getTime())) {
     throw new DomainError(message);
   }
 
-  return date;
+  return value;
 }

@@ -116,4 +116,42 @@ describe("ClinicalDocument", () => {
       })
     ).toThrow(DomainError);
   });
+
+  it("rejects invalid rehydrated lifecycle status", () => {
+    const snapshot = ClinicalDocument.create({
+      id: "clinical-document-lifecycle-001",
+      patientId: "patient-attachment-001",
+      type: "discharge-summary",
+      title: "Tài liệu vòng đời ký",
+      storageUri: "s3://wiiicare-demo/patients/patient-attachment-001/lifecycle.pdf",
+      authorPractitionerId: "practitioner-attachment-001"
+    }).toSnapshot();
+
+    expect(() =>
+      ClinicalDocument.rehydrate({
+        ...snapshot,
+        status: "signed"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      ClinicalDocument.rehydrate({
+        ...snapshot,
+        status: "unknown" as never
+      })
+    ).toThrow(DomainError);
+  });
+
+  it("rejects invalid signing timestamps", () => {
+    const document = ClinicalDocument.create({
+      id: "clinical-document-lifecycle-002",
+      patientId: "patient-attachment-001",
+      type: "discharge-summary",
+      title: "Tài liệu thời điểm ký lỗi",
+      storageUri: "s3://wiiicare-demo/patients/patient-attachment-001/invalid-sign.pdf",
+      authorPractitionerId: "practitioner-attachment-001"
+    });
+
+    expect(() => document.sign(new Date("not-a-date"))).toThrow(DomainError);
+  });
 });
