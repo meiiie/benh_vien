@@ -55,6 +55,7 @@ import { buildPatientRegistryHandlers } from "./features/patient-registry/patien
 import { buildPatientRegistryLoaders } from "./features/patient-registry/patientRegistryLoaders.js";
 import { buildPatientPanelRenderers } from "./features/patient-registry/patientPanelRenderers.js";
 import { buildPatientRegistrySelection } from "./features/patient-registry/patientRegistrySelectors.js";
+import { buildPatientWriteGuard } from "./features/patient-registry/patientWriteGuard.js";
 import { buildPatientWorkspaceCollectionLoaders } from "./features/patient-workspace/patientWorkspaceCollectionLoaders.js";
 import { buildPlatformLoaders } from "./features/platform/platformLoaders.js";
 import { buildFhirPreviewLoaders } from "./features/fhir-preview/fhirPreviewLoaders.js";
@@ -355,6 +356,12 @@ export function App() {
     patientStatusFilter,
     patients,
     selectedPatientId
+  });
+  const { ensureSelectedPatientWritable } = buildPatientWriteGuard({
+    selectedPatient,
+    selectedPatientMergeTarget,
+    selectedPatientWriteDisabled,
+    setStatusMessage
   });
   const patientWorkspaceCollections = {
     allergyIntolerances,
@@ -1120,27 +1127,6 @@ export function App() {
     }
 
     await Promise.all(workspaceTasks);
-  }
-
-  function buildSelectedPatientMergedReadOnlyMessage(): string {
-    if (!selectedPatient) {
-      return "Chưa chọn hồ sơ bệnh nhân.";
-    }
-
-    const mergeTarget = selectedPatientMergeTarget
-      ? `${selectedPatientMergeTarget.fullName} (${selectedPatientMergeTarget.id})`
-      : (selectedPatient.mergedIntoPatientId ?? "hồ sơ đích không còn trong danh sách tải về");
-
-    return `Hồ sơ này đã được merge vào ${mergeTarget}. Các thao tác ghi mới bị khóa để bảo toàn lịch sử và tránh ghi nhầm vào hồ sơ nguồn.`;
-  }
-
-  function ensureSelectedPatientWritable(): boolean {
-    if (!selectedPatientWriteDisabled) {
-      return true;
-    }
-
-    setStatusMessage(buildSelectedPatientMergedReadOnlyMessage());
-    return false;
   }
 
   async function handleLogin(event?: FormEvent<HTMLFormElement>) {
