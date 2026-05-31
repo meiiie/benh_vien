@@ -111,6 +111,11 @@ export class AllergyIntolerance {
   }
 
   static rehydrate(snapshot: AllergyIntoleranceSnapshot): AllergyIntolerance {
+    const recordedAt = parseDate(snapshot.recordedAt, "Thời điểm ghi nhận dị ứng không hợp lệ.");
+    const createdAt = parseDate(snapshot.createdAt, "Thời điểm tạo dị ứng không hợp lệ.");
+    const updatedAt = parseDate(snapshot.updatedAt, "Thời điểm cập nhật dị ứng không hợp lệ.");
+    validatePersistenceTimeline(createdAt, updatedAt);
+
     return new AllergyIntolerance({
       ...snapshot,
       id: normalizeRequired(snapshot.id, "Mã dị ứng không được để trống."),
@@ -123,14 +128,14 @@ export class AllergyIntolerance {
       criticality: snapshot.criticality ? normalizeCriticality(snapshot.criticality) : undefined,
       code: normalizeCode(snapshot.code, "dị ứng"),
       reaction: snapshot.reaction ? normalizeReaction(snapshot.reaction) : undefined,
-      recordedAt: parseDate(snapshot.recordedAt, "Thời điểm ghi nhận dị ứng không hợp lệ.").toISOString(),
+      recordedAt: recordedAt.toISOString(),
       recorderPractitionerId: normalizeRequired(
         snapshot.recorderPractitionerId,
         "Nhân sự ghi nhận dị ứng không được để trống."
       ),
       note: normalizeOptional(snapshot.note),
-      createdAt: parseDate(snapshot.createdAt, "Thời điểm tạo dị ứng không hợp lệ.").toISOString(),
-      updatedAt: parseDate(snapshot.updatedAt, "Thời điểm cập nhật dị ứng không hợp lệ.").toISOString()
+      createdAt: createdAt.toISOString(),
+      updatedAt: updatedAt.toISOString()
     });
   }
 
@@ -237,6 +242,12 @@ function normalizeReactionSeverity(
   }
 
   return value;
+}
+
+function validatePersistenceTimeline(createdAt: Date, updatedAt: Date): void {
+  if (updatedAt.getTime() < createdAt.getTime()) {
+    throw new DomainError("Thời điểm cập nhật dị ứng không được trước thời điểm tạo dị ứng.");
+  }
 }
 
 function parseDate(value: string, message: string): Date {

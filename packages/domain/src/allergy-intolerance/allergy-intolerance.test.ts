@@ -137,6 +137,13 @@ describe("AllergyIntolerance", () => {
         recorderPractitionerId: " "
       })
     ).toThrow(DomainError);
+
+    expect(() =>
+      AllergyIntolerance.rehydrate({
+        ...snapshot,
+        updatedAt: "1999-01-01T00:00:00.000Z"
+      })
+    ).toThrow(DomainError);
   });
 
   it("omits FHIR clinicalStatus when allergy is entered in error", () => {
