@@ -327,7 +327,8 @@ export function canAccess(actor: ActorContext, permission: Permission): boolean 
 export function canAccessPatientRecord(
   actor: ActorContext,
   patient: Pick<PatientSnapshot, "managingOrganizationId">,
-  providerDirectory: Pick<ProviderDirectorySnapshot, "organizations" | "practitionerRoles">
+  providerDirectory: Pick<ProviderDirectorySnapshot, "organizations" | "practitionerRoles">,
+  at = new Date()
 ): boolean {
   if (actor.role === "admin") {
     return true;
@@ -341,7 +342,7 @@ export function canAccessPatientRecord(
     return false;
   }
 
-  return getActivePractitionerOrganizationIds(actor.actorId, providerDirectory).has(
+  return getActivePractitionerOrganizationIds(actor.actorId, providerDirectory, at).has(
     patient.managingOrganizationId
   );
 }
@@ -351,9 +352,10 @@ export function filterAccessiblePatientRecords<
 >(
   actor: ActorContext,
   patients: readonly Patient[],
-  providerDirectory: Pick<ProviderDirectorySnapshot, "organizations" | "practitionerRoles">
+  providerDirectory: Pick<ProviderDirectorySnapshot, "organizations" | "practitionerRoles">,
+  at = new Date()
 ): Patient[] {
-  return patients.filter((patient) => canAccessPatientRecord(actor, patient, providerDirectory));
+  return patients.filter((patient) => canAccessPatientRecord(actor, patient, providerDirectory, at));
 }
 
 export function isActorRole(value: string): value is ActorRole {
@@ -372,12 +374,13 @@ export function isPurposeOfUse(value: string): value is PurposeOfUse {
 
 function getActivePractitionerOrganizationIds(
   actorId: string,
-  providerDirectory: Pick<ProviderDirectorySnapshot, "organizations" | "practitionerRoles">
+  providerDirectory: Pick<ProviderDirectorySnapshot, "organizations" | "practitionerRoles">,
+  at: Date
 ): Set<string> {
   const organizationIds = new Set<string>();
 
   for (const role of providerDirectory.practitionerRoles) {
-    if (role.active && role.practitionerId === actorId) {
+    if (role.practitionerId === actorId && isPractitionerRoleEffective(role, at)) {
       addOrganizationScope(organizationIds, role.organizationId, providerDirectory);
     }
   }
@@ -390,6 +393,10 @@ function addOrganizationScope(
   organizationId: string,
   providerDirectory: Pick<ProviderDirectorySnapshot, "organizations">
 ): void {
+  if (!isActiveOrganization(organizationId, providerDirectory)) {
+    return;
+  }
+
   organizationIds.add(organizationId);
 
   for (const ancestorId of findAncestorOrganizationIds(organizationId, providerDirectory)) {
@@ -417,9 +424,14 @@ function findAncestorOrganizationIds(
     !seenOrganizationIds.has(currentOrganization.partOfOrganizationId)
   ) {
     const parentOrganizationId = currentOrganization.partOfOrganizationId;
-    ancestorIds.push(parentOrganizationId);
     seenOrganizationIds.add(parentOrganizationId);
     currentOrganization = organizationsById.get(parentOrganizationId);
+
+    if (!currentOrganization?.active) {
+      break;
+    }
+
+    ancestorIds.push(parentOrganizationId);
   }
 
   return ancestorIds;
@@ -445,7 +457,7 @@ function findDescendantOrganizationIds(
     );
 
     for (const child of children) {
-      if (seenOrganizationIds.has(child.id)) {
+      if (seenOrganizationIds.has(child.id) || !child.active) {
         continue;
       }
 
@@ -456,4 +468,45 @@ function findDescendantOrganizationIds(
   }
 
   return descendantIds;
+}
+
+function isPractitionerRoleEffective(
+  role: ProviderDirectorySnapshot["practitionerRoles"][number],
+  at: Date
+): boolean {
+  if (!role.active || Number.isNaN(at.getTime())) {
+    return false;
+  }
+
+  const periodStart = role.periodStart ? parseDate(role.periodStart) : undefined;
+  const periodEnd = role.periodEnd ? parseDate(role.periodEnd) : undefined;
+
+  if (role.periodStart && !periodStart) {
+    return false;
+  }
+
+  if (role.periodEnd && !periodEnd) {
+    return false;
+  }
+
+  if (periodStart && at < periodStart) {
+    return false;
+  }
+
+  return !(periodEnd && at > periodEnd);
+}
+
+function isActiveOrganization(
+  organizationId: string,
+  providerDirectory: Pick<ProviderDirectorySnapshot, "organizations">
+): boolean {
+  return providerDirectory.organizations.some(
+    (organization) => organization.id === organizationId && organization.active
+  );
+}
+
+function parseDate(value: string): Date | undefined {
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime()) ? undefined : date;
 }
