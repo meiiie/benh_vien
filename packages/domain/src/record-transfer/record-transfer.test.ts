@@ -137,6 +137,65 @@ describe("RecordTransfer", () => {
     ).toThrow(DomainError);
   });
 
+  it("rejects invalid rehydrated transfer lifecycle metadata", () => {
+    const snapshot = RecordTransfer.create({
+      id: "record-transfer-test-012",
+      patientId: "patient-test-001",
+      bundleType: "document",
+      bundleId: "patient-document-patient-test-001",
+      sourceOrganizationId: "hospital-source",
+      recipientOrganizationId: "hospital-recipient",
+      consentReference: "consent-test-001",
+      requestedByActorId: "practitioner-test-001",
+      reason: "Chuyển hồ sơ để hội chẩn chuyên khoa.",
+      requestedAt: "2026-05-28T02:00:00.000Z"
+    }).toSnapshot();
+
+    expect(() =>
+      RecordTransfer.rehydrate({
+        ...snapshot,
+        status: "unknown" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      RecordTransfer.rehydrate({
+        ...snapshot,
+        priority: "low" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      RecordTransfer.rehydrate({
+        ...snapshot,
+        bundleType: "binary" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      RecordTransfer.rehydrate({
+        ...snapshot,
+        status: "requested",
+        sentAt: "2026-05-28T02:30:00.000Z"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      RecordTransfer.rehydrate({
+        ...snapshot,
+        status: "completed",
+        sentAt: "2026-05-28T02:30:00.000Z"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      RecordTransfer.rehydrate({
+        ...snapshot,
+        updatedAt: "2026-05-27T02:00:00.000Z"
+      })
+    ).toThrow(DomainError);
+  });
+
   it("records a failed delivery and prepares a retry", () => {
     const transfer = RecordTransfer.create({
       id: "record-transfer-test-006",

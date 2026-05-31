@@ -13,6 +13,27 @@ export type RecordTransferStatus =
 export type RecordTransferPriority = "routine" | "urgent" | "asap" | "stat";
 export type RecordTransferBundleType = "collection" | "document";
 
+const recordTransferStatuses = new Set<RecordTransferStatus>([
+  "draft",
+  "requested",
+  "ready",
+  "in-progress",
+  "completed",
+  "cancelled",
+  "failed",
+  "dead-lettered"
+]);
+const recordTransferPriorities = new Set<RecordTransferPriority>([
+  "routine",
+  "urgent",
+  "asap",
+  "stat"
+]);
+const recordTransferBundleTypes = new Set<RecordTransferBundleType>([
+  "collection",
+  "document"
+]);
+
 export type RecordTransferSnapshot = {
   readonly id: string;
   readonly patientId: string;
@@ -126,6 +147,9 @@ export class RecordTransfer {
     const retryCount = normalizeRetryCount(input.retryCount ?? 0);
     const receivedByActorId = normalizeOptional(input.receivedByActorId);
     const acknowledgementReference = normalizeOptional(input.acknowledgementReference);
+    const status = normalizeStatus(input.status ?? "requested");
+    const priority = normalizePriority(input.priority ?? "routine");
+    const bundleType = normalizeBundleType(input.bundleType);
 
     const sourceOrganizationId = normalizeRequired(
       input.sourceOrganizationId,
@@ -184,28 +208,28 @@ export class RecordTransfer {
 
     const failureReason = normalizeOptional(input.failureReason);
 
-    if (input.status === "failed" && (!failedAt || !failureReason)) {
+    if (status === "failed" && (!failedAt || !failureReason)) {
       throw new DomainError("Hồ sơ lỗi cần có thời điểm lỗi và lý do lỗi.");
     }
 
-    if (input.status === "dead-lettered" && (!failedAt || !failureReason || !deadLetteredAt)) {
+    if (status === "dead-lettered" && (!failedAt || !failureReason || !deadLetteredAt)) {
       throw new DomainError("Hồ sơ đưa vào hàng lỗi cuối cần có thời điểm lỗi, lý do lỗi và thời điểm kết thúc retry.");
     }
 
-    if (input.status === "dead-lettered" && nextRetryAt) {
+    if (status === "dead-lettered" && nextRetryAt) {
       throw new DomainError("Hồ sơ đã vào hàng lỗi cuối không được giữ lịch thử gửi lại.");
     }
 
-    if (deadLetteredAt && input.status !== "dead-lettered") {
+    if (deadLetteredAt && status !== "dead-lettered") {
       throw new DomainError("Thời điểm đưa vào hàng lỗi cuối chỉ hợp lệ với hồ sơ ở trạng thái dead-lettered.");
     }
 
-    return new RecordTransfer({
+    const snapshot: RecordTransferSnapshot = {
       id: normalizeRequired(input.id, "Mã chuyển hồ sơ không được để trống."),
       patientId: normalizeRequired(input.patientId, "Chuyển hồ sơ phải gắn với một bệnh nhân."),
-      status: input.status ?? "requested",
-      priority: input.priority ?? "routine",
-      bundleType: input.bundleType,
+      status,
+      priority,
+      bundleType,
       bundleId: normalizeRequired(input.bundleId, "Cần có mã FHIR Bundle dùng để chuyển hồ sơ."),
       sourceOrganizationId,
       recipientOrganizationId,
@@ -231,12 +255,39 @@ export class RecordTransfer {
       note: normalizeOptional(input.note),
       createdAt: now.toISOString(),
       updatedAt: now.toISOString()
-    });
+    };
+
+    validateRecordTransferSnapshot(snapshot);
+
+    return new RecordTransfer(snapshot);
   }
 
   static rehydrate(snapshot: RecordTransferSnapshot): RecordTransfer {
     const normalizedSnapshot: RecordTransferSnapshot = {
       ...snapshot,
+      id: normalizeRequired(snapshot.id, "Mã chuyển hồ sơ không được để trống."),
+      patientId: normalizeRequired(snapshot.patientId, "Chuyển hồ sơ phải gắn với một bệnh nhân."),
+      status: normalizeStatus(snapshot.status),
+      priority: normalizePriority(snapshot.priority),
+      bundleType: normalizeBundleType(snapshot.bundleType),
+      bundleId: normalizeRequired(snapshot.bundleId, "Cần có mã FHIR Bundle dùng để chuyển hồ sơ."),
+      sourceOrganizationId: normalizeRequired(
+        snapshot.sourceOrganizationId,
+        "Cần có cơ sở y tế gửi hồ sơ."
+      ),
+      recipientOrganizationId: normalizeRequired(
+        snapshot.recipientOrganizationId,
+        "Cần có cơ sở y tế nhận hồ sơ."
+      ),
+      consentReference: normalizeRequired(
+        snapshot.consentReference,
+        "Chuyển hồ sơ liên viện phải gắn với consent hợp lệ."
+      ),
+      requestedByActorId: normalizeRequired(
+        snapshot.requestedByActorId,
+        "Cần có người hoặc cơ chế tạo yêu cầu chuyển hồ sơ."
+      ),
+      reason: normalizeRequired(snapshot.reason, "Cần có lý do chuyển hồ sơ."),
       requestedAt: parseDate(
         snapshot.requestedAt,
         "Thời điểm yêu cầu chuyển hồ sơ không hợp lệ."
@@ -500,6 +551,14 @@ function validateRecordTransferSnapshot(snapshot: RecordTransferSnapshot): void 
   const deadLetteredAt = snapshot.deadLetteredAt
     ? parseDate(snapshot.deadLetteredAt, "Thời điểm đưa hồ sơ vào hàng lỗi cuối không hợp lệ.")
     : undefined;
+  parseDate(
+    snapshot.createdAt,
+    "Thời điểm tạo yêu cầu chuyển hồ sơ không hợp lệ."
+  );
+  const updatedAt = parseDate(
+    snapshot.updatedAt,
+    "Thời điểm cập nhật yêu cầu chuyển hồ sơ không hợp lệ."
+  );
   const receivedByActorId = normalizeOptional(snapshot.receivedByActorId);
   const acknowledgementReference = normalizeOptional(snapshot.acknowledgementReference);
   const failureReason = normalizeOptional(snapshot.failureReason);
@@ -511,6 +570,14 @@ function validateRecordTransferSnapshot(snapshot: RecordTransferSnapshot): void 
     snapshot.recipientOrganizationId,
     "Cần có cơ sở y tế nhận hồ sơ."
   );
+  const status = normalizeStatus(snapshot.status);
+
+  normalizePriority(snapshot.priority);
+  normalizeBundleType(snapshot.bundleType);
+
+  if (updatedAt < requestedAt) {
+    throw new DomainError("Thời điểm cập nhật yêu cầu chuyển hồ sơ không được trước thời điểm yêu cầu.");
+  }
 
   if (sourceOrganizationId === recipientOrganizationId) {
     throw new DomainError("Cơ sở gửi và cơ sở nhận hồ sơ phải khác nhau.");
@@ -558,19 +625,39 @@ function validateRecordTransferSnapshot(snapshot: RecordTransferSnapshot): void 
     throw new DomainError("Thời điểm đưa hồ sơ vào hàng lỗi cuối không được trước thời điểm lỗi chuyển hồ sơ.");
   }
 
-  if (snapshot.status === "failed" && (!failedAt || !failureReason)) {
+  if ((status === "draft" || status === "requested" || status === "ready") && sentAt) {
+    throw new DomainError("Hồ sơ chưa xử lý không được có thời điểm gửi.");
+  }
+
+  if (status === "in-progress" && !sentAt) {
+    throw new DomainError("Hồ sơ đang xử lý phải có thời điểm gửi.");
+  }
+
+  if (status === "completed" && (!sentAt || !receivedAt)) {
+    throw new DomainError("Hồ sơ hoàn tất phải có thời điểm gửi và thời điểm tiếp nhận.");
+  }
+
+  if (status !== "completed" && (receivedAt || receivedByActorId || acknowledgementReference)) {
+    throw new DomainError("Thông tin tiếp nhận chỉ hợp lệ khi hồ sơ đã hoàn tất.");
+  }
+
+  if (status !== "failed" && status !== "dead-lettered" && (failedAt || failureReason || nextRetryAt)) {
+    throw new DomainError("Thông tin lỗi hoặc lịch thử lại chỉ hợp lệ với hồ sơ đang lỗi.");
+  }
+
+  if (status === "failed" && (!failedAt || !failureReason)) {
     throw new DomainError("Hồ sơ lỗi cần có thời điểm lỗi và lý do lỗi.");
   }
 
-  if (snapshot.status === "dead-lettered" && (!failedAt || !failureReason || !deadLetteredAt)) {
+  if (status === "dead-lettered" && (!failedAt || !failureReason || !deadLetteredAt)) {
     throw new DomainError("Hồ sơ đưa vào hàng lỗi cuối cần có thời điểm lỗi, lý do lỗi và thời điểm kết thúc retry.");
   }
 
-  if (snapshot.status === "dead-lettered" && nextRetryAt) {
+  if (status === "dead-lettered" && nextRetryAt) {
     throw new DomainError("Hồ sơ đã vào hàng lỗi cuối không được giữ lịch thử gửi lại.");
   }
 
-  if (deadLetteredAt && snapshot.status !== "dead-lettered") {
+  if (deadLetteredAt && status !== "dead-lettered") {
     throw new DomainError("Thời điểm đưa vào hàng lỗi cuối chỉ hợp lệ với hồ sơ ở trạng thái dead-lettered.");
   }
 }
@@ -598,6 +685,30 @@ function parseDate(value: string, message: string): Date {
   }
 
   return date;
+}
+
+function normalizeStatus(value: RecordTransferStatus): RecordTransferStatus {
+  if (!recordTransferStatuses.has(value)) {
+    throw new DomainError("Trạng thái chuyển hồ sơ không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizePriority(value: RecordTransferPriority): RecordTransferPriority {
+  if (!recordTransferPriorities.has(value)) {
+    throw new DomainError("Mức ưu tiên chuyển hồ sơ không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizeBundleType(value: RecordTransferBundleType): RecordTransferBundleType {
+  if (!recordTransferBundleTypes.has(value)) {
+    throw new DomainError("Loại FHIR Bundle dùng để chuyển hồ sơ không hợp lệ.");
+  }
+
+  return value;
 }
 
 function normalizeRetryCount(value: number): number {
