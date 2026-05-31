@@ -12,6 +12,7 @@ import type {
   ProviderDirectoryRepository
 } from "@benh-vien-so/domain";
 import { verifyAccessToken } from "../auth/auth-session.js";
+import { readBearerToken } from "../auth/bearer-token.js";
 import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
 
 export function readActorContext(request: FastifyRequest): ActorContext | undefined {
@@ -334,11 +335,4 @@ function sendInvalidPurposeOfUseResponse(
     requestId: request.id,
     allowedPurposeOfUse: ["TREATMENT", "AUDIT", "OPERATIONS"]
   });
-}
-
-function readBearerToken(value: string | string[] | undefined): string | undefined {
-  const header = readHeader(value);
-  const match = /^Bearer\s+(.+)$/i.exec(header?.trim() ?? "");
-
-  return match?.[1]?.trim() || undefined;
 }

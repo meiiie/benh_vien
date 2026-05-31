@@ -5,6 +5,7 @@ import { AuditEvent } from "@benh-vien-so/domain";
 import type { ActorRole, AuditEventRepository } from "@benh-vien-so/domain";
 import { demoPasswordHash, dummyPasswordHash, verifyPassword } from "./auth-password.js";
 import { createAccessToken, verifyAccessToken } from "./auth-session.js";
+import { readBearerToken } from "./bearer-token.js";
 import {
   createLoginRateLimitKey,
   createLoginRateLimiterFromEnv,
@@ -255,13 +256,6 @@ function hashLoginUsername(username: string): string {
 
 function readHeader(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
-}
-
-function readBearerToken(value: string | string[] | undefined): string | undefined {
-  const header = Array.isArray(value) ? value[0] : value;
-  const match = /^Bearer\s+(.+)$/i.exec(header?.trim() ?? "");
-
-  return match?.[1]?.trim() || undefined;
 }
 
 function isDemoAuthEnabled(): boolean {
