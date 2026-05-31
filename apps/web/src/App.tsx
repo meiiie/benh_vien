@@ -1,6 +1,5 @@
 import { buildAuthSessionHandlers } from "./auth/authSessionHandlers.js";
 import { createClinicalApiClient } from "./api/clinicalApi.js";
-import { buildAuditLoaders } from "./features/audit/auditLoaders.js";
 import { useAuditState } from "./features/audit/auditState.js";
 import { AuthenticatedLayout } from "./components/AppShell.js";
 import { buildClinicalDocumentHandlers } from "./features/clinical-documents/clinicalDocumentHandlers.js";
@@ -13,15 +12,11 @@ import { buildEncounterHandlers } from "./features/clinical-records/encounterHan
 import { buildConsentLoaders } from "./features/consents/consentLoaders.js";
 import { useInteroperabilityState } from "./features/interoperability/interoperabilityState.js";
 import { buildPatientRegistryHandlers } from "./features/patient-registry/patientRegistryHandlers.js";
-import { buildPatientRegistryLoaders } from "./features/patient-registry/patientRegistryLoaders.js";
 import { buildPatientRegistrySelection } from "./features/patient-registry/patientRegistrySelectors.js";
 import { usePatientRegistryState } from "./features/patient-registry/patientRegistryState.js";
 import { buildPatientWriteGuard } from "./features/patient-registry/patientWriteGuard.js";
-import { buildPatientWorkspaceCollectionLoaders } from "./features/patient-workspace/patientWorkspaceCollectionLoaders.js";
 import { buildPatientWorkspaceLifecycle } from "./features/patient-workspace/patientWorkspaceLifecycle.js";
-import { buildPlatformLoaders } from "./features/platform/platformLoaders.js";
 import { usePlatformState } from "./features/platform/platformState.js";
-import { buildFhirPreviewLoaders } from "./features/fhir-preview/fhirPreviewLoaders.js";
 import { useFhirPreviewState } from "./features/fhir-preview/fhirPreviewState.js";
 import { useSelectedFhirPreviewEffects } from "./features/fhir-preview/selectedFhirPreviewEffects.js";
 import { buildRecordTransferHandlers } from "./features/record-transfers/recordTransferHandlers.js";
@@ -29,12 +24,17 @@ import { buildRecordTransferLoaders } from "./features/record-transfers/recordTr
 import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { AppRouteRenderer } from "./pages/AppRouteRenderer.js";
+import { buildAppAuditLoaders } from "./pages/appAuditLoaders.js";
 import { buildAuditPanels } from "./pages/auditPanelContext.js";
 import {
   buildAppAccessContext,
   buildAppRouteRuntimeContext,
   buildAppWorkspaceContext
 } from "./pages/appDerivedContext.js";
+import { buildAppFhirPreviewLoaders } from "./pages/appFhirPreviewLoaders.js";
+import { buildAppPatientRegistryLoaders } from "./pages/appPatientRegistryLoaders.js";
+import { buildAppPatientWorkspaceLoaders } from "./pages/appPatientWorkspaceLoaders.js";
+import { buildAppPlatformLoaders } from "./pages/appPlatformLoaders.js";
 import { useAppLifecycleEffects } from "./pages/appLifecycleEffects.js";
 import { useAppShellState } from "./pages/appShellState.js";
 import { buildAppRoutePanels } from "./pages/appRoutePanels.js";
@@ -128,13 +128,10 @@ export function App() {
     fhirPreviewState,
     platformState
   });
-  const { loadPatients } = buildPatientRegistryLoaders({
+  const { loadPatients } = buildAppPatientRegistryLoaders({
     clinicalApi,
     isAuditOnlySession,
-    selectedPatientId: patientRegistryState.selectedPatientId,
-    setIsLoadingPatients: patientRegistryState.setIsLoadingPatients,
-    setPatients: patientRegistryState.setPatients,
-    setSelectedPatientId: patientRegistryState.setSelectedPatientId,
+    patientRegistryState,
     setStatusMessage
   });
   const {
@@ -158,30 +155,23 @@ export function App() {
     loadProviderDirectoryFhirPreview,
     loadServiceRequestFhirPreview,
     loadWorkflowTaskFhirPreview
-  } = buildFhirPreviewLoaders({
+  } = buildAppFhirPreviewLoaders({
+    auditState,
     canReadAudit,
     clinicalApi,
+    fhirPreviewState,
     isAuditOnlySession,
-    ...fhirPreviewState,
-    setAuditFhirBundlePreview: auditState.setAuditFhirBundlePreview,
-    setIsExportingAuditFhir: auditState.setIsExportingAuditFhir,
-    setProviderDirectoryFhirPreview: platformState.setProviderDirectoryFhirPreview,
+    platformState,
     setStatusMessage
   });
   const {
     loadAuditEvents,
     loadGlobalAuditEvents,
     verifyAuditIntegrity
-  } = buildAuditLoaders({
+  } = buildAppAuditLoaders({
+    auditState,
     canReadAudit,
     clinicalApi,
-    setAuditEvents: auditState.setAuditEvents,
-    setAuditFhirBundlePreview: auditState.setAuditFhirBundlePreview,
-    setAuditIntegrityReport: auditState.setAuditIntegrityReport,
-    setGlobalAuditEvents: auditState.setGlobalAuditEvents,
-    setIsLoadingAuditEvents: auditState.setIsLoadingAuditEvents,
-    setIsLoadingGlobalAuditEvents: auditState.setIsLoadingGlobalAuditEvents,
-    setIsVerifyingAuditIntegrity: auditState.setIsVerifyingAuditIntegrity,
     setStatusMessage
   });
   const {
@@ -227,17 +217,12 @@ export function App() {
     loadApiRuntimeInfo,
     loadCapabilityStatement,
     loadProviderDirectory
-  } = buildPlatformLoaders({
+  } = buildAppPlatformLoaders({
     authSession,
     clinicalApi,
     isAuditOnlySession,
     loadProviderDirectoryFhirPreview,
-    setApiRuntimeInfo: platformState.setApiRuntimeInfo,
-    setApiRuntimeWarning: platformState.setApiRuntimeWarning,
-    setCapabilityStatementPreview: platformState.setCapabilityStatementPreview,
-    setIsLoadingProviderDirectory: platformState.setIsLoadingProviderDirectory,
-    setProviderDirectory: platformState.setProviderDirectory,
-    setProviderDirectoryFhirPreview: platformState.setProviderDirectoryFhirPreview
+    platformState
   });
   const {
     loadAllergyIntolerances,
@@ -253,9 +238,9 @@ export function App() {
     loadProcedures,
     loadServiceRequests,
     loadWorkflowTasks
-  } = buildPatientWorkspaceCollectionLoaders({
+  } = buildAppPatientWorkspaceLoaders({
     clinicalApi,
-    ...clinicalRecordState,
+    clinicalRecordState,
     setStatusMessage
   });
   const {
