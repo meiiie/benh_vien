@@ -3,6 +3,7 @@ import {
   mapAuditEventToFhir,
   mapAuditEventsToFhirBundle
 } from "../fhir/map-audit-event-to-fhir.js";
+import { DomainError } from "../shared/domain-error.js";
 import { AuditEvent, buildAuditIntegrityReport, sealAuditEvent } from "./audit-event.js";
 
 describe("AuditEvent integrity chain", () => {
@@ -104,6 +105,70 @@ describe("AuditEvent integrity chain", () => {
       brokenAtEventId: "audit-event-test-004",
       brokenReason: "EVENT_NOT_SEALED"
     });
+  });
+
+  it("rejects invalid audit event payloads and seal metadata", () => {
+    const baseInput = createAuditEventInput();
+    const snapshot = AuditEvent.record(baseInput).toSnapshot();
+
+    expect(() =>
+      AuditEvent.record({
+        ...baseInput,
+        occurredAt: new Date("not-a-date")
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      AuditEvent.record({
+        ...baseInput,
+        action: "patient.delete" as never
+      })
+    ).toThrow(DomainError);
+
+    for (const invalidSnapshot of [
+      {
+        ...snapshot,
+        occurredAt: "not-a-date"
+      },
+      {
+        ...snapshot,
+        action: "patient.delete" as never
+      },
+      {
+        ...snapshot,
+        resourceType: "Binary" as never
+      },
+      {
+        ...snapshot,
+        metadata: null as never
+      },
+      {
+        ...snapshot,
+        hashAlgorithm: "sha1" as never,
+        payloadHash: "a".repeat(64),
+        integrityHash: "b".repeat(64)
+      },
+      {
+        ...snapshot,
+        hashAlgorithm: "sha256" as const,
+        payloadHash: "not-a-sha256",
+        integrityHash: "b".repeat(64)
+      },
+      {
+        ...snapshot,
+        hashAlgorithm: "sha256" as const,
+        payloadHash: "a".repeat(64)
+      }
+    ]) {
+      expect(() => AuditEvent.rehydrate(invalidSnapshot)).toThrow(DomainError);
+    }
+
+    expect(() => sealAuditEvent(AuditEvent.rehydrate(snapshot), "not-a-sha256")).toThrow(
+      DomainError
+    );
+    expect(() =>
+      buildAuditIntegrityReport("patient-test-001", [], new Date("not-a-date"))
+    ).toThrow(DomainError);
   });
 
   it("maps sealed audit events to FHIR AuditEvent and collection Bundle", () => {
@@ -375,3 +440,19 @@ describe("AuditEvent integrity chain", () => {
     });
   });
 });
+
+function createAuditEventInput(): Parameters<typeof AuditEvent.record>[0] {
+  return {
+    id: "audit-event-invalid-fixture",
+    occurredAt: new Date("2026-05-28T00:00:00.000Z"),
+    actorId: "auditor-test",
+    action: "patient.read",
+    resourceType: "Patient",
+    resourceId: "patient-test-001",
+    patientId: "patient-test-001",
+    purposeOfUse: "AUDIT",
+    metadata: {
+      actorRole: "auditor"
+    }
+  };
+}

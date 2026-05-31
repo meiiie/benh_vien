@@ -107,6 +107,116 @@ export type AuditResourceType =
   | "Consent"
   | "AuditEvent";
 
+const auditActions = new Set<AuditAction>([
+  "auth.login.success",
+  "auth.login.failure",
+  "access.denied",
+  "patient.list",
+  "patient.create",
+  "patient.identifier-conflict",
+  "patient.merge",
+  "patient.read",
+  "patient.fhir-export",
+  "patient.fhir-bundle-export",
+  "patient.fhir-document-bundle-export",
+  "provider-directory.read",
+  "provider-directory.fhir-export",
+  "record-transfer.list",
+  "record-transfer.create",
+  "record-transfer.read",
+  "record-transfer.send",
+  "record-transfer.fail",
+  "record-transfer.retry",
+  "record-transfer.dead-letter",
+  "record-transfer.receive",
+  "record-transfer.acknowledgement-callback",
+  "record-transfer.fhir-export",
+  "encounter.list",
+  "encounter.create",
+  "encounter.read",
+  "encounter.finish",
+  "encounter.fhir-export",
+  "allergy-intolerance.list",
+  "allergy-intolerance.create",
+  "allergy-intolerance.read",
+  "allergy-intolerance.fhir-export",
+  "condition.list",
+  "condition.create",
+  "condition.read",
+  "condition.fhir-export",
+  "medication-request.list",
+  "medication-request.create",
+  "medication-request.read",
+  "medication-request.fhir-export",
+  "medication-dispense.list",
+  "medication-dispense.create",
+  "medication-dispense.read",
+  "medication-dispense.fhir-export",
+  "medication-administration.list",
+  "medication-administration.create",
+  "medication-administration.read",
+  "medication-administration.fhir-export",
+  "observation.list",
+  "observation.create",
+  "observation.read",
+  "observation.fhir-export",
+  "service-request.list",
+  "service-request.create",
+  "service-request.read",
+  "service-request.fhir-export",
+  "workflow-task.list",
+  "workflow-task.create",
+  "workflow-task.read",
+  "workflow-task.fhir-export",
+  "procedure.list",
+  "procedure.create",
+  "procedure.read",
+  "procedure.fhir-export",
+  "diagnostic-report.list",
+  "diagnostic-report.create",
+  "diagnostic-report.read",
+  "diagnostic-report.fhir-export",
+  "imaging-study.list",
+  "imaging-study.create",
+  "imaging-study.read",
+  "imaging-study.fhir-export",
+  "clinical-document.list",
+  "clinical-document.create",
+  "clinical-document.sign",
+  "clinical-document.fhir-export",
+  "clinical-document.provenance-export",
+  "consent.list",
+  "consent.create",
+  "consent.revoke",
+  "consent.fhir-export",
+  "audit-event.list",
+  "audit-event.fhir-export",
+  "audit-event.integrity-verify"
+]);
+
+const auditResourceTypes = new Set<AuditResourceType>([
+  "Patient",
+  "ProviderDirectory",
+  "RecordTransfer",
+  "Encounter",
+  "AllergyIntolerance",
+  "Condition",
+  "MedicationRequest",
+  "MedicationDispense",
+  "MedicationAdministration",
+  "Observation",
+  "ServiceRequest",
+  "Task",
+  "Procedure",
+  "DiagnosticReport",
+  "ImagingStudy",
+  "ClinicalDocument",
+  "Consent",
+  "AuditEvent"
+]);
+
+const sha256HexPattern = /^[a-f0-9]{64}$/;
+
 export type AuditEventSnapshot = {
   readonly id?: string;
   readonly occurredAt: string;
@@ -170,39 +280,43 @@ export class AuditEvent {
   static record(input: RecordAuditEventInput): AuditEvent {
     const actorId = normalizeRequired(input.actorId, "Người thực hiện audit không được để trống.");
     const resourceId = normalizeRequired(input.resourceId, "Tài nguyên audit không được để trống.");
+    const occurredAt = input.occurredAt ?? new Date();
+    assertValidDate(occurredAt, "Thời điểm ghi nhận audit không hợp lệ.");
 
     return new AuditEvent({
       id: input.id?.trim() || undefined,
-      occurredAt: input.occurredAt ?? new Date(),
+      occurredAt,
       actorId,
-      action: input.action,
-      resourceType: input.resourceType,
+      action: normalizeAction(input.action),
+      resourceType: normalizeResourceType(input.resourceType),
       resourceId,
       patientId: normalizeOptional(input.patientId),
       purposeOfUse: normalizeOptional(input.purposeOfUse),
       ipAddress: normalizeOptional(input.ipAddress),
       userAgent: normalizeOptional(input.userAgent),
-      metadata: input.metadata
+      metadata: normalizeMetadata(input.metadata)
     });
   }
 
   static rehydrate(snapshot: AuditEventSnapshot): AuditEvent {
+    const seal = normalizeSealMetadata(snapshot);
+
     return new AuditEvent({
-      id: snapshot.id,
-      occurredAt: new Date(snapshot.occurredAt),
-      actorId: snapshot.actorId,
-      action: snapshot.action,
-      resourceType: snapshot.resourceType,
-      resourceId: snapshot.resourceId,
-      patientId: snapshot.patientId,
-      purposeOfUse: snapshot.purposeOfUse,
-      ipAddress: snapshot.ipAddress,
-      userAgent: snapshot.userAgent,
-      metadata: snapshot.metadata,
-      hashAlgorithm: snapshot.hashAlgorithm,
-      previousHash: snapshot.previousHash,
-      payloadHash: snapshot.payloadHash,
-      integrityHash: snapshot.integrityHash
+      id: normalizeOptional(snapshot.id),
+      occurredAt: parseDate(snapshot.occurredAt, "Thời điểm ghi nhận audit không hợp lệ."),
+      actorId: normalizeRequired(snapshot.actorId, "Người thực hiện audit không được để trống."),
+      action: normalizeAction(snapshot.action),
+      resourceType: normalizeResourceType(snapshot.resourceType),
+      resourceId: normalizeRequired(snapshot.resourceId, "Tài nguyên audit không được để trống."),
+      patientId: normalizeOptional(snapshot.patientId),
+      purposeOfUse: normalizeOptional(snapshot.purposeOfUse),
+      ipAddress: normalizeOptional(snapshot.ipAddress),
+      userAgent: normalizeOptional(snapshot.userAgent),
+      metadata: normalizeMetadata(snapshot.metadata),
+      hashAlgorithm: seal.hashAlgorithm,
+      previousHash: seal.previousHash,
+      payloadHash: seal.payloadHash,
+      integrityHash: seal.integrityHash
     });
   }
 
@@ -238,16 +352,19 @@ export class AuditEvent {
 export function sealAuditEvent(event: AuditEvent, previousHash?: string): AuditEvent {
   const snapshot = event.toSnapshot();
   const payloadHash = hashAuditPayload(snapshot);
+  const normalizedPreviousHash = previousHash
+    ? normalizeHash(previousHash, "previousHash của audit không hợp lệ.")
+    : undefined;
   const integrityHash = hashCanonical({
     algorithm: "sha256",
     payloadHash,
-    previousHash: previousHash ?? null
+    previousHash: normalizedPreviousHash ?? null
   });
 
   return AuditEvent.rehydrate({
     ...snapshot,
     hashAlgorithm: "sha256",
-    previousHash,
+    previousHash: normalizedPreviousHash,
     payloadHash,
     integrityHash
   });
@@ -258,6 +375,7 @@ export function buildAuditIntegrityReport(
   events: readonly AuditEvent[],
   checkedAt = new Date()
 ): AuditIntegrityReport {
+  assertValidDate(checkedAt, "Thời điểm kiểm tra toàn vẹn audit không hợp lệ.");
   let expectedPreviousHash: string | undefined;
   let sealedEvents = 0;
 
@@ -384,6 +502,94 @@ function canonicalize(value: unknown): string {
   return `{${entries
     .map(([key, item]) => `${JSON.stringify(key)}:${canonicalize(item)}`)
     .join(",")}}`;
+}
+
+function normalizeAction(value: AuditAction): AuditAction {
+  if (!auditActions.has(value)) {
+    throw new DomainError("Hành động audit không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizeResourceType(value: AuditResourceType): AuditResourceType {
+  if (!auditResourceTypes.has(value)) {
+    throw new DomainError("Loại tài nguyên audit không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizeMetadata(value: Record<string, unknown>): Record<string, unknown> {
+  if (!isPlainRecord(value)) {
+    throw new DomainError("Metadata audit phải là object hợp lệ.");
+  }
+
+  return { ...value };
+}
+
+function normalizeSealMetadata(snapshot: AuditEventSnapshot): {
+  readonly hashAlgorithm?: "sha256";
+  readonly previousHash?: string;
+  readonly payloadHash?: string;
+  readonly integrityHash?: string;
+} {
+  const previousHash = normalizeOptional(snapshot.previousHash);
+  const payloadHash = normalizeOptional(snapshot.payloadHash);
+  const integrityHash = normalizeOptional(snapshot.integrityHash);
+  const hasSealMetadata =
+    snapshot.hashAlgorithm !== undefined ||
+    previousHash !== undefined ||
+    payloadHash !== undefined ||
+    integrityHash !== undefined;
+
+  if (!hasSealMetadata) {
+    return {};
+  }
+
+  if (snapshot.hashAlgorithm !== "sha256") {
+    throw new DomainError("Thuật toán niêm phong audit không hợp lệ.");
+  }
+
+  if (!payloadHash || !integrityHash) {
+    throw new DomainError("Audit đã niêm phong cần có payloadHash và integrityHash.");
+  }
+
+  return {
+    hashAlgorithm: "sha256",
+    previousHash: previousHash
+      ? normalizeHash(previousHash, "previousHash của audit không hợp lệ.")
+      : undefined,
+    payloadHash: normalizeHash(payloadHash, "payloadHash của audit không hợp lệ."),
+    integrityHash: normalizeHash(integrityHash, "integrityHash của audit không hợp lệ.")
+  };
+}
+
+function normalizeHash(value: string, message: string): string {
+  const normalized = normalizeRequired(value, message);
+
+  if (!sha256HexPattern.test(normalized)) {
+    throw new DomainError(message);
+  }
+
+  return normalized;
+}
+
+function parseDate(value: string, message: string): Date {
+  const date = new Date(normalizeRequired(value, message));
+  assertValidDate(date, message);
+
+  return date;
+}
+
+function assertValidDate(value: Date, message: string): void {
+  if (Number.isNaN(value.getTime())) {
+    throw new DomainError(message);
+  }
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function normalizeRequired(value: string, message: string): string {
