@@ -421,7 +421,14 @@ describe("AuditEvent integrity chain", () => {
       agent: [
         {
           who: {
-            reference: "Practitioner/anonymous"
+            identifier: {
+              system: "urn:wiiicare:nexus:audit-actor",
+              value: "anonymous",
+              type: {
+                text: "Internal audit actor identifier"
+              }
+            },
+            display: "anonymous"
           },
           requestor: true,
           purposeOfUse: [
@@ -447,6 +454,7 @@ describe("AuditEvent integrity chain", () => {
         }
       ]
     });
+    expect(fhirAuditEvent.agent[0]?.who).not.toHaveProperty("reference");
     expect(fhirAuditEvent.entity?.[0]?.what).not.toHaveProperty("reference");
   });
 });

@@ -12,6 +12,9 @@ type FhirAuditEventEntityDetail = NonNullable<
 type FhirAuditEventEntityWhat = NonNullable<
   NonNullable<FhirAuditEvent["entity"]>[number]["what"]
 >;
+type FhirAuditEventAgentWho = NonNullable<
+  NonNullable<FhirAuditEvent["agent"]>[number]["who"]
+>;
 
 const auditActionLabels: Record<AuditAction, string> = {
   "patient.merge": "Merge hồ sơ bệnh nhân",
@@ -150,10 +153,7 @@ export function mapAuditEventToFhir(event: AuditEvent): FhirAuditEvent {
     outcomeDesc: mapAuditOutcomeDescription(snapshot.action),
     agent: [
       {
-        who: {
-          reference: `Practitioner/${snapshot.actorId}`,
-          display: snapshot.actorId
-        },
+        who: buildAuditAgentReference(snapshot),
         requestor: true,
         purposeOfUse: snapshot.purposeOfUse
           ? [mapPurposeOfUse(snapshot.purposeOfUse)]
@@ -190,6 +190,30 @@ export function mapAuditEventToFhir(event: AuditEvent): FhirAuditEvent {
   };
 }
 
+function buildAuditAgentReference(snapshot: AuditEventSnapshot): FhirAuditEventAgentWho {
+  if (
+    snapshot.actorId !== "anonymous" &&
+    !isSystemActor(snapshot) &&
+    fhirIdPattern.test(snapshot.actorId)
+  ) {
+    return {
+      reference: `Practitioner/${snapshot.actorId}`,
+      display: snapshot.actorId
+    };
+  }
+
+  return {
+    identifier: {
+      system: "urn:wiiicare:nexus:audit-actor",
+      value: snapshot.actorId,
+      type: {
+        text: "Internal audit actor identifier"
+      }
+    },
+    display: snapshot.actorId
+  };
+}
+
 function buildAuditEntityReference(snapshot: AuditEventSnapshot): FhirAuditEventEntityWhat {
   const display = `${snapshot.resourceType}/${snapshot.resourceId}`;
   const fhirResourceType = fhirResourceByAuditResource[snapshot.resourceType];
@@ -211,6 +235,13 @@ function buildAuditEntityReference(snapshot: AuditEventSnapshot): FhirAuditEvent
     },
     display
   };
+}
+
+function isSystemActor(snapshot: AuditEventSnapshot): boolean {
+  return (
+    snapshot.metadata.actorRole === "integration" ||
+    snapshot.actorId.startsWith("system-")
+  );
 }
 
 export function mapAuditEventsToFhirBundle(

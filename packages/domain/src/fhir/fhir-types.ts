@@ -323,6 +323,7 @@ export type FhirAuditEvent = {
   readonly agent: readonly {
     readonly who?: {
       readonly reference?: string;
+      readonly identifier?: FhirIdentifier;
       readonly display?: string;
     };
     readonly requestor: boolean;
