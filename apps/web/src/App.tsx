@@ -1,10 +1,10 @@
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   loginPresets,
   type DemoRole,
   type LoginForm
 } from "./auth/demoLogin.js";
-import { loginDemoSession } from "./auth/authApi.js";
+import { buildAuthSessionHandlers } from "./auth/authSessionHandlers.js";
 import { createClinicalApiClient } from "./api/clinicalApi.js";
 import { buildAuditLoaders } from "./features/audit/auditLoaders.js";
 import { buildAuditPanelRenderers } from "./features/audit/auditPanelRenderers.js";
@@ -34,7 +34,6 @@ import { buildFhirPreviewLoaders } from "./features/fhir-preview/fhirPreviewLoad
 import { useSelectedFhirPreviewEffects } from "./features/fhir-preview/selectedFhirPreviewEffects.js";
 import { buildRecordTransferHandlers } from "./features/record-transfers/recordTransferHandlers.js";
 import { buildRecordTransferLoaders } from "./features/record-transfers/recordTransferLoaders.js";
-import { formatDateTime } from "./lib/clinicalFormatters.js";
 import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { AppRouteRenderer } from "./pages/AppRouteRenderer.js";
@@ -701,6 +700,27 @@ export function App() {
     setIsSubmittingDocument,
     setStatusMessage
   });
+  const {
+    handleLogin,
+    handleLogout
+  } = buildAuthSessionHandlers({
+    clearPatientWorkspaceState,
+    clinicalApi,
+    loginForm,
+    setApiRuntimeInfo,
+    setApiRuntimeWarning,
+    setAppRoute,
+    setAuthSession,
+    setGlobalAuditEvents,
+    setIsAuthenticated,
+    setLoginError,
+    setPatients,
+    setProviderDirectory,
+    setProviderDirectoryFhirPreview,
+    setSelectedPatientId,
+    setStatusMessage,
+    setTransitioningRecordTransferId
+  });
   const patientPanels = buildPatientPanelRenderers({
     patients,
     visiblePatients,
@@ -1116,55 +1136,6 @@ export function App() {
     }
 
     await Promise.all(workspaceTasks);
-  }
-
-  async function handleLogin(event?: FormEvent<HTMLFormElement>) {
-    const shouldOpenLoginOnFailure = !event;
-
-    event?.preventDefault();
-
-    if (!loginForm.username.trim() || !loginForm.password.trim()) {
-      setLoginError("Vui lòng nhập tài khoản và mật khẩu demo.");
-      return;
-    }
-
-    try {
-      setLoginError(undefined);
-      setStatusMessage("Đang xác thực phiên đăng nhập...");
-
-      const session = await loginDemoSession(clinicalApi, loginForm);
-      setAuthSession(session);
-      setIsAuthenticated(true);
-      setAppRoute(session.actor.role === "auditor" ? "audit" : "dashboard");
-      setStatusMessage(
-        `Đã đăng nhập ${session.actor.displayName}; phiên hết hạn ${formatDateTime(session.expiresAt)}.`
-      );
-    } catch (error) {
-      setLoginError(
-        error instanceof Error ? error.message : "Không thể đăng nhập phiên demo."
-      );
-      setStatusMessage("Đăng nhập thất bại.");
-
-      if (shouldOpenLoginOnFailure) {
-        setAppRoute("login");
-      }
-    }
-  }
-
-  function handleLogout() {
-    setAuthSession(undefined);
-    setIsAuthenticated(false);
-    setAppRoute("landing");
-    setStatusMessage("Đã đăng xuất khỏi phiên demo.");
-    setPatients([]);
-    clearPatientWorkspaceState();
-    setGlobalAuditEvents([]);
-    setApiRuntimeInfo(undefined);
-    setApiRuntimeWarning(undefined);
-    setProviderDirectory(undefined);
-    setProviderDirectoryFhirPreview(undefined);
-    setSelectedPatientId(undefined);
-    setTransitioningRecordTransferId(undefined);
   }
 
   if (!isAuthenticated) {
