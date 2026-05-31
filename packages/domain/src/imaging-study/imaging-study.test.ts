@@ -199,4 +199,61 @@ describe("ImagingStudy", () => {
       })
     ).toThrow(DomainError);
   });
+
+  it("rejects invalid rehydrated imaging study metadata", () => {
+    const snapshot = ImagingStudy.record({
+      id: "imaging-study-007",
+      patientId: "patient-001",
+      studyInstanceUid: "1.2.826.0.1.3680043.10.543.7",
+      startedAt: "2026-05-28T03:00:00.000Z",
+      series: [
+        {
+          uid: "1.2.826.0.1.3680043.10.543.7.1",
+          modality: dicomModality,
+          numberOfInstances: 2,
+          startedAt: "2026-05-28T03:01:00.000Z"
+        }
+      ]
+    }).toSnapshot();
+
+    expect(() =>
+      ImagingStudy.rehydrate({
+        ...snapshot,
+        status: "draft" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      ImagingStudy.rehydrate({
+        ...snapshot,
+        numberOfSeries: 0
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      ImagingStudy.rehydrate({
+        ...snapshot,
+        numberOfInstances: 1
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      ImagingStudy.rehydrate({
+        ...snapshot,
+        series: [
+          {
+            ...snapshot.series[0],
+            startedAt: "2026-05-28T02:59:00.000Z"
+          }
+        ]
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      ImagingStudy.rehydrate({
+        ...snapshot,
+        updatedAt: "1999-01-01T00:00:00.000Z"
+      })
+    ).toThrow(DomainError);
+  });
 });
