@@ -52,8 +52,7 @@ import {
   buildObservationCommandDraft
 } from "./features/clinical-records/clinicalEntryCommandBuilders.js";
 import { buildEncounterScopedFormUpdater } from "./features/clinical-records/encounterScopedFormUpdater.js";
-import { listPatientConsents, revokePatientConsent } from "./features/consents/consentApi.js";
-import { buildRevokeConsentCommand } from "./features/consents/consentCommandBuilders.js";
+import { buildConsentLoaders } from "./features/consents/consentLoaders.js";
 import { buildInteropPanelRenderers } from "./features/interoperability/interopPanelRenderers.js";
 import {
   createPatient,
@@ -483,6 +482,19 @@ export function App() {
     setIsLoadingAuditEvents,
     setIsLoadingGlobalAuditEvents,
     setIsVerifyingAuditIntegrity,
+    setStatusMessage
+  });
+  const {
+    handleRevokeConsent,
+    loadConsents
+  } = buildConsentLoaders({
+    clinicalApi,
+    ensureSelectedPatientWritable,
+    loadConsentFhirPreview,
+    selectedPatient,
+    setConsents,
+    setIsLoadingConsents,
+    setRevokingConsentId,
     setStatusMessage
   });
   const {
@@ -1081,56 +1093,6 @@ export function App() {
     }
 
     await Promise.all(workspaceTasks);
-  }
-
-  async function loadConsents(patientId: string) {
-    setIsLoadingConsents(true);
-
-    try {
-      const data = await listPatientConsents(clinicalApi, patientId);
-      setConsents(data.items);
-    } catch (error) {
-      setConsents([]);
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tải đồng ý chia sẻ hồ sơ: ${error.message}`
-          : "Không thể tải đồng ý chia sẻ hồ sơ."
-      );
-    } finally {
-      setIsLoadingConsents(false);
-    }
-  }
-
-  async function handleRevokeConsent(consent: Consent) {
-    if (!selectedPatient) {
-      return;
-    }
-
-    if (!ensureSelectedPatientWritable()) {
-      return;
-    }
-
-    setRevokingConsentId(consent.id);
-
-    try {
-      const revokedConsent = await revokePatientConsent(
-        clinicalApi,
-        selectedPatient.id,
-        consent.id,
-        buildRevokeConsentCommand()
-      );
-      await loadConsents(selectedPatient.id);
-      await loadConsentFhirPreview(revokedConsent.id);
-      setStatusMessage(`Đã thu hồi consent ${revokedConsent.id}; các lần xuất/chuyển hồ sơ mới sẽ bị chặn nếu dùng consent này.`);
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể thu hồi consent: ${error.message}`
-          : "Không thể thu hồi consent."
-      );
-    } finally {
-      setRevokingConsentId(undefined);
-    }
   }
 
   async function loadRecordTransfers(
