@@ -31,6 +31,7 @@ import { buildPatientWriteGuard } from "./features/patient-registry/patientWrite
 import { buildPatientWorkspaceCollectionLoaders } from "./features/patient-workspace/patientWorkspaceCollectionLoaders.js";
 import { buildPlatformLoaders } from "./features/platform/platformLoaders.js";
 import { buildFhirPreviewLoaders } from "./features/fhir-preview/fhirPreviewLoaders.js";
+import { useSelectedFhirPreviewEffects } from "./features/fhir-preview/selectedFhirPreviewEffects.js";
 import { buildRecordTransferHandlers } from "./features/record-transfers/recordTransferHandlers.js";
 import { buildRecordTransferLoaders } from "./features/record-transfers/recordTransferLoaders.js";
 import { formatDateTime } from "./lib/clinicalFormatters.js";
@@ -911,6 +912,55 @@ export function App() {
     interopPanels,
     patientPanels
   });
+  useSelectedFhirPreviewEffects({
+    loadAllergyIntoleranceFhirPreview,
+    loadConditionFhirPreview,
+    loadDiagnosticReportFhirPreview,
+    loadDocumentFhirPreview,
+    loadDocumentProvenanceFhirPreview,
+    loadImagingStudyFhirPreview,
+    loadMedicationAdministrationFhirPreview,
+    loadMedicationDispenseFhirPreview,
+    loadMedicationRequestFhirPreview,
+    loadObservationFhirPreview,
+    loadProcedureFhirPreview,
+    loadRecordTransferDeliveryAttempts,
+    loadRecordTransferFhirTaskPreview,
+    loadServiceRequestFhirPreview,
+    loadWorkflowTaskFhirPreview,
+    recordTransfers,
+    selectedAllergyIntoleranceId,
+    selectedConditionId,
+    selectedDiagnosticReportId,
+    selectedDocumentId,
+    selectedDocumentStatus: workspaceSelection.selectedDocument?.status,
+    selectedImagingStudyId,
+    selectedMedicationAdministrationId,
+    selectedMedicationDispenseId,
+    selectedMedicationRequestId,
+    selectedObservationId,
+    selectedProcedureId,
+    selectedRecordTransferId,
+    selectedServiceRequestId,
+    selectedWorkflowTaskId,
+    setAllergyIntoleranceFhirPreview,
+    setConditionFhirPreview,
+    setDiagnosticReportFhirPreview,
+    setDocumentFhirPreview,
+    setDocumentProvenanceFhirPreview,
+    setImagingStudyFhirPreview,
+    setIsLoadingRecordTransferDeliveryAttempts,
+    setMedicationAdministrationFhirPreview,
+    setMedicationDispenseFhirPreview,
+    setMedicationRequestFhirPreview,
+    setObservationFhirPreview,
+    setProcedureFhirPreview,
+    setRecordTransferDeliveryAttempts,
+    setRecordTransferDeliveryAttemptWarning,
+    setRecordTransferFhirTaskPreview,
+    setServiceRequestFhirPreview,
+    setWorkflowTaskFhirPreview
+  });
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -973,144 +1023,6 @@ export function App() {
 
     void loadEncounterFhirPreview(selectedEncounterId);
   }, [selectedEncounterId]);
-
-  useEffect(() => {
-    if (!selectedDocumentId) {
-      setDocumentFhirPreview(undefined);
-      setDocumentProvenanceFhirPreview(undefined);
-      return;
-    }
-
-    void loadDocumentFhirPreview(selectedDocumentId);
-    if (workspaceSelection.selectedDocument?.status === "signed") {
-      void loadDocumentProvenanceFhirPreview(selectedDocumentId);
-      return;
-    }
-
-    setDocumentProvenanceFhirPreview({
-      note: "FHIR Provenance chỉ được xuất khi tài liệu đã ký/xác nhận."
-    });
-  }, [selectedDocumentId, workspaceSelection.selectedDocument?.status]);
-
-  useEffect(() => {
-    if (!selectedConditionId) {
-      setConditionFhirPreview(undefined);
-      return;
-    }
-
-    void loadConditionFhirPreview(selectedConditionId);
-  }, [selectedConditionId]);
-
-  useEffect(() => {
-    if (!selectedAllergyIntoleranceId) {
-      setAllergyIntoleranceFhirPreview(undefined);
-      return;
-    }
-
-    void loadAllergyIntoleranceFhirPreview(selectedAllergyIntoleranceId);
-  }, [selectedAllergyIntoleranceId]);
-
-  useEffect(() => {
-    if (!selectedObservationId) {
-      setObservationFhirPreview(undefined);
-      return;
-    }
-
-    void loadObservationFhirPreview(selectedObservationId);
-  }, [selectedObservationId]);
-
-  useEffect(() => {
-    if (!selectedMedicationRequestId) {
-      setMedicationRequestFhirPreview(undefined);
-      return;
-    }
-
-    void loadMedicationRequestFhirPreview(selectedMedicationRequestId);
-  }, [selectedMedicationRequestId]);
-
-  useEffect(() => {
-    if (!selectedMedicationDispenseId) {
-      setMedicationDispenseFhirPreview(undefined);
-      return;
-    }
-
-    void loadMedicationDispenseFhirPreview(selectedMedicationDispenseId);
-  }, [selectedMedicationDispenseId]);
-
-  useEffect(() => {
-    if (!selectedMedicationAdministrationId) {
-      setMedicationAdministrationFhirPreview(undefined);
-      return;
-    }
-
-    void loadMedicationAdministrationFhirPreview(selectedMedicationAdministrationId);
-  }, [selectedMedicationAdministrationId]);
-
-  useEffect(() => {
-    if (!selectedServiceRequestId) {
-      setServiceRequestFhirPreview(undefined);
-      return;
-    }
-
-    void loadServiceRequestFhirPreview(selectedServiceRequestId);
-  }, [selectedServiceRequestId]);
-
-  useEffect(() => {
-    if (!selectedWorkflowTaskId) {
-      setWorkflowTaskFhirPreview(undefined);
-      return;
-    }
-
-    void loadWorkflowTaskFhirPreview(selectedWorkflowTaskId);
-  }, [selectedWorkflowTaskId]);
-
-  useEffect(() => {
-    if (!selectedProcedureId) {
-      setProcedureFhirPreview(undefined);
-      return;
-    }
-
-    void loadProcedureFhirPreview(selectedProcedureId);
-  }, [selectedProcedureId]);
-
-  useEffect(() => {
-    if (!selectedDiagnosticReportId) {
-      setDiagnosticReportFhirPreview(undefined);
-      return;
-    }
-
-    void loadDiagnosticReportFhirPreview(selectedDiagnosticReportId);
-  }, [selectedDiagnosticReportId]);
-
-  useEffect(() => {
-    if (!selectedImagingStudyId) {
-      setImagingStudyFhirPreview(undefined);
-      return;
-    }
-
-    void loadImagingStudyFhirPreview(selectedImagingStudyId);
-  }, [selectedImagingStudyId]);
-
-  useEffect(() => {
-    if (!selectedRecordTransferId) {
-      setRecordTransferFhirTaskPreview(undefined);
-      setRecordTransferDeliveryAttempts([]);
-      setRecordTransferDeliveryAttemptWarning(undefined);
-      setIsLoadingRecordTransferDeliveryAttempts(false);
-      return;
-    }
-
-    if (!recordTransfers.some((recordTransfer) => recordTransfer.id === selectedRecordTransferId)) {
-      setRecordTransferFhirTaskPreview(undefined);
-      setRecordTransferDeliveryAttempts([]);
-      setRecordTransferDeliveryAttemptWarning(undefined);
-      setIsLoadingRecordTransferDeliveryAttempts(false);
-      return;
-    }
-
-    void loadRecordTransferFhirTaskPreview(selectedRecordTransferId);
-    void loadRecordTransferDeliveryAttempts(selectedRecordTransferId);
-  }, [selectedRecordTransferId, recordTransfers]);
 
   function clearPatientWorkspaceState() {
     setPatientFhirPreview(undefined);
