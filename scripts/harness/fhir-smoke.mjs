@@ -715,18 +715,21 @@ if (
   );
 }
 
-const document = ClinicalDocument.create({
+const document = ClinicalDocument.rehydrate({
   id: "clinical-document-harness-001",
   patientId: patient.id,
   encounterId: encounter.id,
   type: "referral-letter",
   title: "Referral letter harness",
+  status: "draft",
   storageUri: "s3://wiiicare-harness/patients/patient-harness-001/referral-letter.pdf",
   attachmentContentType: "application/pdf",
   attachmentSizeBytes: 131072,
   attachmentHashSha1Base64: "u5+Zwd+MnqJUBDLusw8YfS9xX9Y=",
   attachmentCreatedAt: "2026-05-27T00:00:00.000Z",
-  authorPractitionerId: "practitioner-harness-001"
+  authorPractitionerId: "practitioner-harness-001",
+  createdAt: "2026-05-26T23:59:00.000Z",
+  updatedAt: "2026-05-26T23:59:00.000Z"
 });
 
 document.sign(new Date("2026-05-27T00:00:00.000Z"));

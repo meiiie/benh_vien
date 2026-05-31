@@ -28,18 +28,21 @@ export class InMemoryClinicalDocumentRepository implements ClinicalDocumentRepos
 }
 
 export function createSeedClinicalDocuments(): ClinicalDocument[] {
-  const dischargeSummary = ClinicalDocument.create({
+  const dischargeSummary = ClinicalDocument.rehydrate({
     id: "clinical-document-demo-001",
     patientId: "patient-demo-001",
     encounterId: "encounter-demo-001",
     type: "discharge-summary",
     title: "Tóm tắt ra viện - Nguyễn Văn An",
+    status: "draft",
     storageUri: "s3://wiiicare-demo/patients/patient-demo-001/discharge-summary.pdf",
     attachmentContentType: "application/pdf",
     attachmentSizeBytes: 245760,
     attachmentHashSha1Base64: "Kb0sBAJESyiK08beYsfPVMQp3xU=",
     attachmentCreatedAt: "2026-05-27T01:55:00.000Z",
-    authorPractitionerId: "practitioner-demo-001"
+    authorPractitionerId: "practitioner-demo-001",
+    createdAt: "2026-05-27T01:50:00.000Z",
+    updatedAt: "2026-05-27T01:50:00.000Z"
   });
 
   dischargeSummary.sign(new Date("2026-05-27T02:00:00.000Z"));

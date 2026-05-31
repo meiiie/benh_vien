@@ -142,6 +142,32 @@ describe("ClinicalDocument", () => {
     ).toThrow(DomainError);
   });
 
+  it("rejects invalid rehydrated lifecycle timestamps", () => {
+    const snapshot = ClinicalDocument.create({
+      id: "clinical-document-lifecycle-003",
+      patientId: "patient-attachment-001",
+      type: "discharge-summary",
+      title: "Tài liệu vòng đời thời gian",
+      storageUri: "s3://wiiicare-demo/patients/patient-attachment-001/lifecycle-timeline.pdf",
+      authorPractitionerId: "practitioner-attachment-001"
+    }).toSnapshot();
+
+    expect(() =>
+      ClinicalDocument.rehydrate({
+        ...snapshot,
+        updatedAt: "1999-01-01T00:00:00.000Z"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      ClinicalDocument.rehydrate({
+        ...snapshot,
+        status: "signed",
+        signedAt: "1999-01-01T00:00:00.000Z"
+      })
+    ).toThrow(DomainError);
+  });
+
   it("rejects invalid signing timestamps", () => {
     const document = ClinicalDocument.create({
       id: "clinical-document-lifecycle-002",
@@ -153,5 +179,21 @@ describe("ClinicalDocument", () => {
     });
 
     expect(() => document.sign(new Date("not-a-date"))).toThrow(DomainError);
+  });
+
+  it("rejects signing a document before it was created", () => {
+    const document = ClinicalDocument.rehydrate({
+      id: "clinical-document-lifecycle-004",
+      patientId: "patient-attachment-001",
+      type: "discharge-summary",
+      title: "Tài liệu ký trước ngày tạo",
+      status: "draft",
+      storageUri: "s3://wiiicare-demo/patients/patient-attachment-001/precreated-sign.pdf",
+      authorPractitionerId: "practitioner-attachment-001",
+      createdAt: "2026-05-28T02:00:00.000Z",
+      updatedAt: "2026-05-28T02:00:00.000Z"
+    });
+
+    expect(() => document.sign(new Date("2026-05-28T01:59:59.000Z"))).toThrow(DomainError);
   });
 });

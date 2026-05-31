@@ -114,6 +114,16 @@ export class ClinicalDocument {
       snapshot.signedAt,
       "Thời điểm ký tài liệu không hợp lệ."
     );
+    const createdAt = parseRequiredDate(
+      snapshot.createdAt,
+      "Thời điểm tạo tài liệu không hợp lệ."
+    );
+    const updatedAt = parseRequiredDate(
+      snapshot.updatedAt,
+      "Thời điểm cập nhật tài liệu không hợp lệ."
+    );
+
+    validateTimeline({ createdAt, updatedAt, signedAt });
 
     return new ClinicalDocument({
       id: snapshot.id,
@@ -136,14 +146,8 @@ export class ClinicalDocument {
       ),
       authorPractitionerId: snapshot.authorPractitionerId,
       signedAt,
-      createdAt: parseRequiredDate(
-        snapshot.createdAt,
-        "Thời điểm tạo tài liệu không hợp lệ."
-      ),
-      updatedAt: parseRequiredDate(
-        snapshot.updatedAt,
-        "Thời điểm cập nhật tài liệu không hợp lệ."
-      )
+      createdAt,
+      updatedAt
     });
   }
 
@@ -168,6 +172,10 @@ export class ClinicalDocument {
       signedAt,
       "Thời điểm ký tài liệu không hợp lệ."
     );
+
+    if (normalizedSignedAt < this.props.createdAt) {
+      throw new DomainError("Thời điểm ký tài liệu không được trước thời điểm tạo tài liệu.");
+    }
 
     this.props.status = "signed";
     this.props.signedAt = normalizedSignedAt;
@@ -243,6 +251,20 @@ function normalizeStatus(
   }
 
   return status;
+}
+
+function validateTimeline(input: {
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+  readonly signedAt?: Date;
+}): void {
+  if (input.updatedAt < input.createdAt) {
+    throw new DomainError("Thời điểm cập nhật tài liệu không được trước thời điểm tạo tài liệu.");
+  }
+
+  if (input.signedAt && input.signedAt < input.createdAt) {
+    throw new DomainError("Thời điểm ký tài liệu không được trước thời điểm tạo tài liệu.");
+  }
 }
 
 function parseOptionalDate(value: string | undefined, message: string): Date | undefined {
