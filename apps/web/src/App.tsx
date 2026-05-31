@@ -16,20 +16,9 @@ import {
 import { createClinicalDocument, signClinicalDocument } from "./features/clinical-documents/clinicalDocumentApi.js";
 import { buildCreateClinicalDocumentCommandDraft } from "./features/clinical-documents/clinicalDocumentCommandBuilders.js";
 import { buildClinicalDocumentPanelRenderers } from "./features/clinical-documents/clinicalDocumentPanelRenderers.js";
-import {
-  createDiagnosticReport,
-  createImagingStudy,
-  createProcedure,
-  createServiceRequest
-} from "./features/clinical-records/clinicalRecordApi.js";
 import { buildClinicalRecordPanelRenderers } from "./features/clinical-records/clinicalRecordPanelRenderers.js";
+import { buildCarePlanHandlers } from "./features/clinical-records/carePlanHandlers.js";
 import { buildMedicationHandlers } from "./features/clinical-records/medicationHandlers.js";
-import {
-  buildDiagnosticReportCommand,
-  buildImagingStudyCommandDraft,
-  buildProcedureCommand,
-  buildServiceRequestCommand
-} from "./features/clinical-records/carePlanCommandBuilders.js";
 import { buildClinicalEntryHandlers } from "./features/clinical-records/clinicalEntryHandlers.js";
 import { buildEncounterScopedFormUpdater } from "./features/clinical-records/encounterScopedFormUpdater.js";
 import { buildEncounterHandlers } from "./features/clinical-records/encounterHandlers.js";
@@ -668,6 +657,33 @@ export function App() {
     setIsSubmittingMedicationRequest,
     setStatusMessage
   });
+  const {
+    handleCreateDiagnosticReport,
+    handleCreateImagingStudy,
+    handleCreateProcedure,
+    handleCreateServiceRequest
+  } = buildCarePlanHandlers({
+    clinicalApi,
+    diagnosticReportForm,
+    ensureSelectedPatientWritable,
+    imagingStudyForm,
+    loadAuditEvents,
+    loadDiagnosticReports,
+    loadImagingStudies,
+    loadPatientFhirBundlePreview,
+    loadPatientFhirDocumentBundlePreview,
+    loadProcedures,
+    loadServiceRequests,
+    procedureForm,
+    selectedPatient,
+    serviceRequestForm,
+    setAppRoute,
+    setIsSubmittingDiagnosticReport,
+    setIsSubmittingImagingStudy,
+    setIsSubmittingProcedure,
+    setIsSubmittingServiceRequest,
+    setStatusMessage
+  });
   const patientPanels = buildPatientPanelRenderers({
     patients,
     visiblePatients,
@@ -1221,159 +1237,6 @@ export function App() {
     setProviderDirectoryFhirPreview(undefined);
     setSelectedPatientId(undefined);
     setTransitioningRecordTransferId(undefined);
-  }
-
-  async function handleCreateServiceRequest(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!selectedPatient) {
-      setStatusMessage("Cần chọn bệnh nhân trước khi tạo chỉ định dịch vụ.");
-      return;
-    }
-
-    if (!ensureSelectedPatientWritable()) {
-      return;
-    }
-
-    setIsSubmittingServiceRequest(true);
-
-    try {
-      const createdServiceRequest = await createServiceRequest(
-        clinicalApi,
-        selectedPatient.id,
-        buildServiceRequestCommand(serviceRequestForm)
-      );
-      await loadServiceRequests(selectedPatient.id, createdServiceRequest.id);
-      await loadPatientFhirBundlePreview(selectedPatient.id);
-      await loadAuditEvents(selectedPatient.id, { silent: true });
-      setAppRoute("workspace");
-      setStatusMessage(
-        `Đã tạo chỉ định dịch vụ "${createdServiceRequest.code.display}" cho ${selectedPatient.fullName}.`
-      );
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tạo chỉ định dịch vụ: ${error.message}`
-          : "Không thể tạo chỉ định dịch vụ."
-      );
-    } finally {
-      setIsSubmittingServiceRequest(false);
-    }
-  }
-
-  async function handleCreateProcedure(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!selectedPatient) {
-      setStatusMessage("Cần chọn bệnh nhân trước khi ghi nhận thủ thuật/hoạt động đã thực hiện.");
-      return;
-    }
-
-    if (!ensureSelectedPatientWritable()) {
-      return;
-    }
-
-    setIsSubmittingProcedure(true);
-
-    try {
-      const createdProcedure = await createProcedure(
-        clinicalApi,
-        selectedPatient.id,
-        buildProcedureCommand(procedureForm)
-      );
-      await loadProcedures(selectedPatient.id, createdProcedure.id);
-      await loadPatientFhirBundlePreview(selectedPatient.id);
-      await loadPatientFhirDocumentBundlePreview(selectedPatient.id);
-      await loadAuditEvents(selectedPatient.id, { silent: true });
-      setAppRoute("workspace");
-      setStatusMessage(
-        `Đã ghi nhận Procedure "${createdProcedure.code.display}" cho ${selectedPatient.fullName}.`
-      );
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể ghi nhận thủ thuật/hoạt động: ${error.message}`
-          : "Không thể ghi nhận thủ thuật/hoạt động."
-      );
-    } finally {
-      setIsSubmittingProcedure(false);
-    }
-  }
-
-  async function handleCreateDiagnosticReport(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!selectedPatient) {
-      setStatusMessage("Cần chọn bệnh nhân trước khi tạo báo cáo kết quả.");
-      return;
-    }
-
-    if (!ensureSelectedPatientWritable()) {
-      return;
-    }
-
-    setIsSubmittingDiagnosticReport(true);
-
-    try {
-      const createdDiagnosticReport = await createDiagnosticReport(
-        clinicalApi,
-        selectedPatient.id,
-        buildDiagnosticReportCommand(diagnosticReportForm)
-      );
-      await loadDiagnosticReports(selectedPatient.id, createdDiagnosticReport.id);
-      await loadPatientFhirBundlePreview(selectedPatient.id);
-      await loadAuditEvents(selectedPatient.id, { silent: true });
-      setAppRoute("workspace");
-      setStatusMessage(
-        `Đã tạo báo cáo kết quả "${createdDiagnosticReport.code.display}" cho ${selectedPatient.fullName}.`
-      );
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tạo báo cáo kết quả: ${error.message}`
-          : "Không thể tạo báo cáo kết quả."
-      );
-    } finally {
-      setIsSubmittingDiagnosticReport(false);
-    }
-  }
-
-  async function handleCreateImagingStudy(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!selectedPatient) {
-      setStatusMessage("Cần chọn bệnh nhân trước khi tạo nghiên cứu hình ảnh.");
-      return;
-    }
-
-    if (!ensureSelectedPatientWritable()) return;
-    const commandDraft = buildImagingStudyCommandDraft(imagingStudyForm);
-    if (!commandDraft.ok) { setStatusMessage(commandDraft.message); return; }
-
-    setIsSubmittingImagingStudy(true);
-
-    try {
-      const createdImagingStudy = await createImagingStudy(
-        clinicalApi,
-        selectedPatient.id,
-        commandDraft.command
-      );
-      await loadImagingStudies(selectedPatient.id, createdImagingStudy.id);
-      await loadPatientFhirBundlePreview(selectedPatient.id);
-      await loadAuditEvents(selectedPatient.id, { silent: true });
-      setAppRoute("workspace");
-      setStatusMessage(
-        `Đã tạo nghiên cứu hình ảnh "${createdImagingStudy.description ?? createdImagingStudy.studyInstanceUid}" cho ${selectedPatient.fullName}.`
-      );
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tạo nghiên cứu hình ảnh: ${error.message}`
-          : "Không thể tạo nghiên cứu hình ảnh."
-      );
-    } finally {
-      setIsSubmittingImagingStudy(false);
-    }
   }
 
   async function handleCreateClinicalDocument(event: FormEvent<HTMLFormElement>) {
