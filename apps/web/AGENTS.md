@@ -14,6 +14,7 @@
 - Các formatter của hồ sơ lâm sàng thuộc `src/features/clinical-records`: lượt khám nằm trong `encounterFormatters.ts`; dị ứng nằm trong `allergyFormatters.ts`; chẩn đoán/vấn đề sức khỏe nằm trong `conditionFormatters.ts`; y lệnh/tác vụ/thủ thuật nằm trong `careWorkflowFormatters.ts`; xét nghiệm/chẩn đoán hình ảnh nằm trong `diagnosticResultFormatters.ts`; thuốc nằm trong `medicationFormatters.ts`.
 - Formatter của bệnh nhân, tài liệu lâm sàng, đồng ý chia sẻ và danh bạ nhà cung cấp phải nằm trong feature tương ứng; `src/lib/clinicalFormatters.ts` chỉ giữ helper dùng chung thật sự như thời gian và runtime display.
 - Mọi HTTP request phải đi qua `src/api/clinicalApi.ts` rồi qua feature/platform/auth API module phù hợp; không gọi `fetch` trực tiếp trong component hoặc application module.
+- CSS nền tảng như token, reset, typography, shared panel/button primitives nằm trong `src/styles/base.css`; `src/styles.css` chỉ nên compose các layer còn lại và dần tách theo shell/feature khi đủ rõ boundary.
 
 ## Verification
 
