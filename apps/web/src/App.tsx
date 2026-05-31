@@ -6,7 +6,6 @@ import { useClinicalRecordState } from "./features/clinical-records/clinicalReco
 import { useEncounterScopedFormEffects } from "./features/clinical-records/encounterScopedFormEffects.js";
 import { buildConsentLoaders } from "./features/consents/consentLoaders.js";
 import { useInteroperabilityState } from "./features/interoperability/interoperabilityState.js";
-import { buildPatientRegistryHandlers } from "./features/patient-registry/patientRegistryHandlers.js";
 import { buildPatientRegistrySelection } from "./features/patient-registry/patientRegistrySelectors.js";
 import { usePatientRegistryState } from "./features/patient-registry/patientRegistryState.js";
 import { buildPatientWriteGuard } from "./features/patient-registry/patientWriteGuard.js";
@@ -14,7 +13,6 @@ import { buildPatientWorkspaceLifecycle } from "./features/patient-workspace/pat
 import { usePlatformState } from "./features/platform/platformState.js";
 import { useFhirPreviewState } from "./features/fhir-preview/fhirPreviewState.js";
 import { useSelectedFhirPreviewEffects } from "./features/fhir-preview/selectedFhirPreviewEffects.js";
-import { buildRecordTransferHandlers } from "./features/record-transfers/recordTransferHandlers.js";
 import { buildRecordTransferLoaders } from "./features/record-transfers/recordTransferLoaders.js";
 import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
@@ -28,9 +26,11 @@ import {
 } from "./pages/appDerivedContext.js";
 import { buildAppClinicalRecordHandlers } from "./pages/appClinicalRecordHandlers.js";
 import { buildAppFhirPreviewLoaders } from "./pages/appFhirPreviewLoaders.js";
+import { buildAppPatientRegistryHandlers } from "./pages/appPatientRegistryHandlers.js";
 import { buildAppPatientRegistryLoaders } from "./pages/appPatientRegistryLoaders.js";
 import { buildAppPatientWorkspaceLoaders } from "./pages/appPatientWorkspaceLoaders.js";
 import { buildAppPlatformLoaders } from "./pages/appPlatformLoaders.js";
+import { buildAppRecordTransferHandlers } from "./pages/appRecordTransferHandlers.js";
 import { useAppLifecycleEffects } from "./pages/appLifecycleEffects.js";
 import { useAppShellState } from "./pages/appShellState.js";
 import { buildAppRoutePanels } from "./pages/appRoutePanels.js";
@@ -199,10 +199,10 @@ export function App() {
     handleReceiveRecordTransfer,
     handleRetryRecordTransfer,
     handleSendRecordTransfer
-  } = buildRecordTransferHandlers({
+  } = buildAppRecordTransferHandlers({
     clinicalApi,
     ensureSelectedPatientWritable,
-    ...interoperabilityState,
+    interoperabilityState,
     loadRecordTransferDeliveryAttempts,
     loadRecordTransferFhirTaskPreview,
     loadRecordTransfers,
@@ -277,21 +277,17 @@ export function App() {
   const {
     handleCreatePatient,
     handleMergeSelectedPatient
-  } = buildPatientRegistryHandlers({
+  } = buildAppPatientRegistryHandlers({
     canMergePatients,
     clinicalApi,
     isPatientMergeConfirmationValid,
     loadPatients,
     loadPatientWorkspace,
-    patientForm: patientRegistryState.patientForm,
     patientMergeConfirmationCode,
-    patientMergeForm: patientRegistryState.patientMergeForm,
     patientMergeTargetId,
+    patientRegistryState,
     selectedPatient,
     setAppRoute,
-    setIsMergingPatient: patientRegistryState.setIsMergingPatient,
-    setIsSubmittingPatient: patientRegistryState.setIsSubmittingPatient,
-    setPatientMergeForm: patientRegistryState.setPatientMergeForm,
     setStatusMessage
   });
   const {
