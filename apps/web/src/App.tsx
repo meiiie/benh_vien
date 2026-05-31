@@ -13,8 +13,7 @@ import {
   Info,
   PageHeader
 } from "./components/AppShell.js";
-import { createClinicalDocument, signClinicalDocument } from "./features/clinical-documents/clinicalDocumentApi.js";
-import { buildCreateClinicalDocumentCommandDraft } from "./features/clinical-documents/clinicalDocumentCommandBuilders.js";
+import { buildClinicalDocumentHandlers } from "./features/clinical-documents/clinicalDocumentHandlers.js";
 import { buildClinicalDocumentPanelRenderers } from "./features/clinical-documents/clinicalDocumentPanelRenderers.js";
 import { buildClinicalRecordPanelRenderers } from "./features/clinical-records/clinicalRecordPanelRenderers.js";
 import { buildCarePlanHandlers } from "./features/clinical-records/carePlanHandlers.js";
@@ -684,6 +683,23 @@ export function App() {
     setIsSubmittingServiceRequest,
     setStatusMessage
   });
+  const {
+    handleCreateClinicalDocument,
+    handleSignClinicalDocument
+  } = buildClinicalDocumentHandlers({
+    clinicalApi,
+    documentForm,
+    ensureSelectedPatientWritable,
+    loadAuditEvents,
+    loadClinicalDocuments,
+    loadDocumentFhirPreview,
+    loadDocumentProvenanceFhirPreview,
+    selectedPatient,
+    setAppRoute,
+    setIsSigningDocument,
+    setIsSubmittingDocument,
+    setStatusMessage
+  });
   const patientPanels = buildPatientPanelRenderers({
     patients,
     visiblePatients,
@@ -1237,64 +1253,6 @@ export function App() {
     setProviderDirectoryFhirPreview(undefined);
     setSelectedPatientId(undefined);
     setTransitioningRecordTransferId(undefined);
-  }
-
-  async function handleCreateClinicalDocument(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!selectedPatient) {
-      setStatusMessage("Cần chọn bệnh nhân trước khi tạo tài liệu bệnh án.");
-      return;
-    }
-
-    if (!ensureSelectedPatientWritable()) return;
-
-    const commandDraft = buildCreateClinicalDocumentCommandDraft(documentForm, selectedPatient.id);
-
-    if (!commandDraft.ok) { setStatusMessage(commandDraft.message); return; }
-
-    setIsSubmittingDocument(true);
-
-    try {
-      const createdDocument = await createClinicalDocument(clinicalApi, selectedPatient.id, commandDraft.command);
-      await loadClinicalDocuments(selectedPatient.id, createdDocument.id);
-      await loadAuditEvents(selectedPatient.id, { silent: true });
-      setAppRoute("documents");
-      setStatusMessage(`Đã tạo tài liệu "${createdDocument.title}" ở trạng thái nháp.`);
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tạo tài liệu bệnh án: ${error.message}`
-          : "Không thể tạo tài liệu bệnh án."
-      );
-    } finally {
-      setIsSubmittingDocument(false);
-    }
-  }
-
-  async function handleSignClinicalDocument(documentId: string) {
-    if (!ensureSelectedPatientWritable()) {
-      return;
-    }
-
-    setIsSigningDocument(true);
-
-    try {
-      const signedDocument = await signClinicalDocument(clinicalApi, documentId);
-      await loadClinicalDocuments(signedDocument.patientId, signedDocument.id);
-      await loadDocumentFhirPreview(signedDocument.id);
-      await loadDocumentProvenanceFhirPreview(signedDocument.id);
-      await loadAuditEvents(signedDocument.patientId, { silent: true });
-      setStatusMessage(`Đã ký tài liệu "${signedDocument.title}".`);
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể ký tài liệu bệnh án: ${error.message}`
-          : "Không thể ký tài liệu bệnh án."
-      );
-    } finally {
-      setIsSigningDocument(false);
-    }
   }
 
   if (!isAuthenticated) {
