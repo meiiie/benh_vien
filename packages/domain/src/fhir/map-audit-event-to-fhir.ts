@@ -9,6 +9,9 @@ import type { FhirAuditEvent, FhirBundle } from "./fhir-types.js";
 type FhirAuditEventEntityDetail = NonNullable<
   NonNullable<FhirAuditEvent["entity"]>[number]["detail"]
 >[number];
+type FhirAuditEventEntityWhat = NonNullable<
+  NonNullable<FhirAuditEvent["entity"]>[number]["what"]
+>;
 
 const auditActionLabels: Record<AuditAction, string> = {
   "patient.merge": "Merge hồ sơ bệnh nhân",
@@ -117,6 +120,7 @@ const fhirResourceByAuditResource: Record<AuditResourceType, string> = {
   Consent: "Consent",
   AuditEvent: "AuditEvent"
 };
+const fhirIdPattern = /^[A-Za-z0-9-.]{1,64}$/;
 
 export function mapAuditEventToFhir(event: AuditEvent): FhirAuditEvent {
   const snapshot = event.toSnapshot();
@@ -177,15 +181,35 @@ export function mapAuditEventToFhir(event: AuditEvent): FhirAuditEvent {
     },
     entity: [
       {
-        what: {
-          reference: `${fhirResourceByAuditResource[snapshot.resourceType]}/${snapshot.resourceId}`,
-          display: `${snapshot.resourceType}/${snapshot.resourceId}`
-        },
+        what: buildAuditEntityReference(snapshot),
         name: snapshot.action,
         description: auditActionLabels[snapshot.action],
         detail: details.length > 0 ? details : undefined
       }
     ]
+  };
+}
+
+function buildAuditEntityReference(snapshot: AuditEventSnapshot): FhirAuditEventEntityWhat {
+  const display = `${snapshot.resourceType}/${snapshot.resourceId}`;
+  const fhirResourceType = fhirResourceByAuditResource[snapshot.resourceType];
+
+  if (fhirIdPattern.test(snapshot.resourceId)) {
+    return {
+      reference: `${fhirResourceType}/${snapshot.resourceId}`,
+      display
+    };
+  }
+
+  return {
+    identifier: {
+      system: `urn:wiiicare:nexus:audit-resource:${snapshot.resourceType}`,
+      value: snapshot.resourceId,
+      type: {
+        text: "Internal audit resource identifier"
+      }
+    },
+    display
   };
 }
 

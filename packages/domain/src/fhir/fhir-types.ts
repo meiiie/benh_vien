@@ -350,6 +350,7 @@ export type FhirAuditEvent = {
   readonly entity?: readonly {
     readonly what?: {
       readonly reference?: string;
+      readonly identifier?: FhirIdentifier;
       readonly display?: string;
     };
     readonly name?: string;

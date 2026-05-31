@@ -404,7 +404,9 @@ describe("AuditEvent integrity chain", () => {
       })
     );
 
-    expect(mapAuditEventToFhir(failedLogin)).toMatchObject({
+    const fhirAuditEvent = mapAuditEventToFhir(failedLogin);
+
+    expect(fhirAuditEvent).toMatchObject({
       resourceType: "AuditEvent",
       id: "audit-event-test-007",
       subtype: [
@@ -432,12 +434,20 @@ describe("AuditEvent integrity chain", () => {
       entity: [
         {
           what: {
-            reference: "AuditEvent/auth/login"
+            identifier: {
+              system: "urn:wiiicare:nexus:audit-resource:AuditEvent",
+              value: "auth/login",
+              type: {
+                text: "Internal audit resource identifier"
+              }
+            },
+            display: "AuditEvent/auth/login"
           },
           name: "auth.login.failure"
         }
       ]
     });
+    expect(fhirAuditEvent.entity?.[0]?.what).not.toHaveProperty("reference");
   });
 });
 
