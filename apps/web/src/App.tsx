@@ -61,16 +61,8 @@ import { buildPatientPanelRenderers } from "./features/patient-registry/patientP
 import { buildPatientRegistrySelection } from "./features/patient-registry/patientRegistrySelectors.js";
 import { buildPatientWorkspaceCollectionLoaders } from "./features/patient-workspace/patientWorkspaceCollectionLoaders.js";
 import { buildPlatformLoaders } from "./features/platform/platformLoaders.js";
-import {
-  acknowledgeRecordTransfer,
-  createRecordTransfer,
-  failRecordTransfer,
-  receiveRecordTransfer,
-  retryRecordTransfer,
-  sendRecordTransfer
-} from "./features/record-transfers/recordTransferApi.js";
 import { buildFhirPreviewLoaders } from "./features/fhir-preview/fhirPreviewLoaders.js";
-import { recordTransferCommands } from "./features/record-transfers/recordTransferCommandBuilders.js";
+import { buildRecordTransferHandlers } from "./features/record-transfers/recordTransferHandlers.js";
 import { buildRecordTransferLoaders } from "./features/record-transfers/recordTransferLoaders.js";
 import { formatDateTime } from "./lib/clinicalFormatters.js";
 import { LandingPage } from "./pages/LandingPage.js";
@@ -503,6 +495,28 @@ export function App() {
     setRecordTransfers,
     setSelectedRecordTransferId,
     setStatusMessage
+  });
+  const {
+    handleCreateRecordTransfer,
+    handleFailRecordTransfer,
+    handleGatewayAcknowledgementSubmit,
+    handleReceiveRecordTransfer,
+    handleRetryRecordTransfer,
+    handleSendRecordTransfer
+  } = buildRecordTransferHandlers({
+    clinicalApi,
+    ensureSelectedPatientWritable,
+    gatewayAcknowledgementForm,
+    loadRecordTransferDeliveryAttempts,
+    loadRecordTransferFhirTaskPreview,
+    loadRecordTransfers,
+    recordTransferForm,
+    selectedPatient,
+    setGatewayAcknowledgementResult,
+    setIsSubmittingGatewayAcknowledgement,
+    setIsSubmittingRecordTransfer,
+    setStatusMessage,
+    setTransitioningRecordTransferId
   });
   const {
     loadApiRuntimeInfo,
@@ -1253,207 +1267,6 @@ export function App() {
       );
     } finally {
       setIsMergingPatient(false);
-    }
-  }
-
-  async function handleCreateRecordTransfer(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!selectedPatient) {
-      setStatusMessage("Cần chọn bệnh nhân trước khi tạo gói chuyển hồ sơ.");
-      return;
-    }
-
-    if (!ensureSelectedPatientWritable()) {
-      return;
-    }
-
-    setIsSubmittingRecordTransfer(true);
-
-    try {
-      const createdTransfer = await createRecordTransfer(
-        clinicalApi,
-        selectedPatient.id,
-        recordTransferCommands.create(recordTransferForm)
-      );
-      await loadRecordTransfers(selectedPatient.id, createdTransfer.id);
-      setStatusMessage(
-        `Đã tạo gói chuyển hồ sơ ${createdTransfer.id} cho ${selectedPatient.fullName}.`
-      );
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tạo gói chuyển hồ sơ: ${error.message}`
-          : "Không thể tạo gói chuyển hồ sơ."
-      );
-    } finally {
-      setIsSubmittingRecordTransfer(false);
-    }
-  }
-
-  async function handleSendRecordTransfer(recordTransfer: RecordTransfer) {
-    if (!selectedPatient) {
-      setStatusMessage("Cần chọn bệnh nhân trước khi gửi gói chuyển hồ sơ.");
-      return;
-    }
-
-    if (!ensureSelectedPatientWritable()) {
-      return;
-    }
-
-    setTransitioningRecordTransferId(recordTransfer.id);
-
-    try {
-      const updatedTransfer = await sendRecordTransfer(
-        clinicalApi,
-        recordTransfer.id,
-        recordTransferCommands.send()
-      );
-      await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
-      await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
-      await loadRecordTransferDeliveryAttempts(updatedTransfer.id);
-      setStatusMessage(`Đã gửi gói chuyển hồ sơ ${updatedTransfer.id}.`);
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể gửi gói chuyển hồ sơ: ${error.message}`
-          : "Không thể gửi gói chuyển hồ sơ."
-      );
-    } finally {
-      setTransitioningRecordTransferId(undefined);
-    }
-  }
-
-  async function handleReceiveRecordTransfer(recordTransfer: RecordTransfer) {
-    if (!selectedPatient) {
-      setStatusMessage("Cần chọn bệnh nhân trước khi xác nhận tiếp nhận hồ sơ.");
-      return;
-    }
-
-    if (!ensureSelectedPatientWritable()) {
-      return;
-    }
-
-    setTransitioningRecordTransferId(recordTransfer.id);
-
-    try {
-      const updatedTransfer = await receiveRecordTransfer(
-        clinicalApi,
-        recordTransfer.id,
-        recordTransferCommands.receive()
-      );
-      await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
-      await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
-      await loadRecordTransferDeliveryAttempts(updatedTransfer.id);
-      setStatusMessage(`Đã xác nhận bệnh viện nhận tiếp nhận gói ${updatedTransfer.id}.`);
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể xác nhận tiếp nhận hồ sơ: ${error.message}`
-          : "Không thể xác nhận tiếp nhận hồ sơ."
-      );
-    } finally {
-      setTransitioningRecordTransferId(undefined);
-    }
-  }
-
-  async function handleGatewayAcknowledgementSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const acknowledgementDraft = recordTransferCommands.gatewayAcknowledgementDraft(
-      gatewayAcknowledgementForm
-    );
-
-    if (!acknowledgementDraft.ok) { setStatusMessage(acknowledgementDraft.message); return; }
-    const { acknowledgementReference, payload, recordTransferId } = acknowledgementDraft.command;
-
-    setIsSubmittingGatewayAcknowledgement(true);
-    setGatewayAcknowledgementResult(undefined);
-
-    try {
-      const acknowledgedTransfer = await acknowledgeRecordTransfer(
-        clinicalApi,
-        recordTransferId,
-        payload
-      );
-      setGatewayAcknowledgementResult(acknowledgedTransfer);
-      setStatusMessage(
-        `Gateway đã xác nhận tiếp nhận gói ${acknowledgedTransfer.id} bằng biên nhận ${acknowledgedTransfer.acknowledgementReference ?? acknowledgementReference}.`
-      );
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể gửi callback tiếp nhận: ${error.message}`
-          : "Không thể gửi callback tiếp nhận."
-      );
-    } finally {
-      setIsSubmittingGatewayAcknowledgement(false);
-    }
-  }
-
-  async function handleFailRecordTransfer(recordTransfer: RecordTransfer) {
-    if (!selectedPatient) {
-      setStatusMessage("Cần chọn bệnh nhân trước khi ghi nhận lỗi chuyển hồ sơ.");
-      return;
-    }
-
-    if (!ensureSelectedPatientWritable()) {
-      return;
-    }
-
-    setTransitioningRecordTransferId(recordTransfer.id);
-
-    try {
-      const updatedTransfer = await failRecordTransfer(
-        clinicalApi,
-        recordTransfer.id,
-        recordTransferCommands.fail()
-      );
-      await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
-      await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
-      await loadRecordTransferDeliveryAttempts(updatedTransfer.id);
-      setStatusMessage(`Đã ghi nhận lỗi gửi gói chuyển hồ sơ ${updatedTransfer.id}.`);
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể ghi nhận lỗi chuyển hồ sơ: ${error.message}`
-          : "Không thể ghi nhận lỗi chuyển hồ sơ."
-      );
-    } finally {
-      setTransitioningRecordTransferId(undefined);
-    }
-  }
-
-  async function handleRetryRecordTransfer(recordTransfer: RecordTransfer) {
-    if (!selectedPatient) {
-      setStatusMessage("Cần chọn bệnh nhân trước khi thử gửi lại hồ sơ.");
-      return;
-    }
-
-    if (!ensureSelectedPatientWritable()) {
-      return;
-    }
-
-    setTransitioningRecordTransferId(recordTransfer.id);
-
-    try {
-      const updatedTransfer = await retryRecordTransfer(
-        clinicalApi,
-        recordTransfer.id,
-        recordTransferCommands.retry()
-      );
-      await loadRecordTransfers(selectedPatient.id, updatedTransfer.id);
-      await loadRecordTransferFhirTaskPreview(updatedTransfer.id);
-      await loadRecordTransferDeliveryAttempts(updatedTransfer.id);
-      setStatusMessage(`Đã đưa gói chuyển hồ sơ ${updatedTransfer.id} về hàng đợi gửi lại.`);
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể thử gửi lại hồ sơ: ${error.message}`
-          : "Không thể thử gửi lại hồ sơ."
-      );
-    } finally {
-      setTransitioningRecordTransferId(undefined);
     }
   }
 
