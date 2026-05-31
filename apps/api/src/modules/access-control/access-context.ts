@@ -272,10 +272,7 @@ function sendMergedPatientRecordConflict(
 
 function readBearerToken(value: string | string[] | undefined): string | undefined {
   const header = readHeader(value);
+  const match = /^Bearer\s+(.+)$/i.exec(header?.trim() ?? "");
 
-  if (!header?.startsWith("Bearer ")) {
-    return undefined;
-  }
-
-  return header.slice("Bearer ".length).trim();
+  return match?.[1]?.trim() || undefined;
 }

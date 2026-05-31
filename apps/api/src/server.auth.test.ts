@@ -132,6 +132,30 @@ describe("API auth and RBAC boundary", () => {
     expect(ttlSeconds).toBeLessThanOrEqual(610);
   });
 
+  it("accepts case-insensitive Bearer auth schemes on session and protected routes", async () => {
+    app = await readyServer();
+    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+
+    const sessionResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/auth/session",
+      headers: {
+        authorization: `bearer ${accessToken}`
+      }
+    });
+    const patientResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/patients/patient-demo-001",
+      headers: {
+        authorization: `bearer ${accessToken}`,
+        "x-purpose-of-use": "TREATMENT"
+      }
+    });
+
+    expect(sessionResponse.statusCode).toBe(200);
+    expect(patientResponse.statusCode).toBe(200);
+  });
+
   it("disables demo login by default in production", async () => {
     process.env.NODE_ENV = "production";
     delete process.env.BVS_DEMO_AUTH_ENABLED;
