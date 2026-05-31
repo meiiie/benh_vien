@@ -53,6 +53,7 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/MedicationAdministrationPanel.tsx",
   "apps/web/src/features/clinical-records/MedicationDispensePanel.tsx",
   "apps/web/src/features/clinical-records/MedicationRequestPanel.tsx",
+  "apps/web/src/features/clinical-records/medicationFormatters.ts",
   "apps/web/src/features/clinical-records/medicationCommandBuilders.ts",
   "apps/web/src/features/clinical-records/ObservationPanel.tsx",
   "apps/web/src/features/clinical-records/ProcedurePanel.tsx",
@@ -132,7 +133,9 @@ const forbiddenSharedClinicalFormatterPatterns = [
   /\bformatRecordTransfer/,
   /\bbuildRecordTransferOperationalSummary/,
   /\bresolveSelectedRecordTransferId/,
-  /\bisMissingRecordTransferDeliveryAttemptsRoute/
+  /\bisMissingRecordTransferDeliveryAttemptsRoute/,
+  /\bformatMedication(?:Request|Dispense|Administration)/,
+  /\bformatDosageInstruction/
 ];
 const forbiddenAppApiPathPatterns = [
   {
@@ -194,7 +197,7 @@ for (const forbidden of forbiddenAppApiPathPatterns) {
 for (const pattern of forbiddenSharedClinicalFormatterPatterns) {
   if (pattern.test(sharedClinicalFormatterSource)) {
     throw new Error(
-      "Record-transfer presentation helpers must live under apps/web/src/features/record-transfers, not apps/web/src/lib/clinicalFormatters.ts."
+      "Feature-specific presentation helpers must live under their apps/web/src/features/* module, not apps/web/src/lib/clinicalFormatters.ts."
     );
   }
 }

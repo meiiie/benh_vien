@@ -1,13 +1,13 @@
 import type { FormEvent } from "react";
 import { Info } from "../../components/AppShell.js";
+import { formatDateTime } from "../../lib/clinicalFormatters.js";
 import {
-  formatDateTime,
   formatDosageInstruction,
   formatMedicationRequestCategory,
   formatMedicationRequestIntent,
   formatMedicationRequestPriority,
   formatMedicationRequestStatus
-} from "../../lib/clinicalFormatters.js";
+} from "./medicationFormatters.js";
 import type {
   Condition,
   Encounter,
