@@ -35,6 +35,7 @@ import { LoginPage } from "./pages/LoginPage.js";
 import { AppRouteRenderer } from "./pages/AppRouteRenderer.js";
 import {
   buildAppAccessContext,
+  buildAppRouteRuntimeContext,
   buildAppWorkspaceContext
 } from "./pages/appDerivedContext.js";
 import { useAppLifecycleEffects } from "./pages/appLifecycleEffects.js";
@@ -119,6 +120,14 @@ export function App() {
     providerDirectory: platformState.providerDirectory,
     recordTransfers: interoperabilityState.recordTransfers,
     selectedRecordTransferId: interoperabilityState.selectedRecordTransferId
+  });
+  const {
+    fhirPreviews,
+    latestEncounterServiceType
+  } = buildAppRouteRuntimeContext({
+    clinicalRecordState,
+    fhirPreviewState,
+    platformState
   });
   const { loadPatients } = buildPatientRegistryLoaders({
     clinicalApi,
@@ -646,31 +655,7 @@ export function App() {
         canMergePatients={canMergePatients}
         canViewRuntimeInfo={canViewRuntimeInfo}
         dashboardMetrics={dashboardMetrics}
-        fhirPreviews={{
-          allergyIntolerance: fhirPreviewState.allergyIntoleranceFhirPreview,
-          capabilityStatement: platformState.capabilityStatementPreview,
-          condition: fhirPreviewState.conditionFhirPreview,
-          consent: fhirPreviewState.consentFhirPreview,
-          diagnosticReport: fhirPreviewState.diagnosticReportFhirPreview,
-          document: fhirPreviewState.documentFhirPreview,
-          documentProvenance: fhirPreviewState.documentProvenanceFhirPreview,
-          encounter: fhirPreviewState.encounterFhirPreview,
-          imagingStudy: fhirPreviewState.imagingStudyFhirPreview,
-          medicationAdministration:
-            fhirPreviewState.medicationAdministrationFhirPreview,
-          medicationDispense: fhirPreviewState.medicationDispenseFhirPreview,
-          medicationRequest: fhirPreviewState.medicationRequestFhirPreview,
-          observation: fhirPreviewState.observationFhirPreview,
-          patient: fhirPreviewState.patientFhirPreview,
-          patientBundle: fhirPreviewState.patientFhirBundlePreview,
-          patientDocumentBundle:
-            fhirPreviewState.patientFhirDocumentBundlePreview,
-          procedure: fhirPreviewState.procedureFhirPreview,
-          providerDirectory: platformState.providerDirectoryFhirPreview,
-          recordTransferTask: fhirPreviewState.recordTransferFhirTaskPreview,
-          serviceRequest: fhirPreviewState.serviceRequestFhirPreview,
-          workflowTask: fhirPreviewState.workflowTaskFhirPreview
-        }}
+        fhirPreviews={fhirPreviews}
         gatewayAcknowledgementForm={interoperabilityState.gatewayAcknowledgementForm}
         gatewayAcknowledgementResult={
           interoperabilityState.gatewayAcknowledgementResult
@@ -679,7 +664,7 @@ export function App() {
         isSubmittingGatewayAcknowledgement={
           interoperabilityState.isSubmittingGatewayAcknowledgement
         }
-        latestEncounterServiceType={clinicalRecordState.encounters[0]?.serviceType}
+        latestEncounterServiceType={latestEncounterServiceType}
         loginForm={loginForm}
         panels={routePanels}
         referenceSignals={referenceSignals}

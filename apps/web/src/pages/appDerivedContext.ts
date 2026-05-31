@@ -1,6 +1,9 @@
 import type { useClinicalRecordState } from "../features/clinical-records/clinicalRecordState.js";
+import type { useFhirPreviewState } from "../features/fhir-preview/fhirPreviewState.js";
+import type { usePlatformState } from "../features/platform/platformState.js";
 import { buildDashboardMetrics } from "./dashboardMetrics.js";
 import { buildWorkspaceSelection } from "./workspaceSelection.js";
+import type { AppRouteRenderer } from "./AppRouteRenderer.js";
 import type {
   AuthSession,
   Patient,
@@ -9,6 +12,9 @@ import type {
 } from "../types/clinical.js";
 
 type ClinicalRecordState = ReturnType<typeof useClinicalRecordState>;
+type FhirPreviewState = ReturnType<typeof useFhirPreviewState>;
+type PlatformState = ReturnType<typeof usePlatformState>;
+type AppRouteRendererProps = Parameters<typeof AppRouteRenderer>[0];
 
 type BuildAppAccessContextInput = {
   readonly authSession: AuthSession | undefined;
@@ -90,5 +96,43 @@ export function buildAppWorkspaceContext({
     }),
     patientWorkspaceCollections,
     workspaceSelection
+  };
+}
+
+export function buildAppRouteRuntimeContext({
+  clinicalRecordState,
+  fhirPreviewState,
+  platformState
+}: {
+  readonly clinicalRecordState: ClinicalRecordState;
+  readonly fhirPreviewState: FhirPreviewState;
+  readonly platformState: PlatformState;
+}): Pick<AppRouteRendererProps, "fhirPreviews" | "latestEncounterServiceType"> {
+  return {
+    fhirPreviews: {
+      allergyIntolerance: fhirPreviewState.allergyIntoleranceFhirPreview,
+      capabilityStatement: platformState.capabilityStatementPreview,
+      condition: fhirPreviewState.conditionFhirPreview,
+      consent: fhirPreviewState.consentFhirPreview,
+      diagnosticReport: fhirPreviewState.diagnosticReportFhirPreview,
+      document: fhirPreviewState.documentFhirPreview,
+      documentProvenance: fhirPreviewState.documentProvenanceFhirPreview,
+      encounter: fhirPreviewState.encounterFhirPreview,
+      imagingStudy: fhirPreviewState.imagingStudyFhirPreview,
+      medicationAdministration:
+        fhirPreviewState.medicationAdministrationFhirPreview,
+      medicationDispense: fhirPreviewState.medicationDispenseFhirPreview,
+      medicationRequest: fhirPreviewState.medicationRequestFhirPreview,
+      observation: fhirPreviewState.observationFhirPreview,
+      patient: fhirPreviewState.patientFhirPreview,
+      patientBundle: fhirPreviewState.patientFhirBundlePreview,
+      patientDocumentBundle: fhirPreviewState.patientFhirDocumentBundlePreview,
+      procedure: fhirPreviewState.procedureFhirPreview,
+      providerDirectory: platformState.providerDirectoryFhirPreview,
+      recordTransferTask: fhirPreviewState.recordTransferFhirTaskPreview,
+      serviceRequest: fhirPreviewState.serviceRequestFhirPreview,
+      workflowTask: fhirPreviewState.workflowTaskFhirPreview
+    },
+    latestEncounterServiceType: clinicalRecordState.encounters[0]?.serviceType
   };
 }
