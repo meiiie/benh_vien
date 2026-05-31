@@ -10,6 +10,25 @@ export type PatientIdentifierType =
 
 export type PatientRecordStatus = "active" | "merged" | "inactive";
 
+const administrativeGenders = new Set<AdministrativeGender>([
+  "male",
+  "female",
+  "other",
+  "unknown"
+]);
+const patientIdentifierTypes = new Set<PatientIdentifierType>([
+  "national-id",
+  "insurance-id",
+  "hospital-mrn",
+  "legacy-id"
+]);
+const patientRecordStatuses = new Set<PatientRecordStatus>([
+  "active",
+  "merged",
+  "inactive"
+]);
+const fhirDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+
 export type PatientIdentifier = {
   readonly system: string;
   readonly value: string;
@@ -93,8 +112,8 @@ export class Patient {
       id: input.id.trim(),
       identifiers,
       fullName,
-      birthDate: input.birthDate,
-      gender: input.gender ?? "unknown",
+      birthDate: input.birthDate ? normalizeBirthDate(input.birthDate) : undefined,
+      gender: normalizeGender(input.gender ?? "unknown"),
       address: normalizeOptionalText(input.address),
       phone: normalizeOptionalText(input.phone),
       managingOrganizationId: input.managingOrganizationId.trim(),
@@ -105,22 +124,50 @@ export class Patient {
   }
 
   static rehydrate(snapshot: PatientSnapshot): Patient {
-    return new Patient({
-      id: snapshot.id,
-      identifiers: [...snapshot.identifiers],
-      fullName: snapshot.fullName,
-      birthDate: snapshot.birthDate,
-      gender: snapshot.gender,
-      address: snapshot.address,
-      phone: snapshot.phone,
-      managingOrganizationId: snapshot.managingOrganizationId,
-      status: snapshot.status,
+    const id = normalizeRequiredText(snapshot.id, "Mã hồ sơ bệnh nhân không được để trống.");
+    const identifiers = snapshot.identifiers.map(normalizeIdentifier);
+
+    if (identifiers.length === 0) {
+      throw new DomainError("Bệnh nhân cần ít nhất một định danh.");
+    }
+
+    assertUniqueIdentifiers(identifiers);
+    const fullName = normalizeRequiredText(
+      snapshot.fullName,
+      "Họ tên bệnh nhân không được để trống."
+    );
+    const status = normalizeStatus(snapshot.status);
+    const mergedAt = snapshot.mergedAt
+      ? parseDate(snapshot.mergedAt, "Thời điểm merge hồ sơ không hợp lệ.")
+      : undefined;
+    assertMergeState({
+      id,
+      status,
       mergedIntoPatientId: snapshot.mergedIntoPatientId,
-      mergedAt: snapshot.mergedAt ? new Date(snapshot.mergedAt) : undefined,
+      mergedAt,
       mergedByActorId: snapshot.mergedByActorId,
-      mergeReason: snapshot.mergeReason,
-      createdAt: new Date(snapshot.createdAt),
-      updatedAt: new Date(snapshot.updatedAt)
+      mergeReason: snapshot.mergeReason
+    });
+
+    return new Patient({
+      id,
+      identifiers,
+      fullName,
+      birthDate: snapshot.birthDate ? normalizeBirthDate(snapshot.birthDate) : undefined,
+      gender: normalizeGender(snapshot.gender),
+      address: normalizeOptionalText(snapshot.address),
+      phone: normalizeOptionalText(snapshot.phone),
+      managingOrganizationId: normalizeRequiredText(
+        snapshot.managingOrganizationId,
+        "Cơ sở quản lý hồ sơ không được để trống."
+      ),
+      status,
+      mergedIntoPatientId: normalizeOptionalText(snapshot.mergedIntoPatientId),
+      mergedAt,
+      mergedByActorId: normalizeOptionalText(snapshot.mergedByActorId),
+      mergeReason: normalizeOptionalText(snapshot.mergeReason),
+      createdAt: parseDate(snapshot.createdAt, "Thời điểm tạo hồ sơ bệnh nhân không hợp lệ."),
+      updatedAt: parseDate(snapshot.updatedAt, "Thời điểm cập nhật hồ sơ bệnh nhân không hợp lệ.")
     });
   }
 
@@ -146,11 +193,11 @@ export class Patient {
     }
 
     if (input.birthDate !== undefined) {
-      this.props.birthDate = input.birthDate;
+      this.props.birthDate = normalizeBirthDate(input.birthDate);
     }
 
     if (input.gender !== undefined) {
-      this.props.gender = input.gender;
+      this.props.gender = normalizeGender(input.gender);
     }
 
     if (input.address !== undefined) {
@@ -206,9 +253,12 @@ export class Patient {
       throw new DomainError("Hồ sơ bệnh nhân đã được merge trước đó.");
     }
 
+    const mergedAt = input.mergedAt ?? new Date();
+    assertValidDate(mergedAt, "Thời điểm merge hồ sơ không hợp lệ.");
+
     this.props.status = "merged";
     this.props.mergedIntoPatientId = targetPatientId;
-    this.props.mergedAt = input.mergedAt ?? new Date();
+    this.props.mergedAt = mergedAt;
     this.props.mergedByActorId = mergedByActorId;
     this.props.mergeReason = reason;
     this.touch();
@@ -248,6 +298,7 @@ export class Patient {
 function normalizeIdentifier(identifier: PatientIdentifier): PatientIdentifier {
   const system = identifier.system.trim();
   const value = identifier.value.trim();
+  const type = normalizeIdentifierType(identifier.type);
 
   if (!system || !value) {
     throw new DomainError("Định danh bệnh nhân phải có hệ thống và giá trị.");
@@ -256,7 +307,7 @@ function normalizeIdentifier(identifier: PatientIdentifier): PatientIdentifier {
   return {
     system,
     value,
-    type: identifier.type
+    type
   };
 }
 
@@ -271,6 +322,96 @@ function assertUniqueIdentifiers(identifiers: readonly PatientIdentifier[]): voi
     }
 
     seen.add(key);
+  }
+}
+
+function assertMergeState(input: {
+  readonly id: string;
+  readonly status: PatientRecordStatus;
+  readonly mergedIntoPatientId?: string;
+  readonly mergedAt?: Date;
+  readonly mergedByActorId?: string;
+  readonly mergeReason?: string;
+}): void {
+  const mergedIntoPatientId = normalizeOptionalText(input.mergedIntoPatientId);
+  const mergedByActorId = normalizeOptionalText(input.mergedByActorId);
+  const mergeReason = normalizeOptionalText(input.mergeReason);
+  const hasMergeMetadata = Boolean(
+    mergedIntoPatientId || input.mergedAt || mergedByActorId || mergeReason
+  );
+
+  if (input.status === "merged") {
+    if (!mergedIntoPatientId || !input.mergedAt || !mergedByActorId || !mergeReason) {
+      throw new DomainError("Hồ sơ đã merge cần đủ hồ sơ đích, thời điểm, người thực hiện và lý do.");
+    }
+
+    if (mergedIntoPatientId === input.id) {
+      throw new DomainError("Hồ sơ bệnh nhân không thể merge vào chính nó.");
+    }
+
+    return;
+  }
+
+  if (hasMergeMetadata) {
+    throw new DomainError("Chỉ hồ sơ ở trạng thái merged mới được có thông tin merge.");
+  }
+}
+
+function normalizeGender(value: AdministrativeGender): AdministrativeGender {
+  if (!administrativeGenders.has(value)) {
+    throw new DomainError("Giới tính hành chính của bệnh nhân không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizeIdentifierType(value: PatientIdentifierType): PatientIdentifierType {
+  if (!patientIdentifierTypes.has(value)) {
+    throw new DomainError("Loại định danh bệnh nhân không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizeStatus(value: PatientRecordStatus): PatientRecordStatus {
+  if (!patientRecordStatuses.has(value)) {
+    throw new DomainError("Trạng thái hồ sơ bệnh nhân không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizeBirthDate(value: string): string {
+  const normalized = normalizeText(value);
+
+  if (!fhirDatePattern.test(normalized)) {
+    throw new DomainError("Ngày sinh bệnh nhân phải theo định dạng YYYY-MM-DD.");
+  }
+
+  const date = new Date(`${normalized}T00:00:00.000Z`);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new DomainError("Ngày sinh bệnh nhân không hợp lệ.");
+  }
+
+  const dateValue = date.toISOString().slice(0, 10);
+
+  if (dateValue !== normalized) {
+    throw new DomainError("Ngày sinh bệnh nhân không hợp lệ.");
+  }
+
+  return normalized;
+}
+
+function parseDate(value: string, message: string): Date {
+  const date = new Date(value);
+  assertValidDate(date, message);
+  return date;
+}
+
+function assertValidDate(value: Date, message: string): void {
+  if (Number.isNaN(value.getTime())) {
+    throw new DomainError(message);
   }
 }
 

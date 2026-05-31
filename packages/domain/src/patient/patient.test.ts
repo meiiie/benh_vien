@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Encounter, Patient, mapEncounterToFhir, mapPatientToFhir } from "../index.js";
+import { DomainError } from "../shared/domain-error.js";
 
 describe("Patient", () => {
   it("registers a patient with normalized demographics", () => {
@@ -143,5 +144,89 @@ describe("Patient", () => {
         reference: "Organization/department-outpatient"
       }
     });
+  });
+
+  it("rejects invalid rehydrated patient metadata", () => {
+    const snapshot = Patient.register({
+      id: "patient-test-003",
+      identifiers: [
+        {
+          system: "urn:gov:vietnam:national-id",
+          value: "000000000003",
+          type: "national-id"
+        }
+      ],
+      fullName: "Le Van C",
+      birthDate: "1990-01-01",
+      gender: "male",
+      managingOrganizationId: "hospital-demo"
+    }).toSnapshot();
+
+    expect(() =>
+      Patient.rehydrate({
+        ...snapshot,
+        identifiers: []
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Patient.rehydrate({
+        ...snapshot,
+        identifiers: [
+          {
+            system: "urn:gov:vietnam:national-id",
+            value: "000000000003",
+            type: "citizen-id" as never
+          }
+        ]
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Patient.rehydrate({
+        ...snapshot,
+        birthDate: "1990-02-31"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Patient.rehydrate({
+        ...snapshot,
+        gender: "not-known" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Patient.rehydrate({
+        ...snapshot,
+        status: "archived" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Patient.rehydrate({
+        ...snapshot,
+        status: "merged",
+        mergedIntoPatientId: undefined,
+        mergedAt: "2026-05-28T01:00:00.000Z",
+        mergedByActorId: "admin-test",
+        mergeReason: "Duplicate registration"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Patient.rehydrate({
+        ...snapshot,
+        status: "active",
+        mergedIntoPatientId: "patient-test-canonical"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Patient.rehydrate({
+        ...snapshot,
+        createdAt: "not-a-date"
+      })
+    ).toThrow(DomainError);
   });
 });
