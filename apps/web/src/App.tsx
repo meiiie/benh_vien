@@ -132,6 +132,7 @@ import { loadPatientScopedCollection } from "./lib/patientScopedCollectionLoader
 import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { AppRouteRenderer } from "./pages/AppRouteRenderer.js";
+import { buildAppRoutePanels } from "./pages/appRoutePanels.js";
 import { buildDashboardMetrics } from "./pages/dashboardMetrics.js";
 import { buildWorkspaceSelection } from "./pages/workspaceSelection.js";
 
@@ -669,6 +670,13 @@ export function App() {
     onDocumentFormChange: setDocumentForm,
     onSelectDocument: setSelectedDocumentId,
     onSignDocument: handleSignClinicalDocument
+  });
+  const routePanels = buildAppRoutePanels({
+    auditPanels,
+    clinicalDocumentPanels,
+    clinicalRecordPanels,
+    interopPanels,
+    patientPanels
   });
 
   useEffect(() => {
@@ -2758,30 +2766,7 @@ export function App() {
         isSubmittingGatewayAcknowledgement={isSubmittingGatewayAcknowledgement}
         latestEncounterServiceType={encounters[0]?.serviceType}
         loginForm={loginForm}
-        panels={{
-          allergyIntolerance: clinicalRecordPanels.allergyIntolerance,
-          audit: auditPanels.audit,
-          clinicalDocument: clinicalDocumentPanels.clinicalDocument,
-          condition: clinicalRecordPanels.condition,
-          consentInterop: interopPanels.consentInterop,
-          createPatient: patientPanels.createPatient,
-          diagnosticReport: clinicalRecordPanels.diagnosticReport,
-          encounter: clinicalRecordPanels.encounter,
-          globalAudit: auditPanels.globalAudit,
-          imagingStudy: clinicalRecordPanels.imagingStudy,
-          medicationAdministration: clinicalRecordPanels.medicationAdministration,
-          medicationDispense: clinicalRecordPanels.medicationDispense,
-          medicationRequest: clinicalRecordPanels.medicationRequest,
-          observation: clinicalRecordPanels.observation,
-          patientDetail: patientPanels.patientDetail,
-          patientList: patientPanels.patientList,
-          patientMerge: patientPanels.patientMerge,
-          procedure: clinicalRecordPanels.procedure,
-          providerDirectory: interopPanels.providerDirectory,
-          recordTransferInterop: interopPanels.recordTransferInterop,
-          serviceRequest: clinicalRecordPanels.serviceRequest,
-          workflowTask: clinicalRecordPanels.workflowTask
-        }}
+        panels={routePanels}
         referenceSignals={referenceSignals}
         selectedPatient={selectedPatient}
         workflowSteps={workflowSteps}

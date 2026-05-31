@@ -22,7 +22,7 @@ type ReferenceSignal = {
   readonly value: string;
 };
 
-type AppRoutePanels = {
+export type AppRoutePanels = {
   readonly allergyIntolerance: () => ReactNode;
   readonly audit: () => ReactNode;
   readonly clinicalDocument: () => ReactNode;

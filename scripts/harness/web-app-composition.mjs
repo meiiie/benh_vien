@@ -54,6 +54,7 @@ const requiredModules = [
   "apps/web/src/lib/fhirPreviewLoader.ts",
   "apps/web/src/lib/patientScopedCollectionLoader.ts",
   "apps/web/src/pages/AppRouteRenderer.tsx",
+  "apps/web/src/pages/appRoutePanels.ts",
   "apps/web/src/pages/AuditLogPage.tsx",
   "apps/web/src/pages/DashboardPage.tsx",
   "apps/web/src/pages/DocumentsPage.tsx",
@@ -67,7 +68,7 @@ const requiredModules = [
   "apps/web/src/pages/workspaceSelection.ts",
   "apps/web/src/types/clinical.ts"
 ];
-const maxAppLines = 2_805;
+const maxAppLines = 2_790;
 
 const appSource = await readFile(appPath, "utf8");
 const appLineCount = appSource.split(/\r?\n/).length;
