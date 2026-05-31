@@ -1,3 +1,4 @@
+import { toApiDateTime } from "../../lib/clinicalFormatters.js";
 import type {
   GatewayAcknowledgementForm,
   NewRecordTransferForm
@@ -69,11 +70,17 @@ export function buildGatewayAcknowledgementDraft(
     command: {
       recipientOrganizationId,
       acknowledgementReference,
-      receivedAt: form.receivedAt,
-      receivedByActorId: form.receivedByActorId,
-      targetEndpointId: form.targetEndpointId,
-      deliveryIdempotencyKey: form.deliveryIdempotencyKey,
-      note: form.note
+      ...(form.receivedAt.trim() ? { receivedAt: toApiDateTime(form.receivedAt) } : {}),
+      ...(form.receivedByActorId.trim()
+        ? { receivedByActorId: form.receivedByActorId.trim() }
+        : {}),
+      ...(form.targetEndpointId.trim()
+        ? { targetEndpointId: form.targetEndpointId.trim() }
+        : {}),
+      ...(form.deliveryIdempotencyKey.trim()
+        ? { deliveryIdempotencyKey: form.deliveryIdempotencyKey.trim() }
+        : {}),
+      ...(form.note.trim() ? { note: form.note.trim() } : {})
     }
   };
 }

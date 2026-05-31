@@ -1,7 +1,5 @@
 import type { ClinicalApiClient } from "../../api/clinicalApi.js";
-import { toApiDateTime } from "../../lib/clinicalFormatters.js";
 import type {
-  GatewayAcknowledgementForm,
   RecordTransfer,
   RecordTransferBundleType,
   RecordTransferDeliveryAttemptsResponse,
@@ -27,10 +25,15 @@ export type RecordTransferFailCommand = RecordTransferLifecycleCommand & {
   readonly failureReason: string;
 };
 
-export type GatewayAcknowledgementCommand = Omit<
-  GatewayAcknowledgementForm,
-  "recordTransferId"
->;
+export type GatewayAcknowledgementCommand = {
+  readonly recipientOrganizationId: string;
+  readonly acknowledgementReference: string;
+  readonly receivedAt?: string;
+  readonly receivedByActorId?: string;
+  readonly targetEndpointId?: string;
+  readonly deliveryIdempotencyKey?: string;
+  readonly note?: string;
+};
 
 export function listRecordTransfers(
   api: ClinicalApiClient,
@@ -109,28 +112,14 @@ export function retryRecordTransfer(
 export function acknowledgeRecordTransfer(
   api: ClinicalApiClient,
   recordTransferId: string,
-  form: GatewayAcknowledgementCommand
+  command: GatewayAcknowledgementCommand
 ): Promise<RecordTransfer> {
   return api.requestJson<RecordTransfer>(
     `/record-transfers/${recordTransferId}/acknowledgement-callback`,
     {
       method: "POST",
       purposeOfUse: "OPERATIONS",
-      json: {
-        recipientOrganizationId: form.recipientOrganizationId,
-        acknowledgementReference: form.acknowledgementReference,
-        ...(form.receivedAt.trim() ? { receivedAt: toApiDateTime(form.receivedAt) } : {}),
-        ...(form.receivedByActorId.trim()
-          ? { receivedByActorId: form.receivedByActorId.trim() }
-          : {}),
-        ...(form.targetEndpointId.trim()
-          ? { targetEndpointId: form.targetEndpointId.trim() }
-          : {}),
-        ...(form.deliveryIdempotencyKey.trim()
-          ? { deliveryIdempotencyKey: form.deliveryIdempotencyKey.trim() }
-          : {}),
-        ...(form.note.trim() ? { note: form.note.trim() } : {})
-      }
+      json: command
     }
   );
 }
