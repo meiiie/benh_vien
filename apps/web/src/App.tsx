@@ -5,10 +5,7 @@ import {
   type LoginForm
 } from "./auth/demoLogin.js";
 import { loginDemoSession } from "./auth/authApi.js";
-import {
-  createClinicalApiClient,
-  isApiHttpError
-} from "./api/clinicalApi.js";
+import { createClinicalApiClient } from "./api/clinicalApi.js";
 import { buildAuditLoaders } from "./features/audit/auditLoaders.js";
 import { buildAuditPanelRenderers } from "./features/audit/auditPanelRenderers.js";
 import {
@@ -67,21 +64,15 @@ import { buildPlatformLoaders } from "./features/platform/platformLoaders.js";
 import {
   acknowledgeRecordTransfer,
   createRecordTransfer,
-  exportRecordTransferFhirTask,
   failRecordTransfer,
-  listRecordTransferDeliveryAttempts,
-  listRecordTransfers,
   receiveRecordTransfer,
   retryRecordTransfer,
   sendRecordTransfer
 } from "./features/record-transfers/recordTransferApi.js";
 import { buildFhirPreviewLoaders } from "./features/fhir-preview/fhirPreviewLoaders.js";
 import { recordTransferCommands } from "./features/record-transfers/recordTransferCommandBuilders.js";
-import {
-  formatDateTime,
-  isMissingRecordTransferDeliveryAttemptsRoute,
-  resolveSelectedRecordTransferId
-} from "./lib/clinicalFormatters.js";
+import { buildRecordTransferLoaders } from "./features/record-transfers/recordTransferLoaders.js";
+import { formatDateTime } from "./lib/clinicalFormatters.js";
 import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { AppRouteRenderer } from "./pages/AppRouteRenderer.js";
@@ -495,6 +486,22 @@ export function App() {
     setConsents,
     setIsLoadingConsents,
     setRevokingConsentId,
+    setStatusMessage
+  });
+  const {
+    loadRecordTransferDeliveryAttempts,
+    loadRecordTransferFhirTaskPreview,
+    loadRecordTransfers
+  } = buildRecordTransferLoaders({
+    clinicalApi,
+    getCurrentRecordTransferId: () => selectedRecordTransferIdRef.current,
+    setIsLoadingRecordTransferDeliveryAttempts,
+    setIsLoadingRecordTransfers,
+    setRecordTransferDeliveryAttempts,
+    setRecordTransferDeliveryAttemptWarning,
+    setRecordTransferFhirTaskPreview,
+    setRecordTransfers,
+    setSelectedRecordTransferId,
     setStatusMessage
   });
   const {
@@ -1093,111 +1100,6 @@ export function App() {
     }
 
     await Promise.all(workspaceTasks);
-  }
-
-  async function loadRecordTransfers(
-    patientId: string,
-    nextSelectedRecordTransferId?: string
-  ) {
-    setIsLoadingRecordTransfers(true);
-
-    try {
-      const data = await listRecordTransfers(clinicalApi, patientId);
-      setRecordTransfers(data.items);
-      setSelectedRecordTransferId(
-        resolveSelectedRecordTransferId({
-          items: data.items,
-          preferredId: nextSelectedRecordTransferId,
-          currentId: selectedRecordTransferId
-        })
-      );
-    } catch (error) {
-      setRecordTransfers([]);
-      setSelectedRecordTransferId(undefined);
-      setRecordTransferDeliveryAttempts([]);
-      setRecordTransferDeliveryAttemptWarning(undefined);
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tải gói chuyển hồ sơ: ${error.message}`
-          : "Không thể tải gói chuyển hồ sơ."
-      );
-    } finally {
-      setIsLoadingRecordTransfers(false);
-    }
-  }
-
-  async function loadRecordTransferFhirTaskPreview(recordTransferId: string) {
-    try {
-      const preview = await exportRecordTransferFhirTask(clinicalApi, recordTransferId);
-
-      if (!isCurrentRecordTransferSelection(recordTransferId)) {
-        return;
-      }
-
-      setRecordTransferFhirTaskPreview(preview);
-    } catch (error) {
-      if (!isCurrentRecordTransferSelection(recordTransferId)) {
-        return;
-      }
-
-      setRecordTransferFhirTaskPreview({
-        error:
-          error instanceof Error
-            ? `Không thể xuất FHIR Task chuyển hồ sơ: ${error.message}`
-            : "Không thể xuất FHIR Task chuyển hồ sơ."
-      });
-    }
-  }
-
-  async function loadRecordTransferDeliveryAttempts(recordTransferId: string) {
-    if (!isCurrentRecordTransferSelection(recordTransferId)) {
-      return;
-    }
-
-    setIsLoadingRecordTransferDeliveryAttempts(true);
-    setRecordTransferDeliveryAttemptWarning(undefined);
-
-    try {
-      const data = await listRecordTransferDeliveryAttempts(clinicalApi, recordTransferId);
-
-      if (!isCurrentRecordTransferSelection(recordTransferId)) {
-        return;
-      }
-
-      setRecordTransferDeliveryAttempts(data.items);
-      setRecordTransferDeliveryAttemptWarning(undefined);
-    } catch (error) {
-      if (!isCurrentRecordTransferSelection(recordTransferId)) {
-        return;
-      }
-
-      if (
-        isApiHttpError(error) &&
-        error.status === 404 &&
-        isMissingRecordTransferDeliveryAttemptsRoute(error.payload)
-      ) {
-        setRecordTransferDeliveryAttempts([]);
-        setRecordTransferDeliveryAttemptWarning(
-          "API lịch sử gửi chưa sẵn sàng trong runtime hiện tại. Gói chuyển vẫn hiển thị được, nhưng cần khởi động lại backend mới nhất để xem delivery attempt/outbox."
-        );
-        return;
-      }
-
-      setRecordTransferDeliveryAttempts([]);
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tải lịch sử gửi hồ sơ: ${error.message}`
-          : "Không thể tải lịch sử gửi hồ sơ."
-      );
-    } finally {
-      if (isCurrentRecordTransferSelection(recordTransferId)) {
-        setIsLoadingRecordTransferDeliveryAttempts(false);
-      }
-    }
-  }
-
-  function isCurrentRecordTransferSelection(recordTransferId: string): boolean {
-    return selectedRecordTransferIdRef.current === recordTransferId;
   }
 
   function buildSelectedPatientMergedReadOnlyMessage(): string {
