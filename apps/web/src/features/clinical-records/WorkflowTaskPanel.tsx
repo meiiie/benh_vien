@@ -1,9 +1,11 @@
 import { Info } from "../../components/AppShell.js";
 import {
-  formatDateTime,
   formatServiceRequestPriority,
   formatWorkflowTaskReferences,
   formatWorkflowTaskStatus
+} from "./careWorkflowFormatters.js";
+import {
+  formatDateTime
 } from "../../lib/clinicalFormatters.js";
 import type { WorkflowTask } from "../../types/clinical.js";
 

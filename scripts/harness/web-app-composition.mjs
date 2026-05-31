@@ -42,9 +42,11 @@ const requiredModules = [
   "apps/web/src/features/clinical-documents/clinicalDocumentPanelRenderers.tsx",
   "apps/web/src/features/clinical-records/AllergyIntolerancePanel.tsx",
   "apps/web/src/features/clinical-records/carePlanCommandBuilders.ts",
+  "apps/web/src/features/clinical-records/careWorkflowFormatters.ts",
   "apps/web/src/features/clinical-records/clinicalEntryCommandBuilders.ts",
   "apps/web/src/features/clinical-records/clinicalRecordPanelRenderers.tsx",
   "apps/web/src/features/clinical-records/ConditionPanel.tsx",
+  "apps/web/src/features/clinical-records/diagnosticResultFormatters.ts",
   "apps/web/src/features/clinical-records/DiagnosticReportPanel.tsx",
   "apps/web/src/features/clinical-records/EncounterPanel.tsx",
   "apps/web/src/features/clinical-records/encounterScopedFormUpdater.ts",
@@ -135,7 +137,13 @@ const forbiddenSharedClinicalFormatterPatterns = [
   /\bresolveSelectedRecordTransferId/,
   /\bisMissingRecordTransferDeliveryAttemptsRoute/,
   /\bformatMedication(?:Request|Dispense|Administration)/,
-  /\bformatDosageInstruction/
+  /\bformatDosageInstruction/,
+  /\bformatServiceRequest(?:Category|Status|Intent|Priority)/,
+  /\bformatWorkflowTask(?:Status|References)/,
+  /\bformatProcedure(?:Status|Category|Performers|References)/,
+  /\bformatObservation(?:Category|Status|Value)/,
+  /\bformatDiagnosticReport(?:Category|Status)/,
+  /\bformatImagingStudyStatus/
 ];
 const forbiddenAppApiPathPatterns = [
   {

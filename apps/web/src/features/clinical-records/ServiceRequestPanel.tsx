@@ -1,11 +1,13 @@
 import type { FormEvent } from "react";
 import { Info } from "../../components/AppShell.js";
 import {
-  formatDateTime,
   formatServiceRequestCategory,
   formatServiceRequestIntent,
   formatServiceRequestPriority,
   formatServiceRequestStatus
+} from "./careWorkflowFormatters.js";
+import {
+  formatDateTime
 } from "../../lib/clinicalFormatters.js";
 import type {
   Condition,
