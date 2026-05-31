@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
   loginPresets,
   type DemoRole,
@@ -24,6 +24,7 @@ import { useEncounterScopedFormEffects } from "./features/clinical-records/encou
 import { buildEncounterHandlers } from "./features/clinical-records/encounterHandlers.js";
 import { buildConsentLoaders } from "./features/consents/consentLoaders.js";
 import { buildInteropPanelRenderers } from "./features/interoperability/interopPanelRenderers.js";
+import { useInteroperabilityState } from "./features/interoperability/interoperabilityState.js";
 import { buildPatientRegistryHandlers } from "./features/patient-registry/patientRegistryHandlers.js";
 import { buildPatientRegistryLoaders } from "./features/patient-registry/patientRegistryLoaders.js";
 import { buildPatientPanelRenderers } from "./features/patient-registry/patientPanelRenderers.js";
@@ -53,14 +54,12 @@ import {
   defaultConditionForm,
   defaultDiagnosticReportForm,
   defaultEncounterForm,
-  defaultGatewayAcknowledgementForm,
   defaultImagingStudyForm,
   defaultMedicationAdministrationForm,
   defaultMedicationDispenseForm,
   defaultMedicationRequestForm,
   defaultObservationForm,
   defaultProcedureForm,
-  defaultRecordTransferForm,
   defaultServiceRequestForm,
   defaultTransferContext,
   documentTaxonomy,
@@ -111,11 +110,6 @@ import type {
   ImagingStudyCoding,
   ImagingStudySeries,
   ImagingStudy,
-  Consent,
-  RecordTransfer,
-  RecordTransferDeliveryAttempt,
-  NewRecordTransferForm,
-  GatewayAcknowledgementForm,
   NewEncounterForm,
   NewClinicalDocumentForm,
   NewConditionForm,
@@ -149,6 +143,7 @@ export function App() {
   const platformState = usePlatformState();
   const fhirPreviewState = useFhirPreviewState();
   const auditState = useAuditState();
+  const interoperabilityState = useInteroperabilityState();
   const [encounters, setEncounters] = useState<readonly Encounter[]>([]);
   const [selectedEncounterId, setSelectedEncounterId] = useState<string>();
   const [clinicalDocuments, setClinicalDocuments] = useState<readonly ClinicalDocument[]>([]);
@@ -179,20 +174,6 @@ export function App() {
   const [selectedDiagnosticReportId, setSelectedDiagnosticReportId] = useState<string>();
   const [imagingStudies, setImagingStudies] = useState<readonly ImagingStudy[]>([]);
   const [selectedImagingStudyId, setSelectedImagingStudyId] = useState<string>();
-  const [consents, setConsents] = useState<readonly Consent[]>([]);
-  const [recordTransfers, setRecordTransfers] = useState<readonly RecordTransfer[]>([]);
-  const [selectedRecordTransferId, setSelectedRecordTransferId] = useState<string>();
-  const selectedRecordTransferIdRef = useRef<string | undefined>(undefined);
-  const [recordTransferDeliveryAttempts, setRecordTransferDeliveryAttempts] =
-    useState<readonly RecordTransferDeliveryAttempt[]>([]);
-  const [recordTransferDeliveryAttemptWarning, setRecordTransferDeliveryAttemptWarning] =
-    useState<string>();
-  const [recordTransferForm, setRecordTransferForm] =
-    useState<NewRecordTransferForm>(defaultRecordTransferForm);
-  const [gatewayAcknowledgementForm, setGatewayAcknowledgementForm] =
-    useState<GatewayAcknowledgementForm>(defaultGatewayAcknowledgementForm);
-  const [gatewayAcknowledgementResult, setGatewayAcknowledgementResult] =
-    useState<RecordTransfer>();
   const [encounterForm, setEncounterForm] = useState<NewEncounterForm>(defaultEncounterForm);
   const [documentForm, setDocumentForm] =
     useState<NewClinicalDocumentForm>(defaultClinicalDocumentForm);
@@ -232,10 +213,6 @@ export function App() {
   const [isLoadingProcedures, setIsLoadingProcedures] = useState(false);
   const [isLoadingDiagnosticReports, setIsLoadingDiagnosticReports] = useState(false);
   const [isLoadingImagingStudies, setIsLoadingImagingStudies] = useState(false);
-  const [isLoadingConsents, setIsLoadingConsents] = useState(false);
-  const [isLoadingRecordTransfers, setIsLoadingRecordTransfers] = useState(false);
-  const [isLoadingRecordTransferDeliveryAttempts, setIsLoadingRecordTransferDeliveryAttempts] =
-    useState(false);
   const [isSubmittingEncounter, setIsSubmittingEncounter] = useState(false);
   const [isSubmittingDocument, setIsSubmittingDocument] = useState(false);
   const [isSubmittingAllergyIntolerance, setIsSubmittingAllergyIntolerance] = useState(false);
@@ -250,12 +227,6 @@ export function App() {
   const [isSubmittingProcedure, setIsSubmittingProcedure] = useState(false);
   const [isSubmittingDiagnosticReport, setIsSubmittingDiagnosticReport] = useState(false);
   const [isSubmittingImagingStudy, setIsSubmittingImagingStudy] = useState(false);
-  const [isSubmittingRecordTransfer, setIsSubmittingRecordTransfer] = useState(false);
-  const [isSubmittingGatewayAcknowledgement, setIsSubmittingGatewayAcknowledgement] =
-    useState(false);
-  const [transitioningRecordTransferId, setTransitioningRecordTransferId] =
-    useState<string>();
-  const [revokingConsentId, setRevokingConsentId] = useState<string>();
   const [isSigningDocument, setIsSigningDocument] = useState(false);
   const [isFinishingEncounter, setIsFinishingEncounter] = useState(false);
 
@@ -297,7 +268,7 @@ export function App() {
     medicationRequests,
     observations,
     procedures,
-    recordTransfers,
+    recordTransfers: interoperabilityState.recordTransfers,
     serviceRequests,
     workflowTasks
   };
@@ -314,11 +285,10 @@ export function App() {
     selectedMedicationRequestId,
     selectedObservationId,
     selectedProcedureId,
-    selectedRecordTransferId,
+    selectedRecordTransferId: interoperabilityState.selectedRecordTransferId,
     selectedServiceRequestId,
     selectedWorkflowTaskId
   });
-  selectedRecordTransferIdRef.current = selectedRecordTransferId;
   const dashboardMetrics = buildDashboardMetrics({
     ...patientWorkspaceCollections,
     patients: patientRegistryState.patients,
@@ -391,9 +361,7 @@ export function App() {
     ensureSelectedPatientWritable,
     loadConsentFhirPreview,
     selectedPatient,
-    setConsents,
-    setIsLoadingConsents,
-    setRevokingConsentId,
+    ...interoperabilityState,
     setStatusMessage
   });
   const {
@@ -402,15 +370,9 @@ export function App() {
     loadRecordTransfers
   } = buildRecordTransferLoaders({
     clinicalApi,
-    getCurrentRecordTransferId: () => selectedRecordTransferIdRef.current,
-    setIsLoadingRecordTransferDeliveryAttempts,
-    setIsLoadingRecordTransfers,
-    setRecordTransferDeliveryAttempts,
-    setRecordTransferDeliveryAttemptWarning,
+    ...interoperabilityState,
     setRecordTransferFhirTaskPreview:
       fhirPreviewState.setRecordTransferFhirTaskPreview,
-    setRecordTransfers,
-    setSelectedRecordTransferId,
     setStatusMessage
   });
   const {
@@ -423,17 +385,12 @@ export function App() {
   } = buildRecordTransferHandlers({
     clinicalApi,
     ensureSelectedPatientWritable,
-    gatewayAcknowledgementForm,
+    ...interoperabilityState,
     loadRecordTransferDeliveryAttempts,
     loadRecordTransferFhirTaskPreview,
     loadRecordTransfers,
-    recordTransferForm,
     selectedPatient,
-    setGatewayAcknowledgementResult,
-    setIsSubmittingGatewayAcknowledgement,
-    setIsSubmittingRecordTransfer,
-    setStatusMessage,
-    setTransitioningRecordTransferId
+    setStatusMessage
   });
   const {
     loadApiRuntimeInfo,
@@ -543,7 +500,6 @@ export function App() {
     setCapabilityStatementPreview: platformState.setCapabilityStatementPreview,
     setClinicalDocuments,
     setConditions,
-    setConsents,
     setDiagnosticReports,
     setEncounters,
     setImagingStudies,
@@ -552,9 +508,7 @@ export function App() {
     setMedicationRequests,
     setObservations,
     setProcedures,
-    setRecordTransferDeliveryAttempts,
-    setRecordTransferDeliveryAttemptWarning,
-    setRecordTransfers,
+    ...interoperabilityState,
     setSelectedAllergyIntoleranceId,
     setSelectedConditionId,
     setSelectedDiagnosticReportId,
@@ -566,7 +520,6 @@ export function App() {
     setSelectedMedicationRequestId,
     setSelectedObservationId,
     setSelectedProcedureId,
-    setSelectedRecordTransferId,
     setSelectedServiceRequestId,
     setSelectedWorkflowTaskId,
     setServiceRequests,
@@ -716,7 +669,8 @@ export function App() {
     setProviderDirectoryFhirPreview: platformState.setProviderDirectoryFhirPreview,
     setSelectedPatientId: patientRegistryState.setSelectedPatientId,
     setStatusMessage,
-    setTransitioningRecordTransferId
+    setTransitioningRecordTransferId:
+      interoperabilityState.setTransitioningRecordTransferId
   });
   const patientPanels = buildPatientPanelRenderers({
     patients: patientRegistryState.patients,
@@ -749,33 +703,36 @@ export function App() {
   });
   const interopPanels = buildInteropPanelRenderers({
     consentReference: defaultTransferContext.consentReference,
-    consents,
-    deliveryAttemptWarning: recordTransferDeliveryAttemptWarning,
-    deliveryAttempts: recordTransferDeliveryAttempts,
-    form: recordTransferForm,
-    isLoadingConsents,
-    isLoadingDeliveryAttempts: isLoadingRecordTransferDeliveryAttempts,
+    consents: interoperabilityState.consents,
+    deliveryAttemptWarning:
+      interoperabilityState.recordTransferDeliveryAttemptWarning,
+    deliveryAttempts: interoperabilityState.recordTransferDeliveryAttempts,
+    form: interoperabilityState.recordTransferForm,
+    isLoadingConsents: interoperabilityState.isLoadingConsents,
+    isLoadingDeliveryAttempts:
+      interoperabilityState.isLoadingRecordTransferDeliveryAttempts,
     isLoadingProviderDirectory: platformState.isLoadingProviderDirectory,
-    isLoadingRecordTransfers,
+    isLoadingRecordTransfers: interoperabilityState.isLoadingRecordTransfers,
     isPatientMerged: isSelectedPatientMerged,
-    isSubmittingRecordTransfer,
+    isSubmittingRecordTransfer: interoperabilityState.isSubmittingRecordTransfer,
     isWriteDisabled: selectedPatientWriteDisabled,
     providerDirectory: platformState.providerDirectory,
     recipientOrganizationId: defaultTransferContext.recipientOrganizationId,
-    recordTransfers,
-    revokingConsentId,
+    recordTransfers: interoperabilityState.recordTransfers,
+    revokingConsentId: interoperabilityState.revokingConsentId,
     selectedRecordTransfer: workspaceSelection.selectedRecordTransfer,
-    selectedRecordTransferId,
-    transitioningRecordTransferId,
+    selectedRecordTransferId: interoperabilityState.selectedRecordTransferId,
+    transitioningRecordTransferId:
+      interoperabilityState.transitioningRecordTransferId,
     onCreateRecordTransfer: handleCreateRecordTransfer,
     onFailRecordTransfer: handleFailRecordTransfer,
     onLoadConsentFhirPreview: loadConsentFhirPreview,
     onProviderDirectoryRefresh: loadProviderDirectory,
     onReceiveRecordTransfer: handleReceiveRecordTransfer,
-    onRecordTransferFormChange: setRecordTransferForm,
+    onRecordTransferFormChange: interoperabilityState.setRecordTransferForm,
     onRetryRecordTransfer: handleRetryRecordTransfer,
     onRevokeConsent: handleRevokeConsent,
-    onSelectRecordTransfer: setSelectedRecordTransferId,
+    onSelectRecordTransfer: interoperabilityState.setSelectedRecordTransferId,
     onSendRecordTransfer: handleSendRecordTransfer
   });
   const auditPanels = buildAuditPanelRenderers({
@@ -945,7 +902,6 @@ export function App() {
     loadRecordTransferFhirTaskPreview,
     loadServiceRequestFhirPreview,
     loadWorkflowTaskFhirPreview,
-    recordTransfers,
     selectedAllergyIntoleranceId,
     selectedConditionId,
     selectedDiagnosticReportId,
@@ -957,13 +913,10 @@ export function App() {
     selectedMedicationRequestId,
     selectedObservationId,
     selectedProcedureId,
-    selectedRecordTransferId,
     selectedServiceRequestId,
     selectedWorkflowTaskId,
     ...fhirPreviewState,
-    setIsLoadingRecordTransferDeliveryAttempts,
-    setRecordTransferDeliveryAttempts,
-    setRecordTransferDeliveryAttemptWarning
+    ...interoperabilityState
   });
   useAppLifecycleEffects({
     actorRole: authSession?.actor.role,
@@ -1061,17 +1014,23 @@ export function App() {
           serviceRequest: fhirPreviewState.serviceRequestFhirPreview,
           workflowTask: fhirPreviewState.workflowTaskFhirPreview
         }}
-        gatewayAcknowledgementForm={gatewayAcknowledgementForm}
-        gatewayAcknowledgementResult={gatewayAcknowledgementResult}
+        gatewayAcknowledgementForm={interoperabilityState.gatewayAcknowledgementForm}
+        gatewayAcknowledgementResult={
+          interoperabilityState.gatewayAcknowledgementResult
+        }
         isIntegrationSession={isIntegrationSession}
-        isSubmittingGatewayAcknowledgement={isSubmittingGatewayAcknowledgement}
+        isSubmittingGatewayAcknowledgement={
+          interoperabilityState.isSubmittingGatewayAcknowledgement
+        }
         latestEncounterServiceType={encounters[0]?.serviceType}
         loginForm={loginForm}
         panels={routePanels}
         referenceSignals={referenceSignals}
         selectedPatient={selectedPatient}
         workflowSteps={workflowSteps}
-        onGatewayAcknowledgementFormChange={setGatewayAcknowledgementForm}
+        onGatewayAcknowledgementFormChange={
+          interoperabilityState.setGatewayAcknowledgementForm
+        }
         onGatewayAcknowledgementSubmit={(event) =>
           void handleGatewayAcknowledgementSubmit(event)
         }
