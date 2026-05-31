@@ -1,9 +1,3 @@
-import { useState } from "react";
-import {
-  loginPresets,
-  type DemoRole,
-  type LoginForm
-} from "./auth/demoLogin.js";
 import { buildAuthSessionHandlers } from "./auth/authSessionHandlers.js";
 import { createClinicalApiClient } from "./api/clinicalApi.js";
 import { buildAuditLoaders } from "./features/audit/auditLoaders.js";
@@ -45,6 +39,7 @@ import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { AppRouteRenderer } from "./pages/AppRouteRenderer.js";
 import { useAppLifecycleEffects } from "./pages/appLifecycleEffects.js";
+import { useAppShellState } from "./pages/appShellState.js";
 import { buildAppRoutePanels } from "./pages/appRoutePanels.js";
 import { buildDashboardMetrics } from "./pages/dashboardMetrics.js";
 import { buildWorkspaceSelection } from "./pages/workspaceSelection.js";
@@ -55,32 +50,35 @@ import {
   referenceSignals,
   workflowSteps
 } from "./config/demoClinicalDefaults.js";
-import type {
-  AppRoute,
-  AuthSession
-} from "./types/clinical.js";
-
 const apiBaseUrl =
   import.meta.env.VITE_API_BASE_URL ??
   (window.location.port === "7311" ? "http://localhost:7310/api/v1" : "/api/v1");
 
 export function App() {
-  const [appRoute, setAppRoute] = useState<AppRoute>("landing");
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authSession, setAuthSession] = useState<AuthSession>();
+  const {
+    appRoute,
+    authSession,
+    isAuthenticated,
+    loginError,
+    loginForm,
+    setAppRoute,
+    setAuthSession,
+    setIsAuthenticated,
+    setLoginError,
+    setLoginForm,
+    setStatusMessage,
+    statusMessage
+  } = useAppShellState();
   const clinicalApi = createClinicalApiClient({
     baseUrl: apiBaseUrl,
     getSession: () => authSession
   });
   const patientRegistryState = usePatientRegistryState();
-  const [loginForm, setLoginForm] = useState<LoginForm>(loginPresets.clinician);
-  const [loginError, setLoginError] = useState<string>();
   const platformState = usePlatformState();
   const fhirPreviewState = useFhirPreviewState();
   const auditState = useAuditState();
   const interoperabilityState = useInteroperabilityState();
   const clinicalRecordState = useClinicalRecordState();
-  const [statusMessage, setStatusMessage] = useState("Chưa đăng nhập.");
 
   const canMergePatients = authSession?.actor.role === "admin";
   const isIntegrationSession = authSession?.actor.role === "integration";
