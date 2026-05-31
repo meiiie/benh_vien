@@ -30,9 +30,16 @@ const issuer = "wiiicare-nexus";
 export function createAccessToken(actor: AuthenticatedActor, now = new Date()): AuthenticatedSession & {
   readonly accessToken: string;
 } {
+  assertValidDate(now, "Access token issued time is invalid.");
+  const normalizedActor = normalizeAuthenticatedActor(actor);
+
+  if (!normalizedActor) {
+    throw new Error("Authenticated actor is invalid.");
+  }
+
   const issuedAt = Math.floor(now.getTime() / 1000);
   const payload: TokenPayload = {
-    ...actor,
+    ...normalizedActor,
     iat: issuedAt,
     exp: issuedAt + getAuthTokenTtlSeconds()
   };
@@ -41,12 +48,16 @@ export function createAccessToken(actor: AuthenticatedActor, now = new Date()): 
 
   return {
     accessToken: `${issuer}.${encodedPayload}.${signature}`,
-    actor,
+    actor: normalizedActor,
     expiresAt: new Date(payload.exp * 1000).toISOString()
   };
 }
 
 export function verifyAccessToken(token: string, now = new Date()): AuthenticatedSession | undefined {
+  if (Number.isNaN(now.getTime())) {
+    return undefined;
+  }
+
   if (token.length > maxAccessTokenLength) {
     return undefined;
   }
@@ -68,22 +79,14 @@ export function verifyAccessToken(token: string, now = new Date()): Authenticate
 
   try {
     const payload = JSON.parse(base64UrlDecode(encodedPayload)) as Partial<TokenPayload>;
+    const actor = normalizeAuthenticatedActor(payload);
 
-    if (
-      typeof payload.actorId !== "string" ||
-      typeof payload.displayName !== "string" ||
-      !isTokenRole(payload.role) ||
-      !hasValidTokenLifetime(payload, now)
-    ) {
+    if (!actor || !hasValidTokenLifetime(payload, now)) {
       return undefined;
     }
 
     return {
-      actor: {
-        actorId: payload.actorId,
-        displayName: payload.displayName,
-        role: payload.role
-      },
+      actor,
       expiresAt: new Date(payload.exp * 1000).toISOString()
     };
   } catch {
@@ -191,6 +194,38 @@ function isSafeTokenSegment(value: unknown, maxLength: number): value is string 
     value.length <= maxLength &&
     tokenSegmentPattern.test(value)
   );
+}
+
+function normalizeAuthenticatedActor(
+  value: Partial<AuthenticatedActor>
+): AuthenticatedActor | undefined {
+  const actorId = normalizeRequiredText(value.actorId);
+  const displayName = normalizeRequiredText(value.displayName);
+
+  if (!actorId || !displayName || !isTokenRole(value.role)) {
+    return undefined;
+  }
+
+  return {
+    actorId,
+    displayName,
+    role: value.role
+  };
+}
+
+function normalizeRequiredText(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const normalized = value.trim().replace(/\s+/g, " ");
+  return normalized || undefined;
+}
+
+function assertValidDate(value: Date, message: string): void {
+  if (Number.isNaN(value.getTime())) {
+    throw new Error(message);
+  }
 }
 
 function base64UrlEncode(value: string): string {
