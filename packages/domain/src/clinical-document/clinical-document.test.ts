@@ -73,4 +73,47 @@ describe("ClinicalDocument", () => {
       })
     ).toThrow(DomainError);
   });
+
+  it("rejects invalid rehydrated attachment metadata", () => {
+    const snapshot = ClinicalDocument.create({
+      id: "clinical-document-attachment-004",
+      patientId: "patient-attachment-001",
+      type: "lab-report",
+      title: "Tài liệu metadata từ lưu trữ",
+      storageUri: "s3://wiiicare-demo/patients/patient-attachment-001/rehydrated.pdf",
+      attachmentContentType: "application/pdf",
+      attachmentSizeBytes: 245760,
+      attachmentHashSha1Base64: "u5+Zwd+MnqJUBDLusw8YfS9xX9Y=",
+      attachmentCreatedAt: "2026-05-28T02:00:00.000Z",
+      authorPractitionerId: "practitioner-attachment-001"
+    }).toSnapshot();
+
+    expect(() =>
+      ClinicalDocument.rehydrate({
+        ...snapshot,
+        attachmentSizeBytes: 2_147_483_648
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      ClinicalDocument.rehydrate({
+        ...snapshot,
+        attachmentContentType: "not-a-mime-type"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      ClinicalDocument.rehydrate({
+        ...snapshot,
+        attachmentHashSha1Base64: "not-a-sha1-hash"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      ClinicalDocument.rehydrate({
+        ...snapshot,
+        attachmentCreatedAt: "not-a-date"
+      })
+    ).toThrow(DomainError);
+  });
 });

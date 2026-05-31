@@ -75,32 +75,12 @@ export class ClinicalDocument {
       throw new DomainError("Tài liệu lâm sàng phải có vị trí lưu trữ.");
     }
 
-    if (input.attachmentSizeBytes !== undefined) {
-      normalizeFhirUnsignedInt(
-        input.attachmentSizeBytes,
-        "Dung lượng tài liệu phải là số nguyên FHIR unsignedInt hợp lệ."
-      );
-    }
-
-    const attachmentCreatedAt = input.attachmentCreatedAt
-      ? new Date(input.attachmentCreatedAt)
-      : undefined;
-
-    if (attachmentCreatedAt && Number.isNaN(attachmentCreatedAt.getTime())) {
-      throw new DomainError("Thời điểm tạo tệp đính kèm không hợp lệ.");
-    }
-
-    const attachmentContentType = input.attachmentContentType?.trim() || undefined;
-
-    if (attachmentContentType && !mimeTypePattern.test(attachmentContentType)) {
-      throw new DomainError("Định dạng MIME của tài liệu không hợp lệ.");
-    }
-
-    const attachmentHashSha1Base64 = input.attachmentHashSha1Base64?.trim() || undefined;
-
-    if (attachmentHashSha1Base64 && !sha1Base64Pattern.test(attachmentHashSha1Base64)) {
-      throw new DomainError("Hash SHA-1 Base64 của tài liệu không hợp lệ.");
-    }
+    const attachmentContentType = normalizeAttachmentContentType(
+      input.attachmentContentType
+    );
+    const attachmentHashSha1Base64 = normalizeAttachmentHash(
+      input.attachmentHashSha1Base64
+    );
 
     return new ClinicalDocument({
       ...input,
@@ -110,9 +90,12 @@ export class ClinicalDocument {
       title: input.title.trim(),
       storageUri: input.storageUri.trim(),
       attachmentContentType,
-      attachmentSizeBytes: input.attachmentSizeBytes,
+      attachmentSizeBytes: normalizeAttachmentSize(input.attachmentSizeBytes),
       attachmentHashSha1Base64,
-      attachmentCreatedAt,
+      attachmentCreatedAt: parseOptionalDate(
+        input.attachmentCreatedAt,
+        "Thời điểm tạo tệp đính kèm không hợp lệ."
+      ),
       authorPractitionerId: input.authorPractitionerId.trim(),
       status: "draft",
       createdAt: now,
@@ -129,16 +112,30 @@ export class ClinicalDocument {
       title: snapshot.title,
       status: snapshot.status,
       storageUri: snapshot.storageUri,
-      attachmentContentType: snapshot.attachmentContentType,
-      attachmentSizeBytes: snapshot.attachmentSizeBytes,
-      attachmentHashSha1Base64: snapshot.attachmentHashSha1Base64,
-      attachmentCreatedAt: snapshot.attachmentCreatedAt
-        ? new Date(snapshot.attachmentCreatedAt)
-        : undefined,
+      attachmentContentType: normalizeAttachmentContentType(
+        snapshot.attachmentContentType
+      ),
+      attachmentSizeBytes: normalizeAttachmentSize(snapshot.attachmentSizeBytes),
+      attachmentHashSha1Base64: normalizeAttachmentHash(
+        snapshot.attachmentHashSha1Base64
+      ),
+      attachmentCreatedAt: parseOptionalDate(
+        snapshot.attachmentCreatedAt,
+        "Thời điểm tạo tệp đính kèm không hợp lệ."
+      ),
       authorPractitionerId: snapshot.authorPractitionerId,
-      signedAt: snapshot.signedAt ? new Date(snapshot.signedAt) : undefined,
-      createdAt: new Date(snapshot.createdAt),
-      updatedAt: new Date(snapshot.updatedAt)
+      signedAt: parseOptionalDate(
+        snapshot.signedAt,
+        "Thời điểm ký tài liệu không hợp lệ."
+      ),
+      createdAt: parseRequiredDate(
+        snapshot.createdAt,
+        "Thời điểm tạo tài liệu không hợp lệ."
+      ),
+      updatedAt: parseRequiredDate(
+        snapshot.updatedAt,
+        "Thời điểm cập nhật tài liệu không hợp lệ."
+      )
     });
   }
 
@@ -187,4 +184,49 @@ export class ClinicalDocument {
   private touch(): void {
     this.props.updatedAt = new Date();
   }
+}
+
+function normalizeAttachmentSize(value: number | undefined): number | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return normalizeFhirUnsignedInt(
+    value,
+    "Dung lượng tài liệu phải là số nguyên FHIR unsignedInt hợp lệ."
+  );
+}
+
+function normalizeAttachmentContentType(value: string | undefined): string | undefined {
+  const normalized = value?.trim() || undefined;
+
+  if (normalized && !mimeTypePattern.test(normalized)) {
+    throw new DomainError("Định dạng MIME của tài liệu không hợp lệ.");
+  }
+
+  return normalized;
+}
+
+function normalizeAttachmentHash(value: string | undefined): string | undefined {
+  const normalized = value?.trim() || undefined;
+
+  if (normalized && !sha1Base64Pattern.test(normalized)) {
+    throw new DomainError("Hash SHA-1 Base64 của tài liệu không hợp lệ.");
+  }
+
+  return normalized;
+}
+
+function parseOptionalDate(value: string | undefined, message: string): Date | undefined {
+  return value ? parseRequiredDate(value, message) : undefined;
+}
+
+function parseRequiredDate(value: string, message: string): Date {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new DomainError(message);
+  }
+
+  return date;
 }
