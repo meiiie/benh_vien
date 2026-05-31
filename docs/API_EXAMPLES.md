@@ -49,7 +49,7 @@ Kết quả mong muốn là resource `CapabilityStatement` có `fhirVersion = "4
 
 ## Đăng nhập và lấy token
 
-Các API nghiệp vụ yêu cầu `Authorization: Bearer <token>`. Header `x-purpose-of-use` vẫn được giữ để khai báo mục đích truy cập dữ liệu y tế. Nếu header này bị thiếu hoặc để trống, API mặc định là `TREATMENT`; nếu client gửi giá trị khác `TREATMENT`, `AUDIT` hoặc `OPERATIONS`, API trả `400 INVALID_PURPOSE_OF_USE` hoặc FHIR `OperationOutcome` khi client yêu cầu `Accept: application/fhir+json`.
+Các API nghiệp vụ yêu cầu `Authorization: Bearer <token>`. Header `x-purpose-of-use` vẫn được giữ để khai báo mục đích truy cập dữ liệu y tế. Nếu header này bị thiếu hoặc để trống, API mặc định là `TREATMENT`; nếu client gửi giá trị khác `TREATMENT`, `AUDIT` hoặc `OPERATIONS`, API trả `400 INVALID_PURPOSE_OF_USE` hoặc FHIR `OperationOutcome` khi client yêu cầu `Accept: application/fhir+json`. Với token hợp lệ, lần bị chặn này cũng được ghi thành audit event `access.denied` ở ngữ cảnh `OPERATIONS`.
 
 ```bash
 TOKEN=$(curl -s -X POST http://localhost:7310/api/v1/auth/login \

@@ -6,6 +6,7 @@ import Fastify from "fastify";
 import type { FastifyRequest } from "fastify";
 import { ZodError } from "zod";
 import {
+  AuditEvent,
   buildFhirOperationOutcome,
   buildWiiiCareCapabilityStatement
 } from "@benh-vien-so/domain";
@@ -32,7 +33,10 @@ import type {
   ServiceRequestRepository,
   WorkflowTaskRepository
 } from "@benh-vien-so/domain";
-import { readActorContext } from "./modules/access-control/access-context.js";
+import {
+  readActorContext,
+  readAuthenticatedActorIdentity
+} from "./modules/access-control/access-context.js";
 import { recordAuditEvent } from "./modules/audit-events/audit-context.js";
 import { createAuditEventRepository } from "./modules/audit-events/create-audit-event.repository.js";
 import { registerAuditEventRoutes } from "./modules/audit-events/audit-event-routes.js";
@@ -126,7 +130,7 @@ type RecordTransferDeliveryWorkerConfig = {
 };
 
 type DeniedAccessPayload = {
-  readonly error: "FORBIDDEN" | "PATIENT_ACCESS_DENIED";
+  readonly error: "FORBIDDEN" | "PATIENT_ACCESS_DENIED" | "INVALID_PURPOSE_OF_USE";
   readonly requestId?: string;
   readonly permission?: string;
   readonly patientId?: string;
@@ -1076,7 +1080,7 @@ async function recordDeniedAccessAuditEvent(
   statusCode: number,
   deniedAccess: DeniedAccessPayload
 ): Promise<void> {
-  if (statusCode !== 403) {
+  if (!isAuditableDeniedAccess(statusCode, deniedAccess)) {
     return;
   }
 
@@ -1087,6 +1091,11 @@ async function recordDeniedAccessAuditEvent(
       : deniedAccess.permission ?? request.id;
 
   try {
+    if (deniedAccess.error === "INVALID_PURPOSE_OF_USE") {
+      await recordInvalidPurposeOfUseAuditEvent(auditEventRepository, request, statusCode);
+      return;
+    }
+
     await recordAuditEvent(auditEventRepository, request, {
       action: "access.denied",
       resourceType,
@@ -1116,7 +1125,7 @@ function rememberDeniedAccessForAudit(
   statusCode: number,
   payload: unknown
 ): void {
-  if (statusCode !== 403) {
+  if (statusCode !== 400 && statusCode !== 403) {
     return;
   }
 
@@ -1125,9 +1134,45 @@ function rememberDeniedAccessForAudit(
     ? parseDeniedAccessPayload(payloadText)
     : undefined;
 
-  if (deniedAccess) {
+  if (deniedAccess && isAuditableDeniedAccess(statusCode, deniedAccess)) {
     deniedAccessPayloads.set(request, deniedAccess);
   }
+}
+
+async function recordInvalidPurposeOfUseAuditEvent(
+  auditEventRepository: AuditEventRepository,
+  request: FastifyRequest,
+  statusCode: number
+): Promise<void> {
+  const actor = readAuthenticatedActorIdentity(request);
+
+  if (!actor) {
+    return;
+  }
+
+  await auditEventRepository.save(
+    AuditEvent.record({
+      actorId: actor.actorId,
+      action: "access.denied",
+      resourceType: "AuditEvent",
+      resourceId: "x-purpose-of-use",
+      purposeOfUse: "OPERATIONS",
+      ipAddress: request.ip,
+      userAgent: readHeader(request.headers["user-agent"]),
+      metadata: {
+        actorRole: actor.role,
+        requestId: request.id,
+        denialCode: "INVALID_PURPOSE_OF_USE",
+        deniedActorId: actor.actorId,
+        deniedActorRole: actor.role,
+        deniedActorPurposeOfUse: "INVALID",
+        rejectedHeader: "x-purpose-of-use",
+        allowedPurposeOfUse: ["TREATMENT", "AUDIT", "OPERATIONS"],
+        route: `${request.method} ${request.url}`,
+        statusCode
+      }
+    })
+  );
 }
 
 function parseDeniedAccessPayload(payload: string): DeniedAccessPayload | undefined {
@@ -1167,11 +1212,18 @@ function parseDeniedAccessOperationOutcome(value: unknown): DeniedAccessPayload 
         readonly diagnostics?: unknown;
       }
     | undefined;
-  const code = firstIssue?.details?.coding?.find((coding) =>
-    coding.code === "FORBIDDEN" || coding.code === "PATIENT_ACCESS_DENIED"
+  const code = firstIssue?.details?.coding?.find(
+    (coding) =>
+      coding.code === "FORBIDDEN" ||
+      coding.code === "PATIENT_ACCESS_DENIED" ||
+      coding.code === "INVALID_PURPOSE_OF_USE"
   )?.code;
 
-  if (code !== "FORBIDDEN" && code !== "PATIENT_ACCESS_DENIED") {
+  if (
+    code !== "FORBIDDEN" &&
+    code !== "PATIENT_ACCESS_DENIED" &&
+    code !== "INVALID_PURPOSE_OF_USE"
+  ) {
     return undefined;
   }
 
@@ -1213,7 +1265,19 @@ function isDeniedAccessPayload(value: unknown): value is DeniedAccessPayload {
 
   const error = (value as { readonly error?: unknown }).error;
 
-  return error === "FORBIDDEN" || error === "PATIENT_ACCESS_DENIED";
+  return (
+    error === "FORBIDDEN" ||
+    error === "PATIENT_ACCESS_DENIED" ||
+    error === "INVALID_PURPOSE_OF_USE"
+  );
+}
+
+function isAuditableDeniedAccess(statusCode: number, payload: DeniedAccessPayload): boolean {
+  if (payload.error === "INVALID_PURPOSE_OF_USE") {
+    return statusCode === 400;
+  }
+
+  return statusCode === 403;
 }
 
 function inferDeniedAuditResourceType(payload: DeniedAccessPayload): AuditResourceType {
@@ -1248,6 +1312,14 @@ function isSafeRequestId(value: unknown): value is string {
     value.length <= maxRequestIdLength &&
     requestIdPattern.test(value)
   );
+}
+
+function readHeader(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) {
+    return value[0];
+  }
+
+  return value;
 }
 
 function readPayloadText(payload: unknown): string | undefined {

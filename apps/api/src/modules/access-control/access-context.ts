@@ -15,6 +15,24 @@ import { verifyAccessToken } from "../auth/auth-session.js";
 import { readBearerToken } from "../auth/bearer-token.js";
 import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
 
+export type AuthenticatedActorIdentity = Pick<ActorContext, "actorId" | "role">;
+
+export function readAuthenticatedActorIdentity(
+  request: FastifyRequest
+): AuthenticatedActorIdentity | undefined {
+  const token = readBearerToken(request.headers.authorization);
+  const session = token ? verifyAccessToken(token) : undefined;
+
+  if (!session) {
+    return undefined;
+  }
+
+  return {
+    actorId: session.actor.actorId,
+    role: session.actor.role
+  };
+}
+
 export function readActorContext(request: FastifyRequest): ActorContext | undefined {
   const actorResult = readActorContextResult(request);
 
@@ -34,10 +52,9 @@ type ActorContextReadResult =
     };
 
 function readActorContextResult(request: FastifyRequest): ActorContextReadResult {
-  const token = readBearerToken(request.headers.authorization);
-  const session = token ? verifyAccessToken(token) : undefined;
+  const authenticatedActor = readAuthenticatedActorIdentity(request);
 
-  if (!session) {
+  if (!authenticatedActor) {
     return {
       kind: "missing"
     };
@@ -54,8 +71,8 @@ function readActorContextResult(request: FastifyRequest): ActorContextReadResult
   return {
     kind: "actor",
     actor: {
-      actorId: session.actor.actorId,
-      role: session.actor.role,
+      actorId: authenticatedActor.actorId,
+      role: authenticatedActor.role,
       purposeOfUse
     }
   };
