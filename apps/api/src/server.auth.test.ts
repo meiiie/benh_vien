@@ -3623,6 +3623,7 @@ describe("API auth and RBAC boundary", () => {
           code: "24323-8",
           display: "Comprehensive metabolic panel"
         },
+        authoredOn: "2026-05-27T04:30:00.000Z",
         occurrenceAt: "2026-05-27T05:00:00.000Z",
         requesterPractitionerId: "practitioner-demo-001",
         performerOrganizationId: "department-laboratory",

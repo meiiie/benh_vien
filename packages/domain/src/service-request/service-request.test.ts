@@ -119,6 +119,24 @@ describe("ServiceRequest", () => {
     ).toThrow(DomainError);
   });
 
+  it("rejects requested occurrence timestamps before the authored time", () => {
+    expect(() =>
+      ServiceRequest.order({
+        id: "service-request-invalid-timeline-001",
+        patientId: "patient-001",
+        category: "laboratory",
+        code: {
+          system: "http://loinc.org",
+          code: "58410-2",
+          display: "Complete blood count panel"
+        },
+        authoredOn: "2026-05-28T02:00:00.000Z",
+        occurrenceAt: "2026-05-28T01:59:59.000Z",
+        requesterPractitionerId: "practitioner-001"
+      })
+    ).toThrow(DomainError);
+  });
+
   it("rejects invalid rehydrated service request metadata", () => {
     const snapshot = ServiceRequest.order({
       id: "service-request-006",
@@ -193,6 +211,20 @@ describe("ServiceRequest", () => {
       ServiceRequest.rehydrate({
         ...snapshot,
         createdAt: "not-a-date"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      ServiceRequest.rehydrate({
+        ...snapshot,
+        occurrenceAt: "2026-05-28T01:29:59.000Z"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      ServiceRequest.rehydrate({
+        ...snapshot,
+        updatedAt: "1999-01-01T00:00:00.000Z"
       })
     ).toThrow(DomainError);
   });

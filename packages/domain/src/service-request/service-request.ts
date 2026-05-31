@@ -108,8 +108,14 @@ export class ServiceRequest {
       ? parseDate(input.authoredOn, "Thời điểm chỉ định dịch vụ không hợp lệ.")
       : now;
     const occurrenceAt = input.occurrenceAt
-      ? parseDate(input.occurrenceAt, "Thời điểm dự kiến thực hiện không hợp lệ.").toISOString()
+      ? parseDate(input.occurrenceAt, "Thời điểm dự kiến thực hiện không hợp lệ.")
       : undefined;
+    validateTimeline({
+      authoredOn,
+      occurrenceAt,
+      createdAt: now,
+      updatedAt: now
+    });
 
     return new ServiceRequest({
       id: normalizeRequired(input.id, "Mã chỉ định dịch vụ không được để trống."),
@@ -121,7 +127,7 @@ export class ServiceRequest {
       category: normalizeCategory(input.category),
       priority: normalizePriority(input.priority ?? "routine"),
       code: normalizeCode(input.code),
-      occurrenceAt,
+      occurrenceAt: occurrenceAt?.toISOString(),
       authoredOn: authoredOn.toISOString(),
       requesterPractitionerId: normalizeRequired(
         input.requesterPractitionerId,
@@ -136,6 +142,23 @@ export class ServiceRequest {
   }
 
   static rehydrate(snapshot: ServiceRequestSnapshot): ServiceRequest {
+    const occurrenceAt = snapshot.occurrenceAt
+      ? parseDate(snapshot.occurrenceAt, "Thời điểm dự kiến thực hiện không hợp lệ.")
+      : undefined;
+    const authoredOn = parseDate(
+      snapshot.authoredOn,
+      "Thời điểm chỉ định dịch vụ không hợp lệ."
+    );
+    const createdAt = parseDate(
+      snapshot.createdAt,
+      "Thời điểm tạo chỉ định dịch vụ không hợp lệ."
+    );
+    const updatedAt = parseDate(
+      snapshot.updatedAt,
+      "Thời điểm cập nhật chỉ định dịch vụ không hợp lệ."
+    );
+    validateTimeline({ authoredOn, occurrenceAt, createdAt, updatedAt });
+
     return new ServiceRequest({
       ...snapshot,
       id: normalizeRequired(snapshot.id, "Mã chỉ định dịch vụ không được để trống."),
@@ -147,13 +170,8 @@ export class ServiceRequest {
       category: normalizeCategory(snapshot.category),
       priority: normalizePriority(snapshot.priority),
       code: normalizeCode(snapshot.code),
-      occurrenceAt: snapshot.occurrenceAt
-        ? parseDate(snapshot.occurrenceAt, "Thời điểm dự kiến thực hiện không hợp lệ.").toISOString()
-        : undefined,
-      authoredOn: parseDate(
-        snapshot.authoredOn,
-        "Thời điểm chỉ định dịch vụ không hợp lệ."
-      ).toISOString(),
+      occurrenceAt: occurrenceAt?.toISOString(),
+      authoredOn: authoredOn.toISOString(),
       requesterPractitionerId: normalizeRequired(
         snapshot.requesterPractitionerId,
         "Nhân sự chỉ định dịch vụ không được để trống."
@@ -161,8 +179,8 @@ export class ServiceRequest {
       performerOrganizationId: normalizeOptional(snapshot.performerOrganizationId),
       patientInstruction: normalizeOptional(snapshot.patientInstruction),
       note: normalizeOptional(snapshot.note),
-      createdAt: parseDate(snapshot.createdAt, "Thời điểm tạo chỉ định dịch vụ không hợp lệ.").toISOString(),
-      updatedAt: parseDate(snapshot.updatedAt, "Thời điểm cập nhật chỉ định dịch vụ không hợp lệ.").toISOString()
+      createdAt: createdAt.toISOString(),
+      updatedAt: updatedAt.toISOString()
     });
   }
 
@@ -235,6 +253,21 @@ function normalizePriority(value: ServiceRequestPriority): ServiceRequestPriorit
   }
 
   return value;
+}
+
+function validateTimeline(input: {
+  readonly authoredOn: Date;
+  readonly occurrenceAt?: Date;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+}): void {
+  if (input.occurrenceAt && input.occurrenceAt < input.authoredOn) {
+    throw new DomainError("Thời điểm dự kiến thực hiện không được trước thời điểm chỉ định dịch vụ.");
+  }
+
+  if (input.updatedAt < input.createdAt) {
+    throw new DomainError("Thời điểm cập nhật chỉ định dịch vụ không được trước thời điểm tạo chỉ định.");
+  }
 }
 
 function parseDate(value: string, message: string): Date {
