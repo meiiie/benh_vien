@@ -107,8 +107,17 @@ export class Encounter {
       ? parseDate(snapshot.endedAt, "Thời điểm kết thúc lượt khám không hợp lệ.")
       : undefined;
     const status = normalizeStatus(snapshot.status);
+    const createdAt = parseDate(
+      snapshot.createdAt,
+      "Thời điểm tạo lượt khám không hợp lệ."
+    );
+    const updatedAt = parseDate(
+      snapshot.updatedAt,
+      "Thời điểm cập nhật lượt khám không hợp lệ."
+    );
 
     validateLifecycle(status, startedAt, endedAt);
+    validatePersistenceTimeline(createdAt, updatedAt);
 
     return new Encounter({
       id: normalizeRequired(snapshot.id, "Mã lượt khám không được để trống."),
@@ -124,8 +133,8 @@ export class Encounter {
       ),
       startedAt,
       endedAt,
-      createdAt: parseDate(snapshot.createdAt, "Thời điểm tạo lượt khám không hợp lệ."),
-      updatedAt: parseDate(snapshot.updatedAt, "Thời điểm cập nhật lượt khám không hợp lệ.")
+      createdAt,
+      updatedAt
     });
   }
 
@@ -237,5 +246,11 @@ function validateLifecycle(
 
   if ((status === "planned" || status === "in-progress") && endedAt) {
     throw new DomainError("Lượt khám chưa hoàn tất không được có thời điểm kết thúc.");
+  }
+}
+
+function validatePersistenceTimeline(createdAt: Date, updatedAt: Date): void {
+  if (updatedAt < createdAt) {
+    throw new DomainError("Thời điểm cập nhật lượt khám không được trước thời điểm tạo lượt khám.");
   }
 }
