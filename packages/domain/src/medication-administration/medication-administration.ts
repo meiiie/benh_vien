@@ -118,10 +118,13 @@ export class MedicationAdministration {
   }
 
   static rehydrate(snapshot: MedicationAdministrationSnapshot): MedicationAdministration {
+    const createdAt = parseDate(snapshot.createdAt, "Thời điểm tạo lần dùng thuốc không hợp lệ.");
+    const updatedAt = parseDate(snapshot.updatedAt, "Thời điểm cập nhật lần dùng thuốc không hợp lệ.");
     const status = normalizeStatus(snapshot.status);
     const effectivePeriod = normalizeEffectivePeriod(snapshot.effectivePeriod);
     const performers = normalizePerformers(snapshot.performers);
     assertMedicationAdministrationLifecycle(status, effectivePeriod, performers);
+    validatePersistenceTimeline(createdAt, updatedAt);
 
     return new MedicationAdministration({
       ...snapshot,
@@ -138,8 +141,8 @@ export class MedicationAdministration {
       performers,
       dosage: snapshot.dosage ? normalizeDosage(snapshot.dosage) : undefined,
       note: normalizeOptional(snapshot.note),
-      createdAt: parseDate(snapshot.createdAt, "Thời điểm tạo lần dùng thuốc không hợp lệ.").toISOString(),
-      updatedAt: parseDate(snapshot.updatedAt, "Thời điểm cập nhật lần dùng thuốc không hợp lệ.").toISOString()
+      createdAt: createdAt.toISOString(),
+      updatedAt: updatedAt.toISOString()
     });
   }
 
@@ -297,6 +300,12 @@ function normalizePerformerActorType(
   }
 
   return value;
+}
+
+function validatePersistenceTimeline(createdAt: Date, updatedAt: Date): void {
+  if (updatedAt.getTime() < createdAt.getTime()) {
+    throw new DomainError("Thời điểm cập nhật lần dùng thuốc không được trước thời điểm tạo lần dùng.");
+  }
 }
 
 function normalizeRequired(value: string, message: string): string {

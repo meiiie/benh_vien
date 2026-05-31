@@ -117,9 +117,10 @@ export class MedicationRequest {
     const authoredOn = input.authoredOn
       ? parseDate(input.authoredOn, "Thời điểm kê thuốc không hợp lệ.")
       : now;
+    const id = normalizeRequired(input.id, "Mã chỉ định thuốc không được để trống.");
 
     return new MedicationRequest({
-      id: normalizeRequired(input.id, "Mã chỉ định thuốc không được để trống."),
+      id,
       patientId: normalizeRequired(input.patientId, "Chỉ định thuốc phải gắn với một bệnh nhân."),
       encounterId: normalizeOptional(input.encounterId),
       reasonConditionId: normalizeOptional(input.reasonConditionId),
@@ -145,6 +146,10 @@ export class MedicationRequest {
   }
 
   static rehydrate(snapshot: MedicationRequestSnapshot): MedicationRequest {
+    const createdAt = parseDate(snapshot.createdAt, "Thời điểm tạo chỉ định thuốc không hợp lệ.");
+    const updatedAt = parseDate(snapshot.updatedAt, "Thời điểm cập nhật chỉ định thuốc không hợp lệ.");
+    validatePersistenceTimeline(createdAt, updatedAt);
+
     return new MedicationRequest({
       ...snapshot,
       id: normalizeRequired(snapshot.id, "Mã chỉ định thuốc không được để trống."),
@@ -167,8 +172,8 @@ export class MedicationRequest {
         "Số ngày cấp thuốc phải lớn hơn 0."
       ),
       note: normalizeOptional(snapshot.note),
-      createdAt: parseDate(snapshot.createdAt, "Thời điểm tạo chỉ định thuốc không hợp lệ.").toISOString(),
-      updatedAt: parseDate(snapshot.updatedAt, "Thời điểm cập nhật chỉ định thuốc không hợp lệ.").toISOString()
+      createdAt: createdAt.toISOString(),
+      updatedAt: updatedAt.toISOString()
     });
   }
 
@@ -287,6 +292,12 @@ function normalizePositiveNumber(value: number | undefined, message: string): nu
   }
 
   return value;
+}
+
+function validatePersistenceTimeline(createdAt: Date, updatedAt: Date): void {
+  if (updatedAt.getTime() < createdAt.getTime()) {
+    throw new DomainError("Thời điểm cập nhật chỉ định thuốc không được trước thời điểm tạo chỉ định.");
+  }
 }
 
 function normalizeRequired(value: string, message: string): string {

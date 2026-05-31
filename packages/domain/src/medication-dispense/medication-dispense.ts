@@ -125,6 +125,8 @@ export class MedicationDispense {
   }
 
   static rehydrate(snapshot: MedicationDispenseSnapshot): MedicationDispense {
+    const createdAt = parseDate(snapshot.createdAt, "Thời điểm tạo cấp phát thuốc không hợp lệ.");
+    const updatedAt = parseDate(snapshot.updatedAt, "Thời điểm cập nhật cấp phát thuốc không hợp lệ.");
     const status = normalizeStatus(snapshot.status);
     const quantity = snapshot.quantity
       ? normalizeQuantity(snapshot.quantity, "Số lượng cấp phát")
@@ -151,6 +153,8 @@ export class MedicationDispense {
       throw new DomainError("Cấp phát thuốc đã hoàn tất cần có số lượng cấp phát.");
     }
 
+    validatePersistenceTimeline(createdAt, updatedAt);
+
     return new MedicationDispense({
       ...snapshot,
       id: normalizeRequired(snapshot.id, "Mã cấp phát thuốc không được để trống."),
@@ -172,8 +176,8 @@ export class MedicationDispense {
         ? normalizeDosageInstruction(snapshot.dosageInstruction)
         : undefined,
       note: normalizeOptional(snapshot.note),
-      createdAt: parseDate(snapshot.createdAt, "Thời điểm tạo cấp phát thuốc không hợp lệ.").toISOString(),
-      updatedAt: parseDate(snapshot.updatedAt, "Thời điểm cập nhật cấp phát thuốc không hợp lệ.").toISOString()
+      createdAt: createdAt.toISOString(),
+      updatedAt: updatedAt.toISOString()
     });
   }
 
@@ -296,6 +300,12 @@ function normalizePositiveNumber(value: number | undefined, message: string): nu
   }
 
   return value;
+}
+
+function validatePersistenceTimeline(createdAt: Date, updatedAt: Date): void {
+  if (updatedAt.getTime() < createdAt.getTime()) {
+    throw new DomainError("Thời điểm cập nhật cấp phát thuốc không được trước thời điểm tạo cấp phát.");
+  }
 }
 
 function normalizeRequired(value: string, message: string): string {

@@ -153,5 +153,12 @@ describe("MedicationRequest", () => {
         requesterPractitionerId: " "
       })
     ).toThrow(DomainError);
+
+    expect(() =>
+      MedicationRequest.rehydrate({
+        ...snapshot,
+        updatedAt: "1999-01-01T00:00:00.000Z"
+      })
+    ).toThrow(DomainError);
   });
 });

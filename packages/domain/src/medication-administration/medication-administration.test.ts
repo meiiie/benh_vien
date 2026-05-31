@@ -215,5 +215,12 @@ describe("MedicationAdministration", () => {
         createdAt: "not-a-date"
       })
     ).toThrow(DomainError);
+
+    expect(() =>
+      MedicationAdministration.rehydrate({
+        ...snapshot,
+        updatedAt: "1999-01-01T00:00:00.000Z"
+      })
+    ).toThrow(DomainError);
   });
 });
