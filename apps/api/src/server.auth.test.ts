@@ -1,12 +1,6 @@
-import Fastify, { type FastifyInstance } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type {
-  ProviderDirectoryRepository,
-  RecordTransferDeliveryAttempt,
-  RecordTransferDeliveryAttemptRepository
-} from "@benh-vien-so/domain";
-import { registerAuthRoutes } from "./modules/auth/auth-routes.js";
-import { createMemoryLoginRateLimiter } from "./modules/auth/login-rate-limit.js";
+import type { ProviderDirectoryRepository } from "@benh-vien-so/domain";
 import type { LoginRateLimiter } from "./modules/auth/login-rate-limit.js";
 import {
   buildRecordTransferCallbackSignature,
@@ -15,6 +9,19 @@ import {
   recordTransferCallbackTimestampHeader
 } from "./modules/record-transfers/record-transfer-callback-signature.js";
 import { buildServer } from "./server.js";
+import {
+  auditHeaders,
+  bundleTransferHeaders,
+  expectOperationOutcome,
+  FailingRecordTransferDeliveryAttemptRepository,
+  login,
+  loginForToken,
+  operationsHeaders,
+  readyAuthRouteServer,
+  readyServer,
+  restoreEnv,
+  treatmentHeaders
+} from "./server.auth.test-support.js";
 
 const testSecret = "wiiicare-test-secret-at-least-32-characters";
 const callbackSecret = "wiiicare-record-transfer-callback-secret-for-tests";
@@ -4858,105 +4865,6 @@ describe("API auth and RBAC boundary", () => {
   });
 });
 
-async function readyServer(
-  options: Parameters<typeof buildServer>[0] = {}
-): Promise<FastifyInstance> {
-  const server = await buildServer({
-    logger: false,
-    ...options
-  });
-  await server.ready();
-  return server;
-}
-
-class FailingRecordTransferDeliveryAttemptRepository
-  implements RecordTransferDeliveryAttemptRepository
-{
-  async findByRecordTransferId(): Promise<RecordTransferDeliveryAttempt[]> {
-    return [];
-  }
-
-  async findQueued(): Promise<RecordTransferDeliveryAttempt[]> {
-    return [];
-  }
-
-  async save(_attempt: RecordTransferDeliveryAttempt): Promise<void> {
-    throw new Error("delivery attempt store unavailable");
-  }
-}
-
-async function readyAuthRouteServer(): Promise<FastifyInstance> {
-  const server = Fastify({
-    logger: false,
-    requestIdHeader: "x-request-id"
-  });
-  await server.register(
-    async (api) => {
-      await registerAuthRoutes(api, {
-        loginRateLimiter: createMemoryLoginRateLimiter({
-          maxAttempts: 20,
-          windowMs: 60_000
-        })
-      });
-    },
-    {
-      prefix: "/api/v1"
-    }
-  );
-  await server.ready();
-  return server;
-}
-
-async function login(
-  app: FastifyInstance,
-  payload: {
-    readonly username: string;
-    readonly password: string;
-    readonly role: string;
-  },
-  headers: Record<string, string> = {}
-) {
-  return app.inject({
-    method: "POST",
-    url: "/api/v1/auth/login",
-    headers: {
-      ...headers,
-      "content-type": "application/json"
-    },
-    payload
-  });
-}
-
-async function loginForToken(
-  app: FastifyInstance,
-  username: string,
-  role: string
-): Promise<string> {
-  const response = await login(app, {
-    username,
-    password: "demo",
-    role
-  });
-
-  expect(response.statusCode).toBe(200);
-
-  return response.json().accessToken as string;
-}
-
-function treatmentHeaders(accessToken: string): Record<string, string> {
-  return {
-    authorization: `Bearer ${accessToken}`,
-    "x-purpose-of-use": "TREATMENT"
-  };
-}
-
-function operationsHeaders(accessToken: string): Record<string, string> {
-  return {
-    authorization: `Bearer ${accessToken}`,
-    "x-purpose-of-use": "OPERATIONS"
-  };
-}
-
 function signedRecordTransferCallbackHeaders(input: {
   readonly recordTransferId: string;
   readonly body: unknown;
@@ -4973,63 +4881,4 @@ function signedRecordTransferCallbackHeaders(input: {
       body: input.body
     })
   };
-}
-
-function bundleTransferHeaders(accessToken: string): Record<string, string> {
-  return {
-    ...treatmentHeaders(accessToken),
-    "x-consent-reference": "consent-demo-transfer-001",
-    "x-recipient-organization-id": "hospital-hai-phong-referral"
-  };
-}
-
-function auditHeaders(accessToken: string): Record<string, string> {
-  return {
-    authorization: `Bearer ${accessToken}`,
-    "x-purpose-of-use": "AUDIT"
-  };
-}
-
-function expectOperationOutcome(
-  response: {
-    readonly statusCode: number;
-    readonly headers: Record<string, unknown>;
-    json(): unknown;
-  },
-  expected: {
-    readonly statusCode: number;
-    readonly code: string;
-    readonly detailsCode: string;
-  }
-): void {
-  expect(response.statusCode).toBe(expected.statusCode);
-  expect(String(response.headers["content-type"])).toContain("application/fhir+json");
-  const body = response.json();
-  expect(body).not.toHaveProperty("requestId");
-  expect(body).toMatchObject({
-    resourceType: "OperationOutcome",
-    issue: [
-      {
-        severity: "error",
-        code: expected.code,
-        details: {
-          coding: [
-            {
-              system: "urn:wiiicare:nexus:operation-outcome",
-              code: expected.detailsCode
-            }
-          ]
-        }
-      }
-    ]
-  });
-}
-
-function restoreEnv(name: string, value: string | undefined): void {
-  if (value === undefined) {
-    delete process.env[name];
-    return;
-  }
-
-  process.env[name] = value;
 }
