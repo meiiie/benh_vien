@@ -1,4 +1,3 @@
-import { buildAuthSessionHandlers } from "./auth/authSessionHandlers.js";
 import { createClinicalApiClient } from "./api/clinicalApi.js";
 import { useAuditState } from "./features/audit/auditState.js";
 import { AuthenticatedLayout } from "./components/AppShell.js";
@@ -9,7 +8,6 @@ import { useInteroperabilityState } from "./features/interoperability/interopera
 import { buildPatientRegistrySelection } from "./features/patient-registry/patientRegistrySelectors.js";
 import { usePatientRegistryState } from "./features/patient-registry/patientRegistryState.js";
 import { buildPatientWriteGuard } from "./features/patient-registry/patientWriteGuard.js";
-import { buildPatientWorkspaceLifecycle } from "./features/patient-workspace/patientWorkspaceLifecycle.js";
 import { usePlatformState } from "./features/platform/platformState.js";
 import { useFhirPreviewState } from "./features/fhir-preview/fhirPreviewState.js";
 import { useSelectedFhirPreviewEffects } from "./features/fhir-preview/selectedFhirPreviewEffects.js";
@@ -18,6 +16,7 @@ import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { AppRouteRenderer } from "./pages/AppRouteRenderer.js";
 import { buildAppAuditLoaders } from "./pages/appAuditLoaders.js";
+import { buildAppAuthSessionHandlers } from "./pages/appAuthSessionHandlers.js";
 import { buildAuditPanels } from "./pages/auditPanelContext.js";
 import {
   buildAppAccessContext,
@@ -28,6 +27,7 @@ import { buildAppClinicalRecordHandlers } from "./pages/appClinicalRecordHandler
 import { buildAppFhirPreviewLoaders } from "./pages/appFhirPreviewLoaders.js";
 import { buildAppPatientRegistryHandlers } from "./pages/appPatientRegistryHandlers.js";
 import { buildAppPatientRegistryLoaders } from "./pages/appPatientRegistryLoaders.js";
+import { buildAppPatientWorkspaceLifecycle } from "./pages/appPatientWorkspaceLifecycle.js";
 import { buildAppPatientWorkspaceLoaders } from "./pages/appPatientWorkspaceLoaders.js";
 import { buildAppPlatformLoaders } from "./pages/appPlatformLoaders.js";
 import { buildAppRecordTransferHandlers } from "./pages/appRecordTransferHandlers.js";
@@ -39,11 +39,7 @@ import { buildClinicalRecordPanels } from "./pages/clinicalRecordPanelContext.js
 import { buildInteropPanels } from "./pages/interopPanelContext.js";
 import { buildPatientPanels } from "./pages/patientPanelContext.js";
 
-import {
-  defaultTransferContext,
-  referenceSignals,
-  workflowSteps
-} from "./config/demoClinicalDefaults.js";
+import { referenceSignals, workflowSteps } from "./config/demoClinicalDefaults.js";
 const apiBaseUrl =
   import.meta.env.VITE_API_BASE_URL ??
   (window.location.port === "7311" ? "http://localhost:7310/api/v1" : "/api/v1");
@@ -242,9 +238,12 @@ export function App() {
   const {
     clearPatientWorkspaceState,
     loadPatientWorkspace
-  } = buildPatientWorkspaceLifecycle({
+  } = buildAppPatientWorkspaceLifecycle({
+    auditState,
     canReadAudit,
-    consentReference: defaultTransferContext.consentReference,
+    clinicalRecordState,
+    fhirPreviewState,
+    interoperabilityState,
     isAuditOnlySession,
     loadAllergyIntolerances,
     loadAuditEvents,
@@ -266,13 +265,7 @@ export function App() {
     loadRecordTransfers,
     loadServiceRequests,
     loadWorkflowTasks,
-    ...fhirPreviewState,
-    ...clinicalRecordState,
-    setAuditEvents: auditState.setAuditEvents,
-    setAuditFhirBundlePreview: auditState.setAuditFhirBundlePreview,
-    setAuditIntegrityReport: auditState.setAuditIntegrityReport,
-    setCapabilityStatementPreview: platformState.setCapabilityStatementPreview,
-    ...interoperabilityState,
+    platformState
   });
   const {
     handleCreatePatient,
@@ -334,24 +327,19 @@ export function App() {
   const {
     handleLogin,
     handleLogout
-  } = buildAuthSessionHandlers({
+  } = buildAppAuthSessionHandlers({
+    auditState,
     clearPatientWorkspaceState,
     clinicalApi,
+    interoperabilityState,
     loginForm,
-    setApiRuntimeInfo: platformState.setApiRuntimeInfo,
-    setApiRuntimeWarning: platformState.setApiRuntimeWarning,
+    patientRegistryState,
+    platformState,
     setAppRoute,
     setAuthSession,
-    setGlobalAuditEvents: auditState.setGlobalAuditEvents,
     setIsAuthenticated,
     setLoginError,
-    setPatients: patientRegistryState.setPatients,
-    setProviderDirectory: platformState.setProviderDirectory,
-    setProviderDirectoryFhirPreview: platformState.setProviderDirectoryFhirPreview,
-    setSelectedPatientId: patientRegistryState.setSelectedPatientId,
-    setStatusMessage,
-    setTransitioningRecordTransferId:
-      interoperabilityState.setTransitioningRecordTransferId
+    setStatusMessage
   });
   const patientPanels = buildPatientPanels({
     hasPatientListFilter,
