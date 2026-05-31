@@ -51,12 +51,8 @@ import {
 import { buildEncounterScopedFormUpdater } from "./features/clinical-records/encounterScopedFormUpdater.js";
 import { buildConsentLoaders } from "./features/consents/consentLoaders.js";
 import { buildInteropPanelRenderers } from "./features/interoperability/interopPanelRenderers.js";
-import {
-  createPatient,
-  listPatients,
-  mergePatient
-} from "./features/patient-registry/patientRegistryApi.js";
-import { buildCreatePatientCommand, buildMergePatientCommand } from "./features/patient-registry/patientRegistryCommandBuilders.js";
+import { buildPatientRegistryHandlers } from "./features/patient-registry/patientRegistryHandlers.js";
+import { buildPatientRegistryLoaders } from "./features/patient-registry/patientRegistryLoaders.js";
 import { buildPatientPanelRenderers } from "./features/patient-registry/patientPanelRenderers.js";
 import { buildPatientRegistrySelection } from "./features/patient-registry/patientRegistrySelectors.js";
 import { buildPatientWorkspaceCollectionLoaders } from "./features/patient-workspace/patientWorkspaceCollectionLoaders.js";
@@ -402,6 +398,35 @@ export function App() {
   const canReadAudit = authSession?.actor.role === "auditor" || authSession?.actor.role === "admin";
   const canViewRuntimeInfo = canReadAudit;
   const isAuditOnlySession = authSession?.actor.role === "auditor";
+  const { loadPatients } = buildPatientRegistryLoaders({
+    clinicalApi,
+    isAuditOnlySession,
+    selectedPatientId,
+    setIsLoadingPatients,
+    setPatients,
+    setSelectedPatientId,
+    setStatusMessage
+  });
+  const {
+    handleCreatePatient,
+    handleMergeSelectedPatient
+  } = buildPatientRegistryHandlers({
+    canMergePatients,
+    clinicalApi,
+    isPatientMergeConfirmationValid,
+    loadPatients,
+    loadPatientWorkspace,
+    patientForm,
+    patientMergeConfirmationCode,
+    patientMergeForm,
+    patientMergeTargetId,
+    selectedPatient,
+    setAppRoute,
+    setIsMergingPatient,
+    setIsSubmittingPatient,
+    setPatientMergeForm,
+    setStatusMessage
+  });
   const {
     loadAllergyIntoleranceFhirPreview,
     loadAuditFhirBundle,
@@ -1059,25 +1084,6 @@ export function App() {
     setSelectedRecordTransferId(undefined);
   }
 
-  async function loadPatients(nextSelectedId?: string) {
-    setIsLoadingPatients(true);
-
-    try {
-      const data = await listPatients(clinicalApi, isAuditOnlySession ? "AUDIT" : "TREATMENT");
-      setPatients(data.items);
-      setSelectedPatientId(nextSelectedId ?? selectedPatientId ?? data.items[0]?.id);
-      setStatusMessage(`Đã tải ${data.items.length} hồ sơ bệnh nhân từ backend.`);
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tải dữ liệu bệnh nhân: ${error.message}`
-          : "Không thể tải dữ liệu bệnh nhân."
-      );
-    } finally {
-      setIsLoadingPatients(false);
-    }
-  }
-
   async function loadPatientWorkspace(patientId: string) {
     if (isAuditOnlySession) {
       await loadAuditEvents(patientId, { silent: true });
@@ -1184,90 +1190,6 @@ export function App() {
     setProviderDirectoryFhirPreview(undefined);
     setSelectedPatientId(undefined);
     setTransitioningRecordTransferId(undefined);
-  }
-
-  async function handleCreatePatient(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setIsSubmittingPatient(true);
-
-    try {
-      const createdPatient = await createPatient(
-        clinicalApi,
-        buildCreatePatientCommand(patientForm)
-      );
-      await loadPatients(createdPatient.id);
-      setAppRoute("workspace");
-      setStatusMessage(`Đã tạo hồ sơ ${createdPatient.fullName} và chọn ngay trên workspace.`);
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể tạo hồ sơ bệnh nhân: ${error.message}`
-          : "Không thể tạo hồ sơ bệnh nhân."
-      );
-    } finally {
-      setIsSubmittingPatient(false);
-    }
-  }
-
-  async function handleMergeSelectedPatient(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!selectedPatient) {
-      setStatusMessage("Cần chọn hồ sơ nguồn trước khi merge.");
-      return;
-    }
-
-    if (!canMergePatients) {
-      setStatusMessage("Chỉ quản trị viên mới được merge hồ sơ bệnh nhân.");
-      return;
-    }
-
-    if (selectedPatient.status !== "active") {
-      setStatusMessage("Chỉ merge được hồ sơ nguồn đang hoạt động.");
-      return;
-    }
-
-    if (!patientMergeTargetId) {
-      setStatusMessage("Cần chọn hồ sơ đích trước khi merge.");
-      return;
-    }
-
-    if (!patientMergeForm.reason.trim()) {
-      setStatusMessage("Cần nhập lý do merge để phục vụ kiểm toán/MPI.");
-      return;
-    }
-
-    if (!isPatientMergeConfirmationValid) {
-      setStatusMessage(`Cần nhập đúng mã xác nhận "${patientMergeConfirmationCode}" trước khi merge.`);
-      return;
-    }
-
-    setIsMergingPatient(true);
-
-    try {
-      const mergedPatient = await mergePatient(
-        clinicalApi,
-        selectedPatient.id,
-        buildMergePatientCommand(patientMergeForm, patientMergeTargetId)
-      );
-      await loadPatients(mergedPatient.id);
-      await loadPatientWorkspace(mergedPatient.id);
-      setPatientMergeForm({
-        ...patientMergeForm,
-        confirmationText: ""
-      });
-      setStatusMessage(
-        `Đã merge hồ sơ ${mergedPatient.fullName} vào hồ sơ đích ${mergedPatient.mergedIntoPatientId}. Hồ sơ nguồn đã chuyển sang chế độ chỉ đọc.`
-      );
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? `Không thể merge hồ sơ bệnh nhân: ${error.message}`
-          : "Không thể merge hồ sơ bệnh nhân."
-      );
-    } finally {
-      setIsMergingPatient(false);
-    }
   }
 
   async function handleCreateEncounter(event: FormEvent<HTMLFormElement>) {
