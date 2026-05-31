@@ -29,6 +29,40 @@ export type ServiceRequestCategory =
 
 export type ServiceRequestPriority = "routine" | "urgent" | "asap" | "stat";
 
+const serviceRequestStatuses = new Set<ServiceRequestStatus>([
+  "draft",
+  "active",
+  "on-hold",
+  "revoked",
+  "completed",
+  "entered-in-error",
+  "unknown"
+]);
+const serviceRequestIntents = new Set<ServiceRequestIntent>([
+  "proposal",
+  "plan",
+  "directive",
+  "order",
+  "original-order",
+  "reflex-order",
+  "filler-order",
+  "instance-order",
+  "option"
+]);
+const serviceRequestCategories = new Set<ServiceRequestCategory>([
+  "laboratory",
+  "imaging",
+  "procedure",
+  "consultation",
+  "therapy"
+]);
+const serviceRequestPriorities = new Set<ServiceRequestPriority>([
+  "routine",
+  "urgent",
+  "asap",
+  "stat"
+]);
+
 export type ServiceRequestCode = {
   readonly system: string;
   readonly code: string;
@@ -82,15 +116,11 @@ export class ServiceRequest {
       patientId: normalizeRequired(input.patientId, "Chỉ định dịch vụ phải gắn với bệnh nhân."),
       encounterId: normalizeOptional(input.encounterId),
       reasonConditionId: normalizeOptional(input.reasonConditionId),
-      status: input.status ?? "active",
-      intent: input.intent ?? "order",
-      category: input.category,
-      priority: input.priority ?? "routine",
-      code: {
-        system: normalizeRequired(input.code.system, "Hệ mã dịch vụ không được để trống."),
-        code: normalizeRequired(input.code.code, "Mã dịch vụ không được để trống."),
-        display: normalizeRequired(input.code.display, "Tên dịch vụ không được để trống.")
-      },
+      status: normalizeStatus(input.status ?? "active"),
+      intent: normalizeIntent(input.intent ?? "order"),
+      category: normalizeCategory(input.category),
+      priority: normalizePriority(input.priority ?? "routine"),
+      code: normalizeCode(input.code),
       occurrenceAt,
       authoredOn: authoredOn.toISOString(),
       requesterPractitionerId: normalizeRequired(
@@ -108,13 +138,15 @@ export class ServiceRequest {
   static rehydrate(snapshot: ServiceRequestSnapshot): ServiceRequest {
     return new ServiceRequest({
       ...snapshot,
+      id: normalizeRequired(snapshot.id, "Mã chỉ định dịch vụ không được để trống."),
+      patientId: normalizeRequired(snapshot.patientId, "Chỉ định dịch vụ phải gắn với bệnh nhân."),
       encounterId: normalizeOptional(snapshot.encounterId),
       reasonConditionId: normalizeOptional(snapshot.reasonConditionId),
-      code: {
-        system: normalizeRequired(snapshot.code.system, "Hệ mã dịch vụ không được để trống."),
-        code: normalizeRequired(snapshot.code.code, "Mã dịch vụ không được để trống."),
-        display: normalizeRequired(snapshot.code.display, "Tên dịch vụ không được để trống.")
-      },
+      status: normalizeStatus(snapshot.status),
+      intent: normalizeIntent(snapshot.intent),
+      category: normalizeCategory(snapshot.category),
+      priority: normalizePriority(snapshot.priority),
+      code: normalizeCode(snapshot.code),
       occurrenceAt: snapshot.occurrenceAt
         ? parseDate(snapshot.occurrenceAt, "Thời điểm dự kiến thực hiện không hợp lệ.").toISOString()
         : undefined,
@@ -122,9 +154,15 @@ export class ServiceRequest {
         snapshot.authoredOn,
         "Thời điểm chỉ định dịch vụ không hợp lệ."
       ).toISOString(),
+      requesterPractitionerId: normalizeRequired(
+        snapshot.requesterPractitionerId,
+        "Nhân sự chỉ định dịch vụ không được để trống."
+      ),
       performerOrganizationId: normalizeOptional(snapshot.performerOrganizationId),
       patientInstruction: normalizeOptional(snapshot.patientInstruction),
-      note: normalizeOptional(snapshot.note)
+      note: normalizeOptional(snapshot.note),
+      createdAt: parseDate(snapshot.createdAt, "Thời điểm tạo chỉ định dịch vụ không hợp lệ.").toISOString(),
+      updatedAt: parseDate(snapshot.updatedAt, "Thời điểm cập nhật chỉ định dịch vụ không hợp lệ.").toISOString()
     });
   }
 
@@ -157,6 +195,46 @@ function normalizeRequired(value: string, message: string): string {
 function normalizeOptional(value: string | undefined): string | undefined {
   const normalized = value?.trim().replace(/\s+/g, " ");
   return normalized || undefined;
+}
+
+function normalizeCode(value: ServiceRequestCode): ServiceRequestCode {
+  return {
+    system: normalizeRequired(value.system, "Hệ mã dịch vụ không được để trống."),
+    code: normalizeRequired(value.code, "Mã dịch vụ không được để trống."),
+    display: normalizeRequired(value.display, "Tên dịch vụ không được để trống.")
+  };
+}
+
+function normalizeStatus(value: ServiceRequestStatus): ServiceRequestStatus {
+  if (!serviceRequestStatuses.has(value)) {
+    throw new DomainError("Trạng thái chỉ định dịch vụ không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizeIntent(value: ServiceRequestIntent): ServiceRequestIntent {
+  if (!serviceRequestIntents.has(value)) {
+    throw new DomainError("Mục đích chỉ định dịch vụ không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizeCategory(value: ServiceRequestCategory): ServiceRequestCategory {
+  if (!serviceRequestCategories.has(value)) {
+    throw new DomainError("Nhóm chỉ định dịch vụ không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizePriority(value: ServiceRequestPriority): ServiceRequestPriority {
+  if (!serviceRequestPriorities.has(value)) {
+    throw new DomainError("Mức ưu tiên chỉ định dịch vụ không hợp lệ.");
+  }
+
+  return value;
 }
 
 function parseDate(value: string, message: string): Date {

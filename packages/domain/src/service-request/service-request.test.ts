@@ -118,4 +118,82 @@ describe("ServiceRequest", () => {
       })
     ).toThrow(DomainError);
   });
+
+  it("rejects invalid rehydrated service request metadata", () => {
+    const snapshot = ServiceRequest.order({
+      id: "service-request-006",
+      patientId: "patient-001",
+      encounterId: "encounter-001",
+      reasonConditionId: "condition-001",
+      category: "laboratory",
+      priority: "urgent",
+      code: {
+        system: "http://loinc.org",
+        code: "58410-2",
+        display: "Complete blood count panel"
+      },
+      occurrenceAt: "2026-05-28T02:00:00.000Z",
+      authoredOn: "2026-05-28T01:30:00.000Z",
+      requesterPractitionerId: "practitioner-001"
+    }).toSnapshot();
+
+    expect(() =>
+      ServiceRequest.rehydrate({
+        ...snapshot,
+        status: "accepted" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      ServiceRequest.rehydrate({
+        ...snapshot,
+        intent: "request" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      ServiceRequest.rehydrate({
+        ...snapshot,
+        category: "pharmacy" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      ServiceRequest.rehydrate({
+        ...snapshot,
+        priority: "normal" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      ServiceRequest.rehydrate({
+        ...snapshot,
+        code: {
+          ...snapshot.code,
+          code: " "
+        }
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      ServiceRequest.rehydrate({
+        ...snapshot,
+        occurrenceAt: "not-a-date"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      ServiceRequest.rehydrate({
+        ...snapshot,
+        requesterPractitionerId: " "
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      ServiceRequest.rehydrate({
+        ...snapshot,
+        createdAt: "not-a-date"
+      })
+    ).toThrow(DomainError);
+  });
 });
