@@ -1,7 +1,7 @@
 import { Info, MetricCard, PageHeader } from "../components/AppShell.js";
 import { formatDateTime } from "../lib/clinicalFormatters.js";
 import type { AppRoute, Patient } from "../types/clinical.js";
-import type { DashboardMetrics } from "./dashboardMetrics.js";
+import type { DashboardMetrics } from "../application/dashboardMetrics.js";
 
 type DashboardPageProps = {
   readonly latestEncounterServiceType?: string;

@@ -8,6 +8,28 @@ const requiredModules = [
   "apps/web/src/api/clinicalApi.ts",
   "apps/web/src/auth/authApi.ts",
   "apps/web/src/auth/demoLogin.ts",
+  "apps/web/src/application/appAuditLoaders.ts",
+  "apps/web/src/application/appAuthSessionHandlers.ts",
+  "apps/web/src/application/appClinicalRecordHandlers.ts",
+  "apps/web/src/application/appDerivedContext.ts",
+  "apps/web/src/application/appFhirPreviewLoaders.ts",
+  "apps/web/src/application/appLifecycleEffects.ts",
+  "apps/web/src/application/appPatientRegistryHandlers.ts",
+  "apps/web/src/application/appPatientRegistryLoaders.ts",
+  "apps/web/src/application/appPatientWorkspaceLifecycle.ts",
+  "apps/web/src/application/appPatientWorkspaceLoaders.ts",
+  "apps/web/src/application/appPlatformLoaders.ts",
+  "apps/web/src/application/appRecordTransferHandlers.ts",
+  "apps/web/src/application/appRoutePanels.ts",
+  "apps/web/src/application/appRuntimeEffects.ts",
+  "apps/web/src/application/appShellState.ts",
+  "apps/web/src/application/auditPanelContext.ts",
+  "apps/web/src/application/clinicalDocumentPanelContext.ts",
+  "apps/web/src/application/clinicalRecordPanelContext.ts",
+  "apps/web/src/application/dashboardMetrics.ts",
+  "apps/web/src/application/interopPanelContext.ts",
+  "apps/web/src/application/patientPanelContext.ts",
+  "apps/web/src/application/workspaceSelection.ts",
   "apps/web/src/components/AppShell.tsx",
   "apps/web/src/config/demoClinicalDefaults.ts",
   "apps/web/src/features/audit/AuditPanels.tsx",
@@ -62,19 +84,40 @@ const requiredModules = [
   "apps/web/src/lib/fhirPreviewLoader.ts",
   "apps/web/src/lib/patientScopedCollectionLoader.ts",
   "apps/web/src/pages/AppRouteRenderer.tsx",
-  "apps/web/src/pages/appRoutePanels.ts",
   "apps/web/src/pages/AuditLogPage.tsx",
   "apps/web/src/pages/DashboardPage.tsx",
   "apps/web/src/pages/DocumentsPage.tsx",
-  "apps/web/src/pages/dashboardMetrics.ts",
   "apps/web/src/pages/GatewayAcknowledgementPage.tsx",
   "apps/web/src/pages/InteropPage.tsx",
   "apps/web/src/pages/LandingPage.tsx",
   "apps/web/src/pages/LoginPage.tsx",
   "apps/web/src/pages/SettingsPage.tsx",
   "apps/web/src/pages/WorkspacePage.tsx",
-  "apps/web/src/pages/workspaceSelection.ts",
   "apps/web/src/types/clinical.ts"
+];
+const forbiddenPageCompositionModules = [
+  "apps/web/src/pages/appAuditLoaders.ts",
+  "apps/web/src/pages/appAuthSessionHandlers.ts",
+  "apps/web/src/pages/appClinicalRecordHandlers.ts",
+  "apps/web/src/pages/appDerivedContext.ts",
+  "apps/web/src/pages/appFhirPreviewLoaders.ts",
+  "apps/web/src/pages/appLifecycleEffects.ts",
+  "apps/web/src/pages/appPatientRegistryHandlers.ts",
+  "apps/web/src/pages/appPatientRegistryLoaders.ts",
+  "apps/web/src/pages/appPatientWorkspaceLifecycle.ts",
+  "apps/web/src/pages/appPatientWorkspaceLoaders.ts",
+  "apps/web/src/pages/appPlatformLoaders.ts",
+  "apps/web/src/pages/appRecordTransferHandlers.ts",
+  "apps/web/src/pages/appRoutePanels.ts",
+  "apps/web/src/pages/appRuntimeEffects.ts",
+  "apps/web/src/pages/appShellState.ts",
+  "apps/web/src/pages/auditPanelContext.ts",
+  "apps/web/src/pages/clinicalDocumentPanelContext.ts",
+  "apps/web/src/pages/clinicalRecordPanelContext.ts",
+  "apps/web/src/pages/dashboardMetrics.ts",
+  "apps/web/src/pages/interopPanelContext.ts",
+  "apps/web/src/pages/patientPanelContext.ts",
+  "apps/web/src/pages/workspaceSelection.ts"
 ];
 const maxAppLines = 2_647;
 
@@ -173,6 +216,23 @@ for (const modulePath of requiredModules) {
 if (missingModules.length > 0) {
   throw new Error(
     `Expected web composition modules to exist: ${missingModules.join(", ")}`
+  );
+}
+
+const misplacedPageCompositionModules = [];
+
+for (const modulePath of forbiddenPageCompositionModules) {
+  try {
+    await stat(resolve(modulePath));
+    misplacedPageCompositionModules.push(modulePath);
+  } catch {
+    // Expected: application orchestration belongs under apps/web/src/application.
+  }
+}
+
+if (misplacedPageCompositionModules.length > 0) {
+  throw new Error(
+    `Web application orchestration must live under apps/web/src/application, not pages: ${misplacedPageCompositionModules.join(", ")}`
   );
 }
 

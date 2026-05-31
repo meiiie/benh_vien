@@ -13,29 +13,29 @@ import { buildRecordTransferLoaders } from "./features/record-transfers/recordTr
 import { LandingPage } from "./pages/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { AppRouteRenderer } from "./pages/AppRouteRenderer.js";
-import { buildAppAuditLoaders } from "./pages/appAuditLoaders.js";
-import { buildAppAuthSessionHandlers } from "./pages/appAuthSessionHandlers.js";
-import { buildAuditPanels } from "./pages/auditPanelContext.js";
+import { buildAppAuditLoaders } from "./application/appAuditLoaders.js";
+import { buildAppAuthSessionHandlers } from "./application/appAuthSessionHandlers.js";
+import { buildAuditPanels } from "./application/auditPanelContext.js";
 import {
   buildAppAccessContext,
   buildAppRouteRuntimeContext,
   buildAppWorkspaceContext
-} from "./pages/appDerivedContext.js";
-import { buildAppClinicalRecordHandlers } from "./pages/appClinicalRecordHandlers.js";
-import { buildAppFhirPreviewLoaders } from "./pages/appFhirPreviewLoaders.js";
-import { buildAppPatientRegistryHandlers } from "./pages/appPatientRegistryHandlers.js";
-import { buildAppPatientRegistryLoaders } from "./pages/appPatientRegistryLoaders.js";
-import { buildAppPatientWorkspaceLifecycle } from "./pages/appPatientWorkspaceLifecycle.js";
-import { buildAppPatientWorkspaceLoaders } from "./pages/appPatientWorkspaceLoaders.js";
-import { buildAppPlatformLoaders } from "./pages/appPlatformLoaders.js";
-import { buildAppRecordTransferHandlers } from "./pages/appRecordTransferHandlers.js";
-import { useAppRuntimeEffects } from "./pages/appRuntimeEffects.js";
-import { useAppShellState } from "./pages/appShellState.js";
-import { buildAppRoutePanels } from "./pages/appRoutePanels.js";
-import { buildClinicalDocumentPanels } from "./pages/clinicalDocumentPanelContext.js";
-import { buildClinicalRecordPanels } from "./pages/clinicalRecordPanelContext.js";
-import { buildInteropPanels } from "./pages/interopPanelContext.js";
-import { buildPatientPanels } from "./pages/patientPanelContext.js";
+} from "./application/appDerivedContext.js";
+import { buildAppClinicalRecordHandlers } from "./application/appClinicalRecordHandlers.js";
+import { buildAppFhirPreviewLoaders } from "./application/appFhirPreviewLoaders.js";
+import { buildAppPatientRegistryHandlers } from "./application/appPatientRegistryHandlers.js";
+import { buildAppPatientRegistryLoaders } from "./application/appPatientRegistryLoaders.js";
+import { buildAppPatientWorkspaceLifecycle } from "./application/appPatientWorkspaceLifecycle.js";
+import { buildAppPatientWorkspaceLoaders } from "./application/appPatientWorkspaceLoaders.js";
+import { buildAppPlatformLoaders } from "./application/appPlatformLoaders.js";
+import { buildAppRecordTransferHandlers } from "./application/appRecordTransferHandlers.js";
+import { useAppRuntimeEffects } from "./application/appRuntimeEffects.js";
+import { useAppShellState } from "./application/appShellState.js";
+import { buildAppRoutePanels } from "./application/appRoutePanels.js";
+import { buildClinicalDocumentPanels } from "./application/clinicalDocumentPanelContext.js";
+import { buildClinicalRecordPanels } from "./application/clinicalRecordPanelContext.js";
+import { buildInteropPanels } from "./application/interopPanelContext.js";
+import { buildPatientPanels } from "./application/patientPanelContext.js";
 
 import { referenceSignals, workflowSteps } from "./config/demoClinicalDefaults.js";
 const apiBaseUrl =

@@ -3,7 +3,7 @@ import type { useFhirPreviewState } from "../features/fhir-preview/fhirPreviewSt
 import type { usePlatformState } from "../features/platform/platformState.js";
 import { buildDashboardMetrics } from "./dashboardMetrics.js";
 import { buildWorkspaceSelection } from "./workspaceSelection.js";
-import type { AppRouteRenderer } from "./AppRouteRenderer.js";
+import type { AppRouteRenderer } from "../pages/AppRouteRenderer.js";
 import type {
   AuthSession,
   Patient,

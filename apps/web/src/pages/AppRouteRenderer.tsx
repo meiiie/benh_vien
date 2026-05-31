@@ -10,7 +10,7 @@ import type {
 } from "../types/clinical.js";
 import { AuditLogPage } from "./AuditLogPage.js";
 import { DashboardPage } from "./DashboardPage.js";
-import type { DashboardMetrics } from "./dashboardMetrics.js";
+import type { DashboardMetrics } from "../application/dashboardMetrics.js";
 import { DocumentsPage } from "./DocumentsPage.js";
 import { GatewayAcknowledgementPage } from "./GatewayAcknowledgementPage.js";
 import { InteropPage } from "./InteropPage.js";
