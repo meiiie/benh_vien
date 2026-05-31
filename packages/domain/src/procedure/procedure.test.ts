@@ -103,4 +103,109 @@ describe("Procedure", () => {
       })
     ).toThrow(DomainError);
   });
+
+  it("rejects invalid rehydrated procedure metadata", () => {
+    const snapshot = Procedure.record({
+      id: "procedure-test-004",
+      patientId: "patient-test-001",
+      encounterId: "encounter-test-001",
+      basedOnServiceRequestId: "service-request-test-001",
+      status: "completed",
+      category: "diagnostic",
+      code: {
+        system: "http://snomed.info/sct",
+        code: "168537006",
+        display: "Chest X-ray"
+      },
+      performedPeriod: {
+        start: "2026-05-27T04:30:00.000Z",
+        end: "2026-05-27T05:00:00.000Z"
+      },
+      performers: [
+        {
+          actorType: "Practitioner",
+          actorId: "practitioner-test-001",
+          onBehalfOfOrganizationId: "department-imaging"
+        }
+      ],
+      reportReferences: [
+        {
+          resourceType: "DiagnosticReport",
+          id: "diagnostic-report-test-001"
+        }
+      ]
+    }).toSnapshot();
+
+    expect(() =>
+      Procedure.rehydrate({
+        ...snapshot,
+        status: "signed" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Procedure.rehydrate({
+        ...snapshot,
+        category: "pharmacy" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Procedure.rehydrate({
+        ...snapshot,
+        code: {
+          ...snapshot.code,
+          code: " "
+        }
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Procedure.rehydrate({
+        ...snapshot,
+        performedPeriod: {
+          start: "2026-05-27T05:00:00.000Z",
+          end: "2026-05-27T04:30:00.000Z"
+        }
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Procedure.rehydrate({
+        ...snapshot,
+        performers: [
+          {
+            actorType: "Device" as never,
+            actorId: "device-test-001"
+          }
+        ]
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Procedure.rehydrate({
+        ...snapshot,
+        reportReferences: [
+          {
+            resourceType: "Observation" as never,
+            id: "observation-test-001"
+          }
+        ]
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Procedure.rehydrate({
+        ...snapshot,
+        patientId: " "
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Procedure.rehydrate({
+        ...snapshot,
+        createdAt: "not-a-date"
+      })
+    ).toThrow(DomainError);
+  });
 });

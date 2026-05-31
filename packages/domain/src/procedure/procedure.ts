@@ -18,6 +18,25 @@ export type ProcedureCategory =
   | "rehabilitation"
   | "other";
 
+const procedureStatuses = new Set<ProcedureStatus>([
+  "preparation",
+  "in-progress",
+  "not-done",
+  "on-hold",
+  "stopped",
+  "completed",
+  "entered-in-error",
+  "unknown"
+]);
+const procedureCategories = new Set<ProcedureCategory>([
+  "surgical",
+  "diagnostic",
+  "therapeutic",
+  "counseling",
+  "rehabilitation",
+  "other"
+]);
+
 export type ProcedureCoding = {
   readonly system: string;
   readonly code: string;
@@ -25,6 +44,19 @@ export type ProcedureCoding = {
 };
 
 export type ProcedurePerformerActorType = "Practitioner" | "PractitionerRole" | "Organization";
+
+const procedurePerformerActorTypes = new Set<ProcedurePerformerActorType>([
+  "Practitioner",
+  "PractitionerRole",
+  "Organization"
+]);
+const procedureReportReferenceResourceTypes = new Set<
+  "DiagnosticReport" | "DocumentReference" | "Composition"
+>([
+  "DiagnosticReport",
+  "DocumentReference",
+  "Composition"
+]);
 
 export type ProcedurePerformer = {
   readonly actorType: ProcedurePerformerActorType;
@@ -76,16 +108,10 @@ export class Procedure {
 
   static record(input: CreateProcedureInput): Procedure {
     const now = new Date();
+    const status = normalizeStatus(input.status);
     const performedPeriod = normalizePerformedPeriod(input.performedPeriod);
     const performers = normalizePerformers(input.performers);
-
-    if (input.status === "completed" && !performedPeriod?.start && !performedPeriod?.end) {
-      throw new DomainError("Thủ thuật đã hoàn tất cần có thời điểm thực hiện để truy vết.");
-    }
-
-    if (input.status === "completed" && performers.length === 0) {
-      throw new DomainError("Thủ thuật đã hoàn tất cần có tối thiểu một người hoặc đơn vị thực hiện.");
-    }
+    assertProcedureLifecycle(status, performedPeriod, performers);
 
     return new Procedure({
       id: normalizeRequired(input.id, "Mã thủ thuật không được để trống."),
@@ -93,9 +119,9 @@ export class Procedure {
       encounterId: normalizeOptional(input.encounterId),
       basedOnServiceRequestId: normalizeOptional(input.basedOnServiceRequestId),
       partOfProcedureId: normalizeOptional(input.partOfProcedureId),
-      status: input.status,
+      status,
       statusReason: normalizeCoding(input.statusReason),
-      category: input.category,
+      category: normalizeCategory(input.category),
       code: normalizeRequiredCoding(input.code),
       performedPeriod,
       recorderPractitionerId: normalizeOptional(input.recorderPractitionerId),
@@ -112,22 +138,33 @@ export class Procedure {
   }
 
   static rehydrate(snapshot: ProcedureSnapshot): Procedure {
+    const status = normalizeStatus(snapshot.status);
+    const performedPeriod = normalizePerformedPeriod(snapshot.performedPeriod);
+    const performers = normalizePerformers(snapshot.performers);
+    assertProcedureLifecycle(status, performedPeriod, performers);
+
     return new Procedure({
       ...snapshot,
+      id: normalizeRequired(snapshot.id, "Mã thủ thuật không được để trống."),
+      patientId: normalizeRequired(snapshot.patientId, "Procedure phải gắn với bệnh nhân."),
       encounterId: normalizeOptional(snapshot.encounterId),
       basedOnServiceRequestId: normalizeOptional(snapshot.basedOnServiceRequestId),
       partOfProcedureId: normalizeOptional(snapshot.partOfProcedureId),
+      status,
       statusReason: normalizeCoding(snapshot.statusReason),
+      category: normalizeCategory(snapshot.category),
       code: normalizeRequiredCoding(snapshot.code),
-      performedPeriod: normalizePerformedPeriod(snapshot.performedPeriod),
+      performedPeriod,
       recorderPractitionerId: normalizeOptional(snapshot.recorderPractitionerId),
       asserterPractitionerId: normalizeOptional(snapshot.asserterPractitionerId),
-      performers: normalizePerformers(snapshot.performers),
+      performers,
       reasonConditionId: normalizeOptional(snapshot.reasonConditionId),
       bodySite: normalizeCoding(snapshot.bodySite),
       outcome: normalizeCoding(snapshot.outcome),
       reportReferences: normalizeReportReferences(snapshot.reportReferences),
-      note: normalizeOptional(snapshot.note)
+      note: normalizeOptional(snapshot.note),
+      createdAt: parseDate(snapshot.createdAt, "Thời điểm tạo thủ thuật không hợp lệ.").toISOString(),
+      updatedAt: parseDate(snapshot.updatedAt, "Thời điểm cập nhật thủ thuật không hợp lệ.").toISOString()
     });
   }
 
@@ -195,9 +232,10 @@ function normalizePerformers(
   const normalized = new Map<string, ProcedurePerformer>();
 
   for (const performer of performers ?? []) {
+    const actorType = normalizePerformerActorType(performer.actorType);
     const actorId = normalizeRequired(performer.actorId, "Người hoặc đơn vị thực hiện thủ thuật không được để trống.");
-    normalized.set(`${performer.actorType}/${actorId}`, {
-      actorType: performer.actorType,
+    normalized.set(`${actorType}/${actorId}`, {
+      actorType,
       actorId,
       function: normalizeCoding(performer.function),
       onBehalfOfOrganizationId: normalizeOptional(performer.onBehalfOfOrganizationId)
@@ -213,14 +251,65 @@ function normalizeReportReferences(
   const normalized = new Map<string, ProcedureReportReference>();
 
   for (const reference of references ?? []) {
+    const resourceType = normalizeReportReferenceResourceType(reference.resourceType);
     const id = normalizeRequired(reference.id, "Báo cáo liên quan thủ thuật không được để trống.");
-    normalized.set(`${reference.resourceType}/${id}`, {
-      resourceType: reference.resourceType,
+    normalized.set(`${resourceType}/${id}`, {
+      resourceType,
       id
     });
   }
 
   return [...normalized.values()];
+}
+
+function assertProcedureLifecycle(
+  status: ProcedureStatus,
+  performedPeriod: ProcedurePerformedPeriod | undefined,
+  performers: readonly ProcedurePerformer[]
+): void {
+  if (status === "completed" && !performedPeriod?.start && !performedPeriod?.end) {
+    throw new DomainError("Thủ thuật đã hoàn tất cần có thời điểm thực hiện để truy vết.");
+  }
+
+  if (status === "completed" && performers.length === 0) {
+    throw new DomainError("Thủ thuật đã hoàn tất cần có tối thiểu một người hoặc đơn vị thực hiện.");
+  }
+}
+
+function normalizeStatus(value: ProcedureStatus): ProcedureStatus {
+  if (!procedureStatuses.has(value)) {
+    throw new DomainError("Trạng thái thủ thuật không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizeCategory(value: ProcedureCategory): ProcedureCategory {
+  if (!procedureCategories.has(value)) {
+    throw new DomainError("Nhóm thủ thuật không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizePerformerActorType(
+  value: ProcedurePerformerActorType
+): ProcedurePerformerActorType {
+  if (!procedurePerformerActorTypes.has(value)) {
+    throw new DomainError("Loại chủ thể thực hiện thủ thuật không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizeReportReferenceResourceType(
+  value: ProcedureReportReference["resourceType"]
+): ProcedureReportReference["resourceType"] {
+  if (!procedureReportReferenceResourceTypes.has(value)) {
+    throw new DomainError("Loại báo cáo liên quan thủ thuật không hợp lệ.");
+  }
+
+  return value;
 }
 
 function normalizeRequired(value: string, message: string): string {
