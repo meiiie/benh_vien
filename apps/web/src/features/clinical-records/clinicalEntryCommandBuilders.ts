@@ -11,6 +11,8 @@ import type {
   createEncounter,
   createObservation
 } from "./clinicalRecordApi.js";
+import type { CommandDraft } from "./clinicalRecordCommandDrafts.js";
+import { parseFiniteNumber } from "./clinicalRecordCommandDrafts.js";
 
 type CreateEncounterCommand = Parameters<typeof createEncounter>[2];
 type CreateAllergyIntoleranceCommand = Parameters<
@@ -109,5 +111,25 @@ export function buildObservationCommand(
       code: form.unitCode || undefined
     },
     performerPractitionerId: form.performerPractitionerId || undefined
+  };
+}
+
+export function buildObservationCommandDraft(
+  form: NewObservationForm
+): CommandDraft<CreateObservationCommand> {
+  const numericValue = parseFiniteNumber(
+    form.value,
+    "Giá trị chỉ số phải là số hợp lệ."
+  );
+
+  if (!numericValue.ok) {
+    return numericValue;
+  }
+
+  return {
+    ok: true,
+    command: buildObservationCommand(form, {
+      numericValue: numericValue.value
+    })
   };
 }

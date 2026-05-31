@@ -9,6 +9,11 @@ import type {
   createMedicationDispense,
   createMedicationRequest
 } from "./clinicalRecordApi.js";
+import type { CommandDraft } from "./clinicalRecordCommandDrafts.js";
+import {
+  parseOptionalPositiveNumber,
+  parsePositiveNumber
+} from "./clinicalRecordCommandDrafts.js";
 
 type CreateMedicationRequestCommand = Parameters<typeof createMedicationRequest>[2];
 type CreateMedicationDispenseCommand = Parameters<typeof createMedicationDispense>[2];
@@ -34,26 +39,6 @@ type MedicationDispenseNumericValues = {
 type MedicationAdministrationNumericValues = {
   readonly doseValue: number;
 };
-
-type CommandDraft<TCommand> =
-  | {
-      readonly ok: true;
-      readonly command: TCommand;
-    }
-  | {
-      readonly ok: false;
-      readonly message: string;
-    };
-
-type NumberDraft =
-  | {
-      readonly ok: true;
-      readonly value: number;
-    }
-  | {
-      readonly ok: false;
-      readonly message: string;
-    };
 
 export function buildMedicationRequestCommandDraft(
   form: NewMedicationRequestForm
@@ -337,34 +322,4 @@ export function buildMedicationAdministrationCommand(
     },
     note: form.note || undefined
   };
-}
-
-function parsePositiveNumber(rawValue: string, message: string): NumberDraft {
-  const value = Number(rawValue);
-
-  if (!Number.isFinite(value) || value <= 0) {
-    return {
-      ok: false,
-      message
-    };
-  }
-
-  return {
-    ok: true,
-    value
-  };
-}
-
-function parseOptionalPositiveNumber(
-  rawValue: string,
-  message: string
-): NumberDraft | { readonly ok: true; readonly value: undefined } {
-  if (!rawValue) {
-    return {
-      ok: true,
-      value: undefined
-    };
-  }
-
-  return parsePositiveNumber(rawValue, message);
 }

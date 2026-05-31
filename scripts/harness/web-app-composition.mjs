@@ -19,6 +19,7 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/AllergyIntolerancePanel.tsx",
   "apps/web/src/features/clinical-records/carePlanCommandBuilders.ts",
   "apps/web/src/features/clinical-records/clinicalEntryCommandBuilders.ts",
+  "apps/web/src/features/clinical-records/clinicalRecordCommandDrafts.ts",
   "apps/web/src/features/clinical-records/clinicalRecordPanelRenderers.tsx",
   "apps/web/src/features/clinical-records/ConditionPanel.tsx",
   "apps/web/src/features/clinical-records/DiagnosticReportPanel.tsx",

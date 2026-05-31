@@ -83,7 +83,7 @@ import {
   buildAllergyIntoleranceCommand,
   buildConditionCommand,
   buildEncounterCommand,
-  buildObservationCommand
+  buildObservationCommandDraft
 } from "./features/clinical-records/clinicalEntryCommandBuilders.js";
 import { buildEncounterScopedFormUpdater } from "./features/clinical-records/encounterScopedFormUpdater.js";
 import {
@@ -2184,10 +2184,10 @@ export function App() {
       return;
     }
 
-    const numericValue = Number(observationForm.value);
+    const commandDraft = buildObservationCommandDraft(observationForm);
 
-    if (!Number.isFinite(numericValue)) {
-      setStatusMessage("Giá trị chỉ số phải là số hợp lệ.");
+    if (!commandDraft.ok) {
+      setStatusMessage(commandDraft.message);
       return;
     }
 
@@ -2197,7 +2197,7 @@ export function App() {
       const createdObservation = await createObservation(
         clinicalApi,
         selectedPatient.id,
-        buildObservationCommand(observationForm, { numericValue })
+        commandDraft.command
       );
       await loadObservations(selectedPatient.id, createdObservation.id);
       await loadPatientFhirBundlePreview(selectedPatient.id);
