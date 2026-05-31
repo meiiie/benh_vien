@@ -108,13 +108,16 @@ export class Procedure {
 
   static record(input: CreateProcedureInput): Procedure {
     const now = new Date();
+    const id = normalizeRequired(input.id, "Mã thủ thuật không được để trống.");
     const status = normalizeStatus(input.status);
     const performedPeriod = normalizePerformedPeriod(input.performedPeriod);
     const performers = normalizePerformers(input.performers);
     assertProcedureLifecycle(status, performedPeriod, performers);
+    validateSelfReference(id, input.partOfProcedureId);
+    validatePersistenceTimeline(now, now);
 
     return new Procedure({
-      id: normalizeRequired(input.id, "Mã thủ thuật không được để trống."),
+      id,
       patientId: normalizeRequired(input.patientId, "Procedure phải gắn với bệnh nhân."),
       encounterId: normalizeOptional(input.encounterId),
       basedOnServiceRequestId: normalizeOptional(input.basedOnServiceRequestId),
@@ -138,14 +141,25 @@ export class Procedure {
   }
 
   static rehydrate(snapshot: ProcedureSnapshot): Procedure {
+    const id = normalizeRequired(snapshot.id, "Mã thủ thuật không được để trống.");
+    const createdAt = parseDate(
+      snapshot.createdAt,
+      "Thời điểm tạo thủ thuật không hợp lệ."
+    );
+    const updatedAt = parseDate(
+      snapshot.updatedAt,
+      "Thời điểm cập nhật thủ thuật không hợp lệ."
+    );
     const status = normalizeStatus(snapshot.status);
     const performedPeriod = normalizePerformedPeriod(snapshot.performedPeriod);
     const performers = normalizePerformers(snapshot.performers);
     assertProcedureLifecycle(status, performedPeriod, performers);
+    validateSelfReference(id, snapshot.partOfProcedureId);
+    validatePersistenceTimeline(createdAt, updatedAt);
 
     return new Procedure({
       ...snapshot,
-      id: normalizeRequired(snapshot.id, "Mã thủ thuật không được để trống."),
+      id,
       patientId: normalizeRequired(snapshot.patientId, "Procedure phải gắn với bệnh nhân."),
       encounterId: normalizeOptional(snapshot.encounterId),
       basedOnServiceRequestId: normalizeOptional(snapshot.basedOnServiceRequestId),
@@ -163,8 +177,8 @@ export class Procedure {
       outcome: normalizeCoding(snapshot.outcome),
       reportReferences: normalizeReportReferences(snapshot.reportReferences),
       note: normalizeOptional(snapshot.note),
-      createdAt: parseDate(snapshot.createdAt, "Thời điểm tạo thủ thuật không hợp lệ.").toISOString(),
-      updatedAt: parseDate(snapshot.updatedAt, "Thời điểm cập nhật thủ thuật không hợp lệ.").toISOString()
+      createdAt: createdAt.toISOString(),
+      updatedAt: updatedAt.toISOString()
     });
   }
 
@@ -273,6 +287,20 @@ function assertProcedureLifecycle(
 
   if (status === "completed" && performers.length === 0) {
     throw new DomainError("Thủ thuật đã hoàn tất cần có tối thiểu một người hoặc đơn vị thực hiện.");
+  }
+}
+
+function validateSelfReference(id: string, partOfProcedureId: string | undefined): void {
+  const normalizedPartOfProcedureId = normalizeOptional(partOfProcedureId);
+
+  if (normalizedPartOfProcedureId && normalizedPartOfProcedureId === id) {
+    throw new DomainError("Thủ thuật không được là một phần của chính nó.");
+  }
+}
+
+function validatePersistenceTimeline(createdAt: Date, updatedAt: Date): void {
+  if (updatedAt < createdAt) {
+    throw new DomainError("Thời điểm cập nhật thủ thuật không được trước thời điểm tạo thủ thuật.");
   }
 }
 

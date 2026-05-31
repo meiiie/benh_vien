@@ -104,6 +104,25 @@ describe("Procedure", () => {
     ).toThrow(DomainError);
   });
 
+  it("rejects procedures that reference themselves as part-of", () => {
+    expect(() =>
+      Procedure.record({
+        id: "procedure-test-self-reference-001",
+        patientId: "patient-test-001",
+        partOfProcedureId: "procedure-test-self-reference-001",
+        status: "in-progress",
+        category: "other",
+        code: {
+          system: "http://snomed.info/sct",
+          code: "71388002",
+          display: "Procedure"
+        },
+        performers: [],
+        reportReferences: []
+      })
+    ).toThrow(DomainError);
+  });
+
   it("rejects invalid rehydrated procedure metadata", () => {
     const snapshot = Procedure.record({
       id: "procedure-test-004",
@@ -205,6 +224,20 @@ describe("Procedure", () => {
       Procedure.rehydrate({
         ...snapshot,
         createdAt: "not-a-date"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Procedure.rehydrate({
+        ...snapshot,
+        partOfProcedureId: "procedure-test-004"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Procedure.rehydrate({
+        ...snapshot,
+        updatedAt: "1999-01-01T00:00:00.000Z"
       })
     ).toThrow(DomainError);
   });
