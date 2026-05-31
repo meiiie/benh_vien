@@ -1,4 +1,4 @@
-import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import {
   loginPresets,
   type DemoRole,
@@ -28,7 +28,7 @@ import {
   listClinicalDocuments,
   signClinicalDocument
 } from "./features/clinical-documents/clinicalDocumentApi.js";
-import { ClinicalDocumentPanel } from "./features/clinical-documents/ClinicalDocumentPanel.js";
+import { buildClinicalDocumentPanelRenderers } from "./features/clinical-documents/clinicalDocumentPanelRenderers.js";
 import {
   createAllergyIntolerance,
   createCondition,
@@ -652,6 +652,23 @@ export function App() {
       procedure: isSubmittingProcedure,
       serviceRequest: isSubmittingServiceRequest
     }
+  });
+  const clinicalDocumentPanels = buildClinicalDocumentPanelRenderers({
+    clinicalDocuments,
+    documentTaxonomy,
+    encounters,
+    form: documentForm,
+    isLoading: isLoadingDocuments,
+    isSelectedPatientMerged,
+    isSigningDocument,
+    isSubmitting: isSubmittingDocument,
+    isWriteDisabled: selectedPatientWriteDisabled,
+    selectedDocument: workspaceSelection.selectedDocument,
+    selectedDocumentId,
+    onCreateDocument: handleCreateClinicalDocument,
+    onDocumentFormChange: setDocumentForm,
+    onSelectDocument: setSelectedDocumentId,
+    onSignDocument: handleSignClinicalDocument
   });
 
   useEffect(() => {
@@ -2744,7 +2761,7 @@ export function App() {
         panels={{
           allergyIntolerance: clinicalRecordPanels.allergyIntolerance,
           audit: auditPanels.audit,
-          clinicalDocument: renderDocumentPanel,
+          clinicalDocument: clinicalDocumentPanels.clinicalDocument,
           condition: clinicalRecordPanels.condition,
           consentInterop: interopPanels.consentInterop,
           createPatient: patientPanels.createPatient,
@@ -2781,28 +2798,6 @@ export function App() {
   function clearPatientFilters() {
     setPatientSearchTerm("");
     setPatientStatusFilter("all");
-  }
-
-  function renderDocumentPanel(): ReactNode {
-    return (
-      <ClinicalDocumentPanel
-        clinicalDocuments={clinicalDocuments}
-        documentTaxonomy={documentTaxonomy}
-        encounters={encounters}
-        form={documentForm}
-        isLoading={isLoadingDocuments}
-        isSelectedPatientMerged={isSelectedPatientMerged}
-        isSigningDocument={isSigningDocument}
-        isSubmitting={isSubmittingDocument}
-        isWriteDisabled={selectedPatientWriteDisabled}
-        selectedDocument={workspaceSelection.selectedDocument}
-        selectedDocumentId={selectedDocumentId}
-        onCreateDocument={handleCreateClinicalDocument}
-        onFormChange={setDocumentForm}
-        onSelectDocument={setSelectedDocumentId}
-        onSignDocument={handleSignClinicalDocument}
-      />
-    );
   }
 
 }
