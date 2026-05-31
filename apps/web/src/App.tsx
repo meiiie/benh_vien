@@ -32,6 +32,7 @@ import { buildPatientWriteGuard } from "./features/patient-registry/patientWrite
 import { buildPatientWorkspaceCollectionLoaders } from "./features/patient-workspace/patientWorkspaceCollectionLoaders.js";
 import { buildPatientWorkspaceLifecycle } from "./features/patient-workspace/patientWorkspaceLifecycle.js";
 import { buildPlatformLoaders } from "./features/platform/platformLoaders.js";
+import { usePlatformState } from "./features/platform/platformState.js";
 import { buildFhirPreviewLoaders } from "./features/fhir-preview/fhirPreviewLoaders.js";
 import { useSelectedFhirPreviewEffects } from "./features/fhir-preview/selectedFhirPreviewEffects.js";
 import { buildRecordTransferHandlers } from "./features/record-transfers/recordTransferHandlers.js";
@@ -80,7 +81,6 @@ import type {
   ProviderPractitioner,
   ProviderEndpoint,
   ProviderPractitionerRole,
-  ProviderDirectory,
   Encounter,
   ClinicalDocument,
   ObservationCode,
@@ -114,7 +114,6 @@ import type {
   Consent,
   RecordTransfer,
   RecordTransferDeliveryAttempt,
-  ApiRuntimeInfo,
   NewRecordTransferForm,
   GatewayAcknowledgementForm,
   NewEncounterForm,
@@ -147,6 +146,7 @@ export function App() {
   const patientRegistryState = usePatientRegistryState();
   const [loginForm, setLoginForm] = useState<LoginForm>(loginPresets.clinician);
   const [loginError, setLoginError] = useState<string>();
+  const platformState = usePlatformState();
   const [encounters, setEncounters] = useState<readonly Encounter[]>([]);
   const [selectedEncounterId, setSelectedEncounterId] = useState<string>();
   const [clinicalDocuments, setClinicalDocuments] = useState<readonly ClinicalDocument[]>([]);
@@ -190,14 +190,9 @@ export function App() {
     useState<readonly RecordTransferDeliveryAttempt[]>([]);
   const [recordTransferDeliveryAttemptWarning, setRecordTransferDeliveryAttemptWarning] =
     useState<string>();
-  const [apiRuntimeInfo, setApiRuntimeInfo] = useState<ApiRuntimeInfo>();
-  const [apiRuntimeWarning, setApiRuntimeWarning] = useState<string>();
-  const [providerDirectory, setProviderDirectory] = useState<ProviderDirectory>();
   const [patientFhirPreview, setPatientFhirPreview] = useState<unknown>();
   const [patientFhirBundlePreview, setPatientFhirBundlePreview] = useState<unknown>();
   const [patientFhirDocumentBundlePreview, setPatientFhirDocumentBundlePreview] = useState<unknown>();
-  const [capabilityStatementPreview, setCapabilityStatementPreview] = useState<unknown>();
-  const [providerDirectoryFhirPreview, setProviderDirectoryFhirPreview] = useState<unknown>();
   const [consentFhirPreview, setConsentFhirPreview] = useState<unknown>();
   const [recordTransferFhirTaskPreview, setRecordTransferFhirTaskPreview] =
     useState<unknown>();
@@ -271,7 +266,6 @@ export function App() {
   const [isLoadingRecordTransfers, setIsLoadingRecordTransfers] = useState(false);
   const [isLoadingRecordTransferDeliveryAttempts, setIsLoadingRecordTransferDeliveryAttempts] =
     useState(false);
-  const [isLoadingProviderDirectory, setIsLoadingProviderDirectory] = useState(false);
   const [isSubmittingEncounter, setIsSubmittingEncounter] = useState(false);
   const [isSubmittingDocument, setIsSubmittingDocument] = useState(false);
   const [isSubmittingAllergyIntolerance, setIsSubmittingAllergyIntolerance] = useState(false);
@@ -358,7 +352,7 @@ export function App() {
   const dashboardMetrics = buildDashboardMetrics({
     ...patientWorkspaceCollections,
     patients: patientRegistryState.patients,
-    providerDirectory
+    providerDirectory: platformState.providerDirectory
   });
   const canReadAudit = authSession?.actor.role === "auditor" || authSession?.actor.role === "admin";
   const canViewRuntimeInfo = canReadAudit;
@@ -415,7 +409,7 @@ export function App() {
     setPatientFhirDocumentBundlePreview,
     setPatientFhirPreview,
     setProcedureFhirPreview,
-    setProviderDirectoryFhirPreview,
+    setProviderDirectoryFhirPreview: platformState.setProviderDirectoryFhirPreview,
     setRecordTransferFhirTaskPreview,
     setServiceRequestFhirPreview,
     setStatusMessage,
@@ -497,12 +491,12 @@ export function App() {
     clinicalApi,
     isAuditOnlySession,
     loadProviderDirectoryFhirPreview,
-    setApiRuntimeInfo,
-    setApiRuntimeWarning,
-    setCapabilityStatementPreview,
-    setIsLoadingProviderDirectory,
-    setProviderDirectory,
-    setProviderDirectoryFhirPreview
+    setApiRuntimeInfo: platformState.setApiRuntimeInfo,
+    setApiRuntimeWarning: platformState.setApiRuntimeWarning,
+    setCapabilityStatementPreview: platformState.setCapabilityStatementPreview,
+    setIsLoadingProviderDirectory: platformState.setIsLoadingProviderDirectory,
+    setProviderDirectory: platformState.setProviderDirectory,
+    setProviderDirectoryFhirPreview: platformState.setProviderDirectoryFhirPreview
   });
   const {
     loadAllergyIntolerances,
@@ -593,7 +587,7 @@ export function App() {
     setAuditEvents,
     setAuditFhirBundlePreview,
     setAuditIntegrityReport,
-    setCapabilityStatementPreview,
+    setCapabilityStatementPreview: platformState.setCapabilityStatementPreview,
     setClinicalDocuments,
     setConditionFhirPreview,
     setConditions,
@@ -774,16 +768,16 @@ export function App() {
     clearPatientWorkspaceState,
     clinicalApi,
     loginForm,
-    setApiRuntimeInfo,
-    setApiRuntimeWarning,
+    setApiRuntimeInfo: platformState.setApiRuntimeInfo,
+    setApiRuntimeWarning: platformState.setApiRuntimeWarning,
     setAppRoute,
     setAuthSession,
     setGlobalAuditEvents,
     setIsAuthenticated,
     setLoginError,
     setPatients: patientRegistryState.setPatients,
-    setProviderDirectory,
-    setProviderDirectoryFhirPreview,
+    setProviderDirectory: platformState.setProviderDirectory,
+    setProviderDirectoryFhirPreview: platformState.setProviderDirectoryFhirPreview,
     setSelectedPatientId: patientRegistryState.setSelectedPatientId,
     setStatusMessage,
     setTransitioningRecordTransferId
@@ -825,12 +819,12 @@ export function App() {
     form: recordTransferForm,
     isLoadingConsents,
     isLoadingDeliveryAttempts: isLoadingRecordTransferDeliveryAttempts,
-    isLoadingProviderDirectory,
+    isLoadingProviderDirectory: platformState.isLoadingProviderDirectory,
     isLoadingRecordTransfers,
     isPatientMerged: isSelectedPatientMerged,
     isSubmittingRecordTransfer,
     isWriteDisabled: selectedPatientWriteDisabled,
-    providerDirectory,
+    providerDirectory: platformState.providerDirectory,
     recipientOrganizationId: defaultTransferContext.recipientOrganizationId,
     recordTransfers,
     revokingConsentId,
@@ -1062,8 +1056,8 @@ export function App() {
     loadPatientWorkspace,
     loadProviderDirectory,
     selectedPatientId: patientRegistryState.selectedPatientId,
-    setApiRuntimeInfo,
-    setApiRuntimeWarning,
+    setApiRuntimeInfo: platformState.setApiRuntimeInfo,
+    setApiRuntimeWarning: platformState.setApiRuntimeWarning,
     setGlobalAuditEvents
   });
 
@@ -1112,8 +1106,8 @@ export function App() {
     >
       <AppRouteRenderer
         apiBaseUrl={apiBaseUrl}
-        apiRuntimeInfo={apiRuntimeInfo}
-        apiRuntimeWarning={apiRuntimeWarning}
+        apiRuntimeInfo={platformState.apiRuntimeInfo}
+        apiRuntimeWarning={platformState.apiRuntimeWarning}
         appRoute={appRoute}
         authSession={authSession}
         canMergePatients={canMergePatients}
@@ -1121,7 +1115,7 @@ export function App() {
         dashboardMetrics={dashboardMetrics}
         fhirPreviews={{
           allergyIntolerance: allergyIntoleranceFhirPreview,
-          capabilityStatement: capabilityStatementPreview,
+          capabilityStatement: platformState.capabilityStatementPreview,
           condition: conditionFhirPreview,
           consent: consentFhirPreview,
           diagnosticReport: diagnosticReportFhirPreview,
@@ -1137,7 +1131,7 @@ export function App() {
           patientBundle: patientFhirBundlePreview,
           patientDocumentBundle: patientFhirDocumentBundlePreview,
           procedure: procedureFhirPreview,
-          providerDirectory: providerDirectoryFhirPreview,
+          providerDirectory: platformState.providerDirectoryFhirPreview,
           recordTransferTask: recordTransferFhirTaskPreview,
           serviceRequest: serviceRequestFhirPreview,
           workflowTask: workflowTaskFhirPreview
