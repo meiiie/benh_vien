@@ -1,6 +1,6 @@
 import type { FormEvent } from "react";
 import { Info } from "../../components/AppShell.js";
-import { formatPatientRecordStatus } from "../../lib/clinicalFormatters.js";
+import { formatPatientRecordStatus } from "./patientRegistryFormatters.js";
 import type { Patient, PatientMergeForm } from "../../types/clinical.js";
 
 type PatientMergePanelProps = {

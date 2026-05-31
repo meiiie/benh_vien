@@ -1,9 +1,11 @@
 import { Info } from "../../components/AppShell.js";
 import {
-  formatDateTime,
   formatGender,
   formatIdentifierType,
   formatPatientRecordStatus
+} from "./patientRegistryFormatters.js";
+import {
+  formatDateTime
 } from "../../lib/clinicalFormatters.js";
 import type { Patient } from "../../types/clinical.js";
 

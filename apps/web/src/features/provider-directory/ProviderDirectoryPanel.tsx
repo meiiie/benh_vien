@@ -1,5 +1,5 @@
 import { Info } from "../../components/AppShell.js";
-import { formatProviderEndpointConnectionType } from "../../lib/clinicalFormatters.js";
+import { formatProviderEndpointConnectionType } from "./providerDirectoryFormatters.js";
 import type { ProviderDirectory } from "../../types/clinical.js";
 
 type ProviderDirectoryPanelProps = {

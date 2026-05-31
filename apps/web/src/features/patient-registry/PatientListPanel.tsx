@@ -1,5 +1,5 @@
 import type { Patient, PatientStatusFilter } from "../../types/clinical.js";
-import { formatPatientRecordStatus } from "../../lib/clinicalFormatters.js";
+import { formatPatientRecordStatus } from "./patientRegistryFormatters.js";
 
 type PatientListPanelProps = {
   readonly patients: readonly Patient[];

@@ -5,7 +5,9 @@ import {
   formatAllergyClinicalStatus,
   formatAllergyCriticality,
   formatAllergyType,
-  formatAllergyVerificationStatus,
+  formatAllergyVerificationStatus
+} from "./allergyFormatters.js";
+import {
   formatDateTime
 } from "../../lib/clinicalFormatters.js";
 import type {

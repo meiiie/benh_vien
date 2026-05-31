@@ -2,7 +2,7 @@ import {
   formatIdentifierType,
   formatPatientRecordStatus,
   normalizeSearchText
-} from "../../lib/clinicalFormatters.js";
+} from "./patientRegistryFormatters.js";
 import type {
   Patient,
   PatientMergeForm,

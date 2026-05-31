@@ -1,7 +1,9 @@
 import { Info } from "../../components/AppShell.js";
 import {
   formatConsentCategory,
-  formatConsentStatus,
+  formatConsentStatus
+} from "./consentFormatters.js";
+import {
   formatDateTime
 } from "../../lib/clinicalFormatters.js";
 import type { Consent } from "../../types/clinical.js";

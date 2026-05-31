@@ -1,9 +1,11 @@
 import type { FormEvent } from "react";
 import { Info } from "../../components/AppShell.js";
 import {
-  formatDateTime,
   formatDocumentStatus,
   formatDocumentType
+} from "./clinicalDocumentFormatters.js";
+import {
+  formatDateTime
 } from "../../lib/clinicalFormatters.js";
 import type {
   ClinicalDocument,
