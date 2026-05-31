@@ -78,13 +78,14 @@ export class Consent {
     const updatedAt = parseDate(snapshot.updatedAt, "Thời điểm cập nhật consent không hợp lệ.");
     const revokedByActorId = normalizeOptional(snapshot.revokedByActorId);
     const revokedAt = snapshot.revokedAt
-      ? parseDate(snapshot.revokedAt, "Thời điểm thu hồi consent không hợp lệ.").toISOString()
+      ? parseDate(snapshot.revokedAt, "Thời điểm thu hồi consent không hợp lệ.")
       : undefined;
     const revocationReason = normalizeOptional(snapshot.revocationReason);
 
     assertValidPeriod(validFrom, validUntil);
     assertValidStatus(snapshot.status);
     assertValidCategory(snapshot.category);
+    assertPersistenceTimeline(createdAt, updatedAt);
 
     if (snapshot.status === "revoked" && (!revokedByActorId || !revokedAt)) {
       throw new DomainError("Consent đã thu hồi phải có người thu hồi và thời điểm thu hồi.");
@@ -92,6 +93,10 @@ export class Consent {
 
     if (snapshot.status !== "revoked" && (revokedByActorId || revokedAt || revocationReason)) {
       throw new DomainError("Consent chưa thu hồi không được có metadata thu hồi.");
+    }
+
+    if (revokedAt) {
+      assertRevocationWithinPeriod(validFrom, validUntil, revokedAt);
     }
 
     return new Consent({
@@ -108,7 +113,7 @@ export class Consent {
       ),
       evidenceDocumentId: normalizeOptional(snapshot.evidenceDocumentId),
       revokedByActorId,
-      revokedAt,
+      revokedAt: revokedAt?.toISOString(),
       revocationReason,
       validFrom: validFrom.toISOString(),
       validUntil: validUntil?.toISOString(),
@@ -137,6 +142,11 @@ export class Consent {
     const revokedAt = normalizeDate(
       input.revokedAt ?? new Date(),
       "Thời điểm thu hồi consent không hợp lệ."
+    );
+    assertRevocationWithinPeriod(
+      new Date(this.props.validFrom),
+      this.props.validUntil ? new Date(this.props.validUntil) : undefined,
+      revokedAt
     );
 
     this.props.status = "revoked";
@@ -207,6 +217,26 @@ function normalizeDate(value: Date, message: string): Date {
 function assertValidPeriod(validFrom: Date, validUntil: Date | undefined): void {
   if (validUntil && validUntil <= validFrom) {
     throw new DomainError("Thời điểm hết hiệu lực consent phải sau thời điểm bắt đầu.");
+  }
+}
+
+function assertPersistenceTimeline(createdAt: Date, updatedAt: Date): void {
+  if (updatedAt < createdAt) {
+    throw new DomainError("Thời điểm cập nhật consent không được trước thời điểm tạo consent.");
+  }
+}
+
+function assertRevocationWithinPeriod(
+  validFrom: Date,
+  validUntil: Date | undefined,
+  revokedAt: Date
+): void {
+  if (revokedAt < validFrom) {
+    throw new DomainError("Thời điểm thu hồi consent không được trước thời điểm bắt đầu hiệu lực.");
+  }
+
+  if (validUntil && revokedAt > validUntil) {
+    throw new DomainError("Thời điểm thu hồi consent không được sau thời điểm hết hiệu lực.");
   }
 }
 

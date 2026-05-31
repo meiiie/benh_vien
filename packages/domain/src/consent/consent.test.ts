@@ -228,6 +228,31 @@ describe("Consent", () => {
         createdAt: "not-a-date"
       })
     ).toThrow(DomainError);
+
+    expect(() =>
+      Consent.rehydrate({
+        ...snapshot,
+        updatedAt: "1999-01-01T00:00:00.000Z"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Consent.rehydrate({
+        ...snapshot,
+        status: "revoked",
+        revokedByActorId: "practitioner-test",
+        revokedAt: "2026-05-27T23:59:59.000Z"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      Consent.rehydrate({
+        ...snapshot,
+        status: "revoked",
+        revokedByActorId: "practitioner-test",
+        revokedAt: "2026-05-29T00:00:01.000Z"
+      })
+    ).toThrow(DomainError);
   });
 
   it("rejects invalid revocation timestamps", () => {
@@ -244,6 +269,32 @@ describe("Consent", () => {
       consent.revoke({
         revokedByActorId: "practitioner-test",
         revokedAt: new Date("not-a-date")
+      })
+    ).toThrow(DomainError);
+  });
+
+  it("rejects revocation timestamps outside the consent period", () => {
+    const consent = Consent.grant({
+      id: "consent-test-009",
+      patientId: "patient-test-001",
+      category: "record-sharing",
+      granteeOrganizationId: "hospital-recipient",
+      grantorActorId: "practitioner-test",
+      validFrom: "2026-05-28T00:00:00.000Z",
+      validUntil: "2026-05-29T00:00:00.000Z"
+    });
+
+    expect(() =>
+      consent.revoke({
+        revokedByActorId: "practitioner-test",
+        revokedAt: new Date("2026-05-27T23:59:59.000Z")
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      consent.revoke({
+        revokedByActorId: "practitioner-test",
+        revokedAt: new Date("2026-05-29T00:00:01.000Z")
       })
     ).toThrow(DomainError);
   });
