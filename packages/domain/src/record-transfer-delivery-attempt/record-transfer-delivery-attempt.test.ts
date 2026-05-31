@@ -85,10 +85,100 @@ describe("RecordTransferDeliveryAttempt", () => {
     });
   });
 
+  it("rejects terminal timestamps before the queued timestamp", () => {
+    const attempt = RecordTransferDeliveryAttempt.queue({
+      id: "record-transfer-delivery-test-004",
+      recordTransferId: "record-transfer-test-001",
+      patientId: "patient-test-001",
+      targetEndpointId: "endpoint-fhir-recipient",
+      targetEndpointAddress: "https://fhir.recipient.example/fhir",
+      bundleId: "patient-document-patient-test-001",
+      bundleType: "document",
+      idempotencyKey: "wiiicare-record-transfer-test-key",
+      attemptNumber: 1,
+      queuedAt: "2026-05-28T06:00:00.000Z"
+    });
+
+    expect(() =>
+      attempt.markSucceeded({
+        completedAt: "2026-05-28T05:59:59.000Z",
+        httpStatus: 201
+      })
+    ).toThrow(DomainError);
+  });
+
+  it("rejects invalid rehydrated terminal delivery metadata", () => {
+    const snapshot = RecordTransferDeliveryAttempt.queue({
+      id: "record-transfer-delivery-test-005",
+      recordTransferId: "record-transfer-test-001",
+      patientId: "patient-test-001",
+      targetEndpointId: "endpoint-fhir-recipient",
+      targetEndpointAddress: "https://fhir.recipient.example/fhir",
+      bundleId: "patient-document-patient-test-001",
+      bundleType: "document",
+      idempotencyKey: "wiiicare-record-transfer-test-key",
+      attemptNumber: 1,
+      queuedAt: "2026-05-28T06:00:00.000Z"
+    }).toSnapshot();
+
+    expect(() =>
+      RecordTransferDeliveryAttempt.rehydrate({
+        ...snapshot,
+        status: "queued",
+        httpStatus: 102
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      RecordTransferDeliveryAttempt.rehydrate({
+        ...snapshot,
+        status: "succeeded",
+        completedAt: "2026-05-28T06:00:03.000Z",
+        httpStatus: 503
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      RecordTransferDeliveryAttempt.rehydrate({
+        ...snapshot,
+        status: "succeeded",
+        completedAt: "2026-05-28T06:00:03.000Z",
+        httpStatus: 201,
+        errorMessage: "Unexpected error"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      RecordTransferDeliveryAttempt.rehydrate({
+        ...snapshot,
+        status: "failed",
+        completedAt: "2026-05-28T06:00:03.000Z",
+        httpStatus: 200,
+        errorMessage: "FHIR endpoint returned an unexpected payload."
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      RecordTransferDeliveryAttempt.rehydrate({
+        ...snapshot,
+        status: "failed",
+        completedAt: "2026-05-28T05:59:59.000Z",
+        errorMessage: "FHIR endpoint timed out."
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      RecordTransferDeliveryAttempt.rehydrate({
+        ...snapshot,
+        bundleType: "binary" as never
+      })
+    ).toThrow(DomainError);
+  });
+
   it("rejects invalid endpoint addresses and attempt numbers", () => {
     expect(() =>
       RecordTransferDeliveryAttempt.queue({
-        id: "record-transfer-delivery-test-004",
+        id: "record-transfer-delivery-test-006",
         recordTransferId: "record-transfer-test-001",
         patientId: "patient-test-001",
         targetEndpointId: "endpoint-fhir-recipient",

@@ -2,6 +2,19 @@ import { DomainError } from "../shared/domain-error.js";
 
 export type RecordTransferDeliveryAttemptStatus = "queued" | "succeeded" | "failed";
 
+type RecordTransferDeliveryAttemptBundleType =
+  RecordTransferDeliveryAttemptSnapshot["bundleType"];
+
+const deliveryAttemptStatuses = new Set<RecordTransferDeliveryAttemptStatus>([
+  "queued",
+  "succeeded",
+  "failed"
+]);
+const deliveryAttemptBundleTypes = new Set<RecordTransferDeliveryAttemptBundleType>([
+  "collection",
+  "document"
+]);
+
 export type RecordTransferDeliveryAttemptSnapshot = {
   readonly id: string;
   readonly recordTransferId: string;
@@ -71,7 +84,7 @@ export class RecordTransferDeliveryAttempt {
       ),
       targetEndpointAddress: normalizeEndpointAddress(input.targetEndpointAddress),
       bundleId: normalizeRequired(input.bundleId, "Lần gửi phải có mã FHIR Bundle."),
-      bundleType: input.bundleType,
+      bundleType: normalizeBundleType(input.bundleType),
       idempotencyKey: normalizeRequired(
         input.idempotencyKey,
         "Lần gửi phải có idempotency key."
@@ -88,33 +101,52 @@ export class RecordTransferDeliveryAttempt {
     snapshot: RecordTransferDeliveryAttemptSnapshot
   ): RecordTransferDeliveryAttempt {
     const status = normalizeStatus(snapshot.status);
+    const queuedAt = parseDate(
+      snapshot.queuedAt,
+      "Thời điểm xếp hàng gửi hồ sơ không hợp lệ."
+    );
     const completedAt = snapshot.completedAt
-      ? parseDate(snapshot.completedAt, "Thời điểm hoàn tất gửi hồ sơ không hợp lệ.").toISOString()
+      ? parseDate(snapshot.completedAt, "Thời điểm hoàn tất gửi hồ sơ không hợp lệ.")
       : undefined;
-    const httpStatus = snapshot.httpStatus
-      ? normalizeHttpStatus(snapshot.httpStatus)
-      : undefined;
+    const httpStatus =
+      snapshot.httpStatus === undefined ? undefined : normalizeHttpStatus(snapshot.httpStatus);
+    const responseBodyPreview = normalizeOptional(snapshot.responseBodyPreview);
     const errorMessage = normalizeOptional(snapshot.errorMessage);
 
     validateTerminalState({
       status,
+      queuedAt,
       completedAt,
       httpStatus,
+      responseBodyPreview,
       errorMessage
     });
 
     return new RecordTransferDeliveryAttempt({
       ...snapshot,
+      id: normalizeRequired(snapshot.id, "Mã lần gửi hồ sơ không được để trống."),
+      recordTransferId: normalizeRequired(
+        snapshot.recordTransferId,
+        "Lần gửi phải gắn với một yêu cầu chuyển hồ sơ."
+      ),
+      patientId: normalizeRequired(snapshot.patientId, "Lần gửi phải gắn với một bệnh nhân."),
+      targetEndpointId: normalizeRequired(
+        snapshot.targetEndpointId,
+        "Lần gửi phải có endpoint đích."
+      ),
       targetEndpointAddress: normalizeEndpointAddress(snapshot.targetEndpointAddress),
+      bundleId: normalizeRequired(snapshot.bundleId, "Lần gửi phải có mã FHIR Bundle."),
+      bundleType: normalizeBundleType(snapshot.bundleType),
+      idempotencyKey: normalizeRequired(
+        snapshot.idempotencyKey,
+        "Lần gửi phải có idempotency key."
+      ),
       attemptNumber: normalizeAttemptNumber(snapshot.attemptNumber),
       status,
-      queuedAt: parseDate(
-        snapshot.queuedAt,
-        "Thời điểm xếp hàng gửi hồ sơ không hợp lệ."
-      ).toISOString(),
-      completedAt,
+      queuedAt: queuedAt.toISOString(),
+      completedAt: completedAt?.toISOString(),
       httpStatus,
-      responseBodyPreview: normalizeOptional(snapshot.responseBodyPreview),
+      responseBodyPreview,
       errorMessage,
       createdAt: parseDate(snapshot.createdAt, "Thời điểm tạo lần gửi không hợp lệ.").toISOString(),
       updatedAt: parseDate(
@@ -143,6 +175,7 @@ export class RecordTransferDeliveryAttempt {
       ? parseDate(input.completedAt, "Thời điểm hoàn tất gửi hồ sơ không hợp lệ.")
       : new Date();
     const httpStatus = normalizeHttpStatus(input.httpStatus);
+    assertCompletedAtIsNotBeforeQueuedAt(completedAt, this.props.queuedAt);
 
     if (httpStatus < 200 || httpStatus > 299) {
       throw new DomainError("Lần gửi thành công phải có HTTP status 2xx.");
@@ -165,12 +198,14 @@ export class RecordTransferDeliveryAttempt {
     const completedAt = input.completedAt
       ? parseDate(input.completedAt, "Thời điểm hoàn tất gửi hồ sơ không hợp lệ.")
       : new Date();
+    assertCompletedAtIsNotBeforeQueuedAt(completedAt, this.props.queuedAt);
 
     this.props = {
       ...this.props,
       status: "failed",
       completedAt: completedAt.toISOString(),
-      httpStatus: input.httpStatus ? normalizeHttpStatus(input.httpStatus) : undefined,
+      httpStatus:
+        input.httpStatus === undefined ? undefined : normalizeHttpStatus(input.httpStatus),
       responseBodyPreview: normalizeOptional(input.responseBodyPreview),
       errorMessage: normalizeRequired(input.errorMessage, "Cần có lý do lỗi gửi hồ sơ."),
       updatedAt: completedAt.toISOString()
@@ -234,8 +269,18 @@ function normalizeAttemptNumber(value: number): number {
 }
 
 function normalizeStatus(value: RecordTransferDeliveryAttemptStatus): RecordTransferDeliveryAttemptStatus {
-  if (!["queued", "succeeded", "failed"].includes(value)) {
+  if (!deliveryAttemptStatuses.has(value)) {
     throw new DomainError("Trạng thái lần gửi hồ sơ không hợp lệ.");
+  }
+
+  return value;
+}
+
+function normalizeBundleType(
+  value: RecordTransferDeliveryAttemptBundleType
+): RecordTransferDeliveryAttemptBundleType {
+  if (!deliveryAttemptBundleTypes.has(value)) {
+    throw new DomainError("Loại FHIR Bundle của lần gửi hồ sơ không hợp lệ.");
   }
 
   return value;
@@ -251,24 +296,44 @@ function normalizeHttpStatus(value: number): number {
 
 function validateTerminalState(input: {
   readonly status: RecordTransferDeliveryAttemptStatus;
-  readonly completedAt?: string;
+  readonly queuedAt: Date;
+  readonly completedAt?: Date;
   readonly httpStatus?: number;
+  readonly responseBodyPreview?: string;
   readonly errorMessage?: string;
 }): void {
-  if (input.status === "queued" && input.completedAt) {
-    throw new DomainError("Lần gửi đang chờ không được có thời điểm hoàn tất.");
+  if (
+    input.status === "queued" &&
+    (input.completedAt || input.httpStatus || input.responseBodyPreview || input.errorMessage)
+  ) {
+    throw new DomainError("Lần gửi đang chờ không được có metadata hoàn tất.");
   }
 
   if (input.status !== "queued" && !input.completedAt) {
     throw new DomainError("Lần gửi đã kết thúc phải có thời điểm hoàn tất.");
   }
 
-  if (input.status === "succeeded" && !input.httpStatus) {
-    throw new DomainError("Lần gửi thành công phải có HTTP status.");
+  if (input.completedAt) {
+    assertCompletedAtIsNotBeforeQueuedAt(input.completedAt, input.queuedAt);
+  }
+
+  if (
+    input.status === "succeeded" &&
+    (input.httpStatus === undefined || input.httpStatus < 200 || input.httpStatus > 299)
+  ) {
+    throw new DomainError("Lần gửi thành công phải có HTTP status 2xx.");
+  }
+
+  if (input.status === "succeeded" && input.errorMessage) {
+    throw new DomainError("Lần gửi thành công không được có thông điệp lỗi.");
   }
 
   if (input.status === "failed" && !input.errorMessage) {
     throw new DomainError("Lần gửi lỗi phải có thông điệp lỗi.");
+  }
+
+  if (input.status === "failed" && input.httpStatus !== undefined && input.httpStatus >= 200 && input.httpStatus <= 299) {
+    throw new DomainError("Lần gửi lỗi không được có HTTP status 2xx.");
   }
 }
 
@@ -280,4 +345,15 @@ function parseDate(value: string, message: string): Date {
   }
 
   return date;
+}
+
+function assertCompletedAtIsNotBeforeQueuedAt(completedAt: Date, queuedAt: string | Date): void {
+  const normalizedQueuedAt =
+    queuedAt instanceof Date
+      ? queuedAt
+      : parseDate(queuedAt, "Thời điểm xếp hàng gửi hồ sơ không hợp lệ.");
+
+  if (completedAt < normalizedQueuedAt) {
+    throw new DomainError("Thời điểm hoàn tất gửi hồ sơ không được trước thời điểm xếp hàng.");
+  }
 }
