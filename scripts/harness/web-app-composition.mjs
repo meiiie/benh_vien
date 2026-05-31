@@ -4,6 +4,7 @@ import { relative, resolve } from "node:path";
 const appPath = resolve("apps/web/src/App.tsx");
 const webSrcPath = resolve("apps/web/src");
 const allowedFetchModulePath = resolve("apps/web/src/api/clinicalApi.ts");
+const sharedClinicalFormatterPath = resolve("apps/web/src/lib/clinicalFormatters.ts");
 const requiredModules = [
   "apps/web/src/api/clinicalApi.ts",
   "apps/web/src/auth/authApi.ts",
@@ -78,6 +79,7 @@ const requiredModules = [
   "apps/web/src/features/record-transfers/RecordTransferInteropPanel.tsx",
   "apps/web/src/features/record-transfers/recordTransferApi.ts",
   "apps/web/src/features/record-transfers/recordTransferCommandBuilders.ts",
+  "apps/web/src/features/record-transfers/recordTransferFormatters.ts",
   "apps/web/src/lib/auditFormatters.ts",
   "apps/web/src/lib/clinicalFormatters.ts",
   "apps/web/src/lib/commandDrafts.ts",
@@ -122,9 +124,16 @@ const forbiddenPageCompositionModules = [
 const maxAppLines = 2_647;
 
 const appSource = await readFile(appPath, "utf8");
+const sharedClinicalFormatterSource = await readFile(sharedClinicalFormatterPath, "utf8");
 const appLineCount = appSource.split(/\r?\n/).length;
 const directFetchPattern = /\bfetch\s*\(/;
 const directClinicalApiRequestPattern = /\bclinicalApi\.requestJson\s*\(/;
+const forbiddenSharedClinicalFormatterPatterns = [
+  /\bformatRecordTransfer/,
+  /\bbuildRecordTransferOperationalSummary/,
+  /\bresolveSelectedRecordTransferId/,
+  /\bisMissingRecordTransferDeliveryAttemptsRoute/
+];
 const forbiddenAppApiPathPatterns = [
   {
     pattern: /[`'"]\/patients[`'"]/,
@@ -179,6 +188,14 @@ if (directClinicalApiRequestPattern.test(appSource)) {
 for (const forbidden of forbiddenAppApiPathPatterns) {
   if (forbidden.pattern.test(appSource)) {
     throw new Error(forbidden.message);
+  }
+}
+
+for (const pattern of forbiddenSharedClinicalFormatterPatterns) {
+  if (pattern.test(sharedClinicalFormatterSource)) {
+    throw new Error(
+      "Record-transfer presentation helpers must live under apps/web/src/features/record-transfers, not apps/web/src/lib/clinicalFormatters.ts."
+    );
   }
 }
 

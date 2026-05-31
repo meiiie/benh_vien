@@ -10,6 +10,7 @@
 - `src/application` chứa application composition của frontend: loader wiring, command/handler wiring, runtime effect, derived context, shell state và panel context.
 - `src/pages` chỉ chứa route/page renderer và layout hiển thị. Không đặt HTTP route, FHIR mapper, consent/audit orchestration hoặc handler matrix ở đây.
 - `src/features` sở hữu UI panel, API adapter, selector, command builder và helper của từng feature.
+- Formatter, selector hoặc helper chỉ phục vụ một feature phải nằm trong feature đó; không đưa ngược vào `src/lib/clinicalFormatters.ts` chỉ vì tiện import.
 - Mọi HTTP request phải đi qua `src/api/clinicalApi.ts` rồi qua feature/platform/auth API module phù hợp; không gọi `fetch` trực tiếp trong component hoặc application module.
 
 ## Verification
