@@ -27,6 +27,7 @@ import { buildPatientRegistryHandlers } from "./features/patient-registry/patien
 import { buildPatientRegistryLoaders } from "./features/patient-registry/patientRegistryLoaders.js";
 import { buildPatientPanelRenderers } from "./features/patient-registry/patientPanelRenderers.js";
 import { buildPatientRegistrySelection } from "./features/patient-registry/patientRegistrySelectors.js";
+import { usePatientRegistryState } from "./features/patient-registry/patientRegistryState.js";
 import { buildPatientWriteGuard } from "./features/patient-registry/patientWriteGuard.js";
 import { buildPatientWorkspaceCollectionLoaders } from "./features/patient-workspace/patientWorkspaceCollectionLoaders.js";
 import { buildPatientWorkspaceLifecycle } from "./features/patient-workspace/patientWorkspaceLifecycle.js";
@@ -55,8 +56,6 @@ import {
   defaultMedicationDispenseForm,
   defaultMedicationRequestForm,
   defaultObservationForm,
-  defaultPatientForm,
-  defaultPatientMergeForm,
   defaultProcedureForm,
   defaultRecordTransferForm,
   defaultServiceRequestForm,
@@ -67,7 +66,6 @@ import {
 } from "./config/demoClinicalDefaults.js";
 import type {
   AppRoute,
-  PatientIdentifierType,
   MedicationTimingUnit,
   MedicationDispenseStatus,
   ConsentStatus,
@@ -83,8 +81,6 @@ import type {
   ProviderEndpoint,
   ProviderPractitionerRole,
   ProviderDirectory,
-  Patient,
-  PatientStatusFilter,
   Encounter,
   ClinicalDocument,
   ObservationCode,
@@ -119,8 +115,6 @@ import type {
   RecordTransfer,
   RecordTransferDeliveryAttempt,
   ApiRuntimeInfo,
-  NewPatientForm,
-  PatientMergeForm,
   NewRecordTransferForm,
   GatewayAcknowledgementForm,
   NewEncounterForm,
@@ -150,13 +144,9 @@ export function App() {
     baseUrl: apiBaseUrl,
     getSession: () => authSession
   });
+  const patientRegistryState = usePatientRegistryState();
   const [loginForm, setLoginForm] = useState<LoginForm>(loginPresets.clinician);
   const [loginError, setLoginError] = useState<string>();
-  const [patients, setPatients] = useState<readonly Patient[]>([]);
-  const [selectedPatientId, setSelectedPatientId] = useState<string>();
-  const [patientSearchTerm, setPatientSearchTerm] = useState("");
-  const [patientStatusFilter, setPatientStatusFilter] =
-    useState<PatientStatusFilter>("all");
   const [encounters, setEncounters] = useState<readonly Encounter[]>([]);
   const [selectedEncounterId, setSelectedEncounterId] = useState<string>();
   const [clinicalDocuments, setClinicalDocuments] = useState<readonly ClinicalDocument[]>([]);
@@ -228,9 +218,6 @@ export function App() {
   const [procedureFhirPreview, setProcedureFhirPreview] = useState<unknown>();
   const [diagnosticReportFhirPreview, setDiagnosticReportFhirPreview] = useState<unknown>();
   const [imagingStudyFhirPreview, setImagingStudyFhirPreview] = useState<unknown>();
-  const [patientForm, setPatientForm] = useState<NewPatientForm>(defaultPatientForm);
-  const [patientMergeForm, setPatientMergeForm] =
-    useState<PatientMergeForm>(defaultPatientMergeForm);
   const [recordTransferForm, setRecordTransferForm] =
     useState<NewRecordTransferForm>(defaultRecordTransferForm);
   const [gatewayAcknowledgementForm, setGatewayAcknowledgementForm] =
@@ -261,7 +248,6 @@ export function App() {
   const [imagingStudyForm, setImagingStudyForm] =
     useState<NewImagingStudyForm>(defaultImagingStudyForm);
   const [statusMessage, setStatusMessage] = useState("Chưa đăng nhập.");
-  const [isLoadingPatients, setIsLoadingPatients] = useState(false);
   const [isLoadingEncounters, setIsLoadingEncounters] = useState(false);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [isLoadingAllergyIntolerances, setIsLoadingAllergyIntolerances] = useState(false);
@@ -286,8 +272,6 @@ export function App() {
   const [isLoadingRecordTransferDeliveryAttempts, setIsLoadingRecordTransferDeliveryAttempts] =
     useState(false);
   const [isLoadingProviderDirectory, setIsLoadingProviderDirectory] = useState(false);
-  const [isSubmittingPatient, setIsSubmittingPatient] = useState(false);
-  const [isMergingPatient, setIsMergingPatient] = useState(false);
   const [isSubmittingEncounter, setIsSubmittingEncounter] = useState(false);
   const [isSubmittingDocument, setIsSubmittingDocument] = useState(false);
   const [isSubmittingAllergyIntolerance, setIsSubmittingAllergyIntolerance] = useState(false);
@@ -325,11 +309,11 @@ export function App() {
     selectedPatientWriteDisabled,
     visiblePatients
   } = buildPatientRegistrySelection({
-    patientMergeForm,
-    patientSearchTerm,
-    patientStatusFilter,
-    patients,
-    selectedPatientId
+    patientMergeForm: patientRegistryState.patientMergeForm,
+    patientSearchTerm: patientRegistryState.patientSearchTerm,
+    patientStatusFilter: patientRegistryState.patientStatusFilter,
+    patients: patientRegistryState.patients,
+    selectedPatientId: patientRegistryState.selectedPatientId
   });
   const { ensureSelectedPatientWritable } = buildPatientWriteGuard({
     selectedPatient,
@@ -373,7 +357,7 @@ export function App() {
   selectedRecordTransferIdRef.current = selectedRecordTransferId;
   const dashboardMetrics = buildDashboardMetrics({
     ...patientWorkspaceCollections,
-    patients,
+    patients: patientRegistryState.patients,
     providerDirectory
   });
   const canReadAudit = authSession?.actor.role === "auditor" || authSession?.actor.role === "admin";
@@ -382,10 +366,10 @@ export function App() {
   const { loadPatients } = buildPatientRegistryLoaders({
     clinicalApi,
     isAuditOnlySession,
-    selectedPatientId,
-    setIsLoadingPatients,
-    setPatients,
-    setSelectedPatientId,
+    selectedPatientId: patientRegistryState.selectedPatientId,
+    setIsLoadingPatients: patientRegistryState.setIsLoadingPatients,
+    setPatients: patientRegistryState.setPatients,
+    setSelectedPatientId: patientRegistryState.setSelectedPatientId,
     setStatusMessage
   });
   const {
@@ -667,15 +651,15 @@ export function App() {
     isPatientMergeConfirmationValid,
     loadPatients,
     loadPatientWorkspace,
-    patientForm,
+    patientForm: patientRegistryState.patientForm,
     patientMergeConfirmationCode,
-    patientMergeForm,
+    patientMergeForm: patientRegistryState.patientMergeForm,
     patientMergeTargetId,
     selectedPatient,
     setAppRoute,
-    setIsMergingPatient,
-    setIsSubmittingPatient,
-    setPatientMergeForm,
+    setIsMergingPatient: patientRegistryState.setIsMergingPatient,
+    setIsSubmittingPatient: patientRegistryState.setIsSubmittingPatient,
+    setPatientMergeForm: patientRegistryState.setPatientMergeForm,
     setStatusMessage
   });
   const {
@@ -797,41 +781,41 @@ export function App() {
     setGlobalAuditEvents,
     setIsAuthenticated,
     setLoginError,
-    setPatients,
+    setPatients: patientRegistryState.setPatients,
     setProviderDirectory,
     setProviderDirectoryFhirPreview,
-    setSelectedPatientId,
+    setSelectedPatientId: patientRegistryState.setSelectedPatientId,
     setStatusMessage,
     setTransitioningRecordTransferId
   });
   const patientPanels = buildPatientPanelRenderers({
-    patients,
+    patients: patientRegistryState.patients,
     visiblePatients,
     selectedPatient,
-    selectedPatientId,
+    selectedPatientId: patientRegistryState.selectedPatientId,
     selectedPatientMergeTarget,
     patientMergeCandidates,
     patientMergeConfirmationCode,
-    patientMergeForm,
+    patientMergeForm: patientRegistryState.patientMergeForm,
     patientMergeTargetId,
-    patientForm,
-    searchTerm: patientSearchTerm,
-    statusFilter: patientStatusFilter,
+    patientForm: patientRegistryState.patientForm,
+    searchTerm: patientRegistryState.patientSearchTerm,
+    statusFilter: patientRegistryState.patientStatusFilter,
     hasFilter: hasPatientListFilter,
-    isLoadingPatients,
-    isMergingPatient,
+    isLoadingPatients: patientRegistryState.isLoadingPatients,
+    isMergingPatient: patientRegistryState.isMergingPatient,
     isPatientMergeConfirmationValid,
     isSelectedPatientMerged,
-    isSubmittingPatient,
-    onClearPatientFilters: clearPatientFilters,
+    isSubmittingPatient: patientRegistryState.isSubmittingPatient,
+    onClearPatientFilters: patientRegistryState.clearPatientFilters,
     onCreatePatient: handleCreatePatient,
     onMergePatient: handleMergeSelectedPatient,
-    onPatientFormChange: setPatientForm,
-    onPatientMergeFormChange: setPatientMergeForm,
+    onPatientFormChange: patientRegistryState.setPatientForm,
+    onPatientMergeFormChange: patientRegistryState.setPatientMergeForm,
     onPatientRefresh: loadPatients,
-    onPatientSearchTermChange: setPatientSearchTerm,
-    onPatientSelect: setSelectedPatientId,
-    onPatientStatusFilterChange: setPatientStatusFilter
+    onPatientSearchTermChange: patientRegistryState.setPatientSearchTerm,
+    onPatientSelect: patientRegistryState.setSelectedPatientId,
+    onPatientStatusFilterChange: patientRegistryState.setPatientStatusFilter
   });
   const interopPanels = buildInteropPanelRenderers({
     consentReference: defaultTransferContext.consentReference,
@@ -1077,7 +1061,7 @@ export function App() {
     loadPatients,
     loadPatientWorkspace,
     loadProviderDirectory,
-    selectedPatientId,
+    selectedPatientId: patientRegistryState.selectedPatientId,
     setApiRuntimeInfo,
     setApiRuntimeWarning,
     setGlobalAuditEvents
@@ -1177,10 +1161,5 @@ export function App() {
       />
     </AuthenticatedLayout>
   );
-
-  function clearPatientFilters() {
-    setPatientSearchTerm("");
-    setPatientStatusFilter("all");
-  }
 
 }
