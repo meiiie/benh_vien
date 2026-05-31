@@ -77,16 +77,15 @@ import {
   registerApiSystemRoutes,
   registerSystemRoutes
 } from "./modules/http/system-routes.js";
+import { startRecordTransferWorkers } from "./modules/http/record-transfer-workers.js";
 import { createProcedureRepository } from "./modules/procedures/create-procedure.repository.js";
 import { registerProcedureRoutes } from "./modules/procedures/procedure-routes.js";
 import { createProviderDirectoryRepository } from "./modules/provider-directory/create-provider-directory.repository.js";
 import { registerProviderDirectoryRoutes } from "./modules/provider-directory/provider-directory-routes.js";
 import { createRecordTransferDeliveryAttemptRepository } from "./modules/record-transfer-delivery-attempts/create-record-transfer-delivery-attempt.repository.js";
-import { startRecordTransferDeliveryWorker } from "./modules/record-transfer-delivery-attempts/record-transfer-delivery-worker.js";
 import { createRecordTransferRepository } from "./modules/record-transfers/create-record-transfer.repository.js";
 import { assertRecordTransferCallbackSignatureConfiguration } from "./modules/record-transfers/record-transfer-callback-signature.js";
 import { registerRecordTransferRoutes } from "./modules/record-transfers/record-transfer-routes.js";
-import { startRecordTransferRetryWorker } from "./modules/record-transfers/record-transfer-retry-worker.js";
 import { createServiceRequestRepository } from "./modules/service-requests/create-service-request.repository.js";
 import { registerServiceRequestRoutes } from "./modules/service-requests/service-request-routes.js";
 import { createWorkflowTaskRepository } from "./modules/workflow-tasks/create-workflow-task.repository.js";
@@ -201,49 +200,40 @@ export async function buildServer(options: ServerOptions = {}) {
     trackRepository(await createRecordTransferDeliveryAttemptRepository());
   const auditEventRepository =
     options.auditEventRepository ?? trackRepository(await createAuditEventRepository());
-  const recordTransferRetryWorkerConfig = resolveRecordTransferRetryWorkerConfig();
-  const recordTransferRetryWorker = recordTransferRetryWorkerConfig
-    ? startRecordTransferRetryWorker(
-        {
-          recordTransferRepository,
-          auditRepository: auditEventRepository
-        },
-        {
-          ...recordTransferRetryWorkerConfig,
-          logger: app.log
-        }
-      )
-    : undefined;
-  const recordTransferDeliveryWorkerConfig = resolveRecordTransferDeliveryWorkerConfig();
-  const recordTransferDeliveryWorker = recordTransferDeliveryWorkerConfig
-    ? startRecordTransferDeliveryWorker(
-        {
-          patientRepository,
-          encounterRepository,
-          allergyIntoleranceRepository,
-          clinicalDocumentRepository,
-          conditionRepository,
-          observationRepository,
-          diagnosticReportRepository,
-          imagingStudyRepository,
-          medicationRequestRepository,
-          medicationDispenseRepository,
-          medicationAdministrationRepository,
-          serviceRequestRepository,
-          workflowTaskRepository,
-          procedureRepository,
-          consentRepository,
-          providerDirectoryRepository,
-          recordTransferRepository,
-          deliveryAttemptRepository: recordTransferDeliveryAttemptRepository,
-          auditRepository: auditEventRepository
-        },
-        {
-          ...recordTransferDeliveryWorkerConfig,
-          logger: app.log
-        }
-      )
-    : undefined;
+  const recordTransferWorkers = startRecordTransferWorkers(
+    {
+      retry: {
+        recordTransferRepository,
+        auditRepository: auditEventRepository
+      },
+      delivery: {
+        patientRepository,
+        encounterRepository,
+        allergyIntoleranceRepository,
+        clinicalDocumentRepository,
+        conditionRepository,
+        observationRepository,
+        diagnosticReportRepository,
+        imagingStudyRepository,
+        medicationRequestRepository,
+        medicationDispenseRepository,
+        medicationAdministrationRepository,
+        serviceRequestRepository,
+        workflowTaskRepository,
+        procedureRepository,
+        consentRepository,
+        providerDirectoryRepository,
+        recordTransferRepository,
+        deliveryAttemptRepository: recordTransferDeliveryAttemptRepository,
+        auditRepository: auditEventRepository
+      },
+      logger: app.log
+    },
+    {
+      retry: resolveRecordTransferRetryWorkerConfig(),
+      delivery: resolveRecordTransferDeliveryWorkerConfig()
+    }
+  );
   const deniedAccessPayloads = new WeakMap<FastifyRequest, DeniedAccessPayload>();
 
   app.addHook("onSend", (request, reply, payload, done) => {
@@ -273,8 +263,7 @@ export async function buildServer(options: ServerOptions = {}) {
   });
 
   app.addHook("onClose", async () => {
-    recordTransferDeliveryWorker?.close();
-    recordTransferRetryWorker?.close();
+    recordTransferWorkers.close();
 
     for (const repository of [...managedRepositories].reverse()) {
       await repository.close();
@@ -294,8 +283,8 @@ export async function buildServer(options: ServerOptions = {}) {
         publicApiBaseUrl,
         httpBodyLimitBytes,
         apiDocsEnabled,
-        recordTransferDeliveryWorkerEnabled: Boolean(recordTransferDeliveryWorkerConfig),
-        recordTransferRetryWorkerEnabled: Boolean(recordTransferRetryWorkerConfig)
+        recordTransferDeliveryWorkerEnabled: recordTransferWorkers.deliveryWorkerEnabled,
+        recordTransferRetryWorkerEnabled: recordTransferWorkers.retryWorkerEnabled
       });
 
       await registerAuthRoutes(api, {
