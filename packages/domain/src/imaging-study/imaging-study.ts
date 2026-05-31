@@ -1,4 +1,5 @@
 import { DomainError } from "../shared/domain-error.js";
+import { normalizeFhirUnsignedInt } from "../shared/fhir-primitives.js";
 
 export type ImagingStudyStatus =
   | "registered"
@@ -228,11 +229,7 @@ function normalizeOptional(value: string | undefined): string | undefined {
 }
 
 function normalizeCount(value: number, message: string): number {
-  if (!Number.isInteger(value) || value < 0) {
-    throw new DomainError(message);
-  }
-
-  return value;
+  return normalizeFhirUnsignedInt(value, message);
 }
 
 function parseDate(value: string, message: string): Date {

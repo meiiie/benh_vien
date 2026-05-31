@@ -2,7 +2,7 @@ import { toApiDateTime } from "../../lib/clinicalFormatters.js";
 import type { CommandDraft } from "../../lib/commandDrafts.js";
 import {
   parseOptionalApiDateTime,
-  parseOptionalNonNegativeInteger
+  parseOptionalFhirUnsignedInt
 } from "../../lib/commandDrafts.js";
 import type {
   NewDiagnosticReportForm,
@@ -184,18 +184,18 @@ export function buildImagingStudyCommand(
 export function buildImagingStudyCommandDraft(
   form: NewImagingStudyForm
 ): CommandDraft<CreateImagingStudyCommand> {
-  const seriesNumber = parseOptionalNonNegativeInteger(
+  const seriesNumber = parseOptionalFhirUnsignedInt(
     form.seriesNumber,
-    "Số thứ tự series phải là số nguyên không âm."
+    "Số thứ tự series phải là số nguyên FHIR unsignedInt hợp lệ."
   );
 
   if (!seriesNumber.ok) {
     return seriesNumber;
   }
 
-  const numberOfInstances = parseOptionalNonNegativeInteger(
+  const numberOfInstances = parseOptionalFhirUnsignedInt(
     form.numberOfInstances,
-    "Số ảnh trong series phải là số nguyên không âm."
+    "Số ảnh trong series phải là số nguyên FHIR unsignedInt hợp lệ."
   );
 
   if (!numberOfInstances.ok) {

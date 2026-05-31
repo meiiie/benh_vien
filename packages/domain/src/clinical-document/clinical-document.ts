@@ -1,6 +1,6 @@
 import { DomainError } from "../shared/domain-error.js";
+import { normalizeFhirUnsignedInt } from "../shared/fhir-primitives.js";
 
-const maxFhirUnsignedInt = 4_294_967_295;
 const mimeTypePattern =
   /^[A-Za-z0-9!#$&^_.+-]+\/[A-Za-z0-9!#$&^_.+-]+(?:\s*;\s*[A-Za-z0-9!#$&^_.+-]+=(?:"[^"]+"|[A-Za-z0-9!#$&^_.+-]+))*$/;
 const sha1Base64Pattern = /^[A-Za-z0-9+/]{27}=$/;
@@ -75,13 +75,11 @@ export class ClinicalDocument {
       throw new DomainError("Tài liệu lâm sàng phải có vị trí lưu trữ.");
     }
 
-    if (
-      input.attachmentSizeBytes !== undefined &&
-      (!Number.isInteger(input.attachmentSizeBytes) ||
-        input.attachmentSizeBytes < 0 ||
-        input.attachmentSizeBytes > maxFhirUnsignedInt)
-    ) {
-      throw new DomainError("Dung lượng tài liệu phải là số nguyên FHIR unsignedInt hợp lệ.");
+    if (input.attachmentSizeBytes !== undefined) {
+      normalizeFhirUnsignedInt(
+        input.attachmentSizeBytes,
+        "Dung lượng tài liệu phải là số nguyên FHIR unsignedInt hợp lệ."
+      );
     }
 
     const attachmentCreatedAt = input.attachmentCreatedAt

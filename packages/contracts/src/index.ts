@@ -17,3 +17,4 @@ export * from "./medication-request.contract.js";
 export * from "./observation.contract.js";
 export * from "./clinical-document.contract.js";
 export * from "./consent.contract.js";
+export * from "./fhir-primitives.contract.js";

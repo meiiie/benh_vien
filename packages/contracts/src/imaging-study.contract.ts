@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { FhirUnsignedIntSchema } from "./fhir-primitives.contract.js";
 
 export const ImagingStudyStatusSchema = z.enum([
   "registered",
@@ -16,10 +17,10 @@ export const ImagingStudyCodingSchema = z.object({
 
 export const ImagingStudySeriesSchema = z.object({
   uid: z.string().min(1),
-  number: z.number().int().nonnegative().optional(),
+  number: FhirUnsignedIntSchema.optional(),
   modality: ImagingStudyCodingSchema,
   description: z.string().min(1).optional(),
-  numberOfInstances: z.number().int().nonnegative().optional(),
+  numberOfInstances: FhirUnsignedIntSchema.optional(),
   bodySite: ImagingStudyCodingSchema.optional(),
   startedAt: z.string().datetime().optional()
 });
@@ -45,8 +46,8 @@ export const CreateImagingStudyRequestSchema = z
     referrerPractitionerId: z.string().min(1).optional(),
     interpreterPractitionerId: z.string().min(1).optional(),
     endpointId: z.string().min(1).optional(),
-    numberOfSeries: z.number().int().nonnegative().optional(),
-    numberOfInstances: z.number().int().nonnegative().optional(),
+    numberOfSeries: FhirUnsignedIntSchema.optional(),
+    numberOfInstances: FhirUnsignedIntSchema.optional(),
     series: z.array(ImagingStudySeriesSchema).min(1)
   })
   .strict()

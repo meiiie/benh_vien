@@ -28,6 +28,8 @@ export type OptionalStringDraft =
       readonly message: string;
     };
 
+export const fhirUnsignedIntMax = 2_147_483_647;
+
 export function parseFiniteNumber(rawValue: string, message: string): NumberDraft {
   const value = Number(rawValue);
 
@@ -74,40 +76,27 @@ export function parseOptionalPositiveNumber(
   return parsePositiveNumber(rawValue, message);
 }
 
-export function parseOptionalPositiveInteger(
+export function parseOptionalFhirUnsignedInt(
   rawValue: string,
   message: string
 ): NumberDraft | { readonly ok: true; readonly value: undefined } {
-  const parsedValue = parseOptionalPositiveNumber(rawValue, message);
+  const normalizedValue = rawValue.trim();
 
-  if (!parsedValue.ok || parsedValue.value === undefined) {
-    return parsedValue;
-  }
-
-  if (!Number.isInteger(parsedValue.value)) {
-    return {
-      ok: false,
-      message
-    };
-  }
-
-  return parsedValue;
-}
-
-export function parseOptionalNonNegativeInteger(
-  rawValue: string,
-  message: string
-): NumberDraft | { readonly ok: true; readonly value: undefined } {
-  if (!rawValue) {
+  if (!normalizedValue) {
     return {
       ok: true,
       value: undefined
     };
   }
 
-  const value = Number(rawValue);
+  const value = Number(normalizedValue);
 
-  if (!Number.isFinite(value) || !Number.isInteger(value) || value < 0) {
+  if (
+    !Number.isFinite(value) ||
+    !Number.isInteger(value) ||
+    value < 0 ||
+    value > fhirUnsignedIntMax
+  ) {
     return {
       ok: false,
       message

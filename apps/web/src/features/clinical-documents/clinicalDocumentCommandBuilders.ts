@@ -1,6 +1,6 @@
 import { toApiDateTime } from "../../lib/clinicalFormatters.js";
 import type { CommandDraft } from "../../lib/commandDrafts.js";
-import { parseOptionalPositiveInteger } from "../../lib/commandDrafts.js";
+import { parseOptionalFhirUnsignedInt } from "../../lib/commandDrafts.js";
 import type { NewClinicalDocumentForm } from "../../types/clinical.js";
 import type { CreateClinicalDocumentCommand } from "./clinicalDocumentApi.js";
 
@@ -8,9 +8,9 @@ export function buildCreateClinicalDocumentCommandDraft(
   form: NewClinicalDocumentForm,
   patientId: string
 ): CommandDraft<CreateClinicalDocumentCommand> {
-  const attachmentSizeBytes = parseOptionalPositiveInteger(
+  const attachmentSizeBytes = parseOptionalFhirUnsignedInt(
     form.attachmentSizeBytes,
-    "Kích thước tệp đính kèm phải là số nguyên lớn hơn 0."
+    "Kích thước tệp đính kèm phải là số nguyên FHIR unsignedInt hợp lệ."
   );
 
   if (!attachmentSizeBytes.ok) {

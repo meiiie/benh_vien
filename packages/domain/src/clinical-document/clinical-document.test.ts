@@ -43,7 +43,7 @@ describe("ClinicalDocument", () => {
         type: "lab-report",
         title: "Tài liệu lỗi dung lượng",
         storageUri: "s3://wiiicare-demo/patients/patient-attachment-001/lab-report.pdf",
-        attachmentSizeBytes: 4_294_967_296,
+        attachmentSizeBytes: 2_147_483_648,
         authorPractitionerId: "practitioner-attachment-001"
       })
     ).toThrow(DomainError);

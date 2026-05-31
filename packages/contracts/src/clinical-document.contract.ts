@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { FhirUnsignedIntSchema } from "./fhir-primitives.contract.js";
 
 const MimeTypeSchema = z
   .string()
@@ -33,7 +34,7 @@ export const CreateClinicalDocumentRequestSchema = z.object({
   title: z.string().min(1),
   storageUri: z.string().min(1),
   attachmentContentType: MimeTypeSchema.optional(),
-  attachmentSizeBytes: z.number().int().nonnegative().max(4_294_967_295).optional(),
+  attachmentSizeBytes: FhirUnsignedIntSchema.optional(),
   attachmentHashSha1Base64: Sha1Base64Schema.optional(),
   attachmentCreatedAt: z.string().datetime().optional(),
   authorPractitionerId: z.string().min(1)
