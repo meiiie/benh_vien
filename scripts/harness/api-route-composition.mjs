@@ -351,6 +351,31 @@ const routeBudgets = [
     path: "apps/api/src/modules/procedures/procedure-route-helpers.ts",
     maxLines: 150,
     role: "Procedure response and reference validation helpers"
+  },
+  {
+    path: "apps/api/src/modules/diagnostic-reports/diagnostic-report-routes.ts",
+    maxLines: 70,
+    role: "DiagnosticReport route composition root"
+  },
+  {
+    path: "apps/api/src/modules/diagnostic-reports/diagnostic-report-query-routes.ts",
+    maxLines: 130,
+    role: "DiagnosticReport list and read route adapter"
+  },
+  {
+    path: "apps/api/src/modules/diagnostic-reports/diagnostic-report-creation-routes.ts",
+    maxLines: 140,
+    role: "DiagnosticReport creation and reference validation route adapter"
+  },
+  {
+    path: "apps/api/src/modules/diagnostic-reports/diagnostic-report-fhir-routes.ts",
+    maxLines: 90,
+    role: "DiagnosticReport FHIR export route adapter"
+  },
+  {
+    path: "apps/api/src/modules/diagnostic-reports/diagnostic-report-route-helpers.ts",
+    maxLines: 150,
+    role: "DiagnosticReport response, access, reference and domain error helpers"
   }
 ];
 
@@ -681,6 +706,34 @@ const requiredProcedureRegistrations = [
   "registerProcedureFhirRoutes"
 ];
 
+const diagnosticReportRoutesPath = resolve(
+  "apps/api/src/modules/diagnostic-reports/diagnostic-report-routes.ts"
+);
+const forbiddenDiagnosticReportRoutePatterns = [
+  {
+    pattern:
+      /\bCreateDiagnosticReportRequestSchema\b|\bPatientDiagnosticReportsParamsSchema\b|\bDiagnosticReportIdParamsSchema\b/,
+    message:
+      "DiagnosticReport request handling belongs in diagnostic-report-query-routes.ts, diagnostic-report-creation-routes.ts or diagnostic-report-fhir-routes.ts."
+  },
+  {
+    pattern:
+      /\bDiagnosticReport\.issue\b|\bDomainError\b|\brequirePatientRecordAccessByPatientId\b|\bvalidateDiagnosticReportReferences\b/,
+    message:
+      "DiagnosticReport creation, access and reference validation policy belongs outside the root route."
+  },
+  {
+    pattern: /\bmapDiagnosticReportToFhir\b|\btoDiagnosticReportResponse\b/,
+    message:
+      "DiagnosticReport response and FHIR export details belong in helper or FHIR route modules."
+  }
+];
+const requiredDiagnosticReportRegistrations = [
+  "registerDiagnosticReportQueryRoutes",
+  "registerDiagnosticReportCreationRoutes",
+  "registerDiagnosticReportFhirRoutes"
+];
+
 const routeReports = [];
 
 for (const budget of routeBudgets) {
@@ -731,6 +784,7 @@ const medicationRequestRoutesSource = await readFile(
   "utf8"
 );
 const procedureRoutesSource = await readFile(procedureRoutesPath, "utf8");
+const diagnosticReportRoutesSource = await readFile(diagnosticReportRoutesPath, "utf8");
 
 for (const forbidden of forbiddenApiRoutesPatterns) {
   if (forbidden.pattern.test(apiRoutesSource)) {
@@ -896,6 +950,20 @@ for (const registration of requiredProcedureRegistrations) {
   if (!procedureRoutesSource.includes(registration)) {
     throw new Error(
       `Procedure root routes must register ${registration} so query, command and FHIR modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenDiagnosticReportRoutePatterns) {
+  if (forbidden.pattern.test(diagnosticReportRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredDiagnosticReportRegistrations) {
+  if (!diagnosticReportRoutesSource.includes(registration)) {
+    throw new Error(
+      `DiagnosticReport root routes must register ${registration} so query, creation and FHIR modules remain wired.`
     );
   }
 }
