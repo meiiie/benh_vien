@@ -28,4 +28,5 @@ pnpm --filter @benh-vien-so/domain run build
 - Với miền thuốc, `medication-request.ts`, `medication-dispense.ts` và `medication-administration.ts` giữ behavior; status, category/intent/priority, dosage, performer, snapshot và command input type nằm trong các file `*.types.ts` tương ứng.
 - Với `ServiceRequest`, aggregate `service-request.ts` giữ ordering/scheduling behavior; status, intent, category, priority, snapshot và command input type nằm trong `service-request.types.ts`.
 - Với `ImagingStudy`, aggregate `imaging-study.ts` giữ DICOM UID, series count và timeline validation behavior; status, coding, series, snapshot và command input type nằm trong `imaging-study.types.ts`.
+- Với `ClinicalDocument`, aggregate `clinical-document.ts` giữ signing, attachment validation và timeline behavior; document type, status, snapshot và command input type nằm trong `clinical-document.types.ts`.
 - Test tối thiểu cho invariant và mapping liên thông.

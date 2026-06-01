@@ -131,6 +131,16 @@ const domainBudgets = [
     path: "packages/domain/src/imaging-study/imaging-study.types.ts",
     maxLines: 90,
     role: "ImagingStudy status, coding, series, snapshot and command input types"
+  },
+  {
+    path: "packages/domain/src/clinical-document/clinical-document.ts",
+    maxLines: 270,
+    role: "ClinicalDocument signing, attachment validation and timeline behavior"
+  },
+  {
+    path: "packages/domain/src/clinical-document/clinical-document.types.ts",
+    maxLines: 90,
+    role: "ClinicalDocument document type, status, snapshot and command input types"
   }
 ];
 
@@ -196,6 +206,12 @@ const serviceRequestTypesPath = resolve(
 );
 const imagingStudyAggregatePath = resolve("packages/domain/src/imaging-study/imaging-study.ts");
 const imagingStudyTypesPath = resolve("packages/domain/src/imaging-study/imaging-study.types.ts");
+const clinicalDocumentAggregatePath = resolve(
+  "packages/domain/src/clinical-document/clinical-document.ts"
+);
+const clinicalDocumentTypesPath = resolve(
+  "packages/domain/src/clinical-document/clinical-document.types.ts"
+);
 
 const domainReports = [];
 
@@ -254,6 +270,8 @@ const serviceRequestAggregateSource = await readFile(serviceRequestAggregatePath
 const serviceRequestTypesSource = await readFile(serviceRequestTypesPath, "utf8");
 const imagingStudyAggregateSource = await readFile(imagingStudyAggregatePath, "utf8");
 const imagingStudyTypesSource = await readFile(imagingStudyTypesPath, "utf8");
+const clinicalDocumentAggregateSource = await readFile(clinicalDocumentAggregatePath, "utf8");
+const clinicalDocumentTypesSource = await readFile(clinicalDocumentTypesPath, "utf8");
 
 for (const forbidden of [
   /export type RecordTransferStatus/,
@@ -662,6 +680,38 @@ for (const required of [
 if (!/from "\.\/imaging-study\.types\.js"/.test(imagingStudyAggregateSource)) {
   throw new Error(
     "ImagingStudy aggregate must depend on imaging-study.types.ts for shared types."
+  );
+}
+
+for (const forbidden of [
+  /export type ClinicalDocumentType/,
+  /export type ClinicalDocumentSnapshot/,
+  /const clinicalDocumentStatuses/
+]) {
+  if (forbidden.test(clinicalDocumentAggregateSource)) {
+    throw new Error(
+      "ClinicalDocument type declarations and code sets belong in clinical-document.types.ts, not the aggregate file."
+    );
+  }
+}
+
+for (const required of [
+  /export type ClinicalDocumentType/,
+  /export type ClinicalDocumentStatus/,
+  /export type ClinicalDocumentSnapshot/,
+  /export type CreateClinicalDocumentInput/,
+  /export const clinicalDocumentStatuses/
+]) {
+  if (!required.test(clinicalDocumentTypesSource)) {
+    throw new Error(
+      "clinical-document.types.ts must keep ClinicalDocument document type, status, snapshot, command input and code-set definitions."
+    );
+  }
+}
+
+if (!/from "\.\/clinical-document\.types\.js"/.test(clinicalDocumentAggregateSource)) {
+  throw new Error(
+    "ClinicalDocument aggregate must depend on clinical-document.types.ts for shared types."
   );
 }
 
