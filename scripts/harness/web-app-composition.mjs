@@ -56,6 +56,7 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/ConditionPanel.tsx",
   "apps/web/src/features/clinical-records/conditionFormatters.ts",
   "apps/web/src/features/clinical-records/diagnosticResultFormatters.ts",
+  "apps/web/src/features/clinical-records/diagnosticReportCommandBuilders.ts",
   "apps/web/src/features/clinical-records/DiagnosticReportForm.tsx",
   "apps/web/src/features/clinical-records/DiagnosticReportPanel.tsx",
   "apps/web/src/features/clinical-records/EncounterPanel.tsx",
@@ -64,6 +65,7 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/encounterSelectors.ts",
   "apps/web/src/features/clinical-records/ImagingStudyForm.tsx",
   "apps/web/src/features/clinical-records/ImagingStudyPanel.tsx",
+  "apps/web/src/features/clinical-records/imagingStudyCommandBuilders.ts",
   "apps/web/src/features/clinical-records/MedicationAdministrationContextFields.tsx",
   "apps/web/src/features/clinical-records/MedicationAdministrationDosageFields.tsx",
   "apps/web/src/features/clinical-records/MedicationAdministrationForm.tsx",
@@ -83,8 +85,10 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/medicationRequestCommandBuilders.ts",
   "apps/web/src/features/clinical-records/ObservationForm.tsx",
   "apps/web/src/features/clinical-records/ObservationPanel.tsx",
+  "apps/web/src/features/clinical-records/procedureCommandBuilders.ts",
   "apps/web/src/features/clinical-records/ProcedureForm.tsx",
   "apps/web/src/features/clinical-records/ProcedurePanel.tsx",
+  "apps/web/src/features/clinical-records/serviceRequestCommandBuilders.ts",
   "apps/web/src/features/clinical-records/ServiceRequestForm.tsx",
   "apps/web/src/features/clinical-records/ServiceRequestPanel.tsx",
   "apps/web/src/features/clinical-records/WorkflowTaskPanel.tsx",
@@ -291,6 +295,31 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/clinical-records/medicationAdministrationCommandBuilders.ts",
     maxLines: 120,
     role: "MedicationAdministration actual-use command builder"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/carePlanCommandBuilders.ts",
+    maxLines: 20,
+    role: "Care workflow and diagnostic command-builder compatibility barrel"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/serviceRequestCommandBuilders.ts",
+    maxLines: 50,
+    role: "ServiceRequest order command builder"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/procedureCommandBuilders.ts",
+    maxLines: 100,
+    role: "Procedure performance command builder"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/diagnosticReportCommandBuilders.ts",
+    maxLines: 50,
+    role: "DiagnosticReport result command builder"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/imagingStudyCommandBuilders.ts",
+    maxLines: 130,
+    role: "ImagingStudy DICOM command builder and draft validation"
   },
   {
     path: "apps/web/src/features/clinical-records/AllergyIntolerancePanel.tsx",
