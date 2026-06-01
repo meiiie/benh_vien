@@ -44,6 +44,7 @@ const requiredModules = [
   "apps/web/src/features/clinical-documents/clinicalDocumentCommandBuilders.ts",
   "apps/web/src/features/clinical-documents/clinicalDocumentFormatters.ts",
   "apps/web/src/features/clinical-documents/clinicalDocumentPanelRenderers.tsx",
+  "apps/web/src/features/clinical-records/AllergyIntoleranceForm.tsx",
   "apps/web/src/features/clinical-records/AllergyIntolerancePanel.tsx",
   "apps/web/src/features/clinical-records/allergyFormatters.ts",
   "apps/web/src/features/clinical-records/carePlanCommandBuilders.ts",
@@ -193,6 +194,16 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/clinical-records/clinicalRecordPanelRendererTypes.ts",
     maxLines: 210,
     role: "Clinical record panel renderer type contracts"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/AllergyIntolerancePanel.tsx",
+    maxLines: 180,
+    role: "AllergyIntolerance safety list, summary and form composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/AllergyIntoleranceForm.tsx",
+    maxLines: 230,
+    role: "AllergyIntolerance safety command form"
   },
   {
     path: "apps/web/src/features/clinical-records/MedicationDispensePanel.tsx",
