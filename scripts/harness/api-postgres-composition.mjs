@@ -233,6 +233,31 @@ const postgresBudgets = [
     role: "DiagnosticReport PostgreSQL row types"
   },
   {
+    path: "apps/api/src/infrastructure/postgres/postgres-imaging-study.repository.ts",
+    maxLines: 90,
+    role: "ImagingStudy PostgreSQL repository orchestration"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-imaging-study.sql.ts",
+    maxLines: 80,
+    role: "ImagingStudy PostgreSQL SQL statements"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-imaging-study.mapper.ts",
+    maxLines: 90,
+    role: "ImagingStudy PostgreSQL row and parameter mapper"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-imaging-study.persistence.ts",
+    maxLines: 30,
+    role: "ImagingStudy PostgreSQL persistence command"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-imaging-study.types.ts",
+    maxLines: 50,
+    role: "ImagingStudy PostgreSQL row types"
+  },
+  {
     path: "apps/api/src/infrastructure/postgres/postgres-audit-event.repository.ts",
     maxLines: 110,
     role: "AuditEvent PostgreSQL repository integrity orchestration"
@@ -395,6 +420,21 @@ const diagnosticReportPersistencePath = resolve(
 const diagnosticReportTypesPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-diagnostic-report.types.ts"
 );
+const imagingStudyRepositoryPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-imaging-study.repository.ts"
+);
+const imagingStudySqlPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-imaging-study.sql.ts"
+);
+const imagingStudyMapperPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-imaging-study.mapper.ts"
+);
+const imagingStudyPersistencePath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-imaging-study.persistence.ts"
+);
+const imagingStudyTypesPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-imaging-study.types.ts"
+);
 const auditEventRepositoryPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-audit-event.repository.ts"
 );
@@ -551,6 +591,17 @@ const diagnosticReportTypesSource = await readFile(
   diagnosticReportTypesPath,
   "utf8"
 );
+const imagingStudyRepositorySource = await readFile(
+  imagingStudyRepositoryPath,
+  "utf8"
+);
+const imagingStudySqlSource = await readFile(imagingStudySqlPath, "utf8");
+const imagingStudyMapperSource = await readFile(imagingStudyMapperPath, "utf8");
+const imagingStudyPersistenceSource = await readFile(
+  imagingStudyPersistencePath,
+  "utf8"
+);
+const imagingStudyTypesSource = await readFile(imagingStudyTypesPath, "utf8");
 const auditEventRepositorySource = await readFile(auditEventRepositoryPath, "utf8");
 const auditEventSqlSource = await readFile(auditEventSqlPath, "utf8");
 const auditEventMapperSource = await readFile(auditEventMapperPath, "utf8");
@@ -681,6 +732,19 @@ for (const importedName of requiredDiagnosticReportRepositoryImports) {
     throw new Error(
       `DiagnosticReport PostgreSQL repository must compose ${importedName}.`
     );
+  }
+}
+
+const requiredImagingStudyRepositoryImports = [
+  "rowToImagingStudy",
+  "upsertImagingStudy",
+  "selectImagingStudySql",
+  "ImagingStudyRow"
+];
+
+for (const importedName of requiredImagingStudyRepositoryImports) {
+  if (!imagingStudyRepositorySource.includes(importedName)) {
+    throw new Error(`ImagingStudy PostgreSQL repository must compose ${importedName}.`);
   }
 }
 
@@ -1061,6 +1125,45 @@ assertForbidden(diagnosticReportTypesSource, [
   {
     pattern: /\bDiagnosticReport\.rehydrate\b|\bquery\s*\(|\bINSERT INTO diagnostic_reports\b/,
     message: "DiagnosticReport PostgreSQL type module must only describe row contracts."
+  }
+]);
+
+assertForbidden(imagingStudyRepositorySource, [
+  {
+    pattern: /\bINSERT INTO imaging_studies\b|\bON CONFLICT \(id\)\b|\bImagingStudy\.rehydrate\b|\bImagingStudySnapshot\b|\bJSON\.parse\b|\bJSON\.stringify\b/,
+    message:
+      "ImagingStudy PostgreSQL repository must delegate upsert SQL and JSON row mapping to focused modules."
+  }
+]);
+
+assertForbidden(imagingStudySqlSource, [
+  {
+    pattern: /@benh-vien-so\/domain|\bImagingStudy\b|\bpg\b/,
+    message:
+      "ImagingStudy PostgreSQL SQL module must stay a pure SQL statement module without domain or pg dependencies."
+  }
+]);
+
+assertForbidden(imagingStudyMapperSource, [
+  {
+    pattern: /\bfrom "pg"\b|\bquery\s*\(|\bINSERT INTO imaging_studies\b|\bON CONFLICT \(id\)\b/,
+    message:
+      "ImagingStudy PostgreSQL mapper must stay pure row/value mapping without pg I/O or SQL ownership."
+  }
+]);
+
+assertForbidden(imagingStudyPersistenceSource, [
+  {
+    pattern: /\bImagingStudy\.rehydrate\b|\bImagingStudySnapshot\b|\bSELECT\b|\bJSON\.parse\b/,
+    message:
+      "ImagingStudy PostgreSQL persistence command must compose SQL and mapper without owning reads or domain hydration."
+  }
+]);
+
+assertForbidden(imagingStudyTypesSource, [
+  {
+    pattern: /\bImagingStudy\.rehydrate\b|\bquery\s*\(|\bINSERT INTO imaging_studies\b/,
+    message: "ImagingStudy PostgreSQL type module must only describe row contracts."
   }
 ]);
 
