@@ -53,6 +53,31 @@ const postgresBudgets = [
     role: "RecordTransferDeliveryAttempt PostgreSQL queryable and row types"
   },
   {
+    path: "apps/api/src/infrastructure/postgres/postgres-consent.repository.ts",
+    maxLines: 80,
+    role: "Consent PostgreSQL repository orchestration"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-consent.sql.ts",
+    maxLines: 70,
+    role: "Consent PostgreSQL SQL statements"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-consent.mapper.ts",
+    maxLines: 80,
+    role: "Consent PostgreSQL row and parameter mapper"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-consent.persistence.ts",
+    maxLines: 30,
+    role: "Consent PostgreSQL persistence command"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-consent.types.ts",
+    maxLines: 40,
+    role: "Consent PostgreSQL row types"
+  },
+  {
     path: "apps/api/src/infrastructure/postgres/postgres-patient.repository.ts",
     maxLines: 110,
     role: "Patient PostgreSQL repository orchestration"
@@ -414,6 +439,21 @@ const recordTransferDeliveryAttemptPersistencePath = resolve(
 const recordTransferDeliveryAttemptTypesPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-record-transfer-delivery-attempt.types.ts"
 );
+const consentRepositoryPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-consent.repository.ts"
+);
+const consentSqlPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-consent.sql.ts"
+);
+const consentMapperPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-consent.mapper.ts"
+);
+const consentPersistencePath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-consent.persistence.ts"
+);
+const consentTypesPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-consent.types.ts"
+);
 const patientRepositoryPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-patient.repository.ts"
 );
@@ -667,6 +707,11 @@ const recordTransferDeliveryAttemptTypesSource = await readFile(
   recordTransferDeliveryAttemptTypesPath,
   "utf8"
 );
+const consentRepositorySource = await readFile(consentRepositoryPath, "utf8");
+const consentSqlSource = await readFile(consentSqlPath, "utf8");
+const consentMapperSource = await readFile(consentMapperPath, "utf8");
+const consentPersistenceSource = await readFile(consentPersistencePath, "utf8");
+const consentTypesSource = await readFile(consentTypesPath, "utf8");
 const patientRepositorySource = await readFile(patientRepositoryPath, "utf8");
 const patientSqlSource = await readFile(patientSqlPath, "utf8");
 const patientMapperSource = await readFile(patientMapperPath, "utf8");
@@ -859,6 +904,19 @@ for (const importedName of requiredRecordTransferDeliveryAttemptRepositoryImport
     throw new Error(
       `RecordTransferDeliveryAttempt PostgreSQL repository must compose ${importedName}.`
     );
+  }
+}
+
+const requiredConsentRepositoryImports = [
+  "rowToConsent",
+  "upsertConsent",
+  "selectConsentSql",
+  "ConsentRow"
+];
+
+for (const importedName of requiredConsentRepositoryImports) {
+  if (!consentRepositorySource.includes(importedName)) {
+    throw new Error(`Consent PostgreSQL repository must compose ${importedName}.`);
   }
 }
 
@@ -1125,6 +1183,45 @@ assertForbidden(recordTransferDeliveryAttemptTypesSource, [
     pattern: /\bRecordTransferDeliveryAttempt\.rehydrate\b|\bquery\s*\(|\bINSERT INTO record_transfer_delivery_attempts\b/,
     message:
       "RecordTransferDeliveryAttempt PostgreSQL type module must only describe queryable and row contracts."
+  }
+]);
+
+assertForbidden(consentRepositorySource, [
+  {
+    pattern: /\bINSERT INTO consents\b|\bON CONFLICT \(id\)\b|\bConsent\.rehydrate\b|\bConsentSnapshot\b/,
+    message:
+      "Consent PostgreSQL repository must delegate upsert SQL and row mapping to focused modules."
+  }
+]);
+
+assertForbidden(consentSqlSource, [
+  {
+    pattern: /@benh-vien-so\/domain|\bConsent\b|\bpg\b/,
+    message:
+      "Consent PostgreSQL SQL module must stay a pure SQL statement module without domain or pg dependencies."
+  }
+]);
+
+assertForbidden(consentMapperSource, [
+  {
+    pattern: /\bfrom "pg"\b|\bquery\s*\(|\bINSERT INTO consents\b|\bON CONFLICT \(id\)\b/,
+    message:
+      "Consent PostgreSQL mapper must stay pure row/value mapping without pg I/O or SQL ownership."
+  }
+]);
+
+assertForbidden(consentPersistenceSource, [
+  {
+    pattern: /\bConsent\.rehydrate\b|\bConsentSnapshot\b|\bSELECT\b/,
+    message:
+      "Consent PostgreSQL persistence command must compose SQL and mapper without owning reads or domain hydration."
+  }
+]);
+
+assertForbidden(consentTypesSource, [
+  {
+    pattern: /\bConsent\.rehydrate\b|\bquery\s*\(|\bINSERT INTO consents\b/,
+    message: "Consent PostgreSQL type module must only describe row contracts."
   }
 ]);
 
