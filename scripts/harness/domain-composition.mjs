@@ -154,8 +154,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/clinical-document/clinical-document.ts",
-    maxLines: 270,
+    maxLines: 210,
     role: "ClinicalDocument signing, attachment validation and timeline behavior"
+  },
+  {
+    path: "packages/domain/src/clinical-document/clinical-document.validation.ts",
+    maxLines: 110,
+    role: "ClinicalDocument attachment, status and timeline guards"
   },
   {
     path: "packages/domain/src/clinical-document/clinical-document.types.ts",
@@ -374,6 +379,9 @@ const imagingStudyTypesPath = resolve("packages/domain/src/imaging-study/imaging
 const clinicalDocumentAggregatePath = resolve(
   "packages/domain/src/clinical-document/clinical-document.ts"
 );
+const clinicalDocumentValidationPath = resolve(
+  "packages/domain/src/clinical-document/clinical-document.validation.ts"
+);
 const clinicalDocumentTypesPath = resolve(
   "packages/domain/src/clinical-document/clinical-document.types.ts"
 );
@@ -484,6 +492,10 @@ const serviceRequestTypesSource = await readFile(serviceRequestTypesPath, "utf8"
 const imagingStudyAggregateSource = await readFile(imagingStudyAggregatePath, "utf8");
 const imagingStudyTypesSource = await readFile(imagingStudyTypesPath, "utf8");
 const clinicalDocumentAggregateSource = await readFile(clinicalDocumentAggregatePath, "utf8");
+const clinicalDocumentValidationSource = await readFile(
+  clinicalDocumentValidationPath,
+  "utf8"
+);
 const clinicalDocumentTypesSource = await readFile(clinicalDocumentTypesPath, "utf8");
 const diagnosticReportAggregateSource = await readFile(diagnosticReportAggregatePath, "utf8");
 const diagnosticReportTypesSource = await readFile(diagnosticReportTypesPath, "utf8");
@@ -1018,11 +1030,12 @@ if (!/from "\.\/imaging-study\.types\.js"/.test(imagingStudyAggregateSource)) {
 for (const forbidden of [
   /export type ClinicalDocumentType/,
   /export type ClinicalDocumentSnapshot/,
-  /const clinicalDocumentStatuses/
+  /const clinicalDocumentStatuses/,
+  /function normalizeAttachmentSize/
 ]) {
   if (forbidden.test(clinicalDocumentAggregateSource)) {
     throw new Error(
-      "ClinicalDocument type declarations and code sets belong in clinical-document.types.ts, not the aggregate file."
+      "ClinicalDocument aggregate must keep create/sign behavior only; types stay in clinical-document.types.ts and attachment/status/timeline guards stay in clinical-document.validation.ts."
     );
   }
 }
@@ -1045,6 +1058,26 @@ if (!/from "\.\/clinical-document\.types\.js"/.test(clinicalDocumentAggregateSou
   throw new Error(
     "ClinicalDocument aggregate must depend on clinical-document.types.ts for shared types."
   );
+}
+
+if (!/from "\.\/clinical-document\.validation\.js"/.test(clinicalDocumentAggregateSource)) {
+  throw new Error(
+    "ClinicalDocument aggregate must depend on clinical-document.validation.ts for attachment, status and timeline guards."
+  );
+}
+
+for (const required of [
+  /export function normalizeAttachmentSize/,
+  /export function normalizeAttachmentContentType/,
+  /export function normalizeAttachmentHash/,
+  /export function normalizeStatus/,
+  /from "\.\/clinical-document\.types\.js"/
+]) {
+  if (!required.test(clinicalDocumentValidationSource)) {
+    throw new Error(
+      "clinical-document.validation.ts must keep ClinicalDocument attachment, status and timeline guards."
+    );
+  }
 }
 
 for (const forbidden of [

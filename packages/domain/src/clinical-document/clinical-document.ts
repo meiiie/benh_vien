@@ -1,6 +1,14 @@
 import { DomainError } from "../shared/domain-error.js";
-import { normalizeFhirUnsignedInt } from "../shared/fhir-primitives.js";
-import { clinicalDocumentStatuses } from "./clinical-document.types.js";
+import {
+  normalizeAttachmentContentType,
+  normalizeAttachmentHash,
+  normalizeAttachmentSize,
+  normalizeDate,
+  normalizeStatus,
+  parseOptionalDate,
+  parseRequiredDate,
+  validateTimeline
+} from "./clinical-document.validation.js";
 import type {
   ClinicalDocumentSnapshot,
   ClinicalDocumentStatus,
@@ -14,10 +22,6 @@ export type {
   ClinicalDocumentType,
   CreateClinicalDocumentInput
 } from "./clinical-document.types.js";
-
-const mimeTypePattern =
-  /^[A-Za-z0-9!#$&^_.+-]+\/[A-Za-z0-9!#$&^_.+-]+(?:\s*;\s*[A-Za-z0-9!#$&^_.+-]+=(?:"[^"]+"|[A-Za-z0-9!#$&^_.+-]+))*$/;
-const sha1Base64Pattern = /^[A-Za-z0-9+/]{27}=$/;
 
 type ClinicalDocumentProps = {
   id: string;
@@ -175,82 +179,4 @@ export class ClinicalDocument {
   private touch(): void {
     this.props.updatedAt = new Date();
   }
-}
-
-function normalizeAttachmentSize(value: number | undefined): number | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  return normalizeFhirUnsignedInt(
-    value,
-    "Dung lượng tài liệu phải là số nguyên FHIR unsignedInt hợp lệ."
-  );
-}
-
-function normalizeAttachmentContentType(value: string | undefined): string | undefined {
-  const normalized = value?.trim() || undefined;
-
-  if (normalized && !mimeTypePattern.test(normalized)) {
-    throw new DomainError("Định dạng MIME của tài liệu không hợp lệ.");
-  }
-
-  return normalized;
-}
-
-function normalizeAttachmentHash(value: string | undefined): string | undefined {
-  const normalized = value?.trim() || undefined;
-
-  if (normalized && !sha1Base64Pattern.test(normalized)) {
-    throw new DomainError("Hash SHA-1 Base64 của tài liệu không hợp lệ.");
-  }
-
-  return normalized;
-}
-
-function normalizeStatus(
-  status: ClinicalDocumentStatus,
-  signedAt: Date | undefined
-): ClinicalDocumentStatus {
-  if (!clinicalDocumentStatuses.has(status)) {
-    throw new DomainError("Trạng thái tài liệu lâm sàng không hợp lệ.");
-  }
-
-  if (status === "signed" && !signedAt) {
-    throw new DomainError("Tài liệu đã ký phải có thời điểm ký.");
-  }
-
-  return status;
-}
-
-function validateTimeline(input: {
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
-  readonly signedAt?: Date;
-}): void {
-  if (input.updatedAt < input.createdAt) {
-    throw new DomainError("Thời điểm cập nhật tài liệu không được trước thời điểm tạo tài liệu.");
-  }
-
-  if (input.signedAt && input.signedAt < input.createdAt) {
-    throw new DomainError("Thời điểm ký tài liệu không được trước thời điểm tạo tài liệu.");
-  }
-}
-
-function parseOptionalDate(value: string | undefined, message: string): Date | undefined {
-  return value ? parseRequiredDate(value, message) : undefined;
-}
-
-function parseRequiredDate(value: string, message: string): Date {
-  const date = new Date(value);
-
-  return normalizeDate(date, message);
-}
-
-function normalizeDate(value: Date, message: string): Date {
-  if (Number.isNaN(value.getTime())) {
-    throw new DomainError(message);
-  }
-
-  return value;
 }
