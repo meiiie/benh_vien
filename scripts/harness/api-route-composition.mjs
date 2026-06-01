@@ -138,6 +138,41 @@ const routeBudgets = [
     role: "Runtime diagnostics redaction and repository metadata helpers"
   },
   {
+    path: "apps/api/src/modules/http/http-boundary.ts",
+    maxLines: 30,
+    role: "HTTP boundary composition root"
+  },
+  {
+    path: "apps/api/src/modules/http/http-request-id.ts",
+    maxLines: 40,
+    role: "HTTP request-id validation and generation policy"
+  },
+  {
+    path: "apps/api/src/modules/http/http-security-headers.ts",
+    maxLines: 40,
+    role: "HTTP security and cache-control header hook"
+  },
+  {
+    path: "apps/api/src/modules/http/http-error-handler.ts",
+    maxLines: 70,
+    role: "HTTP error handler and client-safe error envelopes"
+  },
+  {
+    path: "apps/api/src/modules/http/http-validation-operation-outcome.ts",
+    maxLines: 50,
+    role: "HTTP validation error to FHIR OperationOutcome mapper"
+  },
+  {
+    path: "apps/api/src/modules/http/http-content-negotiation.ts",
+    maxLines: 50,
+    role: "HTTP FHIR content negotiation helpers"
+  },
+  {
+    path: "apps/api/src/modules/http/http-error-payload.ts",
+    maxLines: 80,
+    role: "HTTP request-id injection for framework error payloads"
+  },
+  {
     path: "apps/api/src/modules/http/runtime-config.ts",
     maxLines: 30,
     role: "Runtime config public barrel"
@@ -784,6 +819,27 @@ const requiredSystemRegistrations = [
   "registerApiRuntimeRoutes"
 ];
 
+const httpBoundaryPath = resolve("apps/api/src/modules/http/http-boundary.ts");
+const forbiddenHttpBoundaryPatterns = [
+  {
+    pattern: /\bapp\.addHook\b|\bapp\.setErrorHandler\b/,
+    message:
+      "HTTP boundary hooks belong in dedicated request-id, security-header, error-handler or error-payload modules."
+  },
+  {
+    pattern:
+      /\brandomUUID\b|\bZodError\b|\bbuildFhirOperationOutcome\b|\bacceptsFhirJson\b|\bhasFhirContentType\b|\binjectRequestIdIntoErrorPayload\b|\breadPayloadText\b/,
+    message:
+      "HTTP boundary policy details must stay outside http-boundary.ts; keep the root as composition only."
+  }
+];
+const requiredHttpBoundaryRegistrations = [
+  "createRequestId",
+  "registerSecurityHeaderHook",
+  "registerHttpErrorHandler",
+  "registerRequestIdErrorPayloadHook"
+];
+
 const apiDomainRoutesPath = resolve("apps/api/src/modules/http/api-domain-routes.ts");
 const requiredApiDomainRegistrations = [
   "registerApiIdentityRoutes",
@@ -1421,6 +1477,7 @@ for (const budget of routeBudgets) {
 
 const apiRoutesSource = await readFile(apiRoutesPath, "utf8");
 const systemRoutesSource = await readFile(systemRoutesPath, "utf8");
+const httpBoundarySource = await readFile(httpBoundaryPath, "utf8");
 const apiDomainRoutesSource = await readFile(apiDomainRoutesPath, "utf8");
 const providerDirectoryRoutesSource = await readFile(
   providerDirectoryRoutesPath,
@@ -1485,6 +1542,20 @@ for (const registration of requiredSystemRegistrations) {
   if (!systemRoutesSource.includes(registration)) {
     throw new Error(
       `System route composition must register ${registration} so health, readiness and runtime routes remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenHttpBoundaryPatterns) {
+  if (forbidden.pattern.test(httpBoundarySource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredHttpBoundaryRegistrations) {
+  if (!httpBoundarySource.includes(registration)) {
+    throw new Error(
+      `HTTP boundary composition must register ${registration} so request IDs, security headers and error envelopes remain wired.`
     );
   }
 }
