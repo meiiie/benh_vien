@@ -89,8 +89,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/procedure/procedure.ts",
-    maxLines: 330,
-    role: "Procedure aggregate lifecycle, performer and report reference behavior"
+    maxLines: 150,
+    role: "Procedure aggregate record and rehydration behavior"
+  },
+  {
+    path: "packages/domain/src/procedure/procedure.validation.ts",
+    maxLines: 170,
+    role: "Procedure coding, performer, report reference and lifecycle guards"
   },
   {
     path: "packages/domain/src/procedure/procedure.types.ts",
@@ -406,6 +411,7 @@ const workflowTaskTypesPath = resolve(
   "packages/domain/src/workflow-task/workflow-task.types.ts"
 );
 const procedureAggregatePath = resolve("packages/domain/src/procedure/procedure.ts");
+const procedureValidationPath = resolve("packages/domain/src/procedure/procedure.validation.ts");
 const procedureTypesPath = resolve("packages/domain/src/procedure/procedure.types.ts");
 const deliveryAttemptAggregatePath = resolve(
   "packages/domain/src/record-transfer-delivery-attempt/record-transfer-delivery-attempt.ts"
@@ -561,6 +567,7 @@ const workflowTaskAggregateSource = await readFile(workflowTaskAggregatePath, "u
 const workflowTaskValidationSource = await readFile(workflowTaskValidationPath, "utf8");
 const workflowTaskTypesSource = await readFile(workflowTaskTypesPath, "utf8");
 const procedureAggregateSource = await readFile(procedureAggregatePath, "utf8");
+const procedureValidationSource = await readFile(procedureValidationPath, "utf8");
 const procedureTypesSource = await readFile(procedureTypesPath, "utf8");
 const deliveryAttemptAggregateSource = await readFile(deliveryAttemptAggregatePath, "utf8");
 const deliveryAttemptValidationSource = await readFile(deliveryAttemptValidationPath, "utf8");
@@ -943,11 +950,15 @@ for (const required of [
 for (const forbidden of [
   /export type ProcedureStatus/,
   /export type ProcedureSnapshot/,
-  /const procedureStatuses/
+  /const procedureStatuses/,
+  /function normalizeRequiredCoding/,
+  /function normalizePerformers/,
+  /function normalizeReportReferences/,
+  /function assertProcedureLifecycle/
 ]) {
   if (forbidden.test(procedureAggregateSource)) {
     throw new Error(
-      "Procedure type declarations and code sets belong in procedure.types.ts, not the aggregate file."
+      "Procedure aggregate must keep record/rehydrate behavior only; types stay in procedure.types.ts and coding/performer/report/lifecycle guards stay in procedure.validation.ts."
     );
   }
 }
@@ -968,6 +979,27 @@ for (const required of [
 
 if (!/from "\.\/procedure\.types\.js"/.test(procedureAggregateSource)) {
   throw new Error("Procedure aggregate must depend on procedure.types.ts for shared types.");
+}
+
+if (!/from "\.\/procedure\.validation\.js"/.test(procedureAggregateSource)) {
+  throw new Error(
+    "Procedure aggregate must depend on procedure.validation.ts for coding, performer, report and lifecycle guards."
+  );
+}
+
+for (const required of [
+  /export function normalizeRequiredCoding/,
+  /export function normalizePerformers/,
+  /export function normalizeReportReferences/,
+  /export function assertProcedureLifecycle/,
+  /export function validateSelfReference/,
+  /from "\.\/procedure\.types\.js"/
+]) {
+  if (!required.test(procedureValidationSource)) {
+    throw new Error(
+      "procedure.validation.ts must keep Procedure coding, performer, report reference and lifecycle guards."
+    );
+  }
 }
 
 for (const forbidden of [
