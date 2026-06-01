@@ -179,8 +179,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/imaging-study/imaging-study.ts",
-    maxLines: 300,
-    role: "ImagingStudy DICOM UID, series count and timeline validation behavior"
+    maxLines: 150,
+    role: "ImagingStudy record and rehydration behavior"
+  },
+  {
+    path: "packages/domain/src/imaging-study/imaging-study.validation.ts",
+    maxLines: 140,
+    role: "ImagingStudy DICOM UID, series count and timeline guards"
   },
   {
     path: "packages/domain/src/imaging-study/imaging-study.types.ts",
@@ -459,6 +464,7 @@ const serviceRequestTypesPath = resolve(
   "packages/domain/src/service-request/service-request.types.ts"
 );
 const imagingStudyAggregatePath = resolve("packages/domain/src/imaging-study/imaging-study.ts");
+const imagingStudyValidationPath = resolve("packages/domain/src/imaging-study/imaging-study.validation.ts");
 const imagingStudyTypesPath = resolve("packages/domain/src/imaging-study/imaging-study.types.ts");
 const clinicalDocumentAggregatePath = resolve(
   "packages/domain/src/clinical-document/clinical-document.ts"
@@ -600,6 +606,7 @@ const serviceRequestAggregateSource = await readFile(serviceRequestAggregatePath
 const serviceRequestValidationSource = await readFile(serviceRequestValidationPath, "utf8");
 const serviceRequestTypesSource = await readFile(serviceRequestTypesPath, "utf8");
 const imagingStudyAggregateSource = await readFile(imagingStudyAggregatePath, "utf8");
+const imagingStudyValidationSource = await readFile(imagingStudyValidationPath, "utf8");
 const imagingStudyTypesSource = await readFile(imagingStudyTypesPath, "utf8");
 const clinicalDocumentAggregateSource = await readFile(clinicalDocumentAggregatePath, "utf8");
 const clinicalDocumentValidationSource = await readFile(
@@ -1292,11 +1299,14 @@ for (const required of [
 for (const forbidden of [
   /export type ImagingStudyStatus/,
   /export type ImagingStudySnapshot/,
-  /const imagingStudyStatuses/
+  /const imagingStudyStatuses/,
+  /function normalizeSeries/,
+  /function validateCounts/,
+  /function validateTimeline/
 ]) {
   if (forbidden.test(imagingStudyAggregateSource)) {
     throw new Error(
-      "ImagingStudy type declarations and code sets belong in imaging-study.types.ts, not the aggregate file."
+      "ImagingStudy aggregate must keep record/rehydrate behavior only; types stay in imaging-study.types.ts and DICOM UID, series count and timeline guards stay in imaging-study.validation.ts."
     );
   }
 }
@@ -1319,6 +1329,27 @@ if (!/from "\.\/imaging-study\.types\.js"/.test(imagingStudyAggregateSource)) {
   throw new Error(
     "ImagingStudy aggregate must depend on imaging-study.types.ts for shared types."
   );
+}
+
+if (!/from "\.\/imaging-study\.validation\.js"/.test(imagingStudyAggregateSource)) {
+  throw new Error(
+    "ImagingStudy aggregate must depend on imaging-study.validation.ts for DICOM UID, series count and timeline guards."
+  );
+}
+
+for (const required of [
+  /export function normalizeStudyInstanceUid/,
+  /export function normalizeSeries/,
+  /export function validateCounts/,
+  /export function validateTimeline/,
+  /export function normalizeStatus/,
+  /from "\.\/imaging-study\.types\.js"/
+]) {
+  if (!required.test(imagingStudyValidationSource)) {
+    throw new Error(
+      "imaging-study.validation.ts must keep ImagingStudy DICOM UID, series count, status and timeline guards."
+    );
+  }
 }
 
 for (const forbidden of [
