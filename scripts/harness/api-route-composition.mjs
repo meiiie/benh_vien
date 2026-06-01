@@ -84,8 +84,13 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/patients/patient-record-bundle-routes.ts",
-    maxLines: 300,
+    maxLines: 200,
     role: "Patient FHIR Bundle and document Bundle export routes"
+  },
+  {
+    path: "apps/api/src/modules/patients/patient-record-bundle-route-helpers.ts",
+    maxLines: 170,
+    role: "Patient FHIR Bundle transfer context, consent and collection helpers"
   },
   {
     path: "apps/api/src/modules/patients/patient-route-helpers.ts",

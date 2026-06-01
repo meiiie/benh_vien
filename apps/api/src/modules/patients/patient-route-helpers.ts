@@ -99,11 +99,11 @@ export function readBundleTransferContext(
   };
 }
 
-type PatientRecordBundleTransferContext = NonNullable<
+export type PatientRecordBundleTransferContext = NonNullable<
   ReturnType<typeof readBundleTransferContext>
 >;
 
-type LoadPatientRecordBundleCollectionsInput = {
+export type LoadPatientRecordBundleCollectionsInput = {
   readonly patientId: string;
   readonly encounterRepository: EncounterRepository;
   readonly allergyIntoleranceRepository: AllergyIntoleranceRepository;

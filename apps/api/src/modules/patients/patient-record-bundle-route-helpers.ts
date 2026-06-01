@@ -1,0 +1,157 @@
+import type { FastifyReply, FastifyRequest } from "fastify";
+import type {
+  ActorContext,
+  ConsentRepository,
+  PatientRepository
+} from "@benh-vien-so/domain";
+import {
+  requirePatientRecordAccess
+} from "../access-control/access-context.js";
+import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
+import {
+  loadPatientRecordBundleCollections,
+  readBundleTransferContext
+} from "./patient-route-helpers.js";
+import type { LoadPatientRecordBundleCollectionsInput } from "./patient-route-helpers.js";
+
+type PatientRecordBundleType = "collection" | "document";
+
+type PreparePatientRecordBundleContextInput =
+  LoadPatientRecordBundleCollectionsInput & {
+    readonly request: FastifyRequest;
+    readonly reply: FastifyReply;
+    readonly actor: ActorContext;
+    readonly patientId: string;
+    readonly patientRepository: PatientRepository;
+    readonly consentRepository: ConsentRepository;
+    readonly bundleType: PatientRecordBundleType;
+  };
+
+export async function preparePatientRecordBundleContext({
+  request,
+  reply,
+  actor,
+  patientId,
+  patientRepository,
+  consentRepository,
+  bundleType,
+  ...collectionDependencies
+}: PreparePatientRecordBundleContextInput) {
+  const patient = await patientRepository.findById(patientId);
+
+  if (!patient) {
+    sendMissingPatientResponse(reply, patientId, bundleType);
+    return undefined;
+  }
+
+  if (
+    !(await requirePatientRecordAccess(
+      request,
+      reply,
+      actor,
+      patient,
+      collectionDependencies.providerDirectoryRepository
+    ))
+  ) {
+    return undefined;
+  }
+
+  const transferContext = readBundleTransferContext(request.headers);
+
+  if (!transferContext) {
+    sendMissingTransferContextResponse(reply, bundleType);
+    return undefined;
+  }
+
+  const consent = await consentRepository.findById(transferContext.consentReference);
+
+  if (
+    !consent?.allowsRecordSharing({
+      patientId,
+      granteeOrganizationId: transferContext.recipientOrganizationId
+    })
+  ) {
+    sendInvalidConsentResponse(reply, bundleType);
+    return undefined;
+  }
+
+  const collections = await loadPatientRecordBundleCollections({
+    patientId,
+    ...collectionDependencies
+  });
+
+  return {
+    patient,
+    transferContext,
+    consent,
+    collections
+  };
+}
+
+function sendMissingPatientResponse(
+  reply: FastifyReply,
+  patientId: string,
+  bundleType: PatientRecordBundleType
+) {
+  if (bundleType === "collection") {
+    return reply.status(404).send({
+      error: "PATIENT_NOT_FOUND"
+    });
+  }
+
+  return sendFhirOperationOutcome(reply, {
+    statusCode: 404,
+    code: "not-found",
+    diagnostics: `Patient/${patientId} không tồn tại để xuất FHIR document Bundle.`,
+    expression: ["Composition.subject.reference"],
+    details: {
+      code: "PATIENT_NOT_FOUND",
+      display: "Patient not found",
+      text: "Không tìm thấy hồ sơ bệnh nhân cần đóng gói document Bundle."
+    }
+  });
+}
+
+function sendMissingTransferContextResponse(
+  reply: FastifyReply,
+  bundleType: PatientRecordBundleType
+) {
+  const isDocumentBundle = bundleType === "document";
+
+  return sendFhirOperationOutcome(reply, {
+    statusCode: 400,
+    code: "required",
+    diagnostics: `Thiếu x-consent-reference hoặc x-recipient-organization-id khi xuất FHIR ${
+      isDocumentBundle ? "document " : ""
+    }Bundle hồ sơ bệnh nhân.`,
+    details: {
+      code: "MISSING_BUNDLE_TRANSFER_CONTEXT",
+      display: "Missing transfer context",
+      text: `Cần khai báo consent và đơn vị nhận trước khi xuất ${
+        isDocumentBundle ? "document " : ""
+      }Bundle phục vụ liên thông.`
+    }
+  });
+}
+
+function sendInvalidConsentResponse(
+  reply: FastifyReply,
+  bundleType: PatientRecordBundleType
+) {
+  const isDocumentBundle = bundleType === "document";
+
+  return sendFhirOperationOutcome(reply, {
+    statusCode: 403,
+    code: "suppressed",
+    diagnostics:
+      "Consent không tồn tại, không còn hiệu lực hoặc không khớp bệnh nhân/đơn vị nhận.",
+    expression: ["Bundle.meta.security"],
+    details: {
+      code: "CONSENT_NOT_VALID_FOR_TRANSFER",
+      display: "Consent not valid for transfer",
+      text: `Không được xuất ${
+        isDocumentBundle ? "document " : ""
+      }Bundle vì consent chia sẻ hồ sơ không hợp lệ.`
+    }
+  });
+}

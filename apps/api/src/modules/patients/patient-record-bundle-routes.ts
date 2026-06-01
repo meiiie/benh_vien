@@ -23,16 +23,11 @@ import type {
   ServiceRequestRepository,
   WorkflowTaskRepository
 } from "@benh-vien-so/domain";
-import {
-  requirePatientRecordAccess,
-  requirePermission
-} from "../access-control/access-context.js";
+import { requirePermission } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
-import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
+import { preparePatientRecordBundleContext } from "./patient-record-bundle-route-helpers.js";
 import {
-  buildPatientRecordBundleAuditMetadata,
-  loadPatientRecordBundleCollections,
-  readBundleTransferContext
+  buildPatientRecordBundleAuditMetadata
 } from "./patient-route-helpers.js";
 
 export async function registerPatientRecordBundleRoutes(
@@ -63,67 +58,12 @@ export async function registerPatientRecordBundleRoutes(
     }
 
     const params = PatientIdParamsSchema.parse(request.params);
-    const patient = await repository.findById(params.id);
-
-    if (!patient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND"
-      });
-    }
-
-    if (
-      !(await requirePatientRecordAccess(
-        request,
-        reply,
-        actor,
-        patient,
-        providerDirectoryRepository
-      ))
-    ) {
-      return;
-    }
-
-    const transferContext = readBundleTransferContext(request.headers);
-
-    if (!transferContext) {
-      return sendFhirOperationOutcome(reply, {
-        statusCode: 400,
-        code: "required",
-        diagnostics:
-          "Thiếu x-consent-reference hoặc x-recipient-organization-id khi xuất FHIR Bundle hồ sơ bệnh nhân.",
-        details: {
-          code: "MISSING_BUNDLE_TRANSFER_CONTEXT",
-          display: "Missing transfer context",
-          text:
-            "Cần khai báo consent và đơn vị nhận trước khi xuất Bundle phục vụ liên thông."
-        }
-      });
-    }
-
-    const consent = await consentRepository.findById(transferContext.consentReference);
-
-    if (
-      !consent?.allowsRecordSharing({
-        patientId: params.id,
-        granteeOrganizationId: transferContext.recipientOrganizationId
-      })
-    ) {
-      return sendFhirOperationOutcome(reply, {
-        statusCode: 403,
-        code: "suppressed",
-        diagnostics:
-          "Consent không tồn tại, không còn hiệu lực hoặc không khớp bệnh nhân/đơn vị nhận.",
-        expression: ["Bundle.meta.security"],
-        details: {
-          code: "CONSENT_NOT_VALID_FOR_TRANSFER",
-          display: "Consent not valid for transfer",
-          text: "Không được xuất Bundle vì consent chia sẻ hồ sơ không hợp lệ."
-        }
-      });
-    }
-
-    const collections = await loadPatientRecordBundleCollections({
+    const context = await preparePatientRecordBundleContext({
+      request,
+      reply,
+      actor,
       patientId: params.id,
+      patientRepository: repository,
       encounterRepository,
       allergyIntoleranceRepository,
       documentRepository,
@@ -137,8 +77,16 @@ export async function registerPatientRecordBundleRoutes(
       serviceRequestRepository,
       workflowTaskRepository,
       procedureRepository,
-      providerDirectoryRepository
+      providerDirectoryRepository,
+      consentRepository,
+      bundleType: "collection"
     });
+
+    if (!context) {
+      return;
+    }
+
+    const { patient, transferContext, consent, collections } = context;
 
     await recordAuditEvent(auditRepository, request, {
       action: "patient.fhir-bundle-export",
@@ -167,75 +115,12 @@ export async function registerPatientRecordBundleRoutes(
     }
 
     const params = PatientIdParamsSchema.parse(request.params);
-    const patient = await repository.findById(params.id);
-
-    if (!patient) {
-      return sendFhirOperationOutcome(reply, {
-        statusCode: 404,
-        code: "not-found",
-        diagnostics: `Patient/${params.id} không tồn tại để xuất FHIR document Bundle.`,
-        expression: ["Composition.subject.reference"],
-        details: {
-          code: "PATIENT_NOT_FOUND",
-          display: "Patient not found",
-          text: "Không tìm thấy hồ sơ bệnh nhân cần đóng gói document Bundle."
-        }
-      });
-    }
-
-    if (
-      !(await requirePatientRecordAccess(
-        request,
-        reply,
-        actor,
-        patient,
-        providerDirectoryRepository
-      ))
-    ) {
-      return;
-    }
-
-    const transferContext = readBundleTransferContext(request.headers);
-
-    if (!transferContext) {
-      return sendFhirOperationOutcome(reply, {
-        statusCode: 400,
-        code: "required",
-        diagnostics:
-          "Thiếu x-consent-reference hoặc x-recipient-organization-id khi xuất FHIR document Bundle hồ sơ bệnh nhân.",
-        details: {
-          code: "MISSING_BUNDLE_TRANSFER_CONTEXT",
-          display: "Missing transfer context",
-          text:
-            "Cần khai báo consent và đơn vị nhận trước khi xuất document Bundle phục vụ liên thông."
-        }
-      });
-    }
-
-    const consent = await consentRepository.findById(transferContext.consentReference);
-
-    if (
-      !consent?.allowsRecordSharing({
-        patientId: params.id,
-        granteeOrganizationId: transferContext.recipientOrganizationId
-      })
-    ) {
-      return sendFhirOperationOutcome(reply, {
-        statusCode: 403,
-        code: "suppressed",
-        diagnostics:
-          "Consent không tồn tại, không còn hiệu lực hoặc không khớp bệnh nhân/đơn vị nhận.",
-        expression: ["Bundle.meta.security"],
-        details: {
-          code: "CONSENT_NOT_VALID_FOR_TRANSFER",
-          display: "Consent not valid for transfer",
-          text: "Không được xuất document Bundle vì consent chia sẻ hồ sơ không hợp lệ."
-        }
-      });
-    }
-
-    const collections = await loadPatientRecordBundleCollections({
+    const context = await preparePatientRecordBundleContext({
+      request,
+      reply,
+      actor,
       patientId: params.id,
+      patientRepository: repository,
       encounterRepository,
       allergyIntoleranceRepository,
       documentRepository,
@@ -249,8 +134,16 @@ export async function registerPatientRecordBundleRoutes(
       serviceRequestRepository,
       workflowTaskRepository,
       procedureRepository,
-      providerDirectoryRepository
+      providerDirectoryRepository,
+      consentRepository,
+      bundleType: "document"
     });
+
+    if (!context) {
+      return;
+    }
+
+    const { patient, transferContext, consent, collections } = context;
 
     await recordAuditEvent(auditRepository, request, {
       action: "patient.fhir-document-bundle-export",
