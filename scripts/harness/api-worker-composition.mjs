@@ -41,6 +41,36 @@ const workerBudgets = [
     path: "apps/api/src/modules/record-transfer-delivery-attempts/record-transfer-delivery-worker-scheduler.ts",
     maxLines: 80,
     role: "RecordTransfer delivery worker interval scheduler"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-retry-worker.ts",
+    maxLines: 30,
+    role: "RecordTransfer retry worker public API barrel"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-retry-worker.types.ts",
+    maxLines: 60,
+    role: "RecordTransfer retry worker dependency and I/O contracts"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-retry-worker.config.ts",
+    maxLines: 40,
+    role: "RecordTransfer retry worker defaults and normalization"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-retry-worker-outcomes.ts",
+    maxLines: 130,
+    role: "RecordTransfer retry worker lifecycle and audit outcomes"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-retry-worker-processor.ts",
+    maxLines: 120,
+    role: "RecordTransfer retry worker due transfer processor"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-retry-worker-scheduler.ts",
+    maxLines: 80,
+    role: "RecordTransfer retry worker interval scheduler"
   }
 ];
 
@@ -58,6 +88,18 @@ const deliveryWorkerOutcomesPath = resolve(
 );
 const deliveryWorkerSchedulerPath = resolve(
   "apps/api/src/modules/record-transfer-delivery-attempts/record-transfer-delivery-worker-scheduler.ts"
+);
+const retryWorkerRootPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-retry-worker.ts"
+);
+const retryWorkerProcessorPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-retry-worker-processor.ts"
+);
+const retryWorkerOutcomesPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-retry-worker-outcomes.ts"
+);
+const retryWorkerSchedulerPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-retry-worker-scheduler.ts"
 );
 
 const workerReports = [];
@@ -99,6 +141,10 @@ const deliveryWorkerSchedulerSource = await readFile(
   deliveryWorkerSchedulerPath,
   "utf8"
 );
+const retryWorkerRootSource = await readFile(retryWorkerRootPath, "utf8");
+const retryWorkerProcessorSource = await readFile(retryWorkerProcessorPath, "utf8");
+const retryWorkerOutcomesSource = await readFile(retryWorkerOutcomesPath, "utf8");
+const retryWorkerSchedulerSource = await readFile(retryWorkerSchedulerPath, "utf8");
 
 const requiredDeliveryWorkerRootExports = [
   "processQueuedRecordTransferDeliveries",
@@ -111,6 +157,20 @@ for (const exportedName of requiredDeliveryWorkerRootExports) {
   if (!deliveryWorkerRootSource.includes(exportedName)) {
     throw new Error(
       `RecordTransfer delivery worker public API must re-export ${exportedName}.`
+    );
+  }
+}
+
+const requiredRetryWorkerRootExports = [
+  "processDueRecordTransferRetries",
+  "startRecordTransferRetryWorker",
+  "RecordTransferRetryWorkerDependencies"
+];
+
+for (const exportedName of requiredRetryWorkerRootExports) {
+  if (!retryWorkerRootSource.includes(exportedName)) {
+    throw new Error(
+      `RecordTransfer retry worker public API must re-export ${exportedName}.`
     );
   }
 }
@@ -152,6 +212,40 @@ assertForbidden(deliveryWorkerSchedulerSource, [
     pattern: /\bfetch\b|\bAuditEvent\b|\bbuildRecordTransferFhirBundle\b|\bmarkFailed\b/,
     message:
       "Delivery scheduler must only control interval execution and logging."
+  }
+]);
+
+assertForbidden(retryWorkerRootSource, [
+  {
+    pattern:
+      /\bsetInterval\b|\bAuditEvent\b|\bfindDueRetries\b|\bfindDueDeadLetters\b|\bmarkDeadLettered\b/,
+    message:
+      "record-transfer-retry-worker.ts must stay a public API barrel, not runtime logic."
+  }
+]);
+
+assertForbidden(retryWorkerProcessorSource, [
+  {
+    pattern: /\bsetInterval\b|\bAuditEvent\.record\b|\bmarkDeadLettered\b|\b\.retry\(/,
+    message:
+      "Retry processor must delegate scheduling and lifecycle/audit outcomes to focused modules."
+  }
+]);
+
+assertForbidden(retryWorkerOutcomesSource, [
+  {
+    pattern: /\bsetInterval\b|\bfindDueRetries\b|\bfindDueDeadLetters\b/,
+    message:
+      "Retry outcome module must only persist retry/dead-letter lifecycle changes and audit events."
+  }
+]);
+
+assertForbidden(retryWorkerSchedulerSource, [
+  {
+    pattern:
+      /\bAuditEvent\b|\bfindDueRetries\b|\bfindDueDeadLetters\b|\bmarkDeadLettered\b|\b\.retry\(/,
+    message:
+      "Retry scheduler must only control interval execution and logging."
   }
 ]);
 
