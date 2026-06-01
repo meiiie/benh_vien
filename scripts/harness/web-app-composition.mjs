@@ -66,8 +66,11 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/ImagingStudyPanel.tsx",
   "apps/web/src/features/clinical-records/MedicationAdministrationForm.tsx",
   "apps/web/src/features/clinical-records/MedicationAdministrationPanel.tsx",
+  "apps/web/src/features/clinical-records/MedicationDispenseContextFields.tsx",
+  "apps/web/src/features/clinical-records/MedicationDispenseDosageFields.tsx",
   "apps/web/src/features/clinical-records/MedicationDispenseForm.tsx",
   "apps/web/src/features/clinical-records/MedicationDispensePanel.tsx",
+  "apps/web/src/features/clinical-records/MedicationDispenseSupplyFields.tsx",
   "apps/web/src/features/clinical-records/MedicationRequestForm.tsx",
   "apps/web/src/features/clinical-records/MedicationRequestPanel.tsx",
   "apps/web/src/features/clinical-records/medicationFormatters.ts",
@@ -300,8 +303,23 @@ const featureModuleBudgets = [
   },
   {
     path: "apps/web/src/features/clinical-records/MedicationDispenseForm.tsx",
-    maxLines: 390,
-    role: "MedicationDispense field-heavy command form"
+    maxLines: 80,
+    role: "MedicationDispense command form composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/MedicationDispenseContextFields.tsx",
+    maxLines: 130,
+    role: "MedicationDispense encounter, request and category fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/MedicationDispenseSupplyFields.tsx",
+    maxLines: 160,
+    role: "MedicationDispense supply, handover and dispenser fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/MedicationDispenseDosageFields.tsx",
+    maxLines: 140,
+    role: "MedicationDispense dosage instruction fields"
   },
   {
     path: "apps/web/src/features/clinical-records/MedicationAdministrationPanel.tsx",
