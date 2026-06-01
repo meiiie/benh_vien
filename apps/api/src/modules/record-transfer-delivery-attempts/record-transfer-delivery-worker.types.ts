@@ -33,6 +33,20 @@ export type RecordTransferDeliveryWorkerDependencies =
     readonly sender?: RecordTransferFhirBundleSender;
   };
 
+export type RecordTransferDeliveryWorkerRunContext = {
+  readonly checkedAt: Date;
+  readonly limit: number;
+  readonly timeoutMs: number;
+  readonly retryDelayMs: number;
+  readonly actorId: string;
+  readonly sender: RecordTransferFhirBundleSender;
+};
+
+export type ProcessRecordTransferDeliveryAttemptResult = {
+  readonly attemptId: string;
+  readonly status: "delivered" | "failed";
+};
+
 export type ProcessQueuedRecordTransferDeliveriesInput = {
   readonly checkedAt?: Date;
   readonly limit?: number;

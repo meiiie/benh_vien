@@ -9,7 +9,7 @@ const workerBudgets = [
   },
   {
     path: "apps/api/src/modules/record-transfer-delivery-attempts/record-transfer-delivery-worker.types.ts",
-    maxLines: 80,
+    maxLines: 100,
     role: "RecordTransfer delivery worker dependency and I/O contracts"
   },
   {
@@ -33,8 +33,18 @@ const workerBudgets = [
     role: "RecordTransfer delivery worker delivery attempt, transfer and audit outcomes"
   },
   {
+    path: "apps/api/src/modules/record-transfer-delivery-attempts/record-transfer-delivery-worker-context.ts",
+    maxLines: 60,
+    role: "RecordTransfer delivery worker run-context normalization"
+  },
+  {
+    path: "apps/api/src/modules/record-transfer-delivery-attempts/record-transfer-delivery-attempt-processor.ts",
+    maxLines: 140,
+    role: "RecordTransfer delivery worker single-attempt processor"
+  },
+  {
     path: "apps/api/src/modules/record-transfer-delivery-attempts/record-transfer-delivery-worker-processor.ts",
-    maxLines: 170,
+    maxLines: 70,
     role: "RecordTransfer delivery worker queue processor"
   },
   {
@@ -79,6 +89,12 @@ const deliveryWorkerRootPath = resolve(
 );
 const deliveryWorkerProcessorPath = resolve(
   "apps/api/src/modules/record-transfer-delivery-attempts/record-transfer-delivery-worker-processor.ts"
+);
+const deliveryWorkerContextPath = resolve(
+  "apps/api/src/modules/record-transfer-delivery-attempts/record-transfer-delivery-worker-context.ts"
+);
+const deliveryWorkerAttemptProcessorPath = resolve(
+  "apps/api/src/modules/record-transfer-delivery-attempts/record-transfer-delivery-attempt-processor.ts"
 );
 const deliveryWorkerSenderPath = resolve(
   "apps/api/src/modules/record-transfer-delivery-attempts/record-transfer-fhir-bundle-sender.ts"
@@ -135,6 +151,11 @@ const deliveryWorkerProcessorSource = await readFile(
   deliveryWorkerProcessorPath,
   "utf8"
 );
+const deliveryWorkerContextSource = await readFile(deliveryWorkerContextPath, "utf8");
+const deliveryWorkerAttemptProcessorSource = await readFile(
+  deliveryWorkerAttemptProcessorPath,
+  "utf8"
+);
 const deliveryWorkerSenderSource = await readFile(deliveryWorkerSenderPath, "utf8");
 const deliveryWorkerOutcomesSource = await readFile(deliveryWorkerOutcomesPath, "utf8");
 const deliveryWorkerSchedulerSource = await readFile(
@@ -185,9 +206,27 @@ assertForbidden(deliveryWorkerRootSource, [
 
 assertForbidden(deliveryWorkerProcessorSource, [
   {
-    pattern: /\bfetch\b|\bsetInterval\b|\bAuditEvent\.record\b/,
+    pattern:
+      /\bfetch\b|\bsetInterval\b|\bAuditEvent\.record\b|\bbuildRecordTransferFhirBundle\b|\bvalidateRecordTransferEndpointForDelivery\b|\bmarkDeliveryAttemptSucceeded\b|\bfailDeliveryAttemptAndTransfer\b/,
     message:
-      "Delivery queue processor must delegate HTTP sending, scheduling and audit creation to focused modules."
+      "Delivery queue processor must delegate HTTP sending, scheduling, single-attempt workflow and audit creation to focused modules."
+  }
+]);
+
+assertForbidden(deliveryWorkerContextSource, [
+  {
+    pattern:
+      /\bfindQueued\b|\bbuildRecordTransferFhirBundle\b|\bvalidateRecordTransferEndpointForDelivery\b|\bmarkDeliveryAttemptSucceeded\b|\bfailDeliveryAttempt\b|\bfetch\b|\bAuditEvent\b/,
+    message:
+      "Delivery worker context must only normalize run inputs and select the sender."
+  }
+]);
+
+assertForbidden(deliveryWorkerAttemptProcessorSource, [
+  {
+    pattern: /\bfindQueued\b|\bsetInterval\b|\bAuditEvent\.record\b|\bfetch\b/,
+    message:
+      "Delivery single-attempt processor must not fetch queues, schedule intervals, create audits directly or own raw HTTP transport."
   }
 ]);
 
