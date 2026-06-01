@@ -93,6 +93,36 @@ const routeBudgets = [
     role: "Patient route helper functions"
   },
   {
+    path: "apps/api/src/modules/clinical-documents/clinical-document-routes.ts",
+    maxLines: 80,
+    role: "ClinicalDocument route composition root"
+  },
+  {
+    path: "apps/api/src/modules/clinical-documents/clinical-document-query-routes.ts",
+    maxLines: 90,
+    role: "ClinicalDocument list route adapter"
+  },
+  {
+    path: "apps/api/src/modules/clinical-documents/clinical-document-creation-routes.ts",
+    maxLines: 130,
+    role: "ClinicalDocument creation command route adapter"
+  },
+  {
+    path: "apps/api/src/modules/clinical-documents/clinical-document-command-routes.ts",
+    maxLines: 120,
+    role: "ClinicalDocument sign command route adapter"
+  },
+  {
+    path: "apps/api/src/modules/clinical-documents/clinical-document-fhir-routes.ts",
+    maxLines: 160,
+    role: "ClinicalDocument FHIR DocumentReference and Provenance route adapter"
+  },
+  {
+    path: "apps/api/src/modules/clinical-documents/clinical-document-route-helpers.ts",
+    maxLines: 80,
+    role: "ClinicalDocument response and reference validation helpers"
+  },
+  {
     path: "apps/api/src/modules/procedures/procedure-routes.ts",
     maxLines: 80,
     role: "Procedure route composition root"
@@ -205,6 +235,36 @@ const requiredPatientFhirRegistrations = [
   "registerPatientRecordBundleRoutes"
 ];
 
+const clinicalDocumentRoutesPath = resolve(
+  "apps/api/src/modules/clinical-documents/clinical-document-routes.ts"
+);
+const forbiddenClinicalDocumentRoutePatterns = [
+  {
+    pattern:
+      /\bCreateClinicalDocumentRequestSchema\b|\bPatientDocumentsParamsSchema\b|\bClinicalDocumentIdParamsSchema\b/,
+    message:
+      "ClinicalDocument request handling belongs in clinical-document-query-routes.ts, clinical-document-creation-routes.ts, clinical-document-command-routes.ts or clinical-document-fhir-routes.ts."
+  },
+  {
+    pattern:
+      /\bClinicalDocument\.create\b|\bDomainError\b|\bvalidateClinicalDocumentReferences\b/,
+    message:
+      "ClinicalDocument creation, signing and validation policy belongs outside the root route."
+  },
+  {
+    pattern:
+      /\bmapClinicalDocumentToFhir\b|\bmapClinicalDocumentToFhirProvenance\b|\bsendFhirOperationOutcome\b/,
+    message:
+      "ClinicalDocument FHIR export details belong in clinical-document-fhir-routes.ts."
+  }
+];
+const requiredClinicalDocumentRegistrations = [
+  "registerClinicalDocumentQueryRoutes",
+  "registerClinicalDocumentCreationRoutes",
+  "registerClinicalDocumentCommandRoutes",
+  "registerClinicalDocumentFhirRoutes"
+];
+
 const procedureRoutesPath = resolve("apps/api/src/modules/procedures/procedure-routes.ts");
 const forbiddenProcedureRoutePatterns = [
   {
@@ -254,6 +314,10 @@ for (const budget of routeBudgets) {
 const recordTransferRoutesSource = await readFile(recordTransferRoutesPath, "utf8");
 const patientRoutesSource = await readFile(patientRoutesPath, "utf8");
 const patientFhirRoutesSource = await readFile(patientFhirRoutesPath, "utf8");
+const clinicalDocumentRoutesSource = await readFile(
+  clinicalDocumentRoutesPath,
+  "utf8"
+);
 const procedureRoutesSource = await readFile(procedureRoutesPath, "utf8");
 
 for (const forbidden of forbiddenRecordTransferRoutePatterns) {
@@ -294,6 +358,20 @@ for (const registration of requiredPatientFhirRegistrations) {
   if (!patientFhirRoutesSource.includes(registration)) {
     throw new Error(
       `Patient FHIR root routes must register ${registration} so resource and Bundle export modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenClinicalDocumentRoutePatterns) {
+  if (forbidden.pattern.test(clinicalDocumentRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredClinicalDocumentRegistrations) {
+  if (!clinicalDocumentRoutesSource.includes(registration)) {
+    throw new Error(
+      `ClinicalDocument root routes must register ${registration} so query, command and FHIR modules remain wired.`
     );
   }
 }
