@@ -234,8 +234,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/consent/consent.ts",
-    maxLines: 250,
+    maxLines: 190,
     role: "Consent grant, revoke and record-sharing authorization behavior"
+  },
+  {
+    path: "packages/domain/src/consent/consent.validation.ts",
+    maxLines: 90,
+    role: "Consent period, revocation, status and category guards"
   },
   {
     path: "packages/domain/src/consent/consent.types.ts",
@@ -426,6 +431,7 @@ const encounterAggregatePath = resolve("packages/domain/src/encounter/encounter.
 const encounterValidationPath = resolve("packages/domain/src/encounter/encounter.validation.ts");
 const encounterTypesPath = resolve("packages/domain/src/encounter/encounter.types.ts");
 const consentAggregatePath = resolve("packages/domain/src/consent/consent.ts");
+const consentValidationPath = resolve("packages/domain/src/consent/consent.validation.ts");
 const consentTypesPath = resolve("packages/domain/src/consent/consent.types.ts");
 const fhirTypesPath = resolve("packages/domain/src/fhir/fhir-types.ts");
 const fhirClinicalBarrelPath = resolve("packages/domain/src/fhir/fhir-clinical.types.ts");
@@ -539,6 +545,7 @@ const encounterAggregateSource = await readFile(encounterAggregatePath, "utf8");
 const encounterValidationSource = await readFile(encounterValidationPath, "utf8");
 const encounterTypesSource = await readFile(encounterTypesPath, "utf8");
 const consentAggregateSource = await readFile(consentAggregatePath, "utf8");
+const consentValidationSource = await readFile(consentValidationPath, "utf8");
 const consentTypesSource = await readFile(consentTypesPath, "utf8");
 const fhirTypesSource = await readFile(fhirTypesPath, "utf8");
 const fhirClinicalBarrelSource = await readFile(fhirClinicalBarrelPath, "utf8");
@@ -1351,11 +1358,13 @@ for (const required of [
 for (const forbidden of [
   /export type ConsentStatus/,
   /export type ConsentSnapshot/,
-  /const consentStatuses/
+  /const consentStatuses/,
+  /function normalizeRequired/,
+  /function assertValidPeriod/
 ]) {
   if (forbidden.test(consentAggregateSource)) {
     throw new Error(
-      "Consent type declarations and code sets belong in consent.types.ts, not the aggregate file."
+      "Consent aggregate must keep grant/revoke/authorization behavior only; types stay in consent.types.ts and period/status/category guards stay in consent.validation.ts."
     );
   }
 }
@@ -1378,6 +1387,26 @@ for (const required of [
 
 if (!/from "\.\/consent\.types\.js"/.test(consentAggregateSource)) {
   throw new Error("Consent aggregate must depend on consent.types.ts for shared types.");
+}
+
+if (!/from "\.\/consent\.validation\.js"/.test(consentAggregateSource)) {
+  throw new Error(
+    "Consent aggregate must depend on consent.validation.ts for period, revocation, status and category guards."
+  );
+}
+
+for (const required of [
+  /export function assertValidPeriod/,
+  /export function assertRevocationWithinPeriod/,
+  /export function assertValidStatus/,
+  /export function assertValidCategory/,
+  /from "\.\/consent\.types\.js"/
+]) {
+  if (!required.test(consentValidationSource)) {
+    throw new Error(
+      "consent.validation.ts must keep Consent period, revocation, status and category guards."
+    );
+  }
 }
 
 for (const forbidden of [
