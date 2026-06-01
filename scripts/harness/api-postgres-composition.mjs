@@ -103,6 +103,31 @@ const postgresBudgets = [
     role: "Observation PostgreSQL row types"
   },
   {
+    path: "apps/api/src/infrastructure/postgres/postgres-encounter.repository.ts",
+    maxLines: 80,
+    role: "Encounter PostgreSQL repository orchestration"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-encounter.sql.ts",
+    maxLines: 60,
+    role: "Encounter PostgreSQL SQL statements"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-encounter.mapper.ts",
+    maxLines: 70,
+    role: "Encounter PostgreSQL row and parameter mapper"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-encounter.persistence.ts",
+    maxLines: 30,
+    role: "Encounter PostgreSQL persistence command"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-encounter.types.ts",
+    maxLines: 40,
+    role: "Encounter PostgreSQL row types"
+  },
+  {
     path: "apps/api/src/infrastructure/postgres/postgres-patient.repository.ts",
     maxLines: 110,
     role: "Patient PostgreSQL repository orchestration"
@@ -494,6 +519,21 @@ const observationPersistencePath = resolve(
 const observationTypesPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-observation.types.ts"
 );
+const encounterRepositoryPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-encounter.repository.ts"
+);
+const encounterSqlPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-encounter.sql.ts"
+);
+const encounterMapperPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-encounter.mapper.ts"
+);
+const encounterPersistencePath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-encounter.persistence.ts"
+);
+const encounterTypesPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-encounter.types.ts"
+);
 const patientRepositoryPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-patient.repository.ts"
 );
@@ -760,6 +800,11 @@ const observationPersistenceSource = await readFile(
   "utf8"
 );
 const observationTypesSource = await readFile(observationTypesPath, "utf8");
+const encounterRepositorySource = await readFile(encounterRepositoryPath, "utf8");
+const encounterSqlSource = await readFile(encounterSqlPath, "utf8");
+const encounterMapperSource = await readFile(encounterMapperPath, "utf8");
+const encounterPersistenceSource = await readFile(encounterPersistencePath, "utf8");
+const encounterTypesSource = await readFile(encounterTypesPath, "utf8");
 const patientRepositorySource = await readFile(patientRepositoryPath, "utf8");
 const patientSqlSource = await readFile(patientSqlPath, "utf8");
 const patientMapperSource = await readFile(patientMapperPath, "utf8");
@@ -978,6 +1023,19 @@ const requiredObservationRepositoryImports = [
 for (const importedName of requiredObservationRepositoryImports) {
   if (!observationRepositorySource.includes(importedName)) {
     throw new Error(`Observation PostgreSQL repository must compose ${importedName}.`);
+  }
+}
+
+const requiredEncounterRepositoryImports = [
+  "rowToEncounter",
+  "upsertEncounter",
+  "selectEncounterSql",
+  "EncounterRow"
+];
+
+for (const importedName of requiredEncounterRepositoryImports) {
+  if (!encounterRepositorySource.includes(importedName)) {
+    throw new Error(`Encounter PostgreSQL repository must compose ${importedName}.`);
   }
 }
 
@@ -1322,6 +1380,45 @@ assertForbidden(observationTypesSource, [
   {
     pattern: /\bObservation\.rehydrate\b|\bquery\s*\(|\bINSERT INTO observations\b/,
     message: "Observation PostgreSQL type module must only describe row contracts."
+  }
+]);
+
+assertForbidden(encounterRepositorySource, [
+  {
+    pattern: /\bINSERT INTO encounters\b|\bON CONFLICT \(id\)\b|\bEncounter\.rehydrate\b|\bEncounterSnapshot\b/,
+    message:
+      "Encounter PostgreSQL repository must delegate upsert SQL and row mapping to focused modules."
+  }
+]);
+
+assertForbidden(encounterSqlSource, [
+  {
+    pattern: /@benh-vien-so\/domain|\bEncounter\b|\bpg\b/,
+    message:
+      "Encounter PostgreSQL SQL module must stay a pure SQL statement module without domain or pg dependencies."
+  }
+]);
+
+assertForbidden(encounterMapperSource, [
+  {
+    pattern: /\bfrom "pg"\b|\bquery\s*\(|\bINSERT INTO encounters\b|\bON CONFLICT \(id\)\b/,
+    message:
+      "Encounter PostgreSQL mapper must stay pure row/value mapping without pg I/O or SQL ownership."
+  }
+]);
+
+assertForbidden(encounterPersistenceSource, [
+  {
+    pattern: /\bEncounter\.rehydrate\b|\bEncounterSnapshot\b|\bSELECT\b/,
+    message:
+      "Encounter PostgreSQL persistence command must compose SQL and mapper without owning reads or domain hydration."
+  }
+]);
+
+assertForbidden(encounterTypesSource, [
+  {
+    pattern: /\bEncounter\.rehydrate\b|\bquery\s*\(|\bINSERT INTO encounters\b/,
+    message: "Encounter PostgreSQL type module must only describe row contracts."
   }
 ]);
 
