@@ -21,6 +21,16 @@ const domainBudgets = [
     path: "packages/domain/src/provider-directory/provider-directory.types.ts",
     maxLines: 190,
     role: "ProviderDirectory snapshot, coding, telecom and endpoint type definitions"
+  },
+  {
+    path: "packages/domain/src/audit-event/audit-event.ts",
+    maxLines: 420,
+    role: "AuditEvent aggregate, sealing and integrity verification behavior"
+  },
+  {
+    path: "packages/domain/src/audit-event/audit-event.types.ts",
+    maxLines: 300,
+    role: "AuditEvent action, resource, snapshot and integrity report types"
   }
 ];
 
@@ -36,6 +46,8 @@ const providerDirectoryAggregatePath = resolve(
 const providerDirectoryTypesPath = resolve(
   "packages/domain/src/provider-directory/provider-directory.types.ts"
 );
+const auditEventAggregatePath = resolve("packages/domain/src/audit-event/audit-event.ts");
+const auditEventTypesPath = resolve("packages/domain/src/audit-event/audit-event.types.ts");
 
 const domainReports = [];
 
@@ -66,6 +78,8 @@ const providerDirectoryAggregateSource = await readFile(
   "utf8"
 );
 const providerDirectoryTypesSource = await readFile(providerDirectoryTypesPath, "utf8");
+const auditEventAggregateSource = await readFile(auditEventAggregatePath, "utf8");
+const auditEventTypesSource = await readFile(auditEventTypesPath, "utf8");
 
 for (const forbidden of [
   /export type RecordTransferStatus/,
@@ -125,6 +139,36 @@ if (!/from "\.\/provider-directory\.types\.js"/.test(providerDirectoryAggregateS
   throw new Error(
     "ProviderDirectory aggregate must depend on provider-directory.types.ts for shared types."
   );
+}
+
+for (const forbidden of [
+  /export type AuditAction/,
+  /export type AuditEventSnapshot/,
+  /const auditActions/
+]) {
+  if (forbidden.test(auditEventAggregateSource)) {
+    throw new Error(
+      "AuditEvent action, resource and snapshot types belong in audit-event.types.ts, not the aggregate file."
+    );
+  }
+}
+
+for (const required of [
+  /export type AuditAction/,
+  /export type AuditResourceType/,
+  /export type AuditEventSnapshot/,
+  /export type AuditIntegrityReport/,
+  /export const auditActions/
+]) {
+  if (!required.test(auditEventTypesSource)) {
+    throw new Error(
+      "audit-event.types.ts must keep AuditEvent actions, resources, snapshots, integrity reports and action-set definitions."
+    );
+  }
+}
+
+if (!/from "\.\/audit-event\.types\.js"/.test(auditEventAggregateSource)) {
+  throw new Error("AuditEvent aggregate must depend on audit-event.types.ts for shared types.");
 }
 
 console.log(

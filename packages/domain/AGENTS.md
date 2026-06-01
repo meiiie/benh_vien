@@ -19,4 +19,5 @@ pnpm --filter @benh-vien-so/domain run build
 - Mapping FHIR đặt trong namespace `fhir`, không trộn vào aggregate.
 - Với `RecordTransfer`, aggregate `record-transfer.ts` giữ hành vi vòng đời; type, snapshot, command input và status set nằm trong `record-transfer.types.ts`. Chạy `pnpm run harness:domain-composition` khi đổi boundary domain này.
 - Với `ProviderDirectory`, aggregate `provider-directory.ts` giữ assemble/rehydrate/validation; type, snapshot, coding, telecom và endpoint code set nằm trong `provider-directory.types.ts`.
+- Với `AuditEvent`, aggregate `audit-event.ts` giữ record/rehydrate/seal/integrity behavior; action, resource, snapshot và integrity report type nằm trong `audit-event.types.ts`.
 - Test tối thiểu cho invariant và mapping liên thông.
