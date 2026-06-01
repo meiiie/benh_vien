@@ -1,5 +1,6 @@
 import type { ClinicalApiClient } from "../../api/clinicalApi.js";
-import type { Consent, Patient } from "../../types/clinical.js";
+import type { Consent } from "../../types/consents.js";
+import type { Patient } from "../../types/patientRegistry.js";
 import { listPatientConsents, revokePatientConsent } from "./consentApi.js";
 import { buildRevokeConsentCommand } from "./consentCommandBuilders.js";
 

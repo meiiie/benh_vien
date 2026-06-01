@@ -1,17 +1,21 @@
 import { useEffect, type Dispatch, type SetStateAction } from "react";
+import type { NewAllergyIntoleranceForm } from "../../types/allergies.js";
 import type {
-  NewAllergyIntoleranceForm,
-  NewClinicalDocumentForm,
-  NewConditionForm,
-  NewDiagnosticReportForm,
-  NewImagingStudyForm,
-  NewMedicationAdministrationForm,
-  NewMedicationDispenseForm,
-  NewMedicationRequestForm,
-  NewObservationForm,
   NewProcedureForm,
   NewServiceRequestForm
-} from "../../types/clinical.js";
+} from "../../types/careWorkflow.js";
+import type { NewClinicalDocumentForm } from "../../types/clinicalDocuments.js";
+import type { NewConditionForm } from "../../types/conditions.js";
+import type {
+  NewDiagnosticReportForm,
+  NewImagingStudyForm
+} from "../../types/diagnosticResults.js";
+import type {
+  NewMedicationAdministrationForm,
+  NewMedicationDispenseForm,
+  NewMedicationRequestForm
+} from "../../types/medications.js";
+import type { NewObservationForm } from "../../types/observations.js";
 import { buildEncounterScopedFormUpdater } from "./encounterScopedFormUpdater.js";
 
 type EncounterScopedFormEffectsConfig = {

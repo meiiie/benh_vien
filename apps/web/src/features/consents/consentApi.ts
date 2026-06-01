@@ -1,5 +1,5 @@
 import type { ClinicalApiClient } from "../../api/clinicalApi.js";
-import type { Consent, ConsentsResponse } from "../../types/clinical.js";
+import type { Consent, ConsentsResponse } from "../../types/consents.js";
 
 export type RevokeConsentCommand = {
   readonly reason: string;

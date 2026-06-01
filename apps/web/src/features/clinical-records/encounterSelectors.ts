@@ -1,18 +1,24 @@
 import type {
   AllergyIntolerance,
-  ClinicalDocument,
-  Condition,
-  DiagnosticReport,
-  Encounter,
-  ImagingStudy,
-  MedicationAdministration,
-  MedicationDispense,
-  MedicationRequest,
-  Observation,
+} from "../../types/allergies.js";
+import type {
   Procedure,
   ServiceRequest,
   WorkflowTask
-} from "../../types/clinical.js";
+} from "../../types/careWorkflow.js";
+import type { ClinicalDocument } from "../../types/clinicalDocuments.js";
+import type { Condition } from "../../types/conditions.js";
+import type {
+  DiagnosticReport,
+  ImagingStudy
+} from "../../types/diagnosticResults.js";
+import type { Encounter } from "../../types/encounters.js";
+import type {
+  MedicationAdministration,
+  MedicationDispense,
+  MedicationRequest
+} from "../../types/medications.js";
+import type { Observation } from "../../types/observations.js";
 
 type BuildEncounterRecordCountsInput = {
   readonly allergyIntolerances: readonly AllergyIntolerance[];

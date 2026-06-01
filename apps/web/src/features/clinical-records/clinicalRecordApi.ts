@@ -1,30 +1,42 @@
 import type { ClinicalApiClient } from "../../api/clinicalApi.js";
 import type {
   AllergyIntolerance,
-  AllergyIntolerancesResponse,
-  Condition,
-  ConditionsResponse,
-  DiagnosticReport,
-  DiagnosticReportsResponse,
-  Encounter,
-  EncountersResponse,
-  ImagingStudiesResponse,
-  ImagingStudy,
-  ImagingStudySeries,
-  MedicationAdministration,
-  MedicationAdministrationsResponse,
-  MedicationDispense,
-  MedicationDispensesResponse,
-  MedicationRequest,
-  MedicationRequestsResponse,
-  Observation,
-  ObservationsResponse,
+  AllergyIntolerancesResponse
+} from "../../types/allergies.js";
+import type {
   Procedure,
   ProceduresResponse,
   ServiceRequest,
   ServiceRequestsResponse,
   WorkflowTasksResponse
-} from "../../types/clinical.js";
+} from "../../types/careWorkflow.js";
+import type {
+  Condition,
+  ConditionsResponse
+} from "../../types/conditions.js";
+import type {
+  DiagnosticReport,
+  DiagnosticReportsResponse,
+  ImagingStudiesResponse,
+  ImagingStudy,
+  ImagingStudySeries
+} from "../../types/diagnosticResults.js";
+import type {
+  Encounter,
+  EncountersResponse
+} from "../../types/encounters.js";
+import type {
+  MedicationAdministration,
+  MedicationAdministrationsResponse,
+  MedicationDispense,
+  MedicationDispensesResponse,
+  MedicationRequest,
+  MedicationRequestsResponse
+} from "../../types/medications.js";
+import type {
+  Observation,
+  ObservationsResponse
+} from "../../types/observations.js";
 
 type CreateEncounterCommand = Pick<
   Encounter,

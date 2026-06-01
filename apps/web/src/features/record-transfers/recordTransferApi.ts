@@ -5,7 +5,7 @@ import type {
   RecordTransferDeliveryAttemptsResponse,
   RecordTransferPriority,
   RecordTransfersResponse
-} from "../../types/clinical.js";
+} from "../../types/recordTransfers.js";
 
 export type CreateRecordTransferCommand = {
   readonly priority: RecordTransferPriority;

@@ -1,7 +1,7 @@
 import { toApiDateTime } from "../../lib/clinicalFormatters.js";
 import type { CommandDraft } from "../../lib/commandDrafts.js";
 import { parseOptionalFhirUnsignedInt } from "../../lib/commandDrafts.js";
-import type { NewClinicalDocumentForm } from "../../types/clinical.js";
+import type { NewClinicalDocumentForm } from "../../types/clinicalDocuments.js";
 import type { CreateClinicalDocumentCommand } from "./clinicalDocumentApi.js";
 
 export function buildCreateClinicalDocumentCommandDraft(

@@ -1,9 +1,9 @@
 import { useEffect } from "react";
 import type {
   ApiRuntimeInfo,
-  AuditEvent,
   AuthSession
-} from "../types/clinical.js";
+} from "../types/appRuntime.js";
+import type { AuditEvent } from "../types/audit.js";
 
 type AppLifecycleEffectsConfig = {
   readonly actorRole: AuthSession["actor"]["role"] | undefined;

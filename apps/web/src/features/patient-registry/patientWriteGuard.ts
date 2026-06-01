@@ -1,4 +1,4 @@
-import type { Patient } from "../../types/clinical.js";
+import type { Patient } from "../../types/patientRegistry.js";
 
 type PatientWriteGuardConfig = {
   readonly selectedPatient: Patient | undefined;

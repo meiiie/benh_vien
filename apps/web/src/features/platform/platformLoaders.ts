@@ -2,11 +2,8 @@ import type { ClinicalApiClient } from "../../api/clinicalApi.js";
 import { isApiHttpError } from "../../api/clinicalApi.js";
 import { getProviderDirectory } from "../provider-directory/providerDirectoryApi.js";
 import { getApiRuntimeInfo, getFhirCapabilityStatement } from "./platformApi.js";
-import type {
-  ApiRuntimeInfo,
-  AuthSession,
-  ProviderDirectory
-} from "../../types/clinical.js";
+import type { ApiRuntimeInfo, AuthSession } from "../../types/appRuntime.js";
+import type { ProviderDirectory } from "../../types/providerDirectory.js";
 
 type SetPreview = (preview: unknown) => void;
 

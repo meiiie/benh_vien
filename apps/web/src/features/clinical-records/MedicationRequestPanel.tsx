@@ -10,13 +10,15 @@ import {
 } from "./medicationFormatters.js";
 import type {
   Condition,
-  Encounter,
+} from "../../types/conditions.js";
+import type { Encounter } from "../../types/encounters.js";
+import type {
   MedicationRequest,
   MedicationRequestCategory,
   MedicationRequestPriority,
   MedicationTimingUnit,
   NewMedicationRequestForm
-} from "../../types/clinical.js";
+} from "../../types/medications.js";
 
 type MedicationRequestPanelProps = {
   readonly conditions: readonly Condition[];

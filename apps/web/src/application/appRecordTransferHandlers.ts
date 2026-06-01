@@ -1,7 +1,7 @@
 import type { ClinicalApiClient } from "../api/clinicalApi.js";
 import type { useInteroperabilityState } from "../features/interoperability/interoperabilityState.js";
 import { buildRecordTransferHandlers } from "../features/record-transfers/recordTransferHandlers.js";
-import type { Patient } from "../types/clinical.js";
+import type { Patient } from "../types/patientRegistry.js";
 
 type InteroperabilityState = ReturnType<typeof useInteroperabilityState>;
 type RecordTransferHandlerConfig =

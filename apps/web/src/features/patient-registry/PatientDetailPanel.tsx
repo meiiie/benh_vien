@@ -7,7 +7,7 @@ import {
 import {
   formatDateTime
 } from "../../lib/clinicalFormatters.js";
-import type { Patient } from "../../types/clinical.js";
+import type { Patient } from "../../types/patientRegistry.js";
 
 type PatientDetailPanelProps = {
   readonly isMerged: boolean;

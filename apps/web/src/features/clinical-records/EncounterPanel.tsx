@@ -7,7 +7,11 @@ import {
 import {
   formatDateTime
 } from "../../lib/clinicalFormatters.js";
-import type { Encounter, EncounterClass, NewEncounterForm } from "../../types/clinical.js";
+import type {
+  Encounter,
+  EncounterClass,
+  NewEncounterForm
+} from "../../types/encounters.js";
 
 type EncounterPanelCounts = {
   readonly allergyIntolerances: number;

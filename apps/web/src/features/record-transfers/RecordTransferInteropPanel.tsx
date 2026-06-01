@@ -15,7 +15,7 @@ import type {
   RecordTransferBundleType,
   RecordTransferDeliveryAttempt,
   RecordTransferPriority
-} from "../../types/clinical.js";
+} from "../../types/recordTransfers.js";
 
 type RecordTransferInteropPanelProps = {
   readonly deliveryAttemptWarning?: string;

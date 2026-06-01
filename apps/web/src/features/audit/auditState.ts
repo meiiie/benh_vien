@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { AuditEvent, AuditIntegrityReport } from "../../types/clinical.js";
+import type { AuditEvent, AuditIntegrityReport } from "../../types/audit.js";
 
 export function useAuditState() {
   const [auditEvents, setAuditEvents] = useState<readonly AuditEvent[]>([]);

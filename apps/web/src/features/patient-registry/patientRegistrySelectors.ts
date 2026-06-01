@@ -7,7 +7,7 @@ import type {
   Patient,
   PatientMergeForm,
   PatientStatusFilter
-} from "../../types/clinical.js";
+} from "../../types/patientRegistry.js";
 
 type BuildPatientRegistrySelectionInput = {
   readonly patientMergeForm: PatientMergeForm;

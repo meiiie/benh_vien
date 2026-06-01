@@ -1,4 +1,4 @@
-import type { AuthSession, PurposeOfUse } from "../types/clinical.js";
+import type { AuthSession, PurposeOfUse } from "../types/appRuntime.js";
 
 type ApiRequestOptions = {
   readonly purposeOfUse?: PurposeOfUse;

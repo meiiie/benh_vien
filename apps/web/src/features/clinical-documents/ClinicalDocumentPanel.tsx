@@ -10,9 +10,9 @@ import {
 import type {
   ClinicalDocument,
   ClinicalDocumentType,
-  Encounter,
   NewClinicalDocumentForm
-} from "../../types/clinical.js";
+} from "../../types/clinicalDocuments.js";
+import type { Encounter } from "../../types/encounters.js";
 
 type ClinicalDocumentPanelProps = {
   readonly clinicalDocuments: readonly ClinicalDocument[];

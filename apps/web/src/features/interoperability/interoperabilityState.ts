@@ -3,13 +3,13 @@ import {
   defaultGatewayAcknowledgementForm,
   defaultRecordTransferForm
 } from "../../config/demoClinicalDefaults.js";
+import type { Consent } from "../../types/consents.js";
 import type {
-  Consent,
   GatewayAcknowledgementForm,
   NewRecordTransferForm,
   RecordTransfer,
   RecordTransferDeliveryAttempt
-} from "../../types/clinical.js";
+} from "../../types/recordTransfers.js";
 
 export function useInteroperabilityState() {
   const [consents, setConsents] = useState<readonly Consent[]>([]);

@@ -1,11 +1,11 @@
 import type { FormEvent, ReactNode } from "react";
+import type { Consent } from "../../types/consents.js";
+import type { ProviderDirectory } from "../../types/providerDirectory.js";
 import type {
-  Consent,
   NewRecordTransferForm,
-  ProviderDirectory,
   RecordTransfer,
   RecordTransferDeliveryAttempt
-} from "../../types/clinical.js";
+} from "../../types/recordTransfers.js";
 import { ConsentInteropPanel } from "../consents/ConsentInteropPanel.js";
 import { ProviderDirectoryPanel } from "../provider-directory/ProviderDirectoryPanel.js";
 import { RecordTransferInteropPanel } from "../record-transfers/RecordTransferInteropPanel.js";

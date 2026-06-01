@@ -5,7 +5,7 @@ import type { useAuditState } from "../features/audit/auditState.js";
 import type { useInteroperabilityState } from "../features/interoperability/interoperabilityState.js";
 import type { usePatientRegistryState } from "../features/patient-registry/patientRegistryState.js";
 import type { usePlatformState } from "../features/platform/platformState.js";
-import type { AppRoute, AuthSession } from "../types/clinical.js";
+import type { AppRoute, AuthSession } from "../types/appRuntime.js";
 
 type AuditState = ReturnType<typeof useAuditState>;
 type InteroperabilityState = ReturnType<typeof useInteroperabilityState>;

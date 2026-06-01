@@ -1,7 +1,7 @@
 import { formatDemoRole, type LoginForm } from "../auth/demoLogin.js";
 import { Info, PageHeader } from "../components/AppShell.js";
 import { formatDateTime, formatRuntimeFlag } from "../lib/clinicalFormatters.js";
-import type { ApiRuntimeInfo, AuthSession } from "../types/clinical.js";
+import type { ApiRuntimeInfo, AuthSession } from "../types/appRuntime.js";
 
 type SettingsPageProps = {
   readonly apiBaseUrl: string;

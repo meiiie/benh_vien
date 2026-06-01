@@ -7,7 +7,7 @@ import {
   formatAuditResourceType
 } from "../../lib/auditFormatters.js";
 import { formatDateTime } from "../../lib/clinicalFormatters.js";
-import type { AuditEvent, AuditIntegrityReport } from "../../types/clinical.js";
+import type { AuditEvent, AuditIntegrityReport } from "../../types/audit.js";
 
 type GlobalAuditPanelProps = {
   readonly auditEvents: readonly AuditEvent[];

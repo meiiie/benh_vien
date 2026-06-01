@@ -1,6 +1,6 @@
 import { buildPatientPanelRenderers } from "../features/patient-registry/patientPanelRenderers.js";
 import type { usePatientRegistryState } from "../features/patient-registry/patientRegistryState.js";
-import type { Patient } from "../types/clinical.js";
+import type { Patient } from "../types/patientRegistry.js";
 
 type PatientRegistryState = ReturnType<typeof usePatientRegistryState>;
 type PatientPanelOptions = Parameters<typeof buildPatientPanelRenderers>[0];

@@ -2,7 +2,7 @@ import type { ClinicalApiClient } from "../../api/clinicalApi.js";
 import type {
   AuditEventsResponse,
   AuditIntegrityReportResponse
-} from "../../types/clinical.js";
+} from "../../types/audit.js";
 
 export function listPatientAuditEvents(
   api: ClinicalApiClient,

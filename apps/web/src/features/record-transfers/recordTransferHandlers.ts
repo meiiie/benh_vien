@@ -1,11 +1,11 @@
 import type { FormEvent } from "react";
 import type { ClinicalApiClient } from "../../api/clinicalApi.js";
+import type { Patient } from "../../types/patientRegistry.js";
 import type {
   GatewayAcknowledgementForm,
   NewRecordTransferForm,
-  Patient,
   RecordTransfer
-} from "../../types/clinical.js";
+} from "../../types/recordTransfers.js";
 import {
   acknowledgeRecordTransfer,
   createRecordTransfer,

@@ -6,7 +6,7 @@ import { useSelectedFhirPreviewEffects } from "../features/fhir-preview/selected
 import type { useInteroperabilityState } from "../features/interoperability/interoperabilityState.js";
 import type { usePatientRegistryState } from "../features/patient-registry/patientRegistryState.js";
 import type { usePlatformState } from "../features/platform/platformState.js";
-import type { AuthSession } from "../types/clinical.js";
+import type { AuthSession } from "../types/appRuntime.js";
 import { useAppLifecycleEffects } from "./appLifecycleEffects.js";
 import type { buildAppWorkspaceContext } from "./appDerivedContext.js";
 

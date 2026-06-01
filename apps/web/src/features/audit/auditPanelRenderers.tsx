@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { AuditEvent, AuditIntegrityReport } from "../../types/clinical.js";
+import type { AuditEvent, AuditIntegrityReport } from "../../types/audit.js";
 import { GlobalAuditPanel, PatientAuditPanel } from "./AuditPanels.js";
 
 type PatientAuditAction = (patientId: string) => Promise<void> | void;

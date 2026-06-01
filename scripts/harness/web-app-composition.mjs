@@ -5,6 +5,8 @@ const appPath = resolve("apps/web/src/App.tsx");
 const webSrcPath = resolve("apps/web/src");
 const allowedFetchModulePath = resolve("apps/web/src/api/clinicalApi.ts");
 const sharedClinicalFormatterPath = resolve("apps/web/src/lib/clinicalFormatters.ts");
+const clinicalTypeBarrelImportPattern =
+  /(?:from|import\s*\()\s*["'][^"']*types\/clinical\.js["']/;
 const requiredModules = [
   "apps/web/src/api/clinicalApi.ts",
   "apps/web/src/auth/authApi.ts",
@@ -105,7 +107,21 @@ const requiredModules = [
   "apps/web/src/pages/LoginPage.tsx",
   "apps/web/src/pages/SettingsPage.tsx",
   "apps/web/src/pages/WorkspacePage.tsx",
-  "apps/web/src/types/clinical.ts"
+  "apps/web/src/types/allergies.ts",
+  "apps/web/src/types/appRuntime.ts",
+  "apps/web/src/types/audit.ts",
+  "apps/web/src/types/careWorkflow.ts",
+  "apps/web/src/types/clinicalDocuments.ts",
+  "apps/web/src/types/clinical.ts",
+  "apps/web/src/types/conditions.ts",
+  "apps/web/src/types/consents.ts",
+  "apps/web/src/types/diagnosticResults.ts",
+  "apps/web/src/types/encounters.ts",
+  "apps/web/src/types/medications.ts",
+  "apps/web/src/types/observations.ts",
+  "apps/web/src/types/patientRegistry.ts",
+  "apps/web/src/types/providerDirectory.ts",
+  "apps/web/src/types/recordTransfers.ts"
 ];
 const forbiddenPageCompositionModules = [
   "apps/web/src/pages/appAuditLoaders.ts",
@@ -229,22 +245,29 @@ for (const pattern of forbiddenSharedClinicalFormatterPatterns) {
 
 const webSourceFiles = await collectSourceFiles(webSrcPath);
 const forbiddenFetchFiles = [];
+const forbiddenClinicalTypeBarrelImportFiles = [];
 
 for (const filePath of webSourceFiles) {
-  if (filePath === allowedFetchModulePath) {
-    continue;
-  }
-
   const source = filePath === appPath ? appSource : await readFile(filePath, "utf8");
 
-  if (directFetchPattern.test(source)) {
+  if (filePath !== allowedFetchModulePath && directFetchPattern.test(source)) {
     forbiddenFetchFiles.push(relative(process.cwd(), filePath));
+  }
+
+  if (clinicalTypeBarrelImportPattern.test(source)) {
+    forbiddenClinicalTypeBarrelImportFiles.push(relative(process.cwd(), filePath));
   }
 }
 
 if (forbiddenFetchFiles.length > 0) {
   throw new Error(
     `Frontend code must route HTTP through apps/web/src/api/clinicalApi.ts; direct fetch found in: ${forbiddenFetchFiles.join(", ")}`
+  );
+}
+
+if (forbiddenClinicalTypeBarrelImportFiles.length > 0) {
+  throw new Error(
+    `Frontend code must import clinical domain types from their focused apps/web/src/types/* modules, not the compatibility barrel apps/web/src/types/clinical.ts: ${forbiddenClinicalTypeBarrelImportFiles.join(", ")}`
   );
 }
 

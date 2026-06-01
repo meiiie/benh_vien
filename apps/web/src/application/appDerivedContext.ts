@@ -4,12 +4,10 @@ import type { usePlatformState } from "../features/platform/platformState.js";
 import { buildDashboardMetrics } from "./dashboardMetrics.js";
 import { buildWorkspaceSelection } from "./workspaceSelection.js";
 import type { AppRouteRenderer } from "../pages/AppRouteRenderer.js";
-import type {
-  AuthSession,
-  Patient,
-  ProviderDirectory,
-  RecordTransfer
-} from "../types/clinical.js";
+import type { AuthSession } from "../types/appRuntime.js";
+import type { Patient } from "../types/patientRegistry.js";
+import type { ProviderDirectory } from "../types/providerDirectory.js";
+import type { RecordTransfer } from "../types/recordTransfers.js";
 
 type ClinicalRecordState = ReturnType<typeof useClinicalRecordState>;
 type FhirPreviewState = ReturnType<typeof useFhirPreviewState>;

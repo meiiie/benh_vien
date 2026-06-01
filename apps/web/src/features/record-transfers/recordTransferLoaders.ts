@@ -9,7 +9,7 @@ import {
 import type {
   RecordTransfer,
   RecordTransferDeliveryAttempt
-} from "../../types/clinical.js";
+} from "../../types/recordTransfers.js";
 import {
   exportRecordTransferFhirTask,
   listRecordTransferDeliveryAttempts,

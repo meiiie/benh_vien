@@ -6,7 +6,7 @@ import {
 import {
   formatDateTime
 } from "../../lib/clinicalFormatters.js";
-import type { Consent } from "../../types/clinical.js";
+import type { Consent } from "../../types/consents.js";
 
 type ConsentInteropPanelProps = {
   readonly consents: readonly Consent[];

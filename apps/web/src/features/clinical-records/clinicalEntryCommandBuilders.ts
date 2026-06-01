@@ -1,12 +1,10 @@
 import { toApiDateTime } from "../../lib/clinicalFormatters.js";
 import type { CommandDraft } from "../../lib/commandDrafts.js";
 import { parseFiniteNumber } from "../../lib/commandDrafts.js";
-import type {
-  NewAllergyIntoleranceForm,
-  NewConditionForm,
-  NewEncounterForm,
-  NewObservationForm
-} from "../../types/clinical.js";
+import type { NewAllergyIntoleranceForm } from "../../types/allergies.js";
+import type { NewConditionForm } from "../../types/conditions.js";
+import type { NewEncounterForm } from "../../types/encounters.js";
+import type { NewObservationForm } from "../../types/observations.js";
 import type {
   createAllergyIntolerance,
   createCondition,

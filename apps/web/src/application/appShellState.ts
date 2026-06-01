@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { loginPresets, type LoginForm } from "../auth/demoLogin.js";
-import type { AppRoute, AuthSession } from "../types/clinical.js";
+import type { AppRoute, AuthSession } from "../types/appRuntime.js";
 
 export function useAppShellState() {
   const [appRoute, setAppRoute] = useState<AppRoute>("landing");

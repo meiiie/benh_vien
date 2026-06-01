@@ -8,7 +8,7 @@ import type {
   NewMedicationAdministrationForm,
   NewMedicationDispenseForm,
   NewMedicationRequestForm
-} from "../../types/clinical.js";
+} from "../../types/medications.js";
 import type {
   createMedicationAdministration,
   createMedicationDispense,

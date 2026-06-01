@@ -1,7 +1,7 @@
 import type { ClinicalApiClient } from "../api/clinicalApi.js";
 import { buildPlatformLoaders } from "../features/platform/platformLoaders.js";
 import type { usePlatformState } from "../features/platform/platformState.js";
-import type { AuthSession } from "../types/clinical.js";
+import type { AuthSession } from "../types/appRuntime.js";
 
 type PlatformState = ReturnType<typeof usePlatformState>;
 type PlatformLoaderOptions = Parameters<typeof buildPlatformLoaders>[0];

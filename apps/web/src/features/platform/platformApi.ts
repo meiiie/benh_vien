@@ -1,5 +1,5 @@
 import type { ClinicalApiClient } from "../../api/clinicalApi.js";
-import type { ApiRuntimeInfo, PurposeOfUse } from "../../types/clinical.js";
+import type { ApiRuntimeInfo, PurposeOfUse } from "../../types/appRuntime.js";
 
 export function getFhirCapabilityStatement(api: ClinicalApiClient): Promise<unknown> {
   return api.requestJson<unknown>("/fhir/metadata");

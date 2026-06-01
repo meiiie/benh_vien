@@ -1,5 +1,6 @@
 import type { ClinicalApiClient } from "../../api/clinicalApi.js";
-import type { Patient, PurposeOfUse } from "../../types/clinical.js";
+import type { PurposeOfUse } from "../../types/appRuntime.js";
+import type { Patient } from "../../types/patientRegistry.js";
 import { listPatients } from "./patientRegistryApi.js";
 
 type PatientRegistryLoaderConfig = {

@@ -1,5 +1,8 @@
 import type { ClinicalApiClient } from "../../api/clinicalApi.js";
-import type { ClinicalDocument, ClinicalDocumentsResponse } from "../../types/clinical.js";
+import type {
+  ClinicalDocument,
+  ClinicalDocumentsResponse
+} from "../../types/clinicalDocuments.js";
 
 export type CreateClinicalDocumentCommand = {
   readonly encounterId?: string;

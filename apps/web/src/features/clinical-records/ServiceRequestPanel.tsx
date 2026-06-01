@@ -11,12 +11,14 @@ import {
 } from "../../lib/clinicalFormatters.js";
 import type {
   Condition,
-  Encounter,
+} from "../../types/conditions.js";
+import type { Encounter } from "../../types/encounters.js";
+import type {
   NewServiceRequestForm,
   ServiceRequest,
   ServiceRequestCategory,
   ServiceRequestPriority
-} from "../../types/clinical.js";
+} from "../../types/careWorkflow.js";
 
 type ServiceRequestPanelProps = {
   readonly conditions: readonly Condition[];

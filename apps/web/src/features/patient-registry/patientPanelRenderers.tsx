@@ -4,7 +4,7 @@ import type {
   Patient,
   PatientMergeForm,
   PatientStatusFilter
-} from "../../types/clinical.js";
+} from "../../types/patientRegistry.js";
 import { CreatePatientPanel } from "./CreatePatientPanel.js";
 import { PatientDetailPanel } from "./PatientDetailPanel.js";
 import { PatientListPanel } from "./PatientListPanel.js";

@@ -15,31 +15,45 @@ import {
 } from "../../config/demoClinicalDefaults.js";
 import type {
   AllergyIntolerance,
-  ClinicalDocument,
-  Condition,
-  DiagnosticReport,
-  Encounter,
-  ImagingStudy,
-  MedicationAdministration,
-  MedicationDispense,
-  MedicationRequest,
   NewAllergyIntoleranceForm,
-  NewClinicalDocumentForm,
-  NewConditionForm,
-  NewDiagnosticReportForm,
-  NewEncounterForm,
-  NewImagingStudyForm,
-  NewMedicationAdministrationForm,
-  NewMedicationDispenseForm,
-  NewMedicationRequestForm,
-  NewObservationForm,
+} from "../../types/allergies.js";
+import type {
   NewProcedureForm,
   NewServiceRequestForm,
-  Observation,
   Procedure,
   ServiceRequest,
   WorkflowTask
-} from "../../types/clinical.js";
+} from "../../types/careWorkflow.js";
+import type {
+  ClinicalDocument,
+  NewClinicalDocumentForm
+} from "../../types/clinicalDocuments.js";
+import type {
+  Condition,
+  NewConditionForm
+} from "../../types/conditions.js";
+import type {
+  DiagnosticReport,
+  ImagingStudy,
+  NewDiagnosticReportForm,
+  NewImagingStudyForm
+} from "../../types/diagnosticResults.js";
+import type {
+  Encounter,
+  NewEncounterForm
+} from "../../types/encounters.js";
+import type {
+  MedicationAdministration,
+  MedicationDispense,
+  MedicationRequest,
+  NewMedicationAdministrationForm,
+  NewMedicationDispenseForm,
+  NewMedicationRequestForm
+} from "../../types/medications.js";
+import type {
+  Observation,
+  NewObservationForm
+} from "../../types/observations.js";
 
 export function useClinicalRecordState() {
   const [encounters, setEncounters] = useState<readonly Encounter[]>([]);

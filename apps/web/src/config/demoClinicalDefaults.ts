@@ -1,21 +1,29 @@
 import type {
-  GatewayAcknowledgementForm,
-  NewAllergyIntoleranceForm,
-  NewClinicalDocumentForm,
-  NewConditionForm,
+  NewServiceRequestForm,
+  NewProcedureForm
+} from "../types/careWorkflow.js";
+import type { NewAllergyIntoleranceForm } from "../types/allergies.js";
+import type { NewClinicalDocumentForm } from "../types/clinicalDocuments.js";
+import type { NewConditionForm } from "../types/conditions.js";
+import type {
   NewDiagnosticReportForm,
-  NewEncounterForm,
-  NewImagingStudyForm,
+  NewImagingStudyForm
+} from "../types/diagnosticResults.js";
+import type { NewEncounterForm } from "../types/encounters.js";
+import type {
   NewMedicationAdministrationForm,
   NewMedicationDispenseForm,
-  NewMedicationRequestForm,
-  NewObservationForm,
+  NewMedicationRequestForm
+} from "../types/medications.js";
+import type { NewObservationForm } from "../types/observations.js";
+import type {
   NewPatientForm,
-  NewProcedureForm,
-  NewRecordTransferForm,
-  NewServiceRequestForm,
   PatientMergeForm
-} from "../types/clinical.js";
+} from "../types/patientRegistry.js";
+import type {
+  GatewayAcknowledgementForm,
+  NewRecordTransferForm
+} from "../types/recordTransfers.js";
 export const defaultPatientForm: NewPatientForm = {
   fullName: "Trần Minh Hải",
   birthDate: "1992-09-18",

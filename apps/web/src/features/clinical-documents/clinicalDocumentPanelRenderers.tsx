@@ -1,9 +1,9 @@
 import type { FormEvent, ReactNode } from "react";
 import type {
   ClinicalDocument,
-  Encounter,
   NewClinicalDocumentForm
-} from "../../types/clinical.js";
+} from "../../types/clinicalDocuments.js";
+import type { Encounter } from "../../types/encounters.js";
 import { ClinicalDocumentPanel } from "./ClinicalDocumentPanel.js";
 
 type ClinicalDocumentSubmitHandler = (event: FormEvent<HTMLFormElement>) => Promise<void> | void;

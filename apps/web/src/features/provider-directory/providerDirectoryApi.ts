@@ -1,5 +1,6 @@
 import type { ClinicalApiClient } from "../../api/clinicalApi.js";
-import type { ProviderDirectory, PurposeOfUse } from "../../types/clinical.js";
+import type { PurposeOfUse } from "../../types/appRuntime.js";
+import type { ProviderDirectory } from "../../types/providerDirectory.js";
 
 export function getProviderDirectory(
   api: ClinicalApiClient,

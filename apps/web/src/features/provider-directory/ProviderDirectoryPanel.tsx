@@ -1,6 +1,6 @@
 import { Info } from "../../components/AppShell.js";
 import { formatProviderEndpointConnectionType } from "./providerDirectoryFormatters.js";
-import type { ProviderDirectory } from "../../types/clinical.js";
+import type { ProviderDirectory } from "../../types/providerDirectory.js";
 
 type ProviderDirectoryPanelProps = {
   readonly directory?: ProviderDirectory;

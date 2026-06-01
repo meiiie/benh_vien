@@ -1,12 +1,12 @@
 import type { FormEvent } from "react";
 import type { ClinicalApiClient } from "../../api/clinicalApi.js";
+import type { AppRoute } from "../../types/appRuntime.js";
 import type {
-  AppRoute,
   NewAllergyIntoleranceForm,
-  NewConditionForm,
-  NewObservationForm,
-  Patient
-} from "../../types/clinical.js";
+} from "../../types/allergies.js";
+import type { NewConditionForm } from "../../types/conditions.js";
+import type { NewObservationForm } from "../../types/observations.js";
+import type { Patient } from "../../types/patientRegistry.js";
 import {
   createAllergyIntolerance,
   createCondition,

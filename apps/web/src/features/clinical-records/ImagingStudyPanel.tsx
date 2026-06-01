@@ -4,11 +4,13 @@ import { formatImagingStudyStatus } from "./diagnosticResultFormatters.js";
 import { formatDateTime } from "../../lib/clinicalFormatters.js";
 import type {
   DiagnosticReport,
-  Encounter,
   ImagingStudy,
-  NewImagingStudyForm,
+  NewImagingStudyForm
+} from "../../types/diagnosticResults.js";
+import type { Encounter } from "../../types/encounters.js";
+import type {
   ServiceRequest
-} from "../../types/clinical.js";
+} from "../../types/careWorkflow.js";
 
 type ImagingStudyPanelProps = {
   readonly diagnosticReports: readonly DiagnosticReport[];

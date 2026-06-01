@@ -8,7 +8,7 @@ import type {
   Patient,
   PatientMergeForm,
   PatientStatusFilter
-} from "../../types/clinical.js";
+} from "../../types/patientRegistry.js";
 
 export function usePatientRegistryState() {
   const [patients, setPatients] = useState<readonly Patient[]>([]);

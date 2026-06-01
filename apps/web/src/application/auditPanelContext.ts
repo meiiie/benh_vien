@@ -1,6 +1,6 @@
 import { buildAuditPanelRenderers } from "../features/audit/auditPanelRenderers.js";
 import type { useAuditState } from "../features/audit/auditState.js";
-import type { Patient } from "../types/clinical.js";
+import type { Patient } from "../types/patientRegistry.js";
 
 type AuditState = ReturnType<typeof useAuditState>;
 type AuditPanelOptions = Parameters<typeof buildAuditPanelRenderers>[0];

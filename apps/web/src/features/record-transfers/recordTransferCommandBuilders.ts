@@ -3,7 +3,7 @@ import { parseOptionalApiDateTime } from "../../lib/commandDrafts.js";
 import type {
   GatewayAcknowledgementForm,
   NewRecordTransferForm
-} from "../../types/clinical.js";
+} from "../../types/recordTransfers.js";
 import type {
   CreateRecordTransferCommand,
   GatewayAcknowledgementCommand,

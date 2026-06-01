@@ -1,7 +1,8 @@
 import type { ClinicalApiClient } from "../api/clinicalApi.js";
 import { buildPatientRegistryHandlers } from "../features/patient-registry/patientRegistryHandlers.js";
 import type { usePatientRegistryState } from "../features/patient-registry/patientRegistryState.js";
-import type { AppRoute, Patient } from "../types/clinical.js";
+import type { AppRoute } from "../types/appRuntime.js";
+import type { Patient } from "../types/patientRegistry.js";
 
 type PatientRegistryState = ReturnType<typeof usePatientRegistryState>;
 

@@ -1,9 +1,9 @@
 import { useEffect } from "react";
+import type { ClinicalDocument } from "../../types/clinicalDocuments.js";
 import type {
-  ClinicalDocument,
   RecordTransfer,
   RecordTransferDeliveryAttempt
-} from "../../types/clinical.js";
+} from "../../types/recordTransfers.js";
 
 type SelectedFhirPreviewEffectsConfig = {
   readonly loadAllergyIntoleranceFhirPreview: (id: string) => Promise<void>;

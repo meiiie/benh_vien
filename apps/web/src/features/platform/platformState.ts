@@ -1,5 +1,6 @@
 import { useState } from "react";
-import type { ApiRuntimeInfo, ProviderDirectory } from "../../types/clinical.js";
+import type { ApiRuntimeInfo } from "../../types/appRuntime.js";
+import type { ProviderDirectory } from "../../types/providerDirectory.js";
 
 export function usePlatformState() {
   const [apiRuntimeInfo, setApiRuntimeInfo] = useState<ApiRuntimeInfo>();

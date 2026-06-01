@@ -3,11 +3,13 @@ import type { LoginForm } from "../auth/demoLogin.js";
 import type {
   ApiRuntimeInfo,
   AppRoute,
-  AuthSession,
+  AuthSession
+} from "../types/appRuntime.js";
+import type { Patient } from "../types/patientRegistry.js";
+import type {
   GatewayAcknowledgementForm,
-  Patient,
   RecordTransfer
-} from "../types/clinical.js";
+} from "../types/recordTransfers.js";
 import { AuditLogPage } from "./AuditLogPage.js";
 import { DashboardPage } from "./DashboardPage.js";
 import type { DashboardMetrics } from "../application/dashboardMetrics.js";

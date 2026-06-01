@@ -1,5 +1,5 @@
 import type { ClinicalApiClient } from "../api/clinicalApi.js";
-import type { AuthSession } from "../types/clinical.js";
+import type { AuthSession } from "../types/appRuntime.js";
 import type { LoginForm } from "./demoLogin.js";
 
 export function loginDemoSession(

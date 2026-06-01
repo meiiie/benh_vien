@@ -11,11 +11,13 @@ import {
 import type {
   DiagnosticReport,
   DiagnosticReportCategory,
-  Encounter,
   NewDiagnosticReportForm,
-  Observation,
+} from "../../types/diagnosticResults.js";
+import type { Encounter } from "../../types/encounters.js";
+import type { Observation } from "../../types/observations.js";
+import type {
   ServiceRequest
-} from "../../types/clinical.js";
+} from "../../types/careWorkflow.js";
 
 type DiagnosticReportPanelProps = {
   readonly diagnosticReports: readonly DiagnosticReport[];

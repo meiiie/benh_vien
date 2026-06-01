@@ -7,7 +7,7 @@ import {
 import {
   formatDateTime
 } from "../../lib/clinicalFormatters.js";
-import type { WorkflowTask } from "../../types/clinical.js";
+import type { WorkflowTask } from "../../types/careWorkflow.js";
 
 type WorkflowTaskPanelProps = {
   readonly isLoading: boolean;

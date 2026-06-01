@@ -3,11 +3,11 @@ import { formatDemoRole } from "../auth/demoLogin.js";
 import { Info, PageHeader } from "../components/AppShell.js";
 import { formatRecordTransferStatus } from "../features/record-transfers/recordTransferFormatters.js";
 import { formatDateTime } from "../lib/clinicalFormatters.js";
+import type { AuthSession } from "../types/appRuntime.js";
 import type {
-  AuthSession,
   GatewayAcknowledgementForm,
   RecordTransfer
-} from "../types/clinical.js";
+} from "../types/recordTransfers.js";
 
 type GatewayAcknowledgementPageProps = {
   readonly apiBaseUrl: string;

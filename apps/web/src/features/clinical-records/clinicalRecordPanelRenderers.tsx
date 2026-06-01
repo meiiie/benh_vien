@@ -1,29 +1,41 @@
 import type { ComponentProps, FormEvent, ReactNode } from "react";
 import type {
   AllergyIntolerance,
-  Condition,
-  DiagnosticReport,
-  Encounter,
-  ImagingStudy,
-  MedicationAdministration,
-  MedicationDispense,
-  MedicationRequest,
   NewAllergyIntoleranceForm,
-  NewConditionForm,
-  NewDiagnosticReportForm,
-  NewEncounterForm,
-  NewImagingStudyForm,
-  NewMedicationAdministrationForm,
-  NewMedicationDispenseForm,
-  NewMedicationRequestForm,
-  NewObservationForm,
+} from "../../types/allergies.js";
+import type {
   NewProcedureForm,
   NewServiceRequestForm,
-  Observation,
   Procedure,
   ServiceRequest,
   WorkflowTask
-} from "../../types/clinical.js";
+} from "../../types/careWorkflow.js";
+import type {
+  Condition,
+  NewConditionForm
+} from "../../types/conditions.js";
+import type {
+  DiagnosticReport,
+  ImagingStudy,
+  NewDiagnosticReportForm,
+  NewImagingStudyForm
+} from "../../types/diagnosticResults.js";
+import type {
+  Encounter,
+  NewEncounterForm
+} from "../../types/encounters.js";
+import type {
+  MedicationAdministration,
+  MedicationDispense,
+  MedicationRequest,
+  NewMedicationAdministrationForm,
+  NewMedicationDispenseForm,
+  NewMedicationRequestForm
+} from "../../types/medications.js";
+import type {
+  NewObservationForm,
+  Observation
+} from "../../types/observations.js";
 import { AllergyIntolerancePanel } from "./AllergyIntolerancePanel.js";
 import { ConditionPanel } from "./ConditionPanel.js";
 import { DiagnosticReportPanel } from "./DiagnosticReportPanel.js";

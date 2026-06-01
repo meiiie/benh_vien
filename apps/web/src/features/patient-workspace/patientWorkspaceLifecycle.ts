@@ -1,23 +1,33 @@
 import type {
   AllergyIntolerance,
+} from "../../types/allergies.js";
+import type {
   AuditEvent,
-  AuditIntegrityReport,
-  ClinicalDocument,
-  Condition,
-  Consent,
-  DiagnosticReport,
-  Encounter,
-  ImagingStudy,
-  MedicationAdministration,
-  MedicationDispense,
-  MedicationRequest,
-  Observation,
+  AuditIntegrityReport
+} from "../../types/audit.js";
+import type {
   Procedure,
-  RecordTransfer,
-  RecordTransferDeliveryAttempt,
   ServiceRequest,
   WorkflowTask
-} from "../../types/clinical.js";
+} from "../../types/careWorkflow.js";
+import type { ClinicalDocument } from "../../types/clinicalDocuments.js";
+import type { Condition } from "../../types/conditions.js";
+import type { Consent } from "../../types/consents.js";
+import type {
+  DiagnosticReport,
+  ImagingStudy
+} from "../../types/diagnosticResults.js";
+import type { Encounter } from "../../types/encounters.js";
+import type {
+  MedicationAdministration,
+  MedicationDispense,
+  MedicationRequest
+} from "../../types/medications.js";
+import type { Observation } from "../../types/observations.js";
+import type {
+  RecordTransfer,
+  RecordTransferDeliveryAttempt
+} from "../../types/recordTransfers.js";
 
 type AuditLoaderOptions = {
   readonly silent?: boolean;

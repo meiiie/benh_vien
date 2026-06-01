@@ -1,14 +1,10 @@
 import type { FormEvent } from "react";
 import type { ClinicalApiClient } from "../api/clinicalApi.js";
 import { formatDateTime } from "../lib/clinicalFormatters.js";
-import type {
-  ApiRuntimeInfo,
-  AppRoute,
-  AuditEvent,
-  AuthSession,
-  Patient,
-  ProviderDirectory
-} from "../types/clinical.js";
+import type { ApiRuntimeInfo, AppRoute, AuthSession } from "../types/appRuntime.js";
+import type { AuditEvent } from "../types/audit.js";
+import type { Patient } from "../types/patientRegistry.js";
+import type { ProviderDirectory } from "../types/providerDirectory.js";
 import { loginDemoSession } from "./authApi.js";
 import type { LoginForm } from "./demoLogin.js";
 

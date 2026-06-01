@@ -5,7 +5,8 @@ import { buildClinicalEntryHandlers } from "../features/clinical-records/clinica
 import type { useClinicalRecordState } from "../features/clinical-records/clinicalRecordState.js";
 import { buildEncounterHandlers } from "../features/clinical-records/encounterHandlers.js";
 import { buildMedicationHandlers } from "../features/clinical-records/medicationHandlers.js";
-import type { AppRoute, Patient } from "../types/clinical.js";
+import type { AppRoute } from "../types/appRuntime.js";
+import type { Patient } from "../types/patientRegistry.js";
 
 type ClinicalRecordState = ReturnType<typeof useClinicalRecordState>;
 type EncounterHandlerConfig = Parameters<typeof buildEncounterHandlers>[0];

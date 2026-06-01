@@ -1,4 +1,4 @@
-import type { Patient, PatientStatusFilter } from "../../types/clinical.js";
+import type { Patient, PatientStatusFilter } from "../../types/patientRegistry.js";
 import { formatPatientRecordStatus } from "./patientRegistryFormatters.js";
 
 type PatientListPanelProps = {

@@ -10,15 +10,15 @@ import {
   formatDateTime
 } from "../../lib/clinicalFormatters.js";
 import type {
-  Condition,
-  DiagnosticReport,
-  Encounter,
   NewProcedureForm,
   Procedure,
   ProcedureCategory,
   ProcedureStatus,
   ServiceRequest
-} from "../../types/clinical.js";
+} from "../../types/careWorkflow.js";
+import type { Condition } from "../../types/conditions.js";
+import type { DiagnosticReport } from "../../types/diagnosticResults.js";
+import type { Encounter } from "../../types/encounters.js";
 
 type ProcedurePanelProps = {
   readonly conditions: readonly Condition[];

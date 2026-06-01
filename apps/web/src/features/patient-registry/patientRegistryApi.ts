@@ -1,10 +1,10 @@
 import type { ClinicalApiClient } from "../../api/clinicalApi.js";
+import type { PurposeOfUse } from "../../types/appRuntime.js";
 import type {
   Patient,
   PatientIdentifier,
-  PatientsResponse,
-  PurposeOfUse
-} from "../../types/clinical.js";
+  PatientsResponse
+} from "../../types/patientRegistry.js";
 
 type CreatePatientCommand = {
   readonly identifiers: readonly PatientIdentifier[];

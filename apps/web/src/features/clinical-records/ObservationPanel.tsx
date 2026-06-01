@@ -8,12 +8,12 @@ import {
 import {
   formatDateTime
 } from "../../lib/clinicalFormatters.js";
+import type { Encounter } from "../../types/encounters.js";
 import type {
-  Encounter,
   NewObservationForm,
   Observation,
   ObservationCategory
-} from "../../types/clinical.js";
+} from "../../types/observations.js";
 
 type ObservationPanelProps = {
   readonly encounters: readonly Encounter[];

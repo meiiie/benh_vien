@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import type { NewPatientForm, PatientGender } from "../../types/clinical.js";
+import type { NewPatientForm, PatientGender } from "../../types/patientRegistry.js";
 
 type CreatePatientPanelProps = {
   readonly form: NewPatientForm;

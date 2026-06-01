@@ -1,4 +1,4 @@
-import type { NewPatientForm, PatientMergeForm } from "../../types/clinical.js";
+import type { NewPatientForm, PatientMergeForm } from "../../types/patientRegistry.js";
 import type { createPatient, mergePatient } from "./patientRegistryApi.js";
 
 type CreatePatientCommand = Parameters<typeof createPatient>[1];

@@ -18,9 +18,9 @@ import type {
   AllergyReactionSeverity,
   AllergyType,
   AllergyVerificationStatus,
-  Encounter,
   NewAllergyIntoleranceForm
-} from "../../types/clinical.js";
+} from "../../types/allergies.js";
+import type { Encounter } from "../../types/encounters.js";
 
 type AllergyIntolerancePanelProps = {
   readonly allergyIntolerances: readonly AllergyIntolerance[];

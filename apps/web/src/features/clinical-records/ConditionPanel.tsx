@@ -15,9 +15,9 @@ import type {
   ConditionClinicalStatus,
   ConditionSeverity,
   ConditionVerificationStatus,
-  Encounter,
   NewConditionForm
-} from "../../types/clinical.js";
+} from "../../types/conditions.js";
+import type { Encounter } from "../../types/encounters.js";
 
 type ConditionPanelProps = {
   readonly conditions: readonly Condition[];

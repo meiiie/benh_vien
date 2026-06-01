@@ -1,6 +1,6 @@
 import type { ClinicalApiClient } from "../../api/clinicalApi.js";
 import { formatAuditIntegrityReason } from "../../lib/auditFormatters.js";
-import type { AuditEvent, AuditIntegrityReport } from "../../types/clinical.js";
+import type { AuditEvent, AuditIntegrityReport } from "../../types/audit.js";
 import {
   listGlobalAuditEvents,
   listPatientAuditEvents,

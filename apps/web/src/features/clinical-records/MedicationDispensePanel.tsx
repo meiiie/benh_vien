@@ -7,14 +7,14 @@ import {
   formatMedicationDispenseStatus,
   formatMedicationDispenseTime
 } from "./medicationFormatters.js";
+import type { Encounter } from "../../types/encounters.js";
 import type {
-  Encounter,
   MedicationDispense,
   MedicationDispenseCategory,
   MedicationRequest,
   MedicationTimingUnit,
   NewMedicationDispenseForm
-} from "../../types/clinical.js";
+} from "../../types/medications.js";
 
 type MedicationDispensePanelProps = {
   readonly encounters: readonly Encounter[];

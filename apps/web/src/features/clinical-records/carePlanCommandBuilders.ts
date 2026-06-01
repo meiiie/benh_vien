@@ -6,11 +6,13 @@ import {
   parseOptionalFhirUnsignedInt
 } from "../../lib/commandDrafts.js";
 import type {
-  NewDiagnosticReportForm,
-  NewImagingStudyForm,
   NewProcedureForm,
   NewServiceRequestForm
-} from "../../types/clinical.js";
+} from "../../types/careWorkflow.js";
+import type {
+  NewDiagnosticReportForm,
+  NewImagingStudyForm
+} from "../../types/diagnosticResults.js";
 import type {
   createDiagnosticReport,
   createImagingStudy,
