@@ -58,6 +58,7 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/encounterFormatters.ts",
   "apps/web/src/features/clinical-records/encounterScopedFormUpdater.ts",
   "apps/web/src/features/clinical-records/encounterSelectors.ts",
+  "apps/web/src/features/clinical-records/ImagingStudyForm.tsx",
   "apps/web/src/features/clinical-records/ImagingStudyPanel.tsx",
   "apps/web/src/features/clinical-records/MedicationAdministrationForm.tsx",
   "apps/web/src/features/clinical-records/MedicationAdministrationPanel.tsx",
@@ -220,6 +221,16 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/clinical-records/MedicationRequestForm.tsx",
     maxLines: 230,
     role: "MedicationRequest prescribing command form"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/ImagingStudyPanel.tsx",
+    maxLines: 180,
+    role: "ImagingStudy PACS/DICOM list, summary and form composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/ImagingStudyForm.tsx",
+    maxLines: 240,
+    role: "ImagingStudy PACS/DICOM command form"
   }
 ];
 
