@@ -749,8 +749,23 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/procedures/procedure-route-helpers.ts",
-    maxLines: 150,
-    role: "Procedure response and reference validation helpers"
+    maxLines: 20,
+    role: "Procedure route helper compatibility barrel"
+  },
+  {
+    path: "apps/api/src/modules/procedures/procedure-response.ts",
+    maxLines: 20,
+    role: "Procedure response DTO mapper"
+  },
+  {
+    path: "apps/api/src/modules/procedures/procedure-reference-validation.ts",
+    maxLines: 110,
+    role: "Procedure clinical reference validation helper"
+  },
+  {
+    path: "apps/api/src/modules/procedures/procedure-report-reference-validation.ts",
+    maxLines: 60,
+    role: "Procedure report reference validation helper"
   },
   {
     path: "apps/api/src/modules/diagnostic-reports/diagnostic-report-routes.ts",
@@ -1533,6 +1548,15 @@ const requiredMedicationRequestRegistrations = [
 ];
 
 const procedureRoutesPath = resolve("apps/api/src/modules/procedures/procedure-routes.ts");
+const procedureRouteHelpersPath = resolve(
+  "apps/api/src/modules/procedures/procedure-route-helpers.ts"
+);
+const procedureReferenceValidationPath = resolve(
+  "apps/api/src/modules/procedures/procedure-reference-validation.ts"
+);
+const procedureReportReferenceValidationPath = resolve(
+  "apps/api/src/modules/procedures/procedure-report-reference-validation.ts"
+);
 const forbiddenProcedureRoutePatterns = [
   {
     pattern:
@@ -1554,6 +1578,21 @@ const requiredProcedureRegistrations = [
   "registerProcedureQueryRoutes",
   "registerProcedureCreationRoutes",
   "registerProcedureFhirRoutes"
+];
+const requiredProcedureRouteHelperExports = [
+  "toProcedureResponse",
+  "validateProcedureReferences"
+];
+const requiredProcedureReferenceValidationHelpers = [
+  "ENCOUNTER_MISMATCH",
+  "SERVICE_REQUEST_MISMATCH",
+  "PARENT_PROCEDURE_MISMATCH",
+  "CONDITION_MISMATCH",
+  "validateProcedureReportReference"
+];
+const requiredProcedureReportReferenceValidationHelpers = [
+  "DIAGNOSTIC_REPORT_MISMATCH",
+  "DOCUMENT_REFERENCE_MISMATCH"
 ];
 
 const diagnosticReportRoutesPath = resolve(
@@ -1766,6 +1805,15 @@ const medicationRequestRoutesSource = await readFile(
   "utf8"
 );
 const procedureRoutesSource = await readFile(procedureRoutesPath, "utf8");
+const procedureRouteHelpersSource = await readFile(procedureRouteHelpersPath, "utf8");
+const procedureReferenceValidationSource = await readFile(
+  procedureReferenceValidationPath,
+  "utf8"
+);
+const procedureReportReferenceValidationSource = await readFile(
+  procedureReportReferenceValidationPath,
+  "utf8"
+);
 const observationRoutesSource = await readFile(observationRoutesPath, "utf8");
 const conditionRoutesSource = await readFile(conditionRoutesPath, "utf8");
 const allergyIntoleranceRoutesSource = await readFile(
@@ -2163,6 +2211,30 @@ for (const registration of requiredProcedureRegistrations) {
   if (!procedureRoutesSource.includes(registration)) {
     throw new Error(
       `Procedure root routes must register ${registration} so query, command and FHIR modules remain wired.`
+    );
+  }
+}
+
+for (const exportedHelper of requiredProcedureRouteHelperExports) {
+  if (!procedureRouteHelpersSource.includes(exportedHelper)) {
+    throw new Error(
+      `Procedure route helper barrel must export ${exportedHelper} so existing route imports stay wired through a thin compatibility boundary.`
+    );
+  }
+}
+
+for (const helper of requiredProcedureReferenceValidationHelpers) {
+  if (!procedureReferenceValidationSource.includes(helper)) {
+    throw new Error(
+      `Procedure reference validation must retain ${helper} so cross-resource patient scoping remains explicit.`
+    );
+  }
+}
+
+for (const helper of requiredProcedureReportReferenceValidationHelpers) {
+  if (!procedureReportReferenceValidationSource.includes(helper)) {
+    throw new Error(
+      `Procedure report reference validation must retain ${helper} so DiagnosticReport and DocumentReference scoping remains explicit.`
     );
   }
 }
