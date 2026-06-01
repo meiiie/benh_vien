@@ -18,6 +18,11 @@ const routeBudgets = [
     role: "RecordTransfer send, receive, fail and retry commands"
   },
   {
+    path: "apps/api/src/modules/record-transfers/record-transfer-command-route-helpers.ts",
+    maxLines: 120,
+    role: "RecordTransfer command error response and audit metadata helpers"
+  },
+  {
     path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-routes.ts",
     maxLines: 220,
     role: "RecordTransfer acknowledgement callback adapter"

@@ -7,7 +7,6 @@ import {
   RecordTransferIdParamsSchema,
   RetryRecordTransferRequestSchema
 } from "@benh-vien-so/contracts";
-import { DomainError } from "@benh-vien-so/domain";
 import type {
   AuditEventRepository,
   PatientRepository,
@@ -18,6 +17,13 @@ import type {
 import { requirePermission } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 import { validateRecordTransferEndpointForDelivery } from "./record-transfer-endpoint-policy.js";
+import {
+  sendRecordTransferDomainError,
+  toFailAuditMetadata,
+  toReceiveAuditMetadata,
+  toRetryAuditMetadata,
+  toSendAuditMetadata
+} from "./record-transfer-command-route-helpers.js";
 import { queueRecordTransferDeliveryAttempt } from "./record-transfer-delivery-attempt-route-helpers.js";
 import { loadRecordTransferForPatientAccess } from "./record-transfer-route-access.js";
 import {
@@ -101,25 +107,13 @@ export async function registerRecordTransferCommandRoutes(
         resourceType: "RecordTransfer",
         resourceId: recordTransfer.id,
         patientId: recordTransfer.patientId,
-        metadata: {
-          status: recordTransfer.toSnapshot().status,
-          sentAt: recordTransfer.toSnapshot().sentAt,
-          recipientOrganizationId: recordTransfer.toSnapshot().recipientOrganizationId,
-          targetEndpointId: targetEndpoint.id,
-          targetEndpointAddress: targetEndpoint.address,
-          deliveryAttemptId: deliveryAttempt.id,
-          deliveryAttemptNumber: deliveryAttempt.toSnapshot().attemptNumber,
-          deliveryIdempotencyKey: deliveryAttempt.toSnapshot().idempotencyKey
-        }
+        metadata: toSendAuditMetadata(recordTransfer, targetEndpoint, deliveryAttempt)
       });
 
       return toRecordTransferResponse(recordTransfer);
     } catch (error) {
-      if (error instanceof DomainError) {
-        return reply.status(422).send({
-          error: "RECORD_TRANSFER_DOMAIN_ERROR",
-          message: error.message
-        });
+      if (sendRecordTransferDomainError(reply, error)) {
+        return;
       }
 
       throw error;
@@ -177,23 +171,13 @@ export async function registerRecordTransferCommandRoutes(
         resourceType: "RecordTransfer",
         resourceId: recordTransfer.id,
         patientId: recordTransfer.patientId,
-        metadata: {
-          status: recordTransfer.toSnapshot().status,
-          sentAt: recordTransfer.toSnapshot().sentAt,
-          receivedAt: recordTransfer.toSnapshot().receivedAt,
-          receivedByActorId: recordTransfer.toSnapshot().receivedByActorId,
-          acknowledgementReference: recordTransfer.toSnapshot().acknowledgementReference,
-          recipientOrganizationId: recordTransfer.toSnapshot().recipientOrganizationId
-        }
+        metadata: toReceiveAuditMetadata(recordTransfer)
       });
 
       return toRecordTransferResponse(recordTransfer);
     } catch (error) {
-      if (error instanceof DomainError) {
-        return reply.status(422).send({
-          error: "RECORD_TRANSFER_DOMAIN_ERROR",
-          message: error.message
-        });
+      if (sendRecordTransferDomainError(reply, error)) {
+        return;
       }
 
       throw error;
@@ -236,23 +220,13 @@ export async function registerRecordTransferCommandRoutes(
         resourceType: "RecordTransfer",
         resourceId: recordTransfer.id,
         patientId: recordTransfer.patientId,
-        metadata: {
-          status: recordTransfer.toSnapshot().status,
-          failedAt: recordTransfer.toSnapshot().failedAt,
-          failureReason: recordTransfer.toSnapshot().failureReason,
-          nextRetryAt: recordTransfer.toSnapshot().nextRetryAt,
-          retryCount: recordTransfer.toSnapshot().retryCount,
-          recipientOrganizationId: recordTransfer.toSnapshot().recipientOrganizationId
-        }
+        metadata: toFailAuditMetadata(recordTransfer)
       });
 
       return toRecordTransferResponse(recordTransfer);
     } catch (error) {
-      if (error instanceof DomainError) {
-        return reply.status(422).send({
-          error: "RECORD_TRANSFER_DOMAIN_ERROR",
-          message: error.message
-        });
+      if (sendRecordTransferDomainError(reply, error)) {
+        return;
       }
 
       throw error;
@@ -296,21 +270,13 @@ export async function registerRecordTransferCommandRoutes(
         resourceType: "RecordTransfer",
         resourceId: recordTransfer.id,
         patientId: recordTransfer.patientId,
-        metadata: {
-          status: recordTransfer.toSnapshot().status,
-          retryCount: recordTransfer.toSnapshot().retryCount,
-          previousFailureReason,
-          recipientOrganizationId: recordTransfer.toSnapshot().recipientOrganizationId
-        }
+        metadata: toRetryAuditMetadata(recordTransfer, previousFailureReason)
       });
 
       return toRecordTransferResponse(recordTransfer);
     } catch (error) {
-      if (error instanceof DomainError) {
-        return reply.status(422).send({
-          error: "RECORD_TRANSFER_DOMAIN_ERROR",
-          message: error.message
-        });
+      if (sendRecordTransferDomainError(reply, error)) {
+        return;
       }
 
       throw error;
