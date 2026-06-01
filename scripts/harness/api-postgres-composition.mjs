@@ -158,6 +158,31 @@ const postgresBudgets = [
     role: "Patient PostgreSQL queryable and row types"
   },
   {
+    path: "apps/api/src/infrastructure/postgres/postgres-provider-directory.repository.ts",
+    maxLines: 80,
+    role: "ProviderDirectory PostgreSQL repository orchestration"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-provider-directory.sql.ts",
+    maxLines: 30,
+    role: "ProviderDirectory PostgreSQL SQL statements"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-provider-directory.mapper.ts",
+    maxLines: 80,
+    role: "ProviderDirectory PostgreSQL row and resource mapper"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-provider-directory.persistence.ts",
+    maxLines: 40,
+    role: "ProviderDirectory PostgreSQL replace command"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-provider-directory.types.ts",
+    maxLines: 40,
+    role: "ProviderDirectory PostgreSQL queryable and row types"
+  },
+  {
     path: "apps/api/src/infrastructure/postgres/postgres-workflow-task.repository.ts",
     maxLines: 90,
     role: "WorkflowTask PostgreSQL repository orchestration"
@@ -550,6 +575,21 @@ const patientConflictPath = resolve(
 const patientTypesPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-patient.types.ts"
 );
+const providerDirectoryRepositoryPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-provider-directory.repository.ts"
+);
+const providerDirectorySqlPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-provider-directory.sql.ts"
+);
+const providerDirectoryMapperPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-provider-directory.mapper.ts"
+);
+const providerDirectoryPersistencePath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-provider-directory.persistence.ts"
+);
+const providerDirectoryTypesPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-provider-directory.types.ts"
+);
 const workflowTaskRepositoryPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-workflow-task.repository.ts"
 );
@@ -811,6 +851,20 @@ const patientMapperSource = await readFile(patientMapperPath, "utf8");
 const patientPersistenceSource = await readFile(patientPersistencePath, "utf8");
 const patientConflictSource = await readFile(patientConflictPath, "utf8");
 const patientTypesSource = await readFile(patientTypesPath, "utf8");
+const providerDirectoryRepositorySource = await readFile(
+  providerDirectoryRepositoryPath,
+  "utf8"
+);
+const providerDirectorySqlSource = await readFile(providerDirectorySqlPath, "utf8");
+const providerDirectoryMapperSource = await readFile(
+  providerDirectoryMapperPath,
+  "utf8"
+);
+const providerDirectoryPersistenceSource = await readFile(
+  providerDirectoryPersistencePath,
+  "utf8"
+);
+const providerDirectoryTypesSource = await readFile(providerDirectoryTypesPath, "utf8");
 const workflowTaskRepositorySource = await readFile(workflowTaskRepositoryPath, "utf8");
 const workflowTaskSqlSource = await readFile(workflowTaskSqlPath, "utf8");
 const workflowTaskMapperSource = await readFile(workflowTaskMapperPath, "utf8");
@@ -1051,6 +1105,21 @@ const requiredPatientRepositoryImports = [
 for (const importedName of requiredPatientRepositoryImports) {
   if (!patientRepositorySource.includes(importedName)) {
     throw new Error(`Patient PostgreSQL repository must compose ${importedName}.`);
+  }
+}
+
+const requiredProviderDirectoryRepositoryImports = [
+  "rowToProviderDirectory",
+  "replaceProviderDirectoryResources",
+  "selectProviderDirectoryResourcesSql",
+  "ProviderDirectoryResourceRow"
+];
+
+for (const importedName of requiredProviderDirectoryRepositoryImports) {
+  if (!providerDirectoryRepositorySource.includes(importedName)) {
+    throw new Error(
+      `ProviderDirectory PostgreSQL repository must compose ${importedName}.`
+    );
   }
 }
 
@@ -1466,6 +1535,46 @@ assertForbidden(patientTypesSource, [
   {
     pattern: /\bPatient\.rehydrate\b|\bquery\s*\(|\bINSERT INTO patients\b/,
     message: "Patient PostgreSQL type module must only describe queryable and row contracts."
+  }
+]);
+
+assertForbidden(providerDirectoryRepositorySource, [
+  {
+    pattern: /\bINSERT INTO provider_directory_resources\b|\bDELETE FROM provider_directory_resources\b|\bProviderDirectory\.rehydrate\b|\bProviderDirectorySnapshot\b|\bJSON\.stringify\b/,
+    message:
+      "ProviderDirectory PostgreSQL repository must delegate SQL, JSON writes and row mapping to focused modules."
+  }
+]);
+
+assertForbidden(providerDirectorySqlSource, [
+  {
+    pattern: /@benh-vien-so\/domain|\bProviderDirectory\b|\bpg\b/,
+    message:
+      "ProviderDirectory PostgreSQL SQL module must stay a pure SQL statement module without domain or pg dependencies."
+  }
+]);
+
+assertForbidden(providerDirectoryMapperSource, [
+  {
+    pattern: /\bfrom "pg"\b|\bquery\s*\(|\bINSERT INTO provider_directory_resources\b|\bDELETE FROM provider_directory_resources\b/,
+    message:
+      "ProviderDirectory PostgreSQL mapper must stay pure row/resource mapping without pg I/O or SQL ownership."
+  }
+]);
+
+assertForbidden(providerDirectoryPersistenceSource, [
+  {
+    pattern: /\bProviderDirectory\.rehydrate\b|\bProviderDirectorySnapshot\b|\bSELECT\b|\bJSON\.parse\b/,
+    message:
+      "ProviderDirectory PostgreSQL persistence command must compose SQL and mapper without owning reads or domain hydration."
+  }
+]);
+
+assertForbidden(providerDirectoryTypesSource, [
+  {
+    pattern: /\bProviderDirectory\.rehydrate\b|\bquery\s*\(|\bINSERT INTO provider_directory_resources\b|\bDELETE FROM provider_directory_resources\b/,
+    message:
+      "ProviderDirectory PostgreSQL type module must only describe queryable and row contracts."
   }
 ]);
 
