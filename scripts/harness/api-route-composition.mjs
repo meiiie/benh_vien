@@ -258,6 +258,31 @@ const routeBudgets = [
     role: "Condition response, access, reference and domain error helpers"
   },
   {
+    path: "apps/api/src/modules/allergy-intolerances/allergy-intolerance-routes.ts",
+    maxLines: 70,
+    role: "AllergyIntolerance route composition root"
+  },
+  {
+    path: "apps/api/src/modules/allergy-intolerances/allergy-intolerance-query-routes.ts",
+    maxLines: 140,
+    role: "AllergyIntolerance list and read route adapter"
+  },
+  {
+    path: "apps/api/src/modules/allergy-intolerances/allergy-intolerance-creation-routes.ts",
+    maxLines: 150,
+    role: "AllergyIntolerance creation and encounter validation route adapter"
+  },
+  {
+    path: "apps/api/src/modules/allergy-intolerances/allergy-intolerance-fhir-routes.ts",
+    maxLines: 100,
+    role: "AllergyIntolerance FHIR export route adapter"
+  },
+  {
+    path: "apps/api/src/modules/allergy-intolerances/allergy-intolerance-route-helpers.ts",
+    maxLines: 150,
+    role: "AllergyIntolerance response, access, reference and domain error helpers"
+  },
+  {
     path: "apps/api/src/modules/patients/patient-routes.ts",
     maxLines: 90,
     role: "Patient route composition root"
@@ -759,6 +784,34 @@ const requiredConditionRegistrations = [
   "registerConditionFhirRoutes"
 ];
 
+const allergyIntoleranceRoutesPath = resolve(
+  "apps/api/src/modules/allergy-intolerances/allergy-intolerance-routes.ts"
+);
+const forbiddenAllergyIntoleranceRoutePatterns = [
+  {
+    pattern:
+      /\bCreateAllergyIntoleranceRequestSchema\b|\bPatientAllergyIntolerancesParamsSchema\b|\bAllergyIntoleranceIdParamsSchema\b/,
+    message:
+      "AllergyIntolerance request handling belongs in allergy-intolerance-query-routes.ts, allergy-intolerance-creation-routes.ts or allergy-intolerance-fhir-routes.ts."
+  },
+  {
+    pattern:
+      /\bAllergyIntolerance\.record\b|\bDomainError\b|\brequirePatientRecordAccessByPatientId\b|\bvalidateAllergyIntoleranceReferences\b/,
+    message:
+      "AllergyIntolerance recording, access and encounter validation policy belongs outside the root route."
+  },
+  {
+    pattern: /\bmapAllergyIntoleranceToFhir\b|\btoAllergyIntoleranceResponse\b/,
+    message:
+      "AllergyIntolerance response and FHIR export details belong in helper or FHIR route modules."
+  }
+];
+const requiredAllergyIntoleranceRegistrations = [
+  "registerAllergyIntoleranceQueryRoutes",
+  "registerAllergyIntoleranceCreationRoutes",
+  "registerAllergyIntoleranceFhirRoutes"
+];
+
 const patientRoutesPath = resolve("apps/api/src/modules/patients/patient-routes.ts");
 const forbiddenPatientRoutePatterns = [
   {
@@ -1107,6 +1160,10 @@ const medicationRequestRoutesSource = await readFile(
 const procedureRoutesSource = await readFile(procedureRoutesPath, "utf8");
 const observationRoutesSource = await readFile(observationRoutesPath, "utf8");
 const conditionRoutesSource = await readFile(conditionRoutesPath, "utf8");
+const allergyIntoleranceRoutesSource = await readFile(
+  allergyIntoleranceRoutesPath,
+  "utf8"
+);
 const diagnosticReportRoutesSource = await readFile(diagnosticReportRoutesPath, "utf8");
 const imagingStudyRoutesSource = await readFile(imagingStudyRoutesPath, "utf8");
 const serviceRequestRoutesSource = await readFile(serviceRequestRoutesPath, "utf8");
@@ -1220,6 +1277,20 @@ for (const registration of requiredConditionRegistrations) {
   if (!conditionRoutesSource.includes(registration)) {
     throw new Error(
       `Condition root routes must register ${registration} so query, creation and FHIR modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenAllergyIntoleranceRoutePatterns) {
+  if (forbidden.pattern.test(allergyIntoleranceRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredAllergyIntoleranceRegistrations) {
+  if (!allergyIntoleranceRoutesSource.includes(registration)) {
+    throw new Error(
+      `AllergyIntolerance root routes must register ${registration} so query, creation and FHIR modules remain wired.`
     );
   }
 }
