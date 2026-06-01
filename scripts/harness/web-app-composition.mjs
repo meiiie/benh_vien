@@ -77,7 +77,10 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/MedicationRequestForm.tsx",
   "apps/web/src/features/clinical-records/MedicationRequestPanel.tsx",
   "apps/web/src/features/clinical-records/medicationFormatters.ts",
+  "apps/web/src/features/clinical-records/medicationAdministrationCommandBuilders.ts",
   "apps/web/src/features/clinical-records/medicationCommandBuilders.ts",
+  "apps/web/src/features/clinical-records/medicationDispenseCommandBuilders.ts",
+  "apps/web/src/features/clinical-records/medicationRequestCommandBuilders.ts",
   "apps/web/src/features/clinical-records/ObservationForm.tsx",
   "apps/web/src/features/clinical-records/ObservationPanel.tsx",
   "apps/web/src/features/clinical-records/ProcedureForm.tsx",
@@ -268,6 +271,26 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/clinical-records/diagnosticResultApi.ts",
     maxLines: 120,
     role: "DiagnosticReport and ImagingStudy API adapter"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/medicationCommandBuilders.ts",
+    maxLines: 20,
+    role: "Medication command-builder compatibility barrel"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/medicationRequestCommandBuilders.ts",
+    maxLines: 120,
+    role: "MedicationRequest prescribing command builder"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/medicationDispenseCommandBuilders.ts",
+    maxLines: 150,
+    role: "MedicationDispense dispensing command builder"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/medicationAdministrationCommandBuilders.ts",
+    maxLines: 120,
+    role: "MedicationAdministration actual-use command builder"
   },
   {
     path: "apps/web/src/features/clinical-records/AllergyIntolerancePanel.tsx",
