@@ -88,7 +88,9 @@ const requiredModules = [
   "apps/web/src/features/provider-directory/ProviderDirectoryPanel.tsx",
   "apps/web/src/features/provider-directory/providerDirectoryApi.ts",
   "apps/web/src/features/provider-directory/providerDirectoryFormatters.ts",
+  "apps/web/src/features/record-transfers/RecordTransferDeliveryAttemptList.tsx",
   "apps/web/src/features/record-transfers/RecordTransferInteropPanel.tsx",
+  "apps/web/src/features/record-transfers/RecordTransferOperationalSummary.tsx",
   "apps/web/src/features/record-transfers/recordTransferApi.ts",
   "apps/web/src/features/record-transfers/recordTransferCommandBuilders.ts",
   "apps/web/src/features/record-transfers/recordTransferFormatters.ts",
@@ -148,6 +150,23 @@ const forbiddenPageCompositionModules = [
   "apps/web/src/pages/workspaceSelection.ts"
 ];
 const maxAppLines = 2_647;
+const featureModuleBudgets = [
+  {
+    path: "apps/web/src/features/record-transfers/RecordTransferInteropPanel.tsx",
+    maxLines: 340,
+    role: "Record transfer panel layout, metadata and command form"
+  },
+  {
+    path: "apps/web/src/features/record-transfers/RecordTransferDeliveryAttemptList.tsx",
+    maxLines: 100,
+    role: "Record transfer delivery-attempt timeline UI"
+  },
+  {
+    path: "apps/web/src/features/record-transfers/RecordTransferOperationalSummary.tsx",
+    maxLines: 60,
+    role: "Record transfer operational status summary UI"
+  }
+];
 
 const appSource = await readFile(appPath, "utf8");
 const sharedClinicalFormatterSource = await readFile(sharedClinicalFormatterPath, "utf8");
@@ -221,6 +240,17 @@ if (appLineCount > maxAppLines) {
   throw new Error(
     `apps/web/src/App.tsx has ${appLineCount} lines; keep it at or below ${maxAppLines} by extracting pages, shell components, types, config, and pure helpers.`
   );
+}
+
+for (const budget of featureModuleBudgets) {
+  const moduleSource = await readFile(resolve(budget.path), "utf8");
+  const moduleLineCount = moduleSource.split(/\r?\n/).length;
+
+  if (moduleLineCount > budget.maxLines) {
+    throw new Error(
+      `${budget.path} has ${moduleLineCount} lines; keep it at or below ${budget.maxLines}. Role: ${budget.role}.`
+    );
+  }
 }
 
 if (directClinicalApiRequestPattern.test(appSource)) {
@@ -312,6 +342,7 @@ console.log(
       appPath,
       appLineCount,
       maxAppLines,
+      featureBudgetCount: featureModuleBudgets.length,
       moduleCount: requiredModules.length
     },
     null,

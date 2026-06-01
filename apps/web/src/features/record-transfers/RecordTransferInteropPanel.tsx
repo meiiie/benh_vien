@@ -2,13 +2,13 @@ import type { FormEvent } from "react";
 import { Info } from "../../components/AppShell.js";
 import { formatDateTime } from "../../lib/clinicalFormatters.js";
 import {
-  buildRecordTransferOperationalSummary,
   formatRecordTransferBundleType,
-  formatRecordTransferDeliveryAttemptStatus,
   formatRecordTransferPriority,
   formatRecordTransferRetryCount,
   formatRecordTransferStatus
 } from "./recordTransferFormatters.js";
+import { RecordTransferDeliveryAttemptList } from "./RecordTransferDeliveryAttemptList.js";
+import { RecordTransferOperationalSummary } from "./RecordTransferOperationalSummary.js";
 import type {
   NewRecordTransferForm,
   RecordTransfer,
@@ -322,118 +322,5 @@ export function RecordTransferInteropPanel({
         </button>
       </form>
     </article>
-  );
-}
-
-type RecordTransferDeliveryAttemptListProps = {
-  readonly attempts: readonly RecordTransferDeliveryAttempt[];
-  readonly isLoading: boolean;
-  readonly warning?: string;
-};
-
-function RecordTransferDeliveryAttemptList({
-  attempts,
-  isLoading,
-  warning
-}: RecordTransferDeliveryAttemptListProps) {
-  return (
-    <div className="delivery-attempts">
-      <div className="subsection-heading">
-        <div>
-          <strong>Lịch sử gửi qua endpoint</strong>
-          <span>
-            Outbox vận hành cho biết hệ thống đã xếp hàng, gửi thành công hay lỗi
-            từng lần.
-          </span>
-        </div>
-        <span className="pill cyan">
-          {isLoading ? "đang tải" : `${attempts.length} lần`}
-        </span>
-      </div>
-
-      {warning ? <p className="transfer-alert">{warning}</p> : null}
-
-      {attempts.map((attempt) => (
-        <div
-          className={`delivery-attempt delivery-attempt--${attempt.status}`}
-          key={attempt.id}
-        >
-          <div>
-            <span>Lần gửi</span>
-            <strong>#{attempt.attemptNumber}</strong>
-          </div>
-          <div>
-            <span>Trạng thái</span>
-            <strong>{formatRecordTransferDeliveryAttemptStatus(attempt.status)}</strong>
-          </div>
-          <div>
-            <span>HTTP</span>
-            <strong>{attempt.httpStatus ? `HTTP ${attempt.httpStatus}` : "Chưa có"}</strong>
-          </div>
-          <div>
-            <span>Xếp hàng</span>
-            <strong>{formatDateTime(attempt.queuedAt)}</strong>
-          </div>
-          <div>
-            <span>Hoàn tất</span>
-            <strong>{attempt.completedAt ? formatDateTime(attempt.completedAt) : "Đang chờ"}</strong>
-          </div>
-          <div className="delivery-attempt-wide">
-            <span>Endpoint đích</span>
-            <strong>{attempt.targetEndpointAddress}</strong>
-          </div>
-          <div className="delivery-attempt-wide">
-            <span>Idempotency key</span>
-            <strong className="hash-text">{attempt.idempotencyKey}</strong>
-          </div>
-          {attempt.errorMessage || attempt.responseBodyPreview ? (
-            <div className="delivery-attempt-wide">
-              <span>{attempt.errorMessage ? "Lỗi" : "Phản hồi"}</span>
-              <strong>{attempt.errorMessage ?? attempt.responseBodyPreview}</strong>
-            </div>
-          ) : null}
-        </div>
-      ))}
-
-      {!isLoading && attempts.length === 0 ? (
-        <p className="empty-state">
-          Chưa có lần gửi nào. Khi bấm gửi, API sẽ tạo delivery attempt kèm
-          endpoint, Bundle và idempotency key để worker xử lý.
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-type RecordTransferOperationalSummaryProps = {
-  readonly attempts: readonly RecordTransferDeliveryAttempt[];
-  readonly recordTransfer: RecordTransfer;
-};
-
-function RecordTransferOperationalSummary({
-  attempts,
-  recordTransfer
-}: RecordTransferOperationalSummaryProps) {
-  const summary = buildRecordTransferOperationalSummary(recordTransfer, attempts);
-
-  return (
-    <div className={`transfer-ops-summary transfer-ops-summary--${summary.severity}`}>
-      <div className="transfer-ops-headline">
-        <span>Tình trạng vận hành</span>
-        <strong>{summary.title}</strong>
-        <p>{summary.description}</p>
-      </div>
-      <div className="transfer-ops-grid">
-        <Info label="Tín hiệu kỹ thuật" value={summary.technicalSignal} />
-        <Info label="Số lần gửi" value={`${summary.attemptCount}`} />
-        <Info label="Lần lỗi" value={`${summary.failedAttemptCount}`} />
-        <Info label="HTTP gần nhất" value={summary.lastHttpStatus} />
-        <Info label="Lịch retry" value={summary.nextRetry} />
-      </div>
-      <div className="transfer-ops-action">
-        <span>Việc cần làm tiếp</span>
-        <strong>{summary.nextAction}</strong>
-      </div>
-    </div>
   );
 }
