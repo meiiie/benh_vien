@@ -6,6 +6,7 @@ export * from "./clinicalDocuments.js";
 export * from "./consents.js";
 export * from "./conditions.js";
 export * from "./encounters.js";
+export * from "./observations.js";
 export * from "./providerDirectory.js";
 export * from "./patientRegistry.js";
 export * from "./recordTransfers.js";
@@ -19,14 +20,6 @@ export type AppRoute =
   | "audit"
   | "interop"
   | "settings";
-export type ObservationStatus =
-  | "registered"
-  | "preliminary"
-  | "final"
-  | "amended"
-  | "cancelled"
-  | "entered-in-error";
-export type ObservationCategory = "vital-signs" | "laboratory";
 export type MedicationRequestStatus =
   | "active"
   | "on-hold"
@@ -165,34 +158,6 @@ export type ImagingStudyStatus =
   | "entered-in-error"
   | "unknown";
 export type PurposeOfUse = "TREATMENT" | "AUDIT" | "OPERATIONS";
-
-export type ObservationCode = {
-  readonly system: string;
-  readonly code: string;
-  readonly display: string;
-};
-
-export type ObservationQuantity = {
-  readonly value: number;
-  readonly unit: string;
-  readonly system?: string;
-  readonly code?: string;
-};
-
-export type Observation = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly encounterId?: string;
-  readonly status: ObservationStatus;
-  readonly category: ObservationCategory;
-  readonly code: ObservationCode;
-  readonly effectiveAt: string;
-  readonly valueQuantity?: ObservationQuantity;
-  readonly valueText?: string;
-  readonly performerPractitionerId?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
 
 export type MedicationCode = {
   readonly system: string;
@@ -494,10 +459,6 @@ export type ApiRuntimeInfo = {
   };
 };
 
-export type ObservationsResponse = {
-  readonly items: readonly Observation[];
-};
-
 export type MedicationRequestsResponse = {
   readonly items: readonly MedicationRequest[];
 };
@@ -528,20 +489,6 @@ export type DiagnosticReportsResponse = {
 
 export type ImagingStudiesResponse = {
   readonly items: readonly ImagingStudy[];
-};
-
-export type NewObservationForm = {
-  encounterId: string;
-  category: ObservationCategory;
-  codeSystem: string;
-  code: string;
-  codeDisplay: string;
-  value: string;
-  unit: string;
-  unitSystem: string;
-  unitCode: string;
-  effectiveAt: string;
-  performerPractitionerId: string;
 };
 
 export type NewMedicationRequestForm = {
