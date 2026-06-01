@@ -1,8 +1,10 @@
 import type { DemoRole } from "../auth/demoLogin.js";
 
+export * from "./allergies.js";
 export * from "./audit.js";
 export * from "./clinicalDocuments.js";
 export * from "./consents.js";
+export * from "./conditions.js";
 export * from "./encounters.js";
 export * from "./providerDirectory.js";
 export * from "./patientRegistry.js";
@@ -17,28 +19,6 @@ export type AppRoute =
   | "audit"
   | "interop"
   | "settings";
-export type ConditionClinicalStatus =
-  | "active"
-  | "recurrence"
-  | "relapse"
-  | "inactive"
-  | "remission"
-  | "resolved";
-export type ConditionVerificationStatus =
-  | "unconfirmed"
-  | "provisional"
-  | "differential"
-  | "confirmed"
-  | "refuted"
-  | "entered-in-error";
-export type ConditionCategory = "problem-list-item" | "encounter-diagnosis";
-export type ConditionSeverity = "mild" | "moderate" | "severe";
-export type AllergyClinicalStatus = "active" | "inactive" | "resolved";
-export type AllergyVerificationStatus = "unconfirmed" | "confirmed" | "refuted" | "entered-in-error";
-export type AllergyType = "allergy" | "intolerance";
-export type AllergyCategory = "food" | "medication" | "environment" | "biologic";
-export type AllergyCriticality = "low" | "high" | "unable-to-assess";
-export type AllergyReactionSeverity = "mild" | "moderate" | "severe";
 export type ObservationStatus =
   | "registered"
   | "preliminary"
@@ -190,59 +170,6 @@ export type ObservationCode = {
   readonly system: string;
   readonly code: string;
   readonly display: string;
-};
-
-export type ConditionCode = {
-  readonly system: string;
-  readonly code: string;
-  readonly display: string;
-};
-
-export type AllergyCode = {
-  readonly system: string;
-  readonly code: string;
-  readonly display: string;
-};
-
-export type AllergyReaction = {
-  readonly manifestation: AllergyCode;
-  readonly severity?: AllergyReactionSeverity;
-  readonly description?: string;
-};
-
-export type AllergyIntolerance = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly encounterId?: string;
-  readonly clinicalStatus: AllergyClinicalStatus;
-  readonly verificationStatus: AllergyVerificationStatus;
-  readonly type: AllergyType;
-  readonly category: AllergyCategory;
-  readonly criticality?: AllergyCriticality;
-  readonly code: AllergyCode;
-  readonly reaction?: AllergyReaction;
-  readonly recordedAt: string;
-  readonly recorderPractitionerId: string;
-  readonly note?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type Condition = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly encounterId?: string;
-  readonly clinicalStatus: ConditionClinicalStatus;
-  readonly verificationStatus: ConditionVerificationStatus;
-  readonly category: ConditionCategory;
-  readonly code: ConditionCode;
-  readonly severity?: ConditionSeverity;
-  readonly onsetAt?: string;
-  readonly recordedAt: string;
-  readonly recorderPractitionerId: string;
-  readonly note?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
 };
 
 export type ObservationQuantity = {
@@ -567,14 +494,6 @@ export type ApiRuntimeInfo = {
   };
 };
 
-export type ConditionsResponse = {
-  readonly items: readonly Condition[];
-};
-
-export type AllergyIntolerancesResponse = {
-  readonly items: readonly AllergyIntolerance[];
-};
-
 export type ObservationsResponse = {
   readonly items: readonly Observation[];
 };
@@ -609,40 +528,6 @@ export type DiagnosticReportsResponse = {
 
 export type ImagingStudiesResponse = {
   readonly items: readonly ImagingStudy[];
-};
-
-export type NewConditionForm = {
-  encounterId: string;
-  category: ConditionCategory;
-  clinicalStatus: ConditionClinicalStatus;
-  verificationStatus: ConditionVerificationStatus;
-  codeSystem: string;
-  code: string;
-  codeDisplay: string;
-  severity: "" | ConditionSeverity;
-  onsetAt: string;
-  recorderPractitionerId: string;
-  note: string;
-};
-
-export type NewAllergyIntoleranceForm = {
-  encounterId: string;
-  type: AllergyType;
-  category: AllergyCategory;
-  clinicalStatus: AllergyClinicalStatus;
-  verificationStatus: AllergyVerificationStatus;
-  criticality: "" | AllergyCriticality;
-  codeSystem: string;
-  code: string;
-  codeDisplay: string;
-  manifestationSystem: string;
-  manifestationCode: string;
-  manifestationDisplay: string;
-  reactionSeverity: "" | AllergyReactionSeverity;
-  reactionDescription: string;
-  recordedAt: string;
-  recorderPractitionerId: string;
-  note: string;
 };
 
 export type NewObservationForm = {
