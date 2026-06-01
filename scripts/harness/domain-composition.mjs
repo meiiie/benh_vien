@@ -499,8 +499,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/fhir/map-audit-event-to-fhir.ts",
-    maxLines: 220,
+    maxLines: 130,
     role: "FHIR AuditEvent public mapper and bundle orchestration"
+  },
+  {
+    path: "packages/domain/src/fhir/map-audit-event-labels.ts",
+    maxLines: 120,
+    role: "FHIR AuditEvent action label catalog"
   },
   {
     path: "packages/domain/src/fhir/map-audit-event-details.ts",
@@ -691,6 +696,11 @@ const fhirProviderTypesPath = resolve("packages/domain/src/fhir/fhir-provider.ty
 const fhirDocumentTypesPath = resolve("packages/domain/src/fhir/fhir-document.types.ts");
 const fhirPrivacyTypesPath = resolve("packages/domain/src/fhir/fhir-privacy.types.ts");
 const fhirAuditTypesPath = resolve("packages/domain/src/fhir/fhir-audit.types.ts");
+const mapAuditEventToFhirPath = resolve("packages/domain/src/fhir/map-audit-event-to-fhir.ts");
+const mapAuditEventLabelsPath = resolve("packages/domain/src/fhir/map-audit-event-labels.ts");
+const mapAuditEventDetailsPath = resolve("packages/domain/src/fhir/map-audit-event-details.ts");
+const mapAuditEventOutcomePath = resolve("packages/domain/src/fhir/map-audit-event-outcome.ts");
+const mapAuditEventReferencesPath = resolve("packages/domain/src/fhir/map-audit-event-references.ts");
 const fhirClinicalCoreTypesPath = resolve(
   "packages/domain/src/fhir/fhir-clinical-core.types.ts"
 );
@@ -887,6 +897,14 @@ const fhirProviderTypesSource = await readFile(fhirProviderTypesPath, "utf8");
 const fhirDocumentTypesSource = await readFile(fhirDocumentTypesPath, "utf8");
 const fhirPrivacyTypesSource = await readFile(fhirPrivacyTypesPath, "utf8");
 const fhirAuditTypesSource = await readFile(fhirAuditTypesPath, "utf8");
+const mapAuditEventToFhirSource = await readFile(mapAuditEventToFhirPath, "utf8");
+const mapAuditEventLabelsSource = await readFile(mapAuditEventLabelsPath, "utf8");
+const mapAuditEventDetailsSource = await readFile(mapAuditEventDetailsPath, "utf8");
+const mapAuditEventOutcomeSource = await readFile(mapAuditEventOutcomePath, "utf8");
+const mapAuditEventReferencesSource = await readFile(
+  mapAuditEventReferencesPath,
+  "utf8"
+);
 const fhirClinicalCoreTypesSource = await readFile(fhirClinicalCoreTypesPath, "utf8");
 const fhirEncounterTypesSource = await readFile(fhirEncounterTypesPath, "utf8");
 const fhirConditionTypesSource = await readFile(fhirConditionTypesPath, "utf8");
@@ -2369,6 +2387,68 @@ for (const required of [
     throw new Error(
       "consent.validation.ts must keep Consent period, revocation, status and category guards."
     );
+  }
+}
+
+for (const required of [
+  /export function mapAuditEventToFhir/,
+  /export function mapAuditEventsToFhirBundle/,
+  /from "\.\/map-audit-event-labels\.js"/,
+  /from "\.\/map-audit-event-details\.js"/,
+  /from "\.\/map-audit-event-outcome\.js"/,
+  /from "\.\/map-audit-event-references\.js"/
+]) {
+  if (!required.test(mapAuditEventToFhirSource)) {
+    throw new Error(
+      "map-audit-event-to-fhir.ts must keep only public AuditEvent mapper orchestration and delegate labels/details/outcome/references to dedicated modules."
+    );
+  }
+}
+
+for (const forbidden of [
+  /const auditActionLabels/,
+  /"patient\.merge"/,
+  /"record-transfer\.acknowledgement-callback"/
+]) {
+  if (forbidden.test(mapAuditEventToFhirSource)) {
+    throw new Error(
+      "AuditEvent action labels belong in map-audit-event-labels.ts, not in the public FHIR mapper."
+    );
+  }
+}
+
+for (const required of [
+  /export const auditActionLabels/,
+  /Record<AuditAction, string>/,
+  /"audit-event\.integrity-verify"/
+]) {
+  if (!required.test(mapAuditEventLabelsSource)) {
+    throw new Error(
+      "map-audit-event-labels.ts must keep the complete AuditEvent action label catalog."
+    );
+  }
+}
+
+for (const forbidden of [
+  /FhirAuditEvent/,
+  /FhirBundle/,
+  /resourceType/,
+  /mapAuditEventToFhir/
+]) {
+  if (forbidden.test(mapAuditEventLabelsSource)) {
+    throw new Error(
+      "map-audit-event-labels.ts must stay a label catalog and must not own FHIR resource mapping."
+    );
+  }
+}
+
+for (const [source, required, fileName] of [
+  [mapAuditEventDetailsSource, /export function buildEntityDetails/, "map-audit-event-details.ts"],
+  [mapAuditEventOutcomeSource, /export function mapAuditAction/, "map-audit-event-outcome.ts"],
+  [mapAuditEventReferencesSource, /export function buildAuditAgentReference/, "map-audit-event-references.ts"]
+]) {
+  if (!required.test(source)) {
+    throw new Error(`${fileName} must retain its AuditEvent mapper helper export.`);
   }
 }
 
