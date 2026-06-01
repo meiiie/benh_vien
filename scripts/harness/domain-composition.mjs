@@ -553,6 +553,21 @@ const domainBudgets = [
     role: "FHIR Bundle entry and bundle resource types"
   },
   {
+    path: "packages/domain/src/fhir/map-patient-record-to-fhir-bundle.ts",
+    maxLines: 60,
+    role: "FHIR patient-record collection Bundle envelope mapper"
+  },
+  {
+    path: "packages/domain/src/fhir/patient-record-bundle-resources.ts",
+    maxLines: 150,
+    role: "FHIR patient-record Bundle resource collection and entry mapping"
+  },
+  {
+    path: "packages/domain/src/fhir/map-patient-record-to-fhir-document-bundle.ts",
+    maxLines: 170,
+    role: "FHIR patient-record document Bundle and Composition mapper"
+  },
+  {
     path: "packages/domain/src/fhir/map-provider-directory-to-fhir.ts",
     maxLines: 200,
     role: "FHIR ProviderDirectory public mapper and bundle orchestration"
@@ -853,6 +868,15 @@ const capabilityStatementResourcesPath = resolve(
   "packages/domain/src/fhir/capability-statement-resources.ts"
 );
 const fhirBundleTypesPath = resolve("packages/domain/src/fhir/fhir-bundle.types.ts");
+const mapPatientRecordToFhirBundlePath = resolve(
+  "packages/domain/src/fhir/map-patient-record-to-fhir-bundle.ts"
+);
+const patientRecordBundleResourcesPath = resolve(
+  "packages/domain/src/fhir/patient-record-bundle-resources.ts"
+);
+const mapPatientRecordToFhirDocumentBundlePath = resolve(
+  "packages/domain/src/fhir/map-patient-record-to-fhir-document-bundle.ts"
+);
 
 const domainReports = [];
 
@@ -1102,6 +1126,18 @@ const capabilityStatementResourcesSource = await readFile(
   "utf8"
 );
 const fhirBundleTypesSource = await readFile(fhirBundleTypesPath, "utf8");
+const mapPatientRecordToFhirBundleSource = await readFile(
+  mapPatientRecordToFhirBundlePath,
+  "utf8"
+);
+const patientRecordBundleResourcesSource = await readFile(
+  patientRecordBundleResourcesPath,
+  "utf8"
+);
+const mapPatientRecordToFhirDocumentBundleSource = await readFile(
+  mapPatientRecordToFhirDocumentBundlePath,
+  "utf8"
+);
 
 for (const forbidden of [
   /export type RecordTransferStatus/,
@@ -3161,6 +3197,87 @@ for (const forbidden of [
   if (forbidden.test(capabilityStatementResourcesSource)) {
     throw new Error(
       "capability-statement-resources.ts must stay a resource catalog and must not build CapabilityStatement instances."
+    );
+  }
+}
+
+for (const required of [
+  /export function mapPatientRecordToFhirBundle/,
+  /export type \{ PatientRecordBundleInput \} from "\.\/patient-record-bundle-resources\.js"/,
+  /buildPatientRecordBundleResources/,
+  /toPatientRecordBundleEntry/,
+  /resourceType:\s*"Bundle"/
+]) {
+  if (!required.test(mapPatientRecordToFhirBundleSource)) {
+    throw new Error(
+      "map-patient-record-to-fhir-bundle.ts must keep only the public collection Bundle envelope and delegate resource collection to patient-record-bundle-resources.ts."
+    );
+  }
+}
+
+for (const forbidden of [
+  /mapAllergyIntoleranceToFhir/,
+  /mapProviderDirectoryToFhirResources/,
+  /function toBundleEntry/,
+  /FhirMedicationAdministration/,
+  /FhirDocumentReference/
+]) {
+  if (forbidden.test(mapPatientRecordToFhirBundleSource)) {
+    throw new Error(
+      "Patient-record resource mapping and entry union belong in patient-record-bundle-resources.ts, not in the public collection Bundle mapper."
+    );
+  }
+}
+
+for (const required of [
+  /export type PatientRecordBundleInput/,
+  /export type PatientRecordBundleResource/,
+  /export function buildPatientRecordBundleResources/,
+  /export function toPatientRecordBundleEntry/,
+  /mapProviderDirectoryToFhirResources/,
+  /mapClinicalDocumentToFhir/,
+  /mapMedicationAdministrationToFhir/
+]) {
+  if (!required.test(patientRecordBundleResourcesSource)) {
+    throw new Error(
+      "patient-record-bundle-resources.ts must keep PatientRecord Bundle input, resource collection and FHIR entry mapping."
+    );
+  }
+}
+
+for (const forbidden of [
+  /resourceType:\s*"Bundle"/,
+  /patient-record-/,
+  /mapPatientRecordToFhirBundle/
+]) {
+  if (forbidden.test(patientRecordBundleResourcesSource)) {
+    throw new Error(
+      "patient-record-bundle-resources.ts must stay a resource/entry helper and must not build patient-record Bundle envelopes."
+    );
+  }
+}
+
+for (const required of [
+  /export function mapPatientRecordToFhirDocumentBundle/,
+  /mapPatientRecordToFhirBundle/,
+  /function buildComposition/,
+  /function buildSection/,
+  /resourceType:\s*"Bundle"/
+]) {
+  if (!required.test(mapPatientRecordToFhirDocumentBundleSource)) {
+    throw new Error(
+      "map-patient-record-to-fhir-document-bundle.ts must keep the document Bundle envelope, Composition and sections."
+    );
+  }
+}
+
+for (const forbidden of [
+  /mapMedicationAdministrationToFhir/,
+  /mapProviderDirectoryToFhirResources/
+]) {
+  if (forbidden.test(mapPatientRecordToFhirDocumentBundleSource)) {
+    throw new Error(
+      "Document Bundle mapper must reuse the collection Bundle instead of remapping patient-record resources directly."
     );
   }
 }
