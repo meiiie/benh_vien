@@ -384,8 +384,23 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/fhir/fhir-careflow.types.ts",
-    maxLines: 310,
-    role: "FHIR service request, task and procedure resource types"
+    maxLines: 20,
+    role: "FHIR careflow compatibility barrel exports"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-service-request.types.ts",
+    maxLines: 90,
+    role: "FHIR ServiceRequest resource type"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-task.types.ts",
+    maxLines: 120,
+    role: "FHIR Task resource type"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-procedure.types.ts",
+    maxLines: 130,
+    role: "FHIR Procedure resource type"
   },
   {
     path: "packages/domain/src/fhir/fhir-diagnostics.types.ts",
@@ -581,6 +596,11 @@ const fhirMedicationAdministrationTypesPath = resolve(
   "packages/domain/src/fhir/fhir-medication-administration.types.ts"
 );
 const fhirCareflowTypesPath = resolve("packages/domain/src/fhir/fhir-careflow.types.ts");
+const fhirServiceRequestTypesPath = resolve(
+  "packages/domain/src/fhir/fhir-service-request.types.ts"
+);
+const fhirTaskTypesPath = resolve("packages/domain/src/fhir/fhir-task.types.ts");
+const fhirProcedureTypesPath = resolve("packages/domain/src/fhir/fhir-procedure.types.ts");
 const fhirDiagnosticsTypesPath = resolve("packages/domain/src/fhir/fhir-diagnostics.types.ts");
 const fhirPatientTypesPath = resolve("packages/domain/src/fhir/fhir-patient.types.ts");
 const fhirOperationOutcomeTypesPath = resolve(
@@ -741,6 +761,9 @@ const fhirMedicationAdministrationTypesSource = await readFile(
   "utf8"
 );
 const fhirCareflowTypesSource = await readFile(fhirCareflowTypesPath, "utf8");
+const fhirServiceRequestTypesSource = await readFile(fhirServiceRequestTypesPath, "utf8");
+const fhirTaskTypesSource = await readFile(fhirTaskTypesPath, "utf8");
+const fhirProcedureTypesSource = await readFile(fhirProcedureTypesPath, "utf8");
 const fhirDiagnosticsTypesSource = await readFile(fhirDiagnosticsTypesPath, "utf8");
 const fhirPatientTypesSource = await readFile(fhirPatientTypesPath, "utf8");
 const fhirOperationOutcomeTypesSource = await readFile(
@@ -2015,6 +2038,28 @@ for (const required of [
   }
 }
 
+for (const forbidden of [
+  /export type FhirServiceRequest/,
+  /export type FhirTask/,
+  /export type FhirProcedure/
+]) {
+  if (forbidden.test(fhirCareflowTypesSource)) {
+    throw new Error(
+      "fhir-careflow.types.ts must remain a compatibility barrel; concrete careflow resource types belong in focused careflow submodules."
+    );
+  }
+}
+
+for (const required of [
+  /export \* from "\.\/fhir-service-request\.types\.js"/,
+  /export \* from "\.\/fhir-task\.types\.js"/,
+  /export \* from "\.\/fhir-procedure\.types\.js"/
+]) {
+  if (!required.test(fhirCareflowTypesSource)) {
+    throw new Error("fhir-careflow.types.ts must re-export all focused FHIR careflow type modules.");
+  }
+}
+
 for (const required of [
   /export type FhirIdentifier/,
   /export type FhirContactPoint/
@@ -2036,8 +2081,9 @@ for (const required of [
   [fhirMedicationRequestTypesSource, /export type FhirMedicationRequest/, "fhir-medication-request.types.ts"],
   [fhirMedicationDispenseTypesSource, /export type FhirMedicationDispense/, "fhir-medication-dispense.types.ts"],
   [fhirMedicationAdministrationTypesSource, /export type FhirMedicationAdministration/, "fhir-medication-administration.types.ts"],
-  [fhirCareflowTypesSource, /export type FhirServiceRequest/, "fhir-careflow.types.ts"],
-  [fhirCareflowTypesSource, /export type FhirProcedure/, "fhir-careflow.types.ts"],
+  [fhirServiceRequestTypesSource, /export type FhirServiceRequest/, "fhir-service-request.types.ts"],
+  [fhirTaskTypesSource, /export type FhirTask/, "fhir-task.types.ts"],
+  [fhirProcedureTypesSource, /export type FhirProcedure/, "fhir-procedure.types.ts"],
   [fhirDiagnosticsTypesSource, /export type FhirDiagnosticReport/, "fhir-diagnostics.types.ts"],
   [fhirDiagnosticsTypesSource, /export type FhirImagingStudy/, "fhir-diagnostics.types.ts"],
   [fhirPatientTypesSource, /export type FhirPatient/, "fhir-patient.types.ts"],
