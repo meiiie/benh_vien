@@ -208,6 +208,31 @@ const postgresBudgets = [
     role: "ServiceRequest PostgreSQL row types"
   },
   {
+    path: "apps/api/src/infrastructure/postgres/postgres-diagnostic-report.repository.ts",
+    maxLines: 90,
+    role: "DiagnosticReport PostgreSQL repository orchestration"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-diagnostic-report.sql.ts",
+    maxLines: 70,
+    role: "DiagnosticReport PostgreSQL SQL statements"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-diagnostic-report.mapper.ts",
+    maxLines: 90,
+    role: "DiagnosticReport PostgreSQL row and parameter mapper"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-diagnostic-report.persistence.ts",
+    maxLines: 30,
+    role: "DiagnosticReport PostgreSQL persistence command"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-diagnostic-report.types.ts",
+    maxLines: 50,
+    role: "DiagnosticReport PostgreSQL row types"
+  },
+  {
     path: "apps/api/src/infrastructure/postgres/postgres-audit-event.repository.ts",
     maxLines: 110,
     role: "AuditEvent PostgreSQL repository integrity orchestration"
@@ -355,6 +380,21 @@ const serviceRequestPersistencePath = resolve(
 const serviceRequestTypesPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-service-request.types.ts"
 );
+const diagnosticReportRepositoryPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-diagnostic-report.repository.ts"
+);
+const diagnosticReportSqlPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-diagnostic-report.sql.ts"
+);
+const diagnosticReportMapperPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-diagnostic-report.mapper.ts"
+);
+const diagnosticReportPersistencePath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-diagnostic-report.persistence.ts"
+);
+const diagnosticReportTypesPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-diagnostic-report.types.ts"
+);
 const auditEventRepositoryPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-audit-event.repository.ts"
 );
@@ -494,6 +534,23 @@ const serviceRequestPersistenceSource = await readFile(
   "utf8"
 );
 const serviceRequestTypesSource = await readFile(serviceRequestTypesPath, "utf8");
+const diagnosticReportRepositorySource = await readFile(
+  diagnosticReportRepositoryPath,
+  "utf8"
+);
+const diagnosticReportSqlSource = await readFile(diagnosticReportSqlPath, "utf8");
+const diagnosticReportMapperSource = await readFile(
+  diagnosticReportMapperPath,
+  "utf8"
+);
+const diagnosticReportPersistenceSource = await readFile(
+  diagnosticReportPersistencePath,
+  "utf8"
+);
+const diagnosticReportTypesSource = await readFile(
+  diagnosticReportTypesPath,
+  "utf8"
+);
 const auditEventRepositorySource = await readFile(auditEventRepositoryPath, "utf8");
 const auditEventSqlSource = await readFile(auditEventSqlPath, "utf8");
 const auditEventMapperSource = await readFile(auditEventMapperPath, "utf8");
@@ -609,6 +666,21 @@ const requiredServiceRequestRepositoryImports = [
 for (const importedName of requiredServiceRequestRepositoryImports) {
   if (!serviceRequestRepositorySource.includes(importedName)) {
     throw new Error(`ServiceRequest PostgreSQL repository must compose ${importedName}.`);
+  }
+}
+
+const requiredDiagnosticReportRepositoryImports = [
+  "rowToDiagnosticReport",
+  "upsertDiagnosticReport",
+  "selectDiagnosticReportSql",
+  "DiagnosticReportRow"
+];
+
+for (const importedName of requiredDiagnosticReportRepositoryImports) {
+  if (!diagnosticReportRepositorySource.includes(importedName)) {
+    throw new Error(
+      `DiagnosticReport PostgreSQL repository must compose ${importedName}.`
+    );
   }
 }
 
@@ -950,6 +1022,45 @@ assertForbidden(serviceRequestTypesSource, [
   {
     pattern: /\bServiceRequest\.rehydrate\b|\bquery\s*\(|\bINSERT INTO service_requests\b/,
     message: "ServiceRequest PostgreSQL type module must only describe row contracts."
+  }
+]);
+
+assertForbidden(diagnosticReportRepositorySource, [
+  {
+    pattern: /\bINSERT INTO diagnostic_reports\b|\bON CONFLICT \(id\)\b|\bDiagnosticReport\.rehydrate\b|\bDiagnosticReportSnapshot\b|\bJSON\.parse\b|\bJSON\.stringify\b/,
+    message:
+      "DiagnosticReport PostgreSQL repository must delegate upsert SQL and JSON row mapping to focused modules."
+  }
+]);
+
+assertForbidden(diagnosticReportSqlSource, [
+  {
+    pattern: /@benh-vien-so\/domain|\bDiagnosticReport\b|\bpg\b/,
+    message:
+      "DiagnosticReport PostgreSQL SQL module must stay a pure SQL statement module without domain or pg dependencies."
+  }
+]);
+
+assertForbidden(diagnosticReportMapperSource, [
+  {
+    pattern: /\bfrom "pg"\b|\bquery\s*\(|\bINSERT INTO diagnostic_reports\b|\bON CONFLICT \(id\)\b/,
+    message:
+      "DiagnosticReport PostgreSQL mapper must stay pure row/value mapping without pg I/O or SQL ownership."
+  }
+]);
+
+assertForbidden(diagnosticReportPersistenceSource, [
+  {
+    pattern: /\bDiagnosticReport\.rehydrate\b|\bDiagnosticReportSnapshot\b|\bSELECT\b|\bJSON\.parse\b/,
+    message:
+      "DiagnosticReport PostgreSQL persistence command must compose SQL and mapper without owning reads or domain hydration."
+  }
+]);
+
+assertForbidden(diagnosticReportTypesSource, [
+  {
+    pattern: /\bDiagnosticReport\.rehydrate\b|\bquery\s*\(|\bINSERT INTO diagnostic_reports\b/,
+    message: "DiagnosticReport PostgreSQL type module must only describe row contracts."
   }
 ]);
 

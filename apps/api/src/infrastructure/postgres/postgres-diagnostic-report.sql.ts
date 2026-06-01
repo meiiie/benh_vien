@@ -1,0 +1,56 @@
+export const selectDiagnosticReportSql = `SELECT
+  id,
+  patient_id,
+  encounter_id,
+  based_on_service_request_id,
+  status,
+  category,
+  code,
+  effective_at,
+  issued_at,
+  performer_organization_id,
+  results_interpreter_practitioner_id,
+  result_observation_ids,
+  conclusion,
+  presented_form_url,
+  presented_form_title,
+  created_at,
+  updated_at
+  FROM diagnostic_reports`;
+
+export const upsertDiagnosticReportSql = `INSERT INTO diagnostic_reports (
+  id,
+  patient_id,
+  encounter_id,
+  based_on_service_request_id,
+  status,
+  category,
+  code,
+  effective_at,
+  issued_at,
+  performer_organization_id,
+  results_interpreter_practitioner_id,
+  result_observation_ids,
+  conclusion,
+  presented_form_url,
+  presented_form_title,
+  created_at,
+  updated_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12::jsonb, $13, $14, $15, $16, $17)
+ON CONFLICT (id) DO UPDATE SET
+  patient_id = EXCLUDED.patient_id,
+  encounter_id = EXCLUDED.encounter_id,
+  based_on_service_request_id = EXCLUDED.based_on_service_request_id,
+  status = EXCLUDED.status,
+  category = EXCLUDED.category,
+  code = EXCLUDED.code,
+  effective_at = EXCLUDED.effective_at,
+  issued_at = EXCLUDED.issued_at,
+  performer_organization_id = EXCLUDED.performer_organization_id,
+  results_interpreter_practitioner_id = EXCLUDED.results_interpreter_practitioner_id,
+  result_observation_ids = EXCLUDED.result_observation_ids,
+  conclusion = EXCLUDED.conclusion,
+  presented_form_url = EXCLUDED.presented_form_url,
+  presented_form_title = EXCLUDED.presented_form_title,
+  updated_at = EXCLUDED.updated_at`;
