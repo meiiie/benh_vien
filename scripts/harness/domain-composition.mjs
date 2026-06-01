@@ -94,8 +94,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/record-transfer-delivery-attempt/record-transfer-delivery-attempt.ts",
-    maxLines: 390,
-    role: "RecordTransferDeliveryAttempt queue, terminal update and delivery validation behavior"
+    maxLines: 230,
+    role: "RecordTransferDeliveryAttempt queue and terminal update behavior"
+  },
+  {
+    path: "packages/domain/src/record-transfer-delivery-attempt/record-transfer-delivery-attempt.validation.ts",
+    maxLines: 210,
+    role: "RecordTransferDeliveryAttempt delivery normalization and terminal-state guards"
   },
   {
     path: "packages/domain/src/record-transfer-delivery-attempt/record-transfer-delivery-attempt.types.ts",
@@ -352,6 +357,9 @@ const procedureTypesPath = resolve("packages/domain/src/procedure/procedure.type
 const deliveryAttemptAggregatePath = resolve(
   "packages/domain/src/record-transfer-delivery-attempt/record-transfer-delivery-attempt.ts"
 );
+const deliveryAttemptValidationPath = resolve(
+  "packages/domain/src/record-transfer-delivery-attempt/record-transfer-delivery-attempt.validation.ts"
+);
 const deliveryAttemptTypesPath = resolve(
   "packages/domain/src/record-transfer-delivery-attempt/record-transfer-delivery-attempt.types.ts"
 );
@@ -482,6 +490,7 @@ const workflowTaskTypesSource = await readFile(workflowTaskTypesPath, "utf8");
 const procedureAggregateSource = await readFile(procedureAggregatePath, "utf8");
 const procedureTypesSource = await readFile(procedureTypesPath, "utf8");
 const deliveryAttemptAggregateSource = await readFile(deliveryAttemptAggregatePath, "utf8");
+const deliveryAttemptValidationSource = await readFile(deliveryAttemptValidationPath, "utf8");
 const deliveryAttemptTypesSource = await readFile(deliveryAttemptTypesPath, "utf8");
 const medicationRequestAggregateSource = await readFile(medicationRequestAggregatePath, "utf8");
 const medicationRequestTypesSource = await readFile(medicationRequestTypesPath, "utf8");
@@ -846,11 +855,13 @@ if (!/from "\.\/procedure\.types\.js"/.test(procedureAggregateSource)) {
 for (const forbidden of [
   /export type RecordTransferDeliveryAttemptStatus/,
   /export type RecordTransferDeliveryAttemptSnapshot/,
-  /const deliveryAttemptStatuses/
+  /const deliveryAttemptStatuses/,
+  /function normalizeRequired/,
+  /function validateTerminalState/
 ]) {
   if (forbidden.test(deliveryAttemptAggregateSource)) {
     throw new Error(
-      "RecordTransferDeliveryAttempt type declarations and code sets belong in record-transfer-delivery-attempt.types.ts, not the aggregate file."
+      "RecordTransferDeliveryAttempt aggregate must keep queue/terminal behavior only; types stay in record-transfer-delivery-attempt.types.ts and delivery validation guards stay in record-transfer-delivery-attempt.validation.ts."
     );
   }
 }
@@ -875,6 +886,29 @@ if (!/from "\.\/record-transfer-delivery-attempt\.types\.js"/.test(
   throw new Error(
     "RecordTransferDeliveryAttempt aggregate must depend on record-transfer-delivery-attempt.types.ts for shared types."
   );
+}
+
+if (!/from "\.\/record-transfer-delivery-attempt\.validation\.js"/.test(
+  deliveryAttemptAggregateSource
+)) {
+  throw new Error(
+    "RecordTransferDeliveryAttempt aggregate must depend on record-transfer-delivery-attempt.validation.ts for delivery normalization and terminal-state guards."
+  );
+}
+
+for (const required of [
+  /export function normalizeEndpointAddress/,
+  /export function normalizeAttemptNumber/,
+  /export function normalizeStatus/,
+  /export function validateTerminalState/,
+  /export function assertCompletedAtIsNotBeforeQueuedAt/,
+  /from "\.\/record-transfer-delivery-attempt\.types\.js"/
+]) {
+  if (!required.test(deliveryAttemptValidationSource)) {
+    throw new Error(
+      "record-transfer-delivery-attempt.validation.ts must keep delivery attempt normalization, status and terminal-state guards."
+    );
+  }
 }
 
 for (const forbidden of [
