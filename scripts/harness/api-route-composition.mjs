@@ -233,6 +233,31 @@ const routeBudgets = [
     role: "Observation response, access, reference and domain error helpers"
   },
   {
+    path: "apps/api/src/modules/conditions/condition-routes.ts",
+    maxLines: 70,
+    role: "Condition route composition root"
+  },
+  {
+    path: "apps/api/src/modules/conditions/condition-query-routes.ts",
+    maxLines: 130,
+    role: "Condition list and read route adapter"
+  },
+  {
+    path: "apps/api/src/modules/conditions/condition-creation-routes.ts",
+    maxLines: 140,
+    role: "Condition creation and encounter validation route adapter"
+  },
+  {
+    path: "apps/api/src/modules/conditions/condition-fhir-routes.ts",
+    maxLines: 90,
+    role: "Condition FHIR export route adapter"
+  },
+  {
+    path: "apps/api/src/modules/conditions/condition-route-helpers.ts",
+    maxLines: 130,
+    role: "Condition response, access, reference and domain error helpers"
+  },
+  {
     path: "apps/api/src/modules/patients/patient-routes.ts",
     maxLines: 90,
     role: "Patient route composition root"
@@ -708,6 +733,32 @@ const requiredObservationRegistrations = [
   "registerObservationFhirRoutes"
 ];
 
+const conditionRoutesPath = resolve("apps/api/src/modules/conditions/condition-routes.ts");
+const forbiddenConditionRoutePatterns = [
+  {
+    pattern:
+      /\bCreateConditionRequestSchema\b|\bPatientConditionsParamsSchema\b|\bConditionIdParamsSchema\b/,
+    message:
+      "Condition request handling belongs in condition-query-routes.ts, condition-creation-routes.ts or condition-fhir-routes.ts."
+  },
+  {
+    pattern:
+      /\bCondition\.record\b|\bDomainError\b|\brequirePatientRecordAccessByPatientId\b|\bvalidateConditionReferences\b/,
+    message:
+      "Condition recording, access and encounter validation policy belongs outside the root route."
+  },
+  {
+    pattern: /\bmapConditionToFhir\b|\btoConditionResponse\b/,
+    message:
+      "Condition response and FHIR export details belong in helper or FHIR route modules."
+  }
+];
+const requiredConditionRegistrations = [
+  "registerConditionQueryRoutes",
+  "registerConditionCreationRoutes",
+  "registerConditionFhirRoutes"
+];
+
 const patientRoutesPath = resolve("apps/api/src/modules/patients/patient-routes.ts");
 const forbiddenPatientRoutePatterns = [
   {
@@ -1055,6 +1106,7 @@ const medicationRequestRoutesSource = await readFile(
 );
 const procedureRoutesSource = await readFile(procedureRoutesPath, "utf8");
 const observationRoutesSource = await readFile(observationRoutesPath, "utf8");
+const conditionRoutesSource = await readFile(conditionRoutesPath, "utf8");
 const diagnosticReportRoutesSource = await readFile(diagnosticReportRoutesPath, "utf8");
 const imagingStudyRoutesSource = await readFile(imagingStudyRoutesPath, "utf8");
 const serviceRequestRoutesSource = await readFile(serviceRequestRoutesPath, "utf8");
@@ -1154,6 +1206,20 @@ for (const registration of requiredObservationRegistrations) {
   if (!observationRoutesSource.includes(registration)) {
     throw new Error(
       `Observation root routes must register ${registration} so query, creation and FHIR modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenConditionRoutePatterns) {
+  if (forbidden.pattern.test(conditionRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredConditionRegistrations) {
+  if (!conditionRoutesSource.includes(registration)) {
+    throw new Error(
+      `Condition root routes must register ${registration} so query, creation and FHIR modules remain wired.`
     );
   }
 }
