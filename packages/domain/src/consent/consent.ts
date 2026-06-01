@@ -1,38 +1,20 @@
 import { DomainError } from "../shared/domain-error.js";
-
-export type ConsentStatus = "active" | "revoked" | "expired";
-export type ConsentCategory = "record-sharing";
-
-const consentStatuses = new Set<ConsentStatus>(["active", "revoked", "expired"]);
-const consentCategories = new Set<ConsentCategory>(["record-sharing"]);
-
-export type ConsentSnapshot = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly status: ConsentStatus;
-  readonly category: ConsentCategory;
-  readonly granteeOrganizationId: string;
-  readonly grantorActorId: string;
-  readonly evidenceDocumentId?: string;
-  readonly revokedByActorId?: string;
-  readonly revokedAt?: string;
-  readonly revocationReason?: string;
-  readonly validFrom: string;
-  readonly validUntil?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type CreateConsentInput = Omit<
+import { consentCategories, consentStatuses } from "./consent.types.js";
+import type {
+  ConsentCategory,
   ConsentSnapshot,
-  "status" | "revokedByActorId" | "revokedAt" | "revocationReason" | "createdAt" | "updatedAt"
->;
+  ConsentStatus,
+  CreateConsentInput,
+  RevokeConsentInput
+} from "./consent.types.js";
 
-export type RevokeConsentInput = {
-  readonly revokedByActorId: string;
-  readonly revokedAt?: Date;
-  readonly reason?: string;
-};
+export type {
+  ConsentCategory,
+  ConsentSnapshot,
+  ConsentStatus,
+  CreateConsentInput,
+  RevokeConsentInput
+} from "./consent.types.js";
 
 type ConsentProps = {
   -readonly [Key in keyof ConsentSnapshot]: ConsentSnapshot[Key];

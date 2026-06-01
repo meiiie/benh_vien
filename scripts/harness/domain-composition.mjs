@@ -191,6 +191,16 @@ const domainBudgets = [
     path: "packages/domain/src/encounter/encounter.types.ts",
     maxLines: 80,
     role: "Encounter class, status, snapshot and command input types"
+  },
+  {
+    path: "packages/domain/src/consent/consent.ts",
+    maxLines: 250,
+    role: "Consent grant, revoke and record-sharing authorization behavior"
+  },
+  {
+    path: "packages/domain/src/consent/consent.types.ts",
+    maxLines: 70,
+    role: "Consent status, category, snapshot and command input types"
   }
 ];
 
@@ -280,6 +290,8 @@ const allergyIntoleranceTypesPath = resolve(
 );
 const encounterAggregatePath = resolve("packages/domain/src/encounter/encounter.ts");
 const encounterTypesPath = resolve("packages/domain/src/encounter/encounter.types.ts");
+const consentAggregatePath = resolve("packages/domain/src/consent/consent.ts");
+const consentTypesPath = resolve("packages/domain/src/consent/consent.types.ts");
 
 const domainReports = [];
 
@@ -353,6 +365,8 @@ const allergyIntoleranceAggregateSource = await readFile(
 const allergyIntoleranceTypesSource = await readFile(allergyIntoleranceTypesPath, "utf8");
 const encounterAggregateSource = await readFile(encounterAggregatePath, "utf8");
 const encounterTypesSource = await readFile(encounterTypesPath, "utf8");
+const consentAggregateSource = await readFile(consentAggregatePath, "utf8");
+const consentTypesSource = await readFile(consentTypesPath, "utf8");
 
 for (const forbidden of [
   /export type RecordTransferStatus/,
@@ -966,6 +980,38 @@ for (const required of [
 
 if (!/from "\.\/encounter\.types\.js"/.test(encounterAggregateSource)) {
   throw new Error("Encounter aggregate must depend on encounter.types.ts for shared types.");
+}
+
+for (const forbidden of [
+  /export type ConsentStatus/,
+  /export type ConsentSnapshot/,
+  /const consentStatuses/
+]) {
+  if (forbidden.test(consentAggregateSource)) {
+    throw new Error(
+      "Consent type declarations and code sets belong in consent.types.ts, not the aggregate file."
+    );
+  }
+}
+
+for (const required of [
+  /export type ConsentStatus/,
+  /export type ConsentCategory/,
+  /export type ConsentSnapshot/,
+  /export type CreateConsentInput/,
+  /export type RevokeConsentInput/,
+  /export const consentStatuses/,
+  /export const consentCategories/
+]) {
+  if (!required.test(consentTypesSource)) {
+    throw new Error(
+      "consent.types.ts must keep Consent status, category, snapshot, command input and code-set definitions."
+    );
+  }
+}
+
+if (!/from "\.\/consent\.types\.js"/.test(consentAggregateSource)) {
+  throw new Error("Consent aggregate must depend on consent.types.ts for shared types.");
 }
 
 console.log(

@@ -34,4 +34,5 @@ pnpm --filter @benh-vien-so/domain run build
 - Với `Condition`, aggregate `condition.ts` giữ recording, clinical status và timeline validation behavior; status, category, severity, code, snapshot và command input type nằm trong `condition.types.ts`.
 - Với `AllergyIntolerance`, aggregate `allergy-intolerance.ts` giữ recording, reaction và timeline validation behavior; status, category, reaction, snapshot và command input type nằm trong `allergy-intolerance.types.ts`.
 - Với `Encounter`, aggregate `encounter.ts` giữ creation, lifecycle và finish behavior; class, status, snapshot và command input type nằm trong `encounter.types.ts`.
+- Với `Consent`, aggregate `consent.ts` giữ grant/revoke và authorization behavior; status, category, snapshot và command input type nằm trong `consent.types.ts`.
 - Test tối thiểu cho invariant và mapping liên thông.
