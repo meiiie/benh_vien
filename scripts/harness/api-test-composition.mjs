@@ -4,13 +4,18 @@ import { resolve } from "node:path";
 const testBudgets = [
   {
     path: "apps/api/src/server.auth.test.ts",
-    maxLines: 4500,
+    maxLines: 4100,
     role: "API auth/RBAC integration scenarios outside login boundary"
   },
   {
     path: "apps/api/src/server.auth.login.test.ts",
     maxLines: 550,
     role: "API login and token boundary scenarios"
+  },
+  {
+    path: "apps/api/src/server.runtime.test.ts",
+    maxLines: 520,
+    role: "API runtime, readiness and HTTP envelope scenarios"
   },
   {
     path: "apps/api/src/server.auth.test-support.ts",
@@ -21,6 +26,7 @@ const testBudgets = [
 
 const authBoundaryPath = resolve("apps/api/src/server.auth.test.ts");
 const loginBoundaryPath = resolve("apps/api/src/server.auth.login.test.ts");
+const runtimeBoundaryPath = resolve("apps/api/src/server.runtime.test.ts");
 
 const forbiddenAuthBoundaryPatterns = [
   {
@@ -32,6 +38,11 @@ const forbiddenAuthBoundaryPatterns = [
     pattern: /returns a signed demo session|rate limits repeated login attempts/,
     message:
       "Login and token boundary scenarios belong in server.auth.login.test.ts."
+  },
+  {
+    pattern: /returns readiness checks|sets baseline HTTP security headers|returns redacted runtime metadata/,
+    message:
+      "Runtime, readiness and HTTP envelope scenarios belong in server.runtime.test.ts."
   }
 ];
 
@@ -40,6 +51,12 @@ const requiredLoginBoundaryPatterns = [
   /uses the configured auth token TTL/,
   /rate limits repeated login attempts/,
   /rejects invalid purpose-of-use headers/
+];
+const requiredRuntimeBoundaryPatterns = [
+  /returns readiness checks/,
+  /returns redacted runtime metadata/,
+  /sets baseline HTTP security headers/,
+  /returns a safe validation error envelope/
 ];
 
 const testReports = [];
@@ -66,6 +83,7 @@ for (const budget of testBudgets) {
 
 const authBoundarySource = await readFile(authBoundaryPath, "utf8");
 const loginBoundarySource = await readFile(loginBoundaryPath, "utf8");
+const runtimeBoundarySource = await readFile(runtimeBoundaryPath, "utf8");
 
 for (const forbidden of forbiddenAuthBoundaryPatterns) {
   if (forbidden.pattern.test(authBoundarySource)) {
@@ -77,6 +95,14 @@ for (const required of requiredLoginBoundaryPatterns) {
   if (!required.test(loginBoundarySource)) {
     throw new Error(
       "server.auth.login.test.ts must keep core login, token, rate-limit and purpose-of-use boundary scenarios."
+    );
+  }
+}
+
+for (const required of requiredRuntimeBoundaryPatterns) {
+  if (!required.test(runtimeBoundarySource)) {
+    throw new Error(
+      "server.runtime.test.ts must keep core readiness, runtime metadata, security header and safe error envelope scenarios."
     );
   }
 }
