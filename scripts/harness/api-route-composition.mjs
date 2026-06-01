@@ -148,6 +148,36 @@ const routeBudgets = [
     role: "RecordTransfer delivery attempt route helper functions"
   },
   {
+    path: "apps/api/src/modules/encounters/encounter-routes.ts",
+    maxLines: 70,
+    role: "Encounter route composition root"
+  },
+  {
+    path: "apps/api/src/modules/encounters/encounter-query-routes.ts",
+    maxLines: 130,
+    role: "Encounter list and read route adapter"
+  },
+  {
+    path: "apps/api/src/modules/encounters/encounter-creation-routes.ts",
+    maxLines: 130,
+    role: "Encounter creation command route adapter"
+  },
+  {
+    path: "apps/api/src/modules/encounters/encounter-command-routes.ts",
+    maxLines: 110,
+    role: "Encounter finish command route adapter"
+  },
+  {
+    path: "apps/api/src/modules/encounters/encounter-fhir-routes.ts",
+    maxLines: 90,
+    role: "Encounter FHIR export route adapter"
+  },
+  {
+    path: "apps/api/src/modules/encounters/encounter-route-helpers.ts",
+    maxLines: 100,
+    role: "Encounter response, access and domain error helpers"
+  },
+  {
     path: "apps/api/src/modules/patients/patient-routes.ts",
     maxLines: 90,
     role: "Patient route composition root"
@@ -442,6 +472,32 @@ const requiredRecordTransferCommandRegistrations = [
   "registerRecordTransferFailureRoutes"
 ];
 
+const encounterRoutesPath = resolve("apps/api/src/modules/encounters/encounter-routes.ts");
+const forbiddenEncounterRoutePatterns = [
+  {
+    pattern:
+      /\bCreateEncounterRequestSchema\b|\bPatientEncountersParamsSchema\b|\bEncounterIdParamsSchema\b/,
+    message:
+      "Encounter request handling belongs in encounter-query-routes.ts, encounter-creation-routes.ts, encounter-command-routes.ts or encounter-fhir-routes.ts."
+  },
+  {
+    pattern: /\bEncounter\.create\b|\bDomainError\b|\brequirePatientRecordAccessByPatientId\b/,
+    message:
+      "Encounter creation, access and domain error policy belongs outside the root route."
+  },
+  {
+    pattern: /\bmapEncounterToFhir\b|\btoEncounterResponse\b/,
+    message:
+      "Encounter response and FHIR export details belong in helper or FHIR route modules."
+  }
+];
+const requiredEncounterRegistrations = [
+  "registerEncounterQueryRoutes",
+  "registerEncounterCreationRoutes",
+  "registerEncounterCommandRoutes",
+  "registerEncounterFhirRoutes"
+];
+
 const patientRoutesPath = resolve("apps/api/src/modules/patients/patient-routes.ts");
 const forbiddenPatientRoutePatterns = [
   {
@@ -655,6 +711,7 @@ const recordTransferCommandRoutesSource = await readFile(
   recordTransferCommandRoutesPath,
   "utf8"
 );
+const encounterRoutesSource = await readFile(encounterRoutesPath, "utf8");
 const patientRoutesSource = await readFile(patientRoutesPath, "utf8");
 const patientFhirRoutesSource = await readFile(patientFhirRoutesPath, "utf8");
 const clinicalDocumentRoutesSource = await readFile(
@@ -727,6 +784,20 @@ for (const registration of requiredRecordTransferCommandRegistrations) {
   if (!recordTransferCommandRoutesSource.includes(registration)) {
     throw new Error(
       `RecordTransfer command root routes must register ${registration} so send, receive and failure modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenEncounterRoutePatterns) {
+  if (forbidden.pattern.test(encounterRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredEncounterRegistrations) {
+  if (!encounterRoutesSource.includes(registration)) {
+    throw new Error(
+      `Encounter root routes must register ${registration} so query, command and FHIR modules remain wired.`
     );
   }
 }
