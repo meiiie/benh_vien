@@ -1,36 +1,16 @@
-import type { FastifyReply, FastifyRequest } from "fastify";
-import type {
-  ActorContext,
-  ConsentRepository,
-  PatientRepository
-} from "@benh-vien-so/domain";
 import {
   requirePatientRecordAccess
 } from "../access-control/access-context.js";
 import {
   loadPatientRecordBundleCollections
 } from "./patient-record-bundle-collections.js";
-import type { LoadPatientRecordBundleCollectionsInput } from "./patient-record-bundle-collections.js";
 import {
-  sendInvalidConsentResponse,
-  sendMissingPatientResponse,
-  sendMissingTransferContextResponse
+  sendMissingPatientResponse
 } from "./patient-record-bundle-error-responses.js";
-import type { PatientRecordBundleType } from "./patient-record-bundle-error-responses.js";
 import {
-  readBundleTransferContext
-} from "./patient-record-bundle-transfer-context.js";
-
-type PreparePatientRecordBundleContextInput =
-  LoadPatientRecordBundleCollectionsInput & {
-    readonly request: FastifyRequest;
-    readonly reply: FastifyReply;
-    readonly actor: ActorContext;
-    readonly patientId: string;
-    readonly patientRepository: PatientRepository;
-    readonly consentRepository: ConsentRepository;
-    readonly bundleType: PatientRecordBundleType;
-  };
+  preparePatientRecordBundleConsentContext
+} from "./patient-record-bundle-consent-context.js";
+import type { PreparePatientRecordBundleContextInput } from "./patient-record-bundle-context.types.js";
 
 export async function preparePatientRecordBundleContext({
   request,
@@ -61,22 +41,15 @@ export async function preparePatientRecordBundleContext({
     return undefined;
   }
 
-  const transferContext = readBundleTransferContext(request.headers);
+  const consentContext = await preparePatientRecordBundleConsentContext({
+    request,
+    reply,
+    patientId,
+    consentRepository,
+    bundleType
+  });
 
-  if (!transferContext) {
-    sendMissingTransferContextResponse(reply, bundleType);
-    return undefined;
-  }
-
-  const consent = await consentRepository.findById(transferContext.consentReference);
-
-  if (
-    !consent?.allowsRecordSharing({
-      patientId,
-      granteeOrganizationId: transferContext.recipientOrganizationId
-    })
-  ) {
-    sendInvalidConsentResponse(reply, bundleType);
+  if (!consentContext) {
     return undefined;
   }
 
@@ -87,8 +60,8 @@ export async function preparePatientRecordBundleContext({
 
   return {
     patient,
-    transferContext,
-    consent,
+    transferContext: consentContext.transferContext,
+    consent: consentContext.consent,
     collections
   };
 }

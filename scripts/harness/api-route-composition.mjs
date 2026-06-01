@@ -569,8 +569,18 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/patients/patient-record-bundle-route-helpers.ts",
-    maxLines: 100,
-    role: "Patient FHIR Bundle access and consent preparation helpers"
+    maxLines: 80,
+    role: "Patient FHIR Bundle patient access and collection preparation helper"
+  },
+  {
+    path: "apps/api/src/modules/patients/patient-record-bundle-context.types.ts",
+    maxLines: 35,
+    role: "Patient FHIR Bundle preparation input type contract"
+  },
+  {
+    path: "apps/api/src/modules/patients/patient-record-bundle-consent-context.ts",
+    maxLines: 70,
+    role: "Patient FHIR Bundle transfer context and consent guard"
   },
   {
     path: "apps/api/src/modules/patients/patient-record-bundle-error-responses.ts",
@@ -1359,18 +1369,33 @@ const requiredPatientRecordBundleRegistrations = [
 const patientRecordBundleRouteHelpersPath = resolve(
   "apps/api/src/modules/patients/patient-record-bundle-route-helpers.ts"
 );
+const patientRecordBundleConsentContextPath = resolve(
+  "apps/api/src/modules/patients/patient-record-bundle-consent-context.ts"
+);
 const forbiddenPatientRecordBundleHelperPatterns = [
   {
     pattern:
       /\bsendFhirOperationOutcome\b|\bPATIENT_NOT_FOUND\b|\bMISSING_BUNDLE_TRANSFER_CONTEXT\b|\bCONSENT_NOT_VALID_FOR_TRANSFER\b/,
     message:
       "Patient Bundle OperationOutcome and error payload details belong in patient-record-bundle-error-responses.ts."
+  },
+  {
+    pattern:
+      /\breadBundleTransferContext\b|\bsendMissingTransferContextResponse\b|\bsendInvalidConsentResponse\b|\ballowsRecordSharing\b/,
+    message:
+      "Patient Bundle transfer context and consent guard belong in patient-record-bundle-consent-context.ts."
   }
 ];
 const requiredPatientRecordBundleHelpers = [
   "requirePatientRecordAccess",
-  "readBundleTransferContext",
+  "preparePatientRecordBundleConsentContext",
   "loadPatientRecordBundleCollections"
+];
+const requiredPatientRecordBundleConsentContextHelpers = [
+  "readBundleTransferContext",
+  "sendMissingTransferContextResponse",
+  "sendInvalidConsentResponse",
+  "allowsRecordSharing"
 ];
 
 const clinicalDocumentRoutesPath = resolve(
@@ -1716,6 +1741,10 @@ const patientRecordBundleRouteHelpersSource = await readFile(
   patientRecordBundleRouteHelpersPath,
   "utf8"
 );
+const patientRecordBundleConsentContextSource = await readFile(
+  patientRecordBundleConsentContextPath,
+  "utf8"
+);
 const clinicalDocumentRoutesSource = await readFile(
   clinicalDocumentRoutesPath,
   "utf8"
@@ -2042,6 +2071,14 @@ for (const helper of requiredPatientRecordBundleHelpers) {
   if (!patientRecordBundleRouteHelpersSource.includes(helper)) {
     throw new Error(
       `Patient record Bundle helper must use ${helper} so access, transfer context and collection loading remain wired.`
+    );
+  }
+}
+
+for (const helper of requiredPatientRecordBundleConsentContextHelpers) {
+  if (!patientRecordBundleConsentContextSource.includes(helper)) {
+    throw new Error(
+      `Patient record Bundle consent-context helper must use ${helper} so transfer headers and consent validation remain centralized.`
     );
   }
 }
