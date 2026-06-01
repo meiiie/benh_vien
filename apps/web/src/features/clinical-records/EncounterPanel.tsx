@@ -13,7 +13,7 @@ import type {
   NewEncounterForm
 } from "../../types/encounters.js";
 
-type EncounterPanelCounts = {
+export type EncounterPanelCounts = {
   readonly allergyIntolerances: number;
   readonly conditions: number;
   readonly serviceRequests: number;

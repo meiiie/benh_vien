@@ -49,6 +49,7 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/careWorkflowFormatters.ts",
   "apps/web/src/features/clinical-records/clinicalEntryCommandBuilders.ts",
   "apps/web/src/features/clinical-records/clinicalRecordPanelRenderers.tsx",
+  "apps/web/src/features/clinical-records/clinicalRecordPanelRendererTypes.ts",
   "apps/web/src/features/clinical-records/ConditionPanel.tsx",
   "apps/web/src/features/clinical-records/conditionFormatters.ts",
   "apps/web/src/features/clinical-records/diagnosticResultFormatters.ts",
@@ -165,6 +166,16 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/record-transfers/RecordTransferOperationalSummary.tsx",
     maxLines: 60,
     role: "Record transfer operational status summary UI"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/clinicalRecordPanelRenderers.tsx",
+    maxLines: 270,
+    role: "Clinical record panel renderer composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/clinicalRecordPanelRendererTypes.ts",
+    maxLines: 210,
+    role: "Clinical record panel renderer type contracts"
   }
 ];
 
