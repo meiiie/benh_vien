@@ -1,5 +1,10 @@
 import { DomainError } from "../shared/domain-error.js";
 import {
+  normalizeOptionalText as normalizeOptional,
+  normalizeRequiredText as normalizeRequired,
+  parseRequiredDate as parseDate
+} from "../shared/normalization.js";
+import {
   serviceRequestCategories,
   serviceRequestIntents,
   serviceRequestPriorities,
@@ -13,20 +18,11 @@ import type {
   ServiceRequestStatus
 } from "./service-request.types.js";
 
-export function normalizeRequired(value: string, message: string): string {
-  const normalized = value.trim().replace(/\s+/g, " ");
-
-  if (!normalized) {
-    throw new DomainError(message);
-  }
-
-  return normalized;
-}
-
-export function normalizeOptional(value: string | undefined): string | undefined {
-  const normalized = value?.trim().replace(/\s+/g, " ");
-  return normalized || undefined;
-}
+export {
+  normalizeOptionalText as normalizeOptional,
+  normalizeRequiredText as normalizeRequired,
+  parseRequiredDate as parseDate
+} from "../shared/normalization.js";
 
 export function normalizeCode(value: ServiceRequestCode): ServiceRequestCode {
   return {
@@ -81,14 +77,4 @@ export function validateTimeline(input: {
   if (input.updatedAt < input.createdAt) {
     throw new DomainError("Thời điểm cập nhật chỉ định dịch vụ không được trước thời điểm tạo chỉ định.");
   }
-}
-
-export function parseDate(value: string, message: string): Date {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    throw new DomainError(message);
-  }
-
-  return date;
 }

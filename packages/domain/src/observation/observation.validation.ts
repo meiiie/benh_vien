@@ -1,10 +1,21 @@
 import { DomainError } from "../shared/domain-error.js";
+import {
+  normalizeOptionalText as normalizeOptional,
+  normalizeRequiredText as normalizeRequired,
+  parseRequiredDate as parseDate
+} from "../shared/normalization.js";
 import { observationCategories, observationStatuses } from "./observation.types.js";
 import type {
   ObservationCategory,
   ObservationQuantity,
   ObservationStatus
 } from "./observation.types.js";
+
+export {
+  normalizeOptionalText as normalizeOptional,
+  normalizeRequiredText as normalizeRequired,
+  parseRequiredDate as parseDate
+} from "../shared/normalization.js";
 
 export function normalizeQuantity(value: ObservationQuantity): ObservationQuantity {
   if (!Number.isFinite(value.value)) {
@@ -52,29 +63,4 @@ export function normalizeCategory(value: ObservationCategory): ObservationCatego
   }
 
   return value;
-}
-
-export function normalizeRequired(value: string, message: string): string {
-  const normalized = value.trim().replace(/\s+/g, " ");
-
-  if (!normalized) {
-    throw new DomainError(message);
-  }
-
-  return normalized;
-}
-
-export function normalizeOptional(value: string | undefined): string | undefined {
-  const normalized = value?.trim().replace(/\s+/g, " ");
-  return normalized || undefined;
-}
-
-export function parseDate(value: string, message: string): Date {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    throw new DomainError(message);
-  }
-
-  return date;
 }

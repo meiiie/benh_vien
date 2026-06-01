@@ -1,27 +1,17 @@
 import { DomainError } from "../shared/domain-error.js";
+import {
+  normalizeOptionalText as normalizeOptional,
+  normalizeRequiredText as normalizeRequired,
+  parseRequiredDate as parseDate
+} from "../shared/normalization.js";
 import { consentCategories, consentStatuses } from "./consent.types.js";
 import type { ConsentCategory, ConsentStatus } from "./consent.types.js";
 
-export function normalizeRequired(value: string, message: string): string {
-  const normalized = value.trim().replace(/\s+/g, " ");
-
-  if (!normalized) {
-    throw new DomainError(message);
-  }
-
-  return normalized;
-}
-
-export function normalizeOptional(value: string | undefined): string | undefined {
-  const normalized = value?.trim().replace(/\s+/g, " ");
-  return normalized || undefined;
-}
-
-export function parseDate(value: string, message: string): Date {
-  const date = new Date(value);
-
-  return normalizeDate(date, message);
-}
+export {
+  normalizeOptionalText as normalizeOptional,
+  normalizeRequiredText as normalizeRequired,
+  parseRequiredDate as parseDate
+} from "../shared/normalization.js";
 
 export function normalizeDate(value: Date, message: string): Date {
   if (Number.isNaN(value.getTime())) {

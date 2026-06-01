@@ -1,5 +1,10 @@
 import { DomainError } from "../shared/domain-error.js";
 import {
+  normalizeOptionalText as normalizeOptional,
+  normalizeRequiredText as normalizeRequired,
+  parseRequiredDate as parseDate
+} from "../shared/normalization.js";
+import {
   allergyCategories,
   allergyClinicalStatuses,
   allergyCriticalities,
@@ -18,6 +23,12 @@ import type {
   AllergyVerificationStatus
 } from "./allergy-intolerance.types.js";
 
+export {
+  normalizeOptionalText as normalizeOptional,
+  normalizeRequiredText as normalizeRequired,
+  parseRequiredDate as parseDate
+} from "../shared/normalization.js";
+
 export function normalizeReaction(value: AllergyReaction): AllergyReaction {
   return {
     manifestation: normalizeCode(value.manifestation, "biểu hiện phản ứng"),
@@ -32,21 +43,6 @@ export function normalizeCode(value: AllergyCode, label: string): AllergyCode {
     code: normalizeRequired(value.code, `Mã ${label} không được để trống.`),
     display: normalizeRequired(value.display, `Tên ${label} không được để trống.`)
   };
-}
-
-export function normalizeRequired(value: string, message: string): string {
-  const normalized = value.trim().replace(/\s+/g, " ");
-
-  if (!normalized) {
-    throw new DomainError(message);
-  }
-
-  return normalized;
-}
-
-export function normalizeOptional(value: string | undefined): string | undefined {
-  const normalized = value?.trim().replace(/\s+/g, " ");
-  return normalized || undefined;
 }
 
 export function normalizeClinicalStatus(value: AllergyClinicalStatus): AllergyClinicalStatus {
@@ -105,14 +101,4 @@ export function validatePersistenceTimeline(createdAt: Date, updatedAt: Date): v
   if (updatedAt.getTime() < createdAt.getTime()) {
     throw new DomainError("Thời điểm cập nhật dị ứng không được trước thời điểm tạo dị ứng.");
   }
-}
-
-export function parseDate(value: string, message: string): Date {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    throw new DomainError(message);
-  }
-
-  return date;
 }
