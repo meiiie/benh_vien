@@ -34,8 +34,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/audit-event/audit-event.ts",
-    maxLines: 420,
+    maxLines: 270,
     role: "AuditEvent aggregate, sealing and integrity verification behavior"
+  },
+  {
+    path: "packages/domain/src/audit-event/audit-event.validation.ts",
+    maxLines: 180,
+    role: "AuditEvent canonical hashing, normalization and seal metadata guards"
   },
   {
     path: "packages/domain/src/audit-event/audit-event.types.ts",
@@ -308,6 +313,9 @@ const providerDirectoryTypesPath = resolve(
   "packages/domain/src/provider-directory/provider-directory.types.ts"
 );
 const auditEventAggregatePath = resolve("packages/domain/src/audit-event/audit-event.ts");
+const auditEventValidationPath = resolve(
+  "packages/domain/src/audit-event/audit-event.validation.ts"
+);
 const auditEventTypesPath = resolve("packages/domain/src/audit-event/audit-event.types.ts");
 const accessControlBehaviorPath = resolve(
   "packages/domain/src/access-control/access-control.ts"
@@ -440,6 +448,7 @@ const providerDirectoryValidationSource = await readFile(
 );
 const providerDirectoryTypesSource = await readFile(providerDirectoryTypesPath, "utf8");
 const auditEventAggregateSource = await readFile(auditEventAggregatePath, "utf8");
+const auditEventValidationSource = await readFile(auditEventValidationPath, "utf8");
 const auditEventTypesSource = await readFile(auditEventTypesPath, "utf8");
 const accessControlBehaviorSource = await readFile(accessControlBehaviorPath, "utf8");
 const accessControlPolicySource = await readFile(accessControlPolicyPath, "utf8");
@@ -610,11 +619,12 @@ for (const required of [
 for (const forbidden of [
   /export type AuditAction/,
   /export type AuditEventSnapshot/,
-  /const auditActions/
+  /const auditActions/,
+  /function hashAuditPayload/
 ]) {
   if (forbidden.test(auditEventAggregateSource)) {
     throw new Error(
-      "AuditEvent action, resource and snapshot types belong in audit-event.types.ts, not the aggregate file."
+      "AuditEvent aggregate must keep record/seal/report behavior only; types stay in audit-event.types.ts and hashing/normalization guards stay in audit-event.validation.ts."
     );
   }
 }
@@ -635,6 +645,26 @@ for (const required of [
 
 if (!/from "\.\/audit-event\.types\.js"/.test(auditEventAggregateSource)) {
   throw new Error("AuditEvent aggregate must depend on audit-event.types.ts for shared types.");
+}
+
+if (!/from "\.\/audit-event\.validation\.js"/.test(auditEventAggregateSource)) {
+  throw new Error(
+    "AuditEvent aggregate must depend on audit-event.validation.ts for canonical hashing and normalization guards."
+  );
+}
+
+for (const required of [
+  /export function hashAuditPayload/,
+  /export function hashCanonical/,
+  /export function normalizeSealMetadata/,
+  /export function normalizeAction/,
+  /from "\.\/audit-event\.types\.js"/
+]) {
+  if (!required.test(auditEventValidationSource)) {
+    throw new Error(
+      "audit-event.validation.ts must keep AuditEvent canonical hashing, normalization and seal metadata guards."
+    );
+  }
 }
 
 for (const forbidden of [
