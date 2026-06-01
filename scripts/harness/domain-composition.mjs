@@ -169,8 +169,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/diagnostic-report/diagnostic-report.ts",
-    maxLines: 230,
+    maxLines: 150,
     role: "DiagnosticReport issuing, content and timeline validation behavior"
+  },
+  {
+    path: "packages/domain/src/diagnostic-report/diagnostic-report.validation.ts",
+    maxLines: 130,
+    role: "DiagnosticReport code, content, status and timeline guards"
   },
   {
     path: "packages/domain/src/diagnostic-report/diagnostic-report.types.ts",
@@ -388,6 +393,9 @@ const clinicalDocumentTypesPath = resolve(
 const diagnosticReportAggregatePath = resolve(
   "packages/domain/src/diagnostic-report/diagnostic-report.ts"
 );
+const diagnosticReportValidationPath = resolve(
+  "packages/domain/src/diagnostic-report/diagnostic-report.validation.ts"
+);
 const diagnosticReportTypesPath = resolve(
   "packages/domain/src/diagnostic-report/diagnostic-report.types.ts"
 );
@@ -498,6 +506,10 @@ const clinicalDocumentValidationSource = await readFile(
 );
 const clinicalDocumentTypesSource = await readFile(clinicalDocumentTypesPath, "utf8");
 const diagnosticReportAggregateSource = await readFile(diagnosticReportAggregatePath, "utf8");
+const diagnosticReportValidationSource = await readFile(
+  diagnosticReportValidationPath,
+  "utf8"
+);
 const diagnosticReportTypesSource = await readFile(diagnosticReportTypesPath, "utf8");
 const observationAggregateSource = await readFile(observationAggregatePath, "utf8");
 const observationTypesSource = await readFile(observationTypesPath, "utf8");
@@ -1083,11 +1095,12 @@ for (const required of [
 for (const forbidden of [
   /export type DiagnosticReportStatus/,
   /export type DiagnosticReportSnapshot/,
-  /const diagnosticReportStatuses/
+  /const diagnosticReportStatuses/,
+  /function normalizeCode/
 ]) {
   if (forbidden.test(diagnosticReportAggregateSource)) {
     throw new Error(
-      "DiagnosticReport type declarations and code sets belong in diagnostic-report.types.ts, not the aggregate file."
+      "DiagnosticReport aggregate must keep issue/rehydrate behavior only; types stay in diagnostic-report.types.ts and code/content/status/timeline guards stay in diagnostic-report.validation.ts."
     );
   }
 }
@@ -1111,6 +1124,26 @@ if (!/from "\.\/diagnostic-report\.types\.js"/.test(diagnosticReportAggregateSou
   throw new Error(
     "DiagnosticReport aggregate must depend on diagnostic-report.types.ts for shared types."
   );
+}
+
+if (!/from "\.\/diagnostic-report\.validation\.js"/.test(diagnosticReportAggregateSource)) {
+  throw new Error(
+    "DiagnosticReport aggregate must depend on diagnostic-report.validation.ts for code, content, status and timeline guards."
+  );
+}
+
+for (const required of [
+  /export function normalizeCode/,
+  /export function assertReportContent/,
+  /export function normalizeStatus/,
+  /export function normalizeCategory/,
+  /from "\.\/diagnostic-report\.types\.js"/
+]) {
+  if (!required.test(diagnosticReportValidationSource)) {
+    throw new Error(
+      "diagnostic-report.validation.ts must keep DiagnosticReport code, content, status and timeline guards."
+    );
+  }
 }
 
 for (const forbidden of [
