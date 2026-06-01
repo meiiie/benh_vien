@@ -58,6 +58,31 @@ const routeBudgets = [
     role: "HTTP API audit route wiring"
   },
   {
+    path: "apps/api/src/modules/http/system-routes.ts",
+    maxLines: 40,
+    role: "System route composition root"
+  },
+  {
+    path: "apps/api/src/modules/http/system-health-routes.ts",
+    maxLines: 20,
+    role: "System health route"
+  },
+  {
+    path: "apps/api/src/modules/http/system-readiness-routes.ts",
+    maxLines: 100,
+    role: "System readiness route and dependency checks"
+  },
+  {
+    path: "apps/api/src/modules/http/system-api-runtime-routes.ts",
+    maxLines: 60,
+    role: "API runtime metadata and CapabilityStatement route adapter"
+  },
+  {
+    path: "apps/api/src/modules/http/system-runtime-info.ts",
+    maxLines: 80,
+    role: "Runtime diagnostics redaction and repository metadata helpers"
+  },
+  {
     path: "apps/api/src/modules/provider-directory/provider-directory-routes.ts",
     maxLines: 50,
     role: "ProviderDirectory route composition root"
@@ -612,6 +637,31 @@ const forbiddenApiRoutesPatterns = [
     message:
       "HTTP API root should only register system routes and delegate domain route wiring to api-domain-routes.ts."
   }
+];
+
+const systemRoutesPath = resolve("apps/api/src/modules/http/system-routes.ts");
+const forbiddenSystemRoutePatterns = [
+  {
+    pattern: /\bapp\.get\b|\bapi\.get\b/,
+    message:
+      "System route handlers belong in system-health-routes.ts, system-readiness-routes.ts or system-api-runtime-routes.ts."
+  },
+  {
+    pattern:
+      /\bbuildApiRuntimeInfo\b|\breadActorContext\b|\bbuildWiiiCareCapabilityStatement\b|\breadRepositoryName\b/,
+    message:
+      "System runtime metadata and diagnostics policy belong outside system-routes.ts."
+  },
+  {
+    pattern: /\bfindAll\b|\bfindDirectory\b|\bloginRateLimiter\.check\b/,
+    message:
+      "System readiness dependency checks belong in system-readiness-routes.ts."
+  }
+];
+const requiredSystemRegistrations = [
+  "registerHealthRoutes",
+  "registerReadinessRoutes",
+  "registerApiRuntimeRoutes"
 ];
 
 const apiDomainRoutesPath = resolve("apps/api/src/modules/http/api-domain-routes.ts");
@@ -1228,6 +1278,7 @@ for (const budget of routeBudgets) {
 }
 
 const apiRoutesSource = await readFile(apiRoutesPath, "utf8");
+const systemRoutesSource = await readFile(systemRoutesPath, "utf8");
 const apiDomainRoutesSource = await readFile(apiDomainRoutesPath, "utf8");
 const providerDirectoryRoutesSource = await readFile(
   providerDirectoryRoutesPath,
@@ -1275,6 +1326,20 @@ const workflowTaskRoutesSource = await readFile(workflowTaskRoutesPath, "utf8");
 for (const forbidden of forbiddenApiRoutesPatterns) {
   if (forbidden.pattern.test(apiRoutesSource)) {
     throw new Error(forbidden.message);
+  }
+}
+
+for (const forbidden of forbiddenSystemRoutePatterns) {
+  if (forbidden.pattern.test(systemRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredSystemRegistrations) {
+  if (!systemRoutesSource.includes(registration)) {
+    throw new Error(
+      `System route composition must register ${registration} so health, readiness and runtime routes remain wired.`
+    );
   }
 }
 
