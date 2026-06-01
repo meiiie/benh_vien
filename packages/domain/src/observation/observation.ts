@@ -1,5 +1,13 @@
-import { DomainError } from "../shared/domain-error.js";
-import { observationCategories, observationStatuses } from "./observation.types.js";
+import {
+  normalizeCategory,
+  normalizeOptional,
+  normalizeQuantity,
+  normalizeRequired,
+  normalizeStatus,
+  parseDate,
+  validateObservationValue,
+  validatePersistenceTimeline
+} from "./observation.validation.js";
 import type {
   CreateObservationInput,
   ObservationCategory,
@@ -105,77 +113,4 @@ export class Observation {
       valueQuantity: this.props.valueQuantity ? { ...this.props.valueQuantity } : undefined
     };
   }
-}
-
-function normalizeQuantity(value: ObservationQuantity): ObservationQuantity {
-  if (!Number.isFinite(value.value)) {
-    throw new DomainError("Giá trị định lượng của observation không hợp lệ.");
-  }
-
-  return {
-    value: value.value,
-    unit: normalizeRequired(value.unit, "Đơn vị observation không được để trống."),
-    system: normalizeOptional(value.system),
-    code: normalizeOptional(value.code)
-  };
-}
-
-function validateObservationValue(
-  valueText: string | undefined,
-  valueQuantity: ObservationQuantity | undefined
-): void {
-  if (!valueText && !valueQuantity) {
-    throw new DomainError("Observation phải có giá trị định lượng hoặc giá trị văn bản.");
-  }
-
-  if (valueText && valueQuantity) {
-    throw new DomainError("Observation chỉ được có một kiểu giá trị trong lát cắt hiện tại.");
-  }
-}
-
-function validatePersistenceTimeline(createdAt: Date, updatedAt: Date): void {
-  if (updatedAt < createdAt) {
-    throw new DomainError("Thời điểm cập nhật observation không được trước thời điểm tạo observation.");
-  }
-}
-
-function normalizeStatus(value: ObservationStatus): ObservationStatus {
-  if (!observationStatuses.has(value)) {
-    throw new DomainError("Trạng thái observation không hợp lệ.");
-  }
-
-  return value;
-}
-
-function normalizeCategory(value: ObservationCategory): ObservationCategory {
-  if (!observationCategories.has(value)) {
-    throw new DomainError("Nhóm observation không hợp lệ.");
-  }
-
-  return value;
-}
-
-function normalizeRequired(value: string, message: string): string {
-  const normalized = value.trim().replace(/\s+/g, " ");
-
-  if (!normalized) {
-    throw new DomainError(message);
-  }
-
-  return normalized;
-}
-
-function normalizeOptional(value: string | undefined): string | undefined {
-  const normalized = value?.trim().replace(/\s+/g, " ");
-  return normalized || undefined;
-}
-
-function parseDate(value: string, message: string): Date {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    throw new DomainError(message);
-  }
-
-  return date;
 }

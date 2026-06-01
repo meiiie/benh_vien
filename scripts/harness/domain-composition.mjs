@@ -189,8 +189,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/observation/observation.ts",
-    maxLines: 210,
-    role: "Observation recording, value and timeline validation behavior"
+    maxLines: 140,
+    role: "Observation recording behavior"
+  },
+  {
+    path: "packages/domain/src/observation/observation.validation.ts",
+    maxLines: 100,
+    role: "Observation quantity, value, status and timeline guards"
   },
   {
     path: "packages/domain/src/observation/observation.types.ts",
@@ -214,8 +219,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/allergy-intolerance/allergy-intolerance.ts",
-    maxLines: 240,
-    role: "AllergyIntolerance recording, reaction and timeline validation behavior"
+    maxLines: 140,
+    role: "AllergyIntolerance recording and reaction behavior"
+  },
+  {
+    path: "packages/domain/src/allergy-intolerance/allergy-intolerance.validation.ts",
+    maxLines: 140,
+    role: "AllergyIntolerance code, reaction, status and timeline guards"
   },
   {
     path: "packages/domain/src/allergy-intolerance/allergy-intolerance.types.ts",
@@ -423,12 +433,16 @@ const diagnosticReportTypesPath = resolve(
   "packages/domain/src/diagnostic-report/diagnostic-report.types.ts"
 );
 const observationAggregatePath = resolve("packages/domain/src/observation/observation.ts");
+const observationValidationPath = resolve("packages/domain/src/observation/observation.validation.ts");
 const observationTypesPath = resolve("packages/domain/src/observation/observation.types.ts");
 const conditionAggregatePath = resolve("packages/domain/src/condition/condition.ts");
 const conditionValidationPath = resolve("packages/domain/src/condition/condition.validation.ts");
 const conditionTypesPath = resolve("packages/domain/src/condition/condition.types.ts");
 const allergyIntoleranceAggregatePath = resolve(
   "packages/domain/src/allergy-intolerance/allergy-intolerance.ts"
+);
+const allergyIntoleranceValidationPath = resolve(
+  "packages/domain/src/allergy-intolerance/allergy-intolerance.validation.ts"
 );
 const allergyIntoleranceTypesPath = resolve(
   "packages/domain/src/allergy-intolerance/allergy-intolerance.types.ts"
@@ -539,12 +553,17 @@ const diagnosticReportValidationSource = await readFile(
 );
 const diagnosticReportTypesSource = await readFile(diagnosticReportTypesPath, "utf8");
 const observationAggregateSource = await readFile(observationAggregatePath, "utf8");
+const observationValidationSource = await readFile(observationValidationPath, "utf8");
 const observationTypesSource = await readFile(observationTypesPath, "utf8");
 const conditionAggregateSource = await readFile(conditionAggregatePath, "utf8");
 const conditionValidationSource = await readFile(conditionValidationPath, "utf8");
 const conditionTypesSource = await readFile(conditionTypesPath, "utf8");
 const allergyIntoleranceAggregateSource = await readFile(
   allergyIntoleranceAggregatePath,
+  "utf8"
+);
+const allergyIntoleranceValidationSource = await readFile(
+  allergyIntoleranceValidationPath,
   "utf8"
 );
 const allergyIntoleranceTypesSource = await readFile(allergyIntoleranceTypesPath, "utf8");
@@ -1204,11 +1223,13 @@ for (const required of [
 for (const forbidden of [
   /export type ObservationStatus/,
   /export type ObservationSnapshot/,
-  /const observationStatuses/
+  /const observationStatuses/,
+  /function normalizeQuantity/,
+  /function validateObservationValue/
 ]) {
   if (forbidden.test(observationAggregateSource)) {
     throw new Error(
-      "Observation type declarations and code sets belong in observation.types.ts, not the aggregate file."
+      "Observation aggregate must keep record/rehydrate behavior only; types stay in observation.types.ts and quantity/value/status/timeline guards stay in observation.validation.ts."
     );
   }
 }
@@ -1231,6 +1252,26 @@ for (const required of [
 
 if (!/from "\.\/observation\.types\.js"/.test(observationAggregateSource)) {
   throw new Error("Observation aggregate must depend on observation.types.ts for shared types.");
+}
+
+if (!/from "\.\/observation\.validation\.js"/.test(observationAggregateSource)) {
+  throw new Error(
+    "Observation aggregate must depend on observation.validation.ts for quantity, value, status and timeline guards."
+  );
+}
+
+for (const required of [
+  /export function normalizeQuantity/,
+  /export function validateObservationValue/,
+  /export function normalizeStatus/,
+  /export function normalizeCategory/,
+  /from "\.\/observation\.types\.js"/
+]) {
+  if (!required.test(observationValidationSource)) {
+    throw new Error(
+      "observation.validation.ts must keep Observation quantity, value, status and timeline guards."
+    );
+  }
 }
 
 for (const forbidden of [
@@ -1293,11 +1334,13 @@ for (const required of [
 for (const forbidden of [
   /export type AllergyClinicalStatus/,
   /export type AllergyIntoleranceSnapshot/,
-  /const allergyClinicalStatuses/
+  /const allergyClinicalStatuses/,
+  /function normalizeReaction/,
+  /function validatePersistenceTimeline/
 ]) {
   if (forbidden.test(allergyIntoleranceAggregateSource)) {
     throw new Error(
-      "AllergyIntolerance type declarations and code sets belong in allergy-intolerance.types.ts, not the aggregate file."
+      "AllergyIntolerance aggregate must keep record/rehydrate behavior only; types stay in allergy-intolerance.types.ts and code/reaction/status/timeline guards stay in allergy-intolerance.validation.ts."
     );
   }
 }
@@ -1329,6 +1372,28 @@ if (!/from "\.\/allergy-intolerance\.types\.js"/.test(allergyIntoleranceAggregat
   throw new Error(
     "AllergyIntolerance aggregate must depend on allergy-intolerance.types.ts for shared types."
   );
+}
+
+if (!/from "\.\/allergy-intolerance\.validation\.js"/.test(
+  allergyIntoleranceAggregateSource
+)) {
+  throw new Error(
+    "AllergyIntolerance aggregate must depend on allergy-intolerance.validation.ts for code, reaction, status and timeline guards."
+  );
+}
+
+for (const required of [
+  /export function normalizeReaction/,
+  /export function normalizeClinicalStatus/,
+  /export function normalizeVerificationStatus/,
+  /export function validatePersistenceTimeline/,
+  /from "\.\/allergy-intolerance\.types\.js"/
+]) {
+  if (!required.test(allergyIntoleranceValidationSource)) {
+    throw new Error(
+      "allergy-intolerance.validation.ts must keep AllergyIntolerance code, reaction, status and timeline guards."
+    );
+  }
 }
 
 for (const forbidden of [
