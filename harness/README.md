@@ -14,7 +14,7 @@ Lệnh này chạy:
 - Unit test hiện có.
 - Build API, web và packages.
 - Smoke test ánh xạ Patient Record sang FHIR `CapabilityStatement`, `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Consent`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `DocumentReference`, `Composition`, `Bundle`, `AuditEvent` và `Task` điều phối chuyển hồ sơ, kèm RBAC, thu hồi consent, audit tối thiểu và kiểm tra toàn vẹn chuỗi audit.
-- Kiểm tra biên kiến trúc API: route chuyển hồ sơ không phình lại thành God route, các nhánh tạo yêu cầu, command lifecycle và callback xác nhận phải nằm trong module route chuyên biệt.
+- Kiểm tra biên kiến trúc API: route chuyển hồ sơ và route bệnh nhân không phình lại thành God route; các nhánh registry/query/command/FHIR/callback phải nằm trong module route chuyên biệt.
 - Kiểm tra biên kiến trúc frontend: `App.tsx` không phình to, HTTP đi qua API client, formatter không bị gom lẫn miền, và type lâm sàng phải import từ module nghiệp vụ chuyên biệt thay vì barrel tương thích `types/clinical.ts`.
 - Kiểm tra Docker Compose dev/prod parse hợp lệ.
 

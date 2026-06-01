@@ -46,6 +46,36 @@ const routeBudgets = [
     path: "apps/api/src/modules/record-transfers/record-transfer-delivery-attempt-route-helpers.ts",
     maxLines: 140,
     role: "RecordTransfer delivery attempt route helper functions"
+  },
+  {
+    path: "apps/api/src/modules/patients/patient-routes.ts",
+    maxLines: 90,
+    role: "Patient route composition root"
+  },
+  {
+    path: "apps/api/src/modules/patients/patient-registry-routes.ts",
+    maxLines: 170,
+    role: "Patient registry list and create adapter"
+  },
+  {
+    path: "apps/api/src/modules/patients/patient-merge-routes.ts",
+    maxLines: 130,
+    role: "Patient merge command adapter"
+  },
+  {
+    path: "apps/api/src/modules/patients/patient-query-routes.ts",
+    maxLines: 90,
+    role: "Patient read route adapter"
+  },
+  {
+    path: "apps/api/src/modules/patients/patient-fhir-routes.ts",
+    maxLines: 340,
+    role: "Patient FHIR export routes"
+  },
+  {
+    path: "apps/api/src/modules/patients/patient-route-helpers.ts",
+    maxLines: 260,
+    role: "Patient route helper functions"
   }
 ];
 
@@ -88,6 +118,34 @@ const requiredRecordTransferRegistrations = [
   "registerRecordTransferFhirRoutes"
 ];
 
+const patientRoutesPath = resolve("apps/api/src/modules/patients/patient-routes.ts");
+const forbiddenPatientRoutePatterns = [
+  {
+    pattern: /\bCreatePatientRequestSchema\b|\bfindPatientIdentifierConflict\b/,
+    message:
+      "Patient registry list/create policy belongs in patient-registry-routes.ts."
+  },
+  {
+    pattern: /\bMergePatientRequestSchema\b|\bmarkMerged\b/,
+    message: "Patient merge commands belong in patient-merge-routes.ts."
+  },
+  {
+    pattern: /\bPatientIdParamsSchema\b|\bsendFhirOperationOutcome\b/,
+    message: "Patient read and FHIR endpoint details belong outside patient-routes.ts."
+  },
+  {
+    pattern:
+      /\bmapPatientToFhir\b|\bmapPatientRecordToFhirBundle\b|\bmapPatientRecordToFhirDocumentBundle\b/,
+    message: "Patient FHIR mapping belongs in patient-fhir-routes.ts."
+  }
+];
+const requiredPatientRegistrations = [
+  "registerPatientRegistryRoutes",
+  "registerPatientMergeRoutes",
+  "registerPatientQueryRoutes",
+  "registerPatientFhirRoutes"
+];
+
 const routeReports = [];
 
 for (const budget of routeBudgets) {
@@ -111,6 +169,7 @@ for (const budget of routeBudgets) {
 }
 
 const recordTransferRoutesSource = await readFile(recordTransferRoutesPath, "utf8");
+const patientRoutesSource = await readFile(patientRoutesPath, "utf8");
 
 for (const forbidden of forbiddenRecordTransferRoutePatterns) {
   if (forbidden.pattern.test(recordTransferRoutesSource)) {
@@ -122,6 +181,20 @@ for (const registration of requiredRecordTransferRegistrations) {
   if (!recordTransferRoutesSource.includes(registration)) {
     throw new Error(
       `RecordTransfer root routes must register ${registration} so lifecycle-specific route modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenPatientRoutePatterns) {
+  if (forbidden.pattern.test(patientRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredPatientRegistrations) {
+  if (!patientRoutesSource.includes(registration)) {
+    throw new Error(
+      `Patient root routes must register ${registration} so registry, merge, query and FHIR route modules remain wired.`
     );
   }
 }
