@@ -308,6 +308,31 @@ const postgresBudgets = [
     role: "ClinicalDocument PostgreSQL row types"
   },
   {
+    path: "apps/api/src/infrastructure/postgres/postgres-condition.repository.ts",
+    maxLines: 90,
+    role: "Condition PostgreSQL repository orchestration"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-condition.sql.ts",
+    maxLines: 70,
+    role: "Condition PostgreSQL SQL statements"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-condition.mapper.ts",
+    maxLines: 90,
+    role: "Condition PostgreSQL row and parameter mapper"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-condition.persistence.ts",
+    maxLines: 30,
+    role: "Condition PostgreSQL persistence command"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-condition.types.ts",
+    maxLines: 50,
+    role: "Condition PostgreSQL row types"
+  },
+  {
     path: "apps/api/src/infrastructure/postgres/postgres-audit-event.repository.ts",
     maxLines: 110,
     role: "AuditEvent PostgreSQL repository integrity orchestration"
@@ -515,6 +540,21 @@ const clinicalDocumentPersistencePath = resolve(
 const clinicalDocumentTypesPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-clinical-document.types.ts"
 );
+const conditionRepositoryPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-condition.repository.ts"
+);
+const conditionSqlPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-condition.sql.ts"
+);
+const conditionMapperPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-condition.mapper.ts"
+);
+const conditionPersistencePath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-condition.persistence.ts"
+);
+const conditionTypesPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-condition.types.ts"
+);
 const auditEventRepositoryPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-audit-event.repository.ts"
 );
@@ -719,6 +759,14 @@ const clinicalDocumentTypesSource = await readFile(
   clinicalDocumentTypesPath,
   "utf8"
 );
+const conditionRepositorySource = await readFile(conditionRepositoryPath, "utf8");
+const conditionSqlSource = await readFile(conditionSqlPath, "utf8");
+const conditionMapperSource = await readFile(conditionMapperPath, "utf8");
+const conditionPersistenceSource = await readFile(
+  conditionPersistencePath,
+  "utf8"
+);
+const conditionTypesSource = await readFile(conditionTypesPath, "utf8");
 const auditEventRepositorySource = await readFile(auditEventRepositoryPath, "utf8");
 const auditEventSqlSource = await readFile(auditEventSqlPath, "utf8");
 const auditEventMapperSource = await readFile(auditEventMapperPath, "utf8");
@@ -892,6 +940,19 @@ for (const importedName of requiredClinicalDocumentRepositoryImports) {
     throw new Error(
       `ClinicalDocument PostgreSQL repository must compose ${importedName}.`
     );
+  }
+}
+
+const requiredConditionRepositoryImports = [
+  "rowToCondition",
+  "upsertCondition",
+  "selectConditionSql",
+  "ConditionRow"
+];
+
+for (const importedName of requiredConditionRepositoryImports) {
+  if (!conditionRepositorySource.includes(importedName)) {
+    throw new Error(`Condition PostgreSQL repository must compose ${importedName}.`);
   }
 }
 
@@ -1391,6 +1452,45 @@ assertForbidden(clinicalDocumentTypesSource, [
     pattern: /\bClinicalDocument\.rehydrate\b|\bquery\s*\(|\bINSERT INTO clinical_documents\b/,
     message:
       "ClinicalDocument PostgreSQL type module must only describe row contracts."
+  }
+]);
+
+assertForbidden(conditionRepositorySource, [
+  {
+    pattern: /\bINSERT INTO conditions\b|\bON CONFLICT \(id\)\b|\bCondition\.rehydrate\b|\bConditionSnapshot\b|\bJSON\.parse\b|\bJSON\.stringify\b/,
+    message:
+      "Condition PostgreSQL repository must delegate upsert SQL and JSON row mapping to focused modules."
+  }
+]);
+
+assertForbidden(conditionSqlSource, [
+  {
+    pattern: /@benh-vien-so\/domain|\bCondition\b|\bpg\b/,
+    message:
+      "Condition PostgreSQL SQL module must stay a pure SQL statement module without domain or pg dependencies."
+  }
+]);
+
+assertForbidden(conditionMapperSource, [
+  {
+    pattern: /\bfrom "pg"\b|\bquery\s*\(|\bINSERT INTO conditions\b|\bON CONFLICT \(id\)\b/,
+    message:
+      "Condition PostgreSQL mapper must stay pure row/value mapping without pg I/O or SQL ownership."
+  }
+]);
+
+assertForbidden(conditionPersistenceSource, [
+  {
+    pattern: /\bCondition\.rehydrate\b|\bConditionSnapshot\b|\bSELECT\b|\bJSON\.parse\b/,
+    message:
+      "Condition PostgreSQL persistence command must compose SQL and mapper without owning reads or domain hydration."
+  }
+]);
+
+assertForbidden(conditionTypesSource, [
+  {
+    pattern: /\bCondition\.rehydrate\b|\bquery\s*\(|\bINSERT INTO conditions\b/,
+    message: "Condition PostgreSQL type module must only describe row contracts."
   }
 ]);
 
