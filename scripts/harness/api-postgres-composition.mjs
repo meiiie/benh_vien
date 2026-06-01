@@ -133,6 +133,31 @@ const postgresBudgets = [
     role: "MedicationDispense PostgreSQL row types"
   },
   {
+    path: "apps/api/src/infrastructure/postgres/postgres-medication-administration.repository.ts",
+    maxLines: 90,
+    role: "MedicationAdministration PostgreSQL repository orchestration"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-medication-administration.sql.ts",
+    maxLines: 70,
+    role: "MedicationAdministration PostgreSQL SQL statements"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-medication-administration.mapper.ts",
+    maxLines: 110,
+    role: "MedicationAdministration PostgreSQL row and parameter mapper"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-medication-administration.persistence.ts",
+    maxLines: 30,
+    role: "MedicationAdministration PostgreSQL persistence command"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-medication-administration.types.ts",
+    maxLines: 40,
+    role: "MedicationAdministration PostgreSQL row types"
+  },
+  {
     path: "apps/api/src/infrastructure/postgres/postgres-audit-event.repository.ts",
     maxLines: 110,
     role: "AuditEvent PostgreSQL repository integrity orchestration"
@@ -235,6 +260,21 @@ const medicationDispensePersistencePath = resolve(
 const medicationDispenseTypesPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-medication-dispense.types.ts"
 );
+const medicationAdministrationRepositoryPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-medication-administration.repository.ts"
+);
+const medicationAdministrationSqlPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-medication-administration.sql.ts"
+);
+const medicationAdministrationMapperPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-medication-administration.mapper.ts"
+);
+const medicationAdministrationPersistencePath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-medication-administration.persistence.ts"
+);
+const medicationAdministrationTypesPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-medication-administration.types.ts"
+);
 const auditEventRepositoryPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-audit-event.repository.ts"
 );
@@ -323,6 +363,26 @@ const medicationDispenseTypesSource = await readFile(
   medicationDispenseTypesPath,
   "utf8"
 );
+const medicationAdministrationRepositorySource = await readFile(
+  medicationAdministrationRepositoryPath,
+  "utf8"
+);
+const medicationAdministrationSqlSource = await readFile(
+  medicationAdministrationSqlPath,
+  "utf8"
+);
+const medicationAdministrationMapperSource = await readFile(
+  medicationAdministrationMapperPath,
+  "utf8"
+);
+const medicationAdministrationPersistenceSource = await readFile(
+  medicationAdministrationPersistencePath,
+  "utf8"
+);
+const medicationAdministrationTypesSource = await readFile(
+  medicationAdministrationTypesPath,
+  "utf8"
+);
 const auditEventRepositorySource = await readFile(auditEventRepositoryPath, "utf8");
 const auditEventSqlSource = await readFile(auditEventSqlPath, "utf8");
 const auditEventMapperSource = await readFile(auditEventMapperPath, "utf8");
@@ -394,6 +454,21 @@ for (const importedName of requiredMedicationDispenseRepositoryImports) {
   if (!medicationDispenseRepositorySource.includes(importedName)) {
     throw new Error(
       `MedicationDispense PostgreSQL repository must compose ${importedName}.`
+    );
+  }
+}
+
+const requiredMedicationAdministrationRepositoryImports = [
+  "rowToMedicationAdministration",
+  "upsertMedicationAdministration",
+  "selectMedicationAdministrationSql",
+  "MedicationAdministrationRow"
+];
+
+for (const importedName of requiredMedicationAdministrationRepositoryImports) {
+  if (!medicationAdministrationRepositorySource.includes(importedName)) {
+    throw new Error(
+      `MedicationAdministration PostgreSQL repository must compose ${importedName}.`
     );
   }
 }
@@ -617,6 +692,46 @@ assertForbidden(medicationDispenseTypesSource, [
     pattern: /\bMedicationDispense\.rehydrate\b|\bquery\s*\(|\bINSERT INTO medication_dispenses\b/,
     message:
       "MedicationDispense PostgreSQL type module must only describe row contracts."
+  }
+]);
+
+assertForbidden(medicationAdministrationRepositorySource, [
+  {
+    pattern: /\bINSERT INTO medication_administrations\b|\bON CONFLICT \(id\)\b|\bMedicationAdministration\.rehydrate\b|\bMedicationAdministrationSnapshot\b|\bJSON\.parse\b|\bJSON\.stringify\b/,
+    message:
+      "MedicationAdministration PostgreSQL repository must delegate upsert SQL and JSON row mapping to focused modules."
+  }
+]);
+
+assertForbidden(medicationAdministrationSqlSource, [
+  {
+    pattern: /@benh-vien-so\/domain|\bMedicationAdministration\b|\bpg\b/,
+    message:
+      "MedicationAdministration PostgreSQL SQL module must stay a pure SQL statement module without domain or pg dependencies."
+  }
+]);
+
+assertForbidden(medicationAdministrationMapperSource, [
+  {
+    pattern: /\bfrom "pg"\b|\bquery\s*\(|\bINSERT INTO medication_administrations\b|\bON CONFLICT \(id\)\b/,
+    message:
+      "MedicationAdministration PostgreSQL mapper must stay pure row/value mapping without pg I/O or SQL ownership."
+  }
+]);
+
+assertForbidden(medicationAdministrationPersistenceSource, [
+  {
+    pattern: /\bMedicationAdministration\.rehydrate\b|\bMedicationAdministrationSnapshot\b|\bSELECT\b|\bJSON\.parse\b/,
+    message:
+      "MedicationAdministration PostgreSQL persistence command must compose SQL and mapper without owning reads or domain hydration."
+  }
+]);
+
+assertForbidden(medicationAdministrationTypesSource, [
+  {
+    pattern: /\bMedicationAdministration\.rehydrate\b|\bquery\s*\(|\bINSERT INTO medication_administrations\b/,
+    message:
+      "MedicationAdministration PostgreSQL type module must only describe row contracts."
   }
 ]);
 
