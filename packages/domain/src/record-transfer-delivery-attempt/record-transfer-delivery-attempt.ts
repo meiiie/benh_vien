@@ -1,67 +1,27 @@
 import { DomainError } from "../shared/domain-error.js";
+import {
+  deliveryAttemptBundleTypes,
+  deliveryAttemptStatuses
+} from "./record-transfer-delivery-attempt.types.js";
+import type {
+  MarkRecordTransferDeliveryAttemptFailedInput,
+  MarkRecordTransferDeliveryAttemptSucceededInput,
+  QueueRecordTransferDeliveryAttemptInput,
+  RecordTransferDeliveryAttemptBundleType,
+  RecordTransferDeliveryAttemptSnapshot,
+  RecordTransferDeliveryAttemptStatus
+} from "./record-transfer-delivery-attempt.types.js";
 
-export type RecordTransferDeliveryAttemptStatus = "queued" | "succeeded" | "failed";
-
-type RecordTransferDeliveryAttemptBundleType =
-  RecordTransferDeliveryAttemptSnapshot["bundleType"];
-
-const deliveryAttemptStatuses = new Set<RecordTransferDeliveryAttemptStatus>([
-  "queued",
-  "succeeded",
-  "failed"
-]);
-const deliveryAttemptBundleTypes = new Set<RecordTransferDeliveryAttemptBundleType>([
-  "collection",
-  "document"
-]);
 const maxResponseBodyPreviewLength = 2_000;
 
-export type RecordTransferDeliveryAttemptSnapshot = {
-  readonly id: string;
-  readonly recordTransferId: string;
-  readonly patientId: string;
-  readonly targetEndpointId: string;
-  readonly targetEndpointAddress: string;
-  readonly bundleId: string;
-  readonly bundleType: "collection" | "document";
-  readonly idempotencyKey: string;
-  readonly attemptNumber: number;
-  readonly status: RecordTransferDeliveryAttemptStatus;
-  readonly queuedAt: string;
-  readonly completedAt?: string;
-  readonly httpStatus?: number;
-  readonly responseBodyPreview?: string;
-  readonly errorMessage?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type QueueRecordTransferDeliveryAttemptInput = Omit<
+export type {
+  MarkRecordTransferDeliveryAttemptFailedInput,
+  MarkRecordTransferDeliveryAttemptSucceededInput,
+  QueueRecordTransferDeliveryAttemptInput,
+  RecordTransferDeliveryAttemptBundleType,
   RecordTransferDeliveryAttemptSnapshot,
-  | "status"
-  | "queuedAt"
-  | "completedAt"
-  | "httpStatus"
-  | "responseBodyPreview"
-  | "errorMessage"
-  | "createdAt"
-  | "updatedAt"
-> & {
-  readonly queuedAt?: string;
-};
-
-export type MarkRecordTransferDeliveryAttemptSucceededInput = {
-  readonly completedAt?: string;
-  readonly httpStatus: number;
-  readonly responseBodyPreview?: string;
-};
-
-export type MarkRecordTransferDeliveryAttemptFailedInput = {
-  readonly completedAt?: string;
-  readonly httpStatus?: number;
-  readonly responseBodyPreview?: string;
-  readonly errorMessage: string;
-};
+  RecordTransferDeliveryAttemptStatus
+} from "./record-transfer-delivery-attempt.types.js";
 
 export class RecordTransferDeliveryAttempt {
   private constructor(private props: RecordTransferDeliveryAttemptSnapshot) {}

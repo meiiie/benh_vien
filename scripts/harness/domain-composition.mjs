@@ -71,6 +71,16 @@ const domainBudgets = [
     path: "packages/domain/src/procedure/procedure.types.ts",
     maxLines: 130,
     role: "Procedure status, category, performer, report reference and snapshot types"
+  },
+  {
+    path: "packages/domain/src/record-transfer-delivery-attempt/record-transfer-delivery-attempt.ts",
+    maxLines: 390,
+    role: "RecordTransferDeliveryAttempt queue, terminal update and delivery validation behavior"
+  },
+  {
+    path: "packages/domain/src/record-transfer-delivery-attempt/record-transfer-delivery-attempt.types.ts",
+    maxLines: 90,
+    role: "RecordTransferDeliveryAttempt status, bundle, snapshot and command input types"
   }
 ];
 
@@ -104,6 +114,12 @@ const workflowTaskTypesPath = resolve(
 );
 const procedureAggregatePath = resolve("packages/domain/src/procedure/procedure.ts");
 const procedureTypesPath = resolve("packages/domain/src/procedure/procedure.types.ts");
+const deliveryAttemptAggregatePath = resolve(
+  "packages/domain/src/record-transfer-delivery-attempt/record-transfer-delivery-attempt.ts"
+);
+const deliveryAttemptTypesPath = resolve(
+  "packages/domain/src/record-transfer-delivery-attempt/record-transfer-delivery-attempt.types.ts"
+);
 
 const domainReports = [];
 
@@ -144,6 +160,8 @@ const workflowTaskAggregateSource = await readFile(workflowTaskAggregatePath, "u
 const workflowTaskTypesSource = await readFile(workflowTaskTypesPath, "utf8");
 const procedureAggregateSource = await readFile(procedureAggregatePath, "utf8");
 const procedureTypesSource = await readFile(procedureTypesPath, "utf8");
+const deliveryAttemptAggregateSource = await readFile(deliveryAttemptAggregatePath, "utf8");
+const deliveryAttemptTypesSource = await readFile(deliveryAttemptTypesPath, "utf8");
 
 for (const forbidden of [
   /export type RecordTransferStatus/,
@@ -357,6 +375,40 @@ for (const required of [
 
 if (!/from "\.\/procedure\.types\.js"/.test(procedureAggregateSource)) {
   throw new Error("Procedure aggregate must depend on procedure.types.ts for shared types.");
+}
+
+for (const forbidden of [
+  /export type RecordTransferDeliveryAttemptStatus/,
+  /export type RecordTransferDeliveryAttemptSnapshot/,
+  /const deliveryAttemptStatuses/
+]) {
+  if (forbidden.test(deliveryAttemptAggregateSource)) {
+    throw new Error(
+      "RecordTransferDeliveryAttempt type declarations and code sets belong in record-transfer-delivery-attempt.types.ts, not the aggregate file."
+    );
+  }
+}
+
+for (const required of [
+  /export type RecordTransferDeliveryAttemptStatus/,
+  /export type RecordTransferDeliveryAttemptBundleType/,
+  /export type RecordTransferDeliveryAttemptSnapshot/,
+  /export type QueueRecordTransferDeliveryAttemptInput/,
+  /export const deliveryAttemptStatuses/
+]) {
+  if (!required.test(deliveryAttemptTypesSource)) {
+    throw new Error(
+      "record-transfer-delivery-attempt.types.ts must keep delivery status, bundle, snapshot, command input and code-set definitions."
+    );
+  }
+}
+
+if (!/from "\.\/record-transfer-delivery-attempt\.types\.js"/.test(
+  deliveryAttemptAggregateSource
+)) {
+  throw new Error(
+    "RecordTransferDeliveryAttempt aggregate must depend on record-transfer-delivery-attempt.types.ts for shared types."
+  );
 }
 
 console.log(
