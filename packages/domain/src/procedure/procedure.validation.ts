@@ -5,12 +5,16 @@ import {
   parseRequiredDate as parseDate
 } from "../shared/normalization.js";
 import {
-  procedureCategories,
-  procedurePerformerActorTypes,
-  procedureReportReferenceResourceTypes,
-  procedureStatuses
+  normalizePerformerActorType,
+  normalizeReportReferenceResourceType
+} from "./procedure.code-set-guards.js";
+import type {
+  ProcedureCoding,
+  ProcedurePerformedPeriod,
+  ProcedurePerformer,
+  ProcedureReportReference,
+  ProcedureStatus
 } from "./procedure.types.js";
-import type { ProcedureCategory, ProcedureCoding, ProcedurePerformedPeriod, ProcedurePerformer, ProcedurePerformerActorType, ProcedureReportReference, ProcedureStatus } from "./procedure.types.js";
 
 export {
   normalizeOptionalText as normalizeOptional,
@@ -113,36 +117,4 @@ export function validatePersistenceTimeline(createdAt: Date, updatedAt: Date): v
   if (updatedAt < createdAt) {
     throw new DomainError("Thời điểm cập nhật thủ thuật không được trước thời điểm tạo thủ thuật.");
   }
-}
-
-export function normalizeStatus(value: ProcedureStatus): ProcedureStatus {
-  if (!procedureStatuses.has(value)) {
-    throw new DomainError("Trạng thái thủ thuật không hợp lệ.");
-  }
-
-  return value;
-}
-
-export function normalizeCategory(value: ProcedureCategory): ProcedureCategory {
-  if (!procedureCategories.has(value)) {
-    throw new DomainError("Nhóm thủ thuật không hợp lệ.");
-  }
-
-  return value;
-}
-
-function normalizePerformerActorType(value: ProcedurePerformerActorType): ProcedurePerformerActorType {
-  if (!procedurePerformerActorTypes.has(value)) {
-    throw new DomainError("Loại chủ thể thực hiện thủ thuật không hợp lệ.");
-  }
-
-  return value;
-}
-
-function normalizeReportReferenceResourceType(value: ProcedureReportReference["resourceType"]): ProcedureReportReference["resourceType"] {
-  if (!procedureReportReferenceResourceTypes.has(value)) {
-    throw new DomainError("Loại báo cáo liên quan thủ thuật không hợp lệ.");
-  }
-
-  return value;
 }

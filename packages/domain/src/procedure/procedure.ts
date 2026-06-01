@@ -1,6 +1,5 @@
 import {
   assertProcedureLifecycle,
-  normalizeCategory,
   normalizeCoding,
   normalizeOptional,
   normalizePerformedPeriod,
@@ -8,11 +7,14 @@ import {
   normalizeReportReferences,
   normalizeRequired,
   normalizeRequiredCoding,
-  normalizeStatus,
   parseDate,
   validatePersistenceTimeline,
   validateSelfReference
 } from "./procedure.validation.js";
+import {
+  normalizeCategory,
+  normalizeStatus
+} from "./procedure.code-set-guards.js";
 import type {
   CreateProcedureInput,
   ProcedureSnapshot

@@ -144,8 +144,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/procedure/procedure.validation.ts",
-    maxLines: 170,
-    role: "Procedure coding, performer, report reference and lifecycle guards"
+    maxLines: 130,
+    role: "Procedure coding, performer structure, report reference and lifecycle guards"
+  },
+  {
+    path: "packages/domain/src/procedure/procedure.code-set-guards.ts",
+    maxLines: 70,
+    role: "Procedure status, category, performer and report reference code-set guards"
   },
   {
     path: "packages/domain/src/procedure/procedure.types.ts",
@@ -579,6 +584,9 @@ const workflowTaskTypesPath = resolve(
 );
 const procedureAggregatePath = resolve("packages/domain/src/procedure/procedure.ts");
 const procedureValidationPath = resolve("packages/domain/src/procedure/procedure.validation.ts");
+const procedureCodeSetGuardsPath = resolve(
+  "packages/domain/src/procedure/procedure.code-set-guards.ts"
+);
 const procedureTypesPath = resolve("packages/domain/src/procedure/procedure.types.ts");
 const deliveryAttemptAggregatePath = resolve(
   "packages/domain/src/record-transfer-delivery-attempt/record-transfer-delivery-attempt.ts"
@@ -788,6 +796,10 @@ const workflowTaskCodeSetGuardsSource = await readFile(
 const workflowTaskTypesSource = await readFile(workflowTaskTypesPath, "utf8");
 const procedureAggregateSource = await readFile(procedureAggregatePath, "utf8");
 const procedureValidationSource = await readFile(procedureValidationPath, "utf8");
+const procedureCodeSetGuardsSource = await readFile(
+  procedureCodeSetGuardsPath,
+  "utf8"
+);
 const procedureTypesSource = await readFile(procedureTypesPath, "utf8");
 const deliveryAttemptAggregateSource = await readFile(deliveryAttemptAggregatePath, "utf8");
 const deliveryAttemptValidationSource = await readFile(deliveryAttemptValidationPath, "utf8");
@@ -1470,7 +1482,7 @@ for (const forbidden of [
 ]) {
   if (forbidden.test(procedureAggregateSource)) {
     throw new Error(
-      "Procedure aggregate must keep record/rehydrate behavior only; types stay in procedure.types.ts and coding/performer/report/lifecycle guards stay in procedure.validation.ts."
+      "Procedure aggregate must keep record/rehydrate behavior only; types stay in procedure.types.ts, coding/performer/report/lifecycle guards stay in procedure.validation.ts, and code-set guards stay in procedure.code-set-guards.ts."
     );
   }
 }
@@ -1499,17 +1511,50 @@ if (!/from "\.\/procedure\.validation\.js"/.test(procedureAggregateSource)) {
   );
 }
 
+if (!/from "\.\/procedure\.code-set-guards\.js"/.test(procedureAggregateSource)) {
+  throw new Error(
+    "Procedure aggregate must depend on procedure.code-set-guards.ts for status and category guards."
+  );
+}
+
 for (const required of [
   /export function normalizeRequiredCoding/,
   /export function normalizePerformers/,
   /export function normalizeReportReferences/,
   /export function assertProcedureLifecycle/,
   /export function validateSelfReference/,
+  /from "\.\/procedure\.code-set-guards\.js"/,
   /from "\.\/procedure\.types\.js"/
 ]) {
   if (!required.test(procedureValidationSource)) {
     throw new Error(
-      "procedure.validation.ts must keep Procedure coding, performer, report reference and lifecycle guards."
+      "procedure.validation.ts must keep Procedure coding, performer structure, report reference and lifecycle guards."
+    );
+  }
+}
+
+for (const forbidden of [
+  /export function normalizeStatus/,
+  /export function normalizeCategory/,
+  /\bprocedureStatuses\b|\bprocedureCategories\b|\bprocedurePerformerActorTypes\b|\bprocedureReportReferenceResourceTypes\b/
+]) {
+  if (forbidden.test(procedureValidationSource)) {
+    throw new Error(
+      "Procedure status, category, performer actor and report reference code-set guards belong in procedure.code-set-guards.ts."
+    );
+  }
+}
+
+for (const required of [
+  /export function normalizeStatus/,
+  /export function normalizeCategory/,
+  /export function normalizePerformerActorType/,
+  /export function normalizeReportReferenceResourceType/,
+  /from "\.\/procedure\.types\.js"/
+]) {
+  if (!required.test(procedureCodeSetGuardsSource)) {
+    throw new Error(
+      "procedure.code-set-guards.ts must keep Procedure status, category, performer actor and report reference code-set guards."
     );
   }
 }
