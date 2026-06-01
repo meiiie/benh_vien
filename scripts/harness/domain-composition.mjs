@@ -79,8 +79,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/audit-event/audit-event.types.ts",
-    maxLines: 300,
-    role: "AuditEvent action, resource, snapshot and integrity report types"
+    maxLines: 90,
+    role: "AuditEvent snapshot and integrity report types"
+  },
+  {
+    path: "packages/domain/src/audit-event/audit-event.catalog.ts",
+    maxLines: 130,
+    role: "AuditEvent action and resource code catalog"
   },
   {
     path: "packages/domain/src/access-control/access-control.ts",
@@ -588,6 +593,7 @@ const auditEventValidationPath = resolve(
   "packages/domain/src/audit-event/audit-event.validation.ts"
 );
 const auditEventTypesPath = resolve("packages/domain/src/audit-event/audit-event.types.ts");
+const auditEventCatalogPath = resolve("packages/domain/src/audit-event/audit-event.catalog.ts");
 const accessControlBehaviorPath = resolve(
   "packages/domain/src/access-control/access-control.ts"
 );
@@ -828,6 +834,7 @@ const auditEventAggregateSource = await readFile(auditEventAggregatePath, "utf8"
 const auditEventIntegritySource = await readFile(auditEventIntegrityPath, "utf8");
 const auditEventValidationSource = await readFile(auditEventValidationPath, "utf8");
 const auditEventTypesSource = await readFile(auditEventTypesPath, "utf8");
+const auditEventCatalogSource = await readFile(auditEventCatalogPath, "utf8");
 const accessControlBehaviorSource = await readFile(accessControlBehaviorPath, "utf8");
 const accessControlOrganizationScopeSource = await readFile(
   accessControlOrganizationScopePath,
@@ -1313,11 +1320,52 @@ for (const required of [
   /export type AuditResourceType/,
   /export type AuditEventSnapshot/,
   /export type AuditIntegrityReport/,
-  /export const auditActions/
+  /export const auditActions/,
+  /from "\.\/audit-event\.catalog\.js"/
 ]) {
   if (!required.test(auditEventTypesSource)) {
     throw new Error(
-      "audit-event.types.ts must keep AuditEvent actions, resources, snapshots, integrity reports and action-set definitions."
+      "audit-event.types.ts must keep AuditEvent snapshot/report types and derive action/resource sets from audit-event.catalog.ts."
+    );
+  }
+}
+
+for (const forbidden of [
+  /\| "auth\.login\.success"/,
+  /\| "Patient"/,
+  /\[\s*"auth\.login\.success"/,
+  /\[\s*"Patient"/
+]) {
+  if (forbidden.test(auditEventTypesSource)) {
+    throw new Error(
+      "AuditEvent action/resource literal catalogs must stay in audit-event.catalog.ts, not in audit-event.types.ts."
+    );
+  }
+}
+
+for (const required of [
+  /export const auditActionValues/,
+  /export const auditResourceTypeValues/,
+  /"audit-event\.integrity-verify"/,
+  /"RecordTransfer"/,
+  /as const/
+]) {
+  if (!required.test(auditEventCatalogSource)) {
+    throw new Error(
+      "audit-event.catalog.ts must keep AuditEvent action and resource literal catalogs."
+    );
+  }
+}
+
+for (const forbidden of [
+  /AuditEventSnapshot/,
+  /AuditIntegrityReport/,
+  /RecordAuditEventInput/,
+  /new Set/
+]) {
+  if (forbidden.test(auditEventCatalogSource)) {
+    throw new Error(
+      "audit-event.catalog.ts must stay a literal catalog and must not own snapshot/report types or Set construction."
     );
   }
 }
