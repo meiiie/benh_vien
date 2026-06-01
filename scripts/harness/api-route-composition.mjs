@@ -208,6 +208,31 @@ const routeBudgets = [
     role: "Encounter response, access and domain error helpers"
   },
   {
+    path: "apps/api/src/modules/observations/observation-routes.ts",
+    maxLines: 70,
+    role: "Observation route composition root"
+  },
+  {
+    path: "apps/api/src/modules/observations/observation-query-routes.ts",
+    maxLines: 130,
+    role: "Observation list and read route adapter"
+  },
+  {
+    path: "apps/api/src/modules/observations/observation-creation-routes.ts",
+    maxLines: 140,
+    role: "Observation creation and encounter validation route adapter"
+  },
+  {
+    path: "apps/api/src/modules/observations/observation-fhir-routes.ts",
+    maxLines: 90,
+    role: "Observation FHIR export route adapter"
+  },
+  {
+    path: "apps/api/src/modules/observations/observation-route-helpers.ts",
+    maxLines: 130,
+    role: "Observation response, access, reference and domain error helpers"
+  },
+  {
     path: "apps/api/src/modules/patients/patient-routes.ts",
     maxLines: 90,
     role: "Patient route composition root"
@@ -655,6 +680,34 @@ const requiredEncounterRegistrations = [
   "registerEncounterFhirRoutes"
 ];
 
+const observationRoutesPath = resolve(
+  "apps/api/src/modules/observations/observation-routes.ts"
+);
+const forbiddenObservationRoutePatterns = [
+  {
+    pattern:
+      /\bCreateObservationRequestSchema\b|\bPatientObservationsParamsSchema\b|\bObservationIdParamsSchema\b/,
+    message:
+      "Observation request handling belongs in observation-query-routes.ts, observation-creation-routes.ts or observation-fhir-routes.ts."
+  },
+  {
+    pattern:
+      /\bObservation\.record\b|\bDomainError\b|\brequirePatientRecordAccessByPatientId\b|\bvalidateObservationReferences\b/,
+    message:
+      "Observation recording, access and encounter validation policy belongs outside the root route."
+  },
+  {
+    pattern: /\bmapObservationToFhir\b|\btoObservationResponse\b/,
+    message:
+      "Observation response and FHIR export details belong in helper or FHIR route modules."
+  }
+];
+const requiredObservationRegistrations = [
+  "registerObservationQueryRoutes",
+  "registerObservationCreationRoutes",
+  "registerObservationFhirRoutes"
+];
+
 const patientRoutesPath = resolve("apps/api/src/modules/patients/patient-routes.ts");
 const forbiddenPatientRoutePatterns = [
   {
@@ -1001,6 +1054,7 @@ const medicationRequestRoutesSource = await readFile(
   "utf8"
 );
 const procedureRoutesSource = await readFile(procedureRoutesPath, "utf8");
+const observationRoutesSource = await readFile(observationRoutesPath, "utf8");
 const diagnosticReportRoutesSource = await readFile(diagnosticReportRoutesPath, "utf8");
 const imagingStudyRoutesSource = await readFile(imagingStudyRoutesPath, "utf8");
 const serviceRequestRoutesSource = await readFile(serviceRequestRoutesPath, "utf8");
@@ -1086,6 +1140,20 @@ for (const registration of requiredEncounterRegistrations) {
   if (!encounterRoutesSource.includes(registration)) {
     throw new Error(
       `Encounter root routes must register ${registration} so query, command and FHIR modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenObservationRoutePatterns) {
+  if (forbidden.pattern.test(observationRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredObservationRegistrations) {
+  if (!observationRoutesSource.includes(registration)) {
+    throw new Error(
+      `Observation root routes must register ${registration} so query, creation and FHIR modules remain wired.`
     );
   }
 }
