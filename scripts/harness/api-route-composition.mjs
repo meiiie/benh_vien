@@ -83,6 +83,36 @@ const routeBudgets = [
     role: "Auth controlled demo account catalog"
   },
   {
+    path: "apps/api/src/modules/consents/consent-routes.ts",
+    maxLines: 70,
+    role: "Consent route composition root"
+  },
+  {
+    path: "apps/api/src/modules/consents/consent-query-routes.ts",
+    maxLines: 90,
+    role: "Consent list route adapter"
+  },
+  {
+    path: "apps/api/src/modules/consents/consent-creation-routes.ts",
+    maxLines: 120,
+    role: "Consent creation command route adapter"
+  },
+  {
+    path: "apps/api/src/modules/consents/consent-command-routes.ts",
+    maxLines: 140,
+    role: "Consent revoke command route adapter"
+  },
+  {
+    path: "apps/api/src/modules/consents/consent-fhir-routes.ts",
+    maxLines: 90,
+    role: "Consent FHIR export route adapter"
+  },
+  {
+    path: "apps/api/src/modules/consents/consent-route-helpers.ts",
+    maxLines: 130,
+    role: "Consent response, access, OperationOutcome and domain error helpers"
+  },
+  {
     path: "apps/api/src/modules/record-transfers/record-transfer-routes.ts",
     maxLines: 80,
     role: "RecordTransfer route composition root"
@@ -450,6 +480,33 @@ const requiredAuthRegistrations = [
   "registerAuthSessionRoutes"
 ];
 
+const consentRoutesPath = resolve("apps/api/src/modules/consents/consent-routes.ts");
+const forbiddenConsentRoutePatterns = [
+  {
+    pattern:
+      /\bCreateConsentRequestSchema\b|\bRevokeConsentRequestSchema\b|\bPatientConsent(?:s)?ParamsSchema\b|\bConsentIdParamsSchema\b/,
+    message:
+      "Consent request handling belongs in consent query, creation, command or FHIR route modules."
+  },
+  {
+    pattern:
+      /\bConsent\.grant\b|\bDomainError\b|\brequirePatientRecordAccessByPatientId\b|\bsendFhirOperationOutcome\b/,
+    message:
+      "Consent grant, access, OperationOutcome and domain error policy belongs outside the root route."
+  },
+  {
+    pattern: /\bmapConsentToFhir\b|\btoConsentResponse\b|\brevoke\b/,
+    message:
+      "Consent response, revoke and FHIR export details belong in helper or lifecycle route modules."
+  }
+];
+const requiredConsentRegistrations = [
+  "registerConsentQueryRoutes",
+  "registerConsentCreationRoutes",
+  "registerConsentCommandRoutes",
+  "registerConsentFhirRoutes"
+];
+
 const recordTransferRoutesPath = resolve(
   "apps/api/src/modules/record-transfers/record-transfer-routes.ts"
 );
@@ -812,6 +869,7 @@ for (const budget of routeBudgets) {
 const apiRoutesSource = await readFile(apiRoutesPath, "utf8");
 const apiDomainRoutesSource = await readFile(apiDomainRoutesPath, "utf8");
 const authRoutesSource = await readFile(authRoutesPath, "utf8");
+const consentRoutesSource = await readFile(consentRoutesPath, "utf8");
 const recordTransferRoutesSource = await readFile(recordTransferRoutesPath, "utf8");
 const recordTransferCommandRoutesSource = await readFile(
   recordTransferCommandRoutesPath,
@@ -864,6 +922,20 @@ for (const registration of requiredAuthRegistrations) {
   if (!authRoutesSource.includes(registration)) {
     throw new Error(
       `Auth root routes must register ${registration} so login and bearer session routes remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenConsentRoutePatterns) {
+  if (forbidden.pattern.test(consentRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredConsentRegistrations) {
+  if (!consentRoutesSource.includes(registration)) {
+    throw new Error(
+      `Consent root routes must register ${registration} so query, creation, command and FHIR modules remain wired.`
     );
   }
 }
