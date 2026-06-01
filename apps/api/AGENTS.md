@@ -26,6 +26,10 @@
 
 `apps/api` chứa HTTP adapter, route registration, Swagger và orchestration mỏng. Business rule dài hạn phải nằm trong `packages/domain` hoặc application service riêng.
 
+## Provider Directory Seed Boundary
+
+- Seed demo ProviderDirectory cho cơ sở y tế/FHIR/PACS/LIS phải nằm trong `modules/provider-directory/provider-directory-seed.ts`; `in-memory-provider-directory.repository.ts` chỉ là adapter đọc/ghi mỏng, và `create-provider-directory.repository.ts` phải dùng chung seed đó cho cả PostgreSQL lẫn in-memory. Chạy `pnpm run harness:api-provider-directory-composition` khi đổi các file này.
+
 ## Local Commands
 
 ```bash

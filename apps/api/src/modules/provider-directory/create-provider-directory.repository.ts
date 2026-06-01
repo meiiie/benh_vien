@@ -3,10 +3,8 @@ import {
   PostgresProviderDirectoryRepository,
   seedProviderDirectoryIfEmpty
 } from "../../infrastructure/postgres/postgres-provider-directory.repository.js";
-import {
-  InMemoryProviderDirectoryRepository,
-  createSeedProviderDirectory
-} from "./in-memory-provider-directory.repository.js";
+import { InMemoryProviderDirectoryRepository } from "./in-memory-provider-directory.repository.js";
+import { createSeedProviderDirectory } from "./provider-directory-seed.js";
 
 export async function createProviderDirectoryRepository(): Promise<ProviderDirectoryRepository> {
   const seedDirectory = createSeedProviderDirectory();

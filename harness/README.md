@@ -16,6 +16,14 @@ Harness là lớp kiểm chứng quanh mô hình và runtime, không phụ thu�
 pnpm run ci
 ```
 
+## ProviderDirectory composition
+
+```bash
+pnpm run harness:api-provider-directory-composition
+```
+
+Harness này giữ seed danh bạ cơ sở y tế/FHIR/PACS/LIS trong `provider-directory-seed.ts`, giữ `in-memory-provider-directory.repository.ts` thành adapter đọc/ghi mỏng, và bảo đảm factory dùng chung seed cho PostgreSQL lẫn in-memory để demo liên thông không bị lệch dữ liệu.
+
 Lệnh này chạy:
 
 - TypeScript check cho toàn monorepo.
