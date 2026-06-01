@@ -1,5 +1,9 @@
 # API Agent Notes
 
+## PostgreSQL Persistence Boundary
+
+- PostgreSQL repository cho luồng chuyển hồ sơ phải giữ boundary: `postgres-record-transfer.repository.ts` chỉ orchestration query/transaction; SQL nằm trong `postgres-record-transfer.sql.ts`; hydrate row và build tham số upsert nằm trong `postgres-record-transfer.mapper.ts`; lệnh upsert nằm trong `postgres-record-transfer.persistence.ts`; row/queryable type nằm trong `postgres-record-transfer.types.ts`. Chạy `pnpm run harness:api-postgres-composition` khi đổi các file persistence này.
+
 ## Scope
 
 `apps/api` chứa HTTP adapter, route registration, Swagger và orchestration mỏng. Business rule dài hạn phải nằm trong `packages/domain` hoặc application service riêng.
