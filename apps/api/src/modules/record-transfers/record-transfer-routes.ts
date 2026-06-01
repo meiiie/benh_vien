@@ -1,14 +1,10 @@
 import type { FastifyInstance } from "fastify";
-import { nanoid } from "nanoid";
 import {
-  CreateRecordTransferRequestSchema,
   PatientRecordTransfersParamsSchema,
   RecordTransferIdParamsSchema
 } from "@benh-vien-so/contracts";
 import {
-  DomainError,
-  mapRecordTransferToFhirTask,
-  RecordTransfer
+  mapRecordTransferToFhirTask
 } from "@benh-vien-so/domain";
 import type {
   AuditEventRepository,
@@ -26,11 +22,9 @@ import { recordAuditEvent } from "../audit-events/audit-context.js";
 import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
 import { registerRecordTransferAcknowledgementRoutes } from "./record-transfer-acknowledgement-routes.js";
 import { registerRecordTransferCommandRoutes } from "./record-transfer-command-routes.js";
-import { validateRecordTransferEndpointForDelivery } from "./record-transfer-endpoint-policy.js";
+import { registerRecordTransferCreationRoutes } from "./record-transfer-creation-routes.js";
 import { loadRecordTransferForPatientAccess } from "./record-transfer-route-access.js";
 import {
-  buildBundleId,
-  resolveRecordTransferFhirEndpoint,
   toDeliveryAttemptResponse,
   toRecordTransferResponse
 } from "./record-transfer-route-helpers.js";
@@ -81,111 +75,14 @@ export async function registerRecordTransferRoutes(
     };
   });
 
-  app.post("/patients/:patientId/record-transfers", async (request, reply) => {
-    const actor = requirePermission(request, reply, "record-transfer:create");
-
-    if (!actor) {
-      return;
-    }
-
-    const params = PatientRecordTransfersParamsSchema.parse(request.params);
-    if (
-      !(await requirePatientRecordAccessByPatientId(
-        request,
-        reply,
-        actor,
-        params.patientId,
-        patientRepository,
-        providerDirectoryRepository
-      ))
-    ) {
-      return;
-    }
-
-    const parsed = CreateRecordTransferRequestSchema.safeParse(request.body);
-
-    if (!parsed.success) {
-      throw parsed.error;
-    }
-
-    const consent = await consentRepository.findById(parsed.data.consentReference);
-
-    if (
-      !consent?.allowsRecordSharing({
-        patientId: params.patientId,
-        granteeOrganizationId: parsed.data.recipientOrganizationId
-      })
-    ) {
-      return reply.status(403).send({
-        error: "CONSENT_DOES_NOT_ALLOW_RECORD_TRANSFER",
-        message:
-          "Không thể tạo yêu cầu chuyển hồ sơ nếu consent không tồn tại, hết hiệu lực hoặc không khớp đơn vị nhận."
-        });
-    }
-
-    const targetEndpoint = await resolveRecordTransferFhirEndpoint(
-      providerDirectoryRepository,
-      parsed.data.recipientOrganizationId
-    );
-
-    if (!targetEndpoint) {
-      return reply.status(422).send({
-        error: "RECORD_TRANSFER_ENDPOINT_NOT_FOUND",
-        message:
-          "Đơn vị nhận chưa có endpoint FHIR REST đang hoạt động và hỗ trợ Bundle trong Provider Directory."
-      });
-    }
-
-    const endpointPolicy = validateRecordTransferEndpointForDelivery({
-      endpointAddress: targetEndpoint.address
-    });
-
-    if (!endpointPolicy.allowed) {
-      return reply.status(422).send({
-        error: endpointPolicy.error,
-        message: endpointPolicy.message
-      });
-    }
-
-    try {
-      const recordTransfer = RecordTransfer.create({
-        ...parsed.data,
-        id: `record-transfer-${nanoid(10)}`,
-        patientId: params.patientId,
-        status: "requested",
-        requestedByActorId: actor.actorId,
-        bundleId: buildBundleId(params.patientId, parsed.data.bundleType)
-      });
-
-      await recordTransferRepository.save(recordTransfer);
-      await recordAuditEvent(auditRepository, request, {
-        action: "record-transfer.create",
-        resourceType: "RecordTransfer",
-        resourceId: recordTransfer.id,
-        patientId: recordTransfer.patientId,
-        metadata: {
-          status: recordTransfer.toSnapshot().status,
-          bundleType: recordTransfer.toSnapshot().bundleType,
-          bundleId: recordTransfer.toSnapshot().bundleId,
-          consentReference: recordTransfer.toSnapshot().consentReference,
-          recipientOrganizationId: recordTransfer.toSnapshot().recipientOrganizationId,
-          targetEndpointId: targetEndpoint.id,
-          targetEndpointAddress: targetEndpoint.address
-        }
-      });
-
-      return reply.status(201).send(toRecordTransferResponse(recordTransfer));
-    } catch (error) {
-      if (error instanceof DomainError) {
-        return reply.status(422).send({
-          error: "RECORD_TRANSFER_DOMAIN_ERROR",
-          message: error.message
-        });
-      }
-
-      throw error;
-    }
-  });
+  await registerRecordTransferCreationRoutes(
+    app,
+    patientRepository,
+    consentRepository,
+    recordTransferRepository,
+    providerDirectoryRepository,
+    auditRepository
+  );
 
   app.get("/record-transfers/:id/delivery-attempts", async (request, reply) => {
     const actor = requirePermission(request, reply, "record-transfer:read");
