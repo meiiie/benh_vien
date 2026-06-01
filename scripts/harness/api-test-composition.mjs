@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 const testBudgets = [
   {
     path: "apps/api/src/server.auth.test.ts",
-    maxLines: 3700,
+    maxLines: 3000,
     role: "API auth/RBAC integration scenarios outside login boundary"
   },
   {
@@ -28,6 +28,11 @@ const testBudgets = [
     role: "API patient registry, identifier conflict and merge scenarios"
   },
   {
+    path: "apps/api/src/server.patient-access.test.ts",
+    maxLines: 780,
+    role: "API patient access ABAC scenarios across clinical resources"
+  },
+  {
     path: "apps/api/src/server.auth.test-support.ts",
     maxLines: 320,
     role: "Shared API auth boundary test support"
@@ -39,6 +44,7 @@ const loginBoundaryPath = resolve("apps/api/src/server.auth.login.test.ts");
 const runtimeBoundaryPath = resolve("apps/api/src/server.runtime.test.ts");
 const startupConfigBoundaryPath = resolve("apps/api/src/server.startup-config.test.ts");
 const patientRegistryBoundaryPath = resolve("apps/api/src/server.patient-registry.test.ts");
+const patientAccessBoundaryPath = resolve("apps/api/src/server.patient-access.test.ts");
 
 const forbiddenAuthBoundaryPatterns = [
   {
@@ -65,6 +71,11 @@ const forbiddenAuthBoundaryPatterns = [
     pattern: /allows clinician treatment access to patient registry|blocks duplicate patient identifiers|merges a duplicate patient record/,
     message:
       "Patient registry, identifier conflict and merge scenarios belong in server.patient-registry.test.ts."
+  },
+  {
+    pattern: /filters treatment patient access by the actor provider organization/,
+    message:
+      "Patient access ABAC scenarios across clinical resources belong in server.patient-access.test.ts."
   }
 ];
 
@@ -90,6 +101,12 @@ const requiredPatientRegistryBoundaryPatterns = [
   /allows clinician treatment access to patient registry/,
   /blocks duplicate patient identifiers/,
   /merges a duplicate patient record/
+];
+const requiredPatientAccessBoundaryPatterns = [
+  /filters treatment patient access by the actor provider organization/,
+  /patient-abac-denied-001/,
+  /record-transfer-list-abac-denied-001/,
+  /imaging-study-export-abac-denied-001/
 ];
 
 const testReports = [];
@@ -119,6 +136,7 @@ const loginBoundarySource = await readFile(loginBoundaryPath, "utf8");
 const runtimeBoundarySource = await readFile(runtimeBoundaryPath, "utf8");
 const startupConfigBoundarySource = await readFile(startupConfigBoundaryPath, "utf8");
 const patientRegistryBoundarySource = await readFile(patientRegistryBoundaryPath, "utf8");
+const patientAccessBoundarySource = await readFile(patientAccessBoundaryPath, "utf8");
 
 for (const forbidden of forbiddenAuthBoundaryPatterns) {
   if (forbidden.pattern.test(authBoundarySource)) {
@@ -154,6 +172,14 @@ for (const required of requiredPatientRegistryBoundaryPatterns) {
   if (!required.test(patientRegistryBoundarySource)) {
     throw new Error(
       "server.patient-registry.test.ts must keep core patient registry access, identifier conflict and merge scenarios."
+    );
+  }
+}
+
+for (const required of requiredPatientAccessBoundaryPatterns) {
+  if (!required.test(patientAccessBoundarySource)) {
+    throw new Error(
+      "server.patient-access.test.ts must keep patient-scope ABAC denials across list, read and FHIR export scenarios."
     );
   }
 }
