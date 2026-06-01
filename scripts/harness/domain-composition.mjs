@@ -199,8 +199,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/condition/condition.ts",
-    maxLines: 230,
-    role: "Condition recording, clinical status and timeline validation behavior"
+    maxLines: 150,
+    role: "Condition recording and clinical status behavior"
+  },
+  {
+    path: "packages/domain/src/condition/condition.validation.ts",
+    maxLines: 120,
+    role: "Condition code, status, severity and timeline guards"
   },
   {
     path: "packages/domain/src/condition/condition.types.ts",
@@ -420,6 +425,7 @@ const diagnosticReportTypesPath = resolve(
 const observationAggregatePath = resolve("packages/domain/src/observation/observation.ts");
 const observationTypesPath = resolve("packages/domain/src/observation/observation.types.ts");
 const conditionAggregatePath = resolve("packages/domain/src/condition/condition.ts");
+const conditionValidationPath = resolve("packages/domain/src/condition/condition.validation.ts");
 const conditionTypesPath = resolve("packages/domain/src/condition/condition.types.ts");
 const allergyIntoleranceAggregatePath = resolve(
   "packages/domain/src/allergy-intolerance/allergy-intolerance.ts"
@@ -535,6 +541,7 @@ const diagnosticReportTypesSource = await readFile(diagnosticReportTypesPath, "u
 const observationAggregateSource = await readFile(observationAggregatePath, "utf8");
 const observationTypesSource = await readFile(observationTypesPath, "utf8");
 const conditionAggregateSource = await readFile(conditionAggregatePath, "utf8");
+const conditionValidationSource = await readFile(conditionValidationPath, "utf8");
 const conditionTypesSource = await readFile(conditionTypesPath, "utf8");
 const allergyIntoleranceAggregateSource = await readFile(
   allergyIntoleranceAggregatePath,
@@ -1229,11 +1236,13 @@ if (!/from "\.\/observation\.types\.js"/.test(observationAggregateSource)) {
 for (const forbidden of [
   /export type ConditionClinicalStatus/,
   /export type ConditionSnapshot/,
-  /const conditionClinicalStatuses/
+  /const conditionClinicalStatuses/,
+  /function normalizeCode/,
+  /function validateTimeline/
 ]) {
   if (forbidden.test(conditionAggregateSource)) {
     throw new Error(
-      "Condition type declarations and code sets belong in condition.types.ts, not the aggregate file."
+      "Condition aggregate must keep record/rehydrate behavior only; types stay in condition.types.ts and code/status/timeline guards stay in condition.validation.ts."
     );
   }
 }
@@ -1259,6 +1268,26 @@ for (const required of [
 
 if (!/from "\.\/condition\.types\.js"/.test(conditionAggregateSource)) {
   throw new Error("Condition aggregate must depend on condition.types.ts for shared types.");
+}
+
+if (!/from "\.\/condition\.validation\.js"/.test(conditionAggregateSource)) {
+  throw new Error(
+    "Condition aggregate must depend on condition.validation.ts for code, status, severity and timeline guards."
+  );
+}
+
+for (const required of [
+  /export function normalizeCode/,
+  /export function normalizeClinicalStatus/,
+  /export function normalizeVerificationStatus/,
+  /export function validateTimeline/,
+  /from "\.\/condition\.types\.js"/
+]) {
+  if (!required.test(conditionValidationSource)) {
+    throw new Error(
+      "condition.validation.ts must keep Condition code, status, severity and timeline guards."
+    );
+  }
 }
 
 for (const forbidden of [
