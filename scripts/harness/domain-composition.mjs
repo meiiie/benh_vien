@@ -3,6 +3,11 @@ import { resolve } from "node:path";
 
 const domainBudgets = [
   {
+    path: "packages/domain/src/shared/normalization.ts",
+    maxLines: 60,
+    role: "Shared domain text, date and positive number normalization guards"
+  },
+  {
     path: "packages/domain/src/record-transfer/record-transfer.ts",
     maxLines: 300,
     role: "RecordTransfer lifecycle aggregate behavior"

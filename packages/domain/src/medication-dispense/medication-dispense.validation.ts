@@ -6,6 +6,12 @@ import type {
 import { medicationTimingUnits } from "../medication-request/medication-request.types.js";
 import { DomainError } from "../shared/domain-error.js";
 import {
+  normalizeOptionalText as normalizeOptional,
+  normalizePositiveNumber,
+  normalizeRequiredText as normalizeRequired,
+  parseRequiredDate as parseDate
+} from "../shared/normalization.js";
+import {
   medicationDispenseCategories,
   medicationDispenseStatuses
 } from "./medication-dispense.types.js";
@@ -17,6 +23,12 @@ type MedicationDispenseLifecycleInput = {
   readonly whenPrepared?: string;
   readonly whenHandedOver?: string;
 };
+
+export {
+  normalizeOptionalText as normalizeOptional,
+  normalizeRequiredText as normalizeRequired,
+  parseRequiredDate as parseDate
+} from "../shared/normalization.js";
 
 export function assertMedicationDispenseLifecycle(
   input: MedicationDispenseLifecycleInput
@@ -119,48 +131,11 @@ export function validatePersistenceTimeline(createdAt: Date, updatedAt: Date): v
   }
 }
 
-export function normalizeRequired(value: string, message: string): string {
-  const normalized = value.trim().replace(/\s+/g, " ");
-
-  if (!normalized) {
-    throw new DomainError(message);
-  }
-
-  return normalized;
-}
-
-export function normalizeOptional(value: string | undefined): string | undefined {
-  const normalized = value?.trim().replace(/\s+/g, " ");
-  return normalized || undefined;
-}
-
-export function parseDate(value: string, message: string): Date {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    throw new DomainError(message);
-  }
-
-  return date;
-}
-
 function normalizeTimingUnit(
   value: NonNullable<DosageInstruction["periodUnit"]>
 ): NonNullable<DosageInstruction["periodUnit"]> {
   if (!medicationTimingUnits.has(value)) {
     throw new DomainError("Đơn vị chu kỳ dùng thuốc không hợp lệ.");
-  }
-
-  return value;
-}
-
-function normalizePositiveNumber(value: number | undefined, message: string): number | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  if (!Number.isFinite(value) || value <= 0) {
-    throw new DomainError(message);
   }
 
   return value;
