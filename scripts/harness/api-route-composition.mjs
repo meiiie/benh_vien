@@ -69,8 +69,23 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/record-transfers/record-transfer-command-routes.ts",
-    maxLines: 340,
-    role: "RecordTransfer send, receive, fail and retry commands"
+    maxLines: 80,
+    role: "RecordTransfer command route composition root"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-send-routes.ts",
+    maxLines: 150,
+    role: "RecordTransfer send command and delivery attempt queueing"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-receive-routes.ts",
+    maxLines: 130,
+    role: "RecordTransfer receive command and acknowledgement reference"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-failure-routes.ts",
+    maxLines: 170,
+    role: "RecordTransfer fail and retry commands"
   },
   {
     path: "apps/api/src/modules/record-transfers/record-transfer-command-route-helpers.ts",
@@ -345,6 +360,39 @@ const requiredRecordTransferRegistrations = [
   "registerRecordTransferFhirRoutes"
 ];
 
+const recordTransferCommandRoutesPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-command-routes.ts"
+);
+const forbiddenRecordTransferCommandRoutePatterns = [
+  {
+    pattern:
+      /\bMarkRecordTransfer(?:Sent|Received|Failed)RequestSchema\b|\bRetryRecordTransferRequestSchema\b|\bRecordTransferIdParamsSchema\b/,
+    message:
+      "RecordTransfer command request handling belongs in send, receive or failure route modules."
+  },
+  {
+    pattern:
+      /\bvalidateRecordTransferEndpointForDelivery\b|\bqueueRecordTransferDeliveryAttempt\b|\bresolveRecordTransferFhirEndpoint\b/,
+    message:
+      "RecordTransfer send delivery policy belongs in record-transfer-send-routes.ts."
+  },
+  {
+    pattern: /\bbuildAcknowledgementReference\b|\bmarkReceived\b/,
+    message:
+      "RecordTransfer receive acknowledgement policy belongs in record-transfer-receive-routes.ts."
+  },
+  {
+    pattern: /\bmarkFailed\b|\bretry\b|\btoFailAuditMetadata\b|\btoRetryAuditMetadata\b/,
+    message:
+      "RecordTransfer fail and retry policy belongs in record-transfer-failure-routes.ts."
+  }
+];
+const requiredRecordTransferCommandRegistrations = [
+  "registerRecordTransferSendRoutes",
+  "registerRecordTransferReceiveRoutes",
+  "registerRecordTransferFailureRoutes"
+];
+
 const patientRoutesPath = resolve("apps/api/src/modules/patients/patient-routes.ts");
 const forbiddenPatientRoutePatterns = [
   {
@@ -553,6 +601,10 @@ for (const budget of routeBudgets) {
 const apiRoutesSource = await readFile(apiRoutesPath, "utf8");
 const apiDomainRoutesSource = await readFile(apiDomainRoutesPath, "utf8");
 const recordTransferRoutesSource = await readFile(recordTransferRoutesPath, "utf8");
+const recordTransferCommandRoutesSource = await readFile(
+  recordTransferCommandRoutesPath,
+  "utf8"
+);
 const patientRoutesSource = await readFile(patientRoutesPath, "utf8");
 const patientFhirRoutesSource = await readFile(patientFhirRoutesPath, "utf8");
 const clinicalDocumentRoutesSource = await readFile(
@@ -597,6 +649,20 @@ for (const registration of requiredRecordTransferRegistrations) {
   if (!recordTransferRoutesSource.includes(registration)) {
     throw new Error(
       `RecordTransfer root routes must register ${registration} so lifecycle-specific route modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenRecordTransferCommandRoutePatterns) {
+  if (forbidden.pattern.test(recordTransferCommandRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredRecordTransferCommandRegistrations) {
+  if (!recordTransferCommandRoutesSource.includes(registration)) {
+    throw new Error(
+      `RecordTransfer command root routes must register ${registration} so send, receive and failure modules remain wired.`
     );
   }
 }
