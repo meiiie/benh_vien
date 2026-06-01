@@ -3,6 +3,61 @@ import { resolve } from "node:path";
 
 const routeBudgets = [
   {
+    path: "apps/api/src/modules/http/api-routes.ts",
+    maxLines: 50,
+    role: "HTTP API prefix and system-route composition root"
+  },
+  {
+    path: "apps/api/src/modules/http/api-route-dependencies.ts",
+    maxLines: 70,
+    role: "HTTP API route dependency type contract"
+  },
+  {
+    path: "apps/api/src/modules/http/api-domain-routes.ts",
+    maxLines: 60,
+    role: "HTTP API domain route group composition"
+  },
+  {
+    path: "apps/api/src/modules/http/api-identity-routes.ts",
+    maxLines: 80,
+    role: "HTTP API auth, patient and provider directory route wiring"
+  },
+  {
+    path: "apps/api/src/modules/http/api-interoperability-routes.ts",
+    maxLines: 60,
+    role: "HTTP API consent and record-transfer route wiring"
+  },
+  {
+    path: "apps/api/src/modules/http/api-clinical-routes.ts",
+    maxLines: 80,
+    role: "HTTP API core clinical route wiring"
+  },
+  {
+    path: "apps/api/src/modules/http/api-medication-routes.ts",
+    maxLines: 80,
+    role: "HTTP API medication route wiring"
+  },
+  {
+    path: "apps/api/src/modules/http/api-care-workflow-routes.ts",
+    maxLines: 80,
+    role: "HTTP API service request, task and procedure route wiring"
+  },
+  {
+    path: "apps/api/src/modules/http/api-diagnostic-routes.ts",
+    maxLines: 70,
+    role: "HTTP API diagnostic report and imaging route wiring"
+  },
+  {
+    path: "apps/api/src/modules/http/api-document-routes.ts",
+    maxLines: 40,
+    role: "HTTP API clinical document route wiring"
+  },
+  {
+    path: "apps/api/src/modules/http/api-audit-routes.ts",
+    maxLines: 40,
+    role: "HTTP API audit route wiring"
+  },
+  {
     path: "apps/api/src/modules/record-transfers/record-transfer-routes.ts",
     maxLines: 80,
     role: "RecordTransfer route composition root"
@@ -177,6 +232,28 @@ const routeBudgets = [
     maxLines: 150,
     role: "Procedure response and reference validation helpers"
   }
+];
+
+const apiRoutesPath = resolve("apps/api/src/modules/http/api-routes.ts");
+const forbiddenApiRoutesPatterns = [
+  {
+    pattern:
+      /\bregister(?:Auth|Patient|ProviderDirectory|Consent|RecordTransfer|Encounter|AllergyIntolerance|Condition|Observation|MedicationRequest|MedicationDispense|MedicationAdministration|ServiceRequest|WorkflowTask|Procedure|DiagnosticReport|ImagingStudy|ClinicalDocument|AuditEvent)Routes\b/,
+    message:
+      "HTTP API root should only register system routes and delegate domain route wiring to api-domain-routes.ts."
+  }
+];
+
+const apiDomainRoutesPath = resolve("apps/api/src/modules/http/api-domain-routes.ts");
+const requiredApiDomainRegistrations = [
+  "registerApiIdentityRoutes",
+  "registerApiInteroperabilityRoutes",
+  "registerApiClinicalRoutes",
+  "registerApiMedicationRoutes",
+  "registerApiCareWorkflowRoutes",
+  "registerApiDiagnosticRoutes",
+  "registerApiDocumentRoutes",
+  "registerApiAuditRoutes"
 ];
 
 const recordTransferRoutesPath = resolve(
@@ -369,6 +446,8 @@ for (const budget of routeBudgets) {
   });
 }
 
+const apiRoutesSource = await readFile(apiRoutesPath, "utf8");
+const apiDomainRoutesSource = await readFile(apiDomainRoutesPath, "utf8");
 const recordTransferRoutesSource = await readFile(recordTransferRoutesPath, "utf8");
 const patientRoutesSource = await readFile(patientRoutesPath, "utf8");
 const patientFhirRoutesSource = await readFile(patientFhirRoutesPath, "utf8");
@@ -381,6 +460,20 @@ const medicationAdministrationRoutesSource = await readFile(
   "utf8"
 );
 const procedureRoutesSource = await readFile(procedureRoutesPath, "utf8");
+
+for (const forbidden of forbiddenApiRoutesPatterns) {
+  if (forbidden.pattern.test(apiRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredApiDomainRegistrations) {
+  if (!apiDomainRoutesSource.includes(registration)) {
+    throw new Error(
+      `HTTP API domain route composition must register ${registration} so domain route groups remain wired.`
+    );
+  }
+}
 
 for (const forbidden of forbiddenRecordTransferRoutePatterns) {
   if (forbidden.pattern.test(recordTransferRoutesSource)) {
