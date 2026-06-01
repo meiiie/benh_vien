@@ -13,6 +13,61 @@ const routeBudgets = [
     role: "HTTP API route dependency type contract"
   },
   {
+    path: "apps/api/src/modules/http/api-dependencies.ts",
+    maxLines: 20,
+    role: "HTTP API repository dependency public barrel"
+  },
+  {
+    path: "apps/api/src/modules/http/api-repository.types.ts",
+    maxLines: 90,
+    role: "HTTP API repository dependency type contract"
+  },
+  {
+    path: "apps/api/src/modules/http/api-repository-lifecycle.ts",
+    maxLines: 50,
+    role: "HTTP API repository close lifecycle tracker"
+  },
+  {
+    path: "apps/api/src/modules/http/api-repository-factory.ts",
+    maxLines: 50,
+    role: "HTTP API repository group factory composition"
+  },
+  {
+    path: "apps/api/src/modules/http/api-identity-repositories.ts",
+    maxLines: 50,
+    role: "HTTP API identity repository factory"
+  },
+  {
+    path: "apps/api/src/modules/http/api-clinical-repositories.ts",
+    maxLines: 60,
+    role: "HTTP API clinical repository factory"
+  },
+  {
+    path: "apps/api/src/modules/http/api-medication-repositories.ts",
+    maxLines: 50,
+    role: "HTTP API medication repository factory"
+  },
+  {
+    path: "apps/api/src/modules/http/api-care-workflow-repositories.ts",
+    maxLines: 50,
+    role: "HTTP API care workflow repository factory"
+  },
+  {
+    path: "apps/api/src/modules/http/api-diagnostic-repositories.ts",
+    maxLines: 50,
+    role: "HTTP API diagnostic repository factory"
+  },
+  {
+    path: "apps/api/src/modules/http/api-interoperability-repositories.ts",
+    maxLines: 60,
+    role: "HTTP API interoperability repository factory"
+  },
+  {
+    path: "apps/api/src/modules/http/api-audit-repositories.ts",
+    maxLines: 40,
+    role: "HTTP API audit repository factory"
+  },
+  {
     path: "apps/api/src/modules/http/api-domain-routes.ts",
     maxLines: 60,
     role: "HTTP API domain route group composition"
