@@ -54,6 +54,7 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/ConditionPanel.tsx",
   "apps/web/src/features/clinical-records/conditionFormatters.ts",
   "apps/web/src/features/clinical-records/diagnosticResultFormatters.ts",
+  "apps/web/src/features/clinical-records/DiagnosticReportForm.tsx",
   "apps/web/src/features/clinical-records/DiagnosticReportPanel.tsx",
   "apps/web/src/features/clinical-records/EncounterPanel.tsx",
   "apps/web/src/features/clinical-records/encounterFormatters.ts",
@@ -232,6 +233,16 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/clinical-records/MedicationRequestForm.tsx",
     maxLines: 230,
     role: "MedicationRequest prescribing command form"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/DiagnosticReportPanel.tsx",
+    maxLines: 180,
+    role: "DiagnosticReport list, summary and form composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/DiagnosticReportForm.tsx",
+    maxLines: 260,
+    role: "DiagnosticReport LIS/RIS result command form"
   },
   {
     path: "apps/web/src/features/clinical-records/ImagingStudyPanel.tsx",
