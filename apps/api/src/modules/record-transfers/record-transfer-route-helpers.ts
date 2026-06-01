@@ -140,6 +140,49 @@ export async function saveRecordTransferWithDeliveryAttempt(
   }
 }
 
+export async function queueRecordTransferDeliveryAttempt(input: {
+  readonly recordTransferRepository: RecordTransferRepository;
+  readonly deliveryAttemptRepository: RecordTransferDeliveryAttemptRepository;
+  readonly recordTransfer: RecordTransfer;
+  readonly targetEndpoint: ProviderEndpointSnapshot;
+  readonly id: string;
+}): Promise<RecordTransferDeliveryAttempt> {
+  const snapshot = input.recordTransfer.toSnapshot();
+  const existingAttempts =
+    await input.deliveryAttemptRepository.findByRecordTransferId(
+      input.recordTransfer.id
+    );
+  const attemptNumber = existingAttempts.length + 1;
+  const queuedAt = snapshot.sentAt ?? new Date().toISOString();
+  const deliveryAttempt = RecordTransferDeliveryAttempt.queue({
+    id: input.id,
+    recordTransferId: snapshot.id,
+    patientId: snapshot.patientId,
+    targetEndpointId: input.targetEndpoint.id,
+    targetEndpointAddress: input.targetEndpoint.address,
+    bundleId: snapshot.bundleId,
+    bundleType: snapshot.bundleType,
+    idempotencyKey: buildDeliveryIdempotencyKey({
+      recordTransferId: snapshot.id,
+      attemptNumber,
+      bundleId: snapshot.bundleId,
+      targetEndpointId: input.targetEndpoint.id,
+      queuedAt
+    }),
+    attemptNumber,
+    queuedAt
+  });
+
+  await saveRecordTransferWithDeliveryAttempt(
+    input.recordTransferRepository,
+    input.deliveryAttemptRepository,
+    input.recordTransfer,
+    deliveryAttempt
+  );
+
+  return deliveryAttempt;
+}
+
 export function buildAcknowledgementReference(input: {
   readonly recordTransferId: string;
   readonly receivedByActorId: string;

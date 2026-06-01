@@ -13,8 +13,7 @@ import {
 import {
   DomainError,
   mapRecordTransferToFhirTask,
-  RecordTransfer,
-  RecordTransferDeliveryAttempt
+  RecordTransfer
 } from "@benh-vien-so/domain";
 import type {
   AuditEventRepository,
@@ -36,10 +35,9 @@ import { loadRecordTransferForPatientAccess } from "./record-transfer-route-acce
 import {
   buildAcknowledgementReference,
   buildBundleId,
-  buildDeliveryIdempotencyKey,
   canAcknowledgeForRecipient,
+  queueRecordTransferDeliveryAttempt,
   resolveRecordTransferFhirEndpoint,
-  saveRecordTransferWithDeliveryAttempt,
   toCallbackSignatureAuditMetadata,
   toDeliveryAttemptResponse,
   toRecordTransferResponse
@@ -325,37 +323,14 @@ export async function registerRecordTransferRoutes(
 
     try {
       recordTransfer.markSent(parsed.data);
-      const snapshot = recordTransfer.toSnapshot();
-      const existingAttempts = await deliveryAttemptRepository.findByRecordTransferId(
-        recordTransfer.id
-      );
-      const attemptNumber = existingAttempts.length + 1;
-      const queuedAt = snapshot.sentAt ?? new Date().toISOString();
-      const deliveryAttempt = RecordTransferDeliveryAttempt.queue({
-        id: `record-transfer-delivery-${nanoid(10)}`,
-        recordTransferId: snapshot.id,
-        patientId: snapshot.patientId,
-        targetEndpointId: targetEndpoint.id,
-        targetEndpointAddress: targetEndpoint.address,
-        bundleId: snapshot.bundleId,
-        bundleType: snapshot.bundleType,
-        idempotencyKey: buildDeliveryIdempotencyKey({
-          recordTransferId: snapshot.id,
-          attemptNumber,
-          bundleId: snapshot.bundleId,
-          targetEndpointId: targetEndpoint.id,
-          queuedAt
-        }),
-        attemptNumber,
-        queuedAt
-      });
-
-      await saveRecordTransferWithDeliveryAttempt(
+      const deliveryAttempt = await queueRecordTransferDeliveryAttempt({
         recordTransferRepository,
         deliveryAttemptRepository,
         recordTransfer,
-        deliveryAttempt
-      );
+        targetEndpoint,
+        id: `record-transfer-delivery-${nanoid(10)}`
+      });
+
       await recordAuditEvent(auditRepository, request, {
         action: "record-transfer.send",
         resourceType: "RecordTransfer",
