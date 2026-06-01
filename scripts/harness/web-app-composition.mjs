@@ -84,7 +84,11 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/MedicationDispenseSupplyFields.tsx",
   "apps/web/src/features/clinical-records/MedicationRequestForm.tsx",
   "apps/web/src/features/clinical-records/MedicationRequestContextFields.tsx",
+  "apps/web/src/features/clinical-records/MedicationRequestReferenceFields.tsx",
+  "apps/web/src/features/clinical-records/MedicationRequestClassificationFields.tsx",
   "apps/web/src/features/clinical-records/MedicationRequestMedicationFields.tsx",
+  "apps/web/src/features/clinical-records/MedicationRequestDrugCodeFields.tsx",
+  "apps/web/src/features/clinical-records/MedicationRequestDosageTimingFields.tsx",
   "apps/web/src/features/clinical-records/MedicationRequestPrescriptionFields.tsx",
   "apps/web/src/features/clinical-records/MedicationRequestPanel.tsx",
   "apps/web/src/features/clinical-records/medicationFormatters.ts",
@@ -501,13 +505,33 @@ const featureModuleBudgets = [
   },
   {
     path: "apps/web/src/features/clinical-records/MedicationRequestContextFields.tsx",
-    maxLines: 100,
-    role: "MedicationRequest encounter, diagnosis, category and priority fields"
+    maxLines: 70,
+    role: "MedicationRequest context field composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/MedicationRequestReferenceFields.tsx",
+    maxLines: 80,
+    role: "MedicationRequest encounter and diagnosis reference fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/MedicationRequestClassificationFields.tsx",
+    maxLines: 70,
+    role: "MedicationRequest category and priority fields"
   },
   {
     path: "apps/web/src/features/clinical-records/MedicationRequestMedicationFields.tsx",
-    maxLines: 130,
-    role: "MedicationRequest medication code, dosage and timing fields"
+    maxLines: 70,
+    role: "MedicationRequest medication field composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/MedicationRequestDrugCodeFields.tsx",
+    maxLines: 70,
+    role: "MedicationRequest medication code identity fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/MedicationRequestDosageTimingFields.tsx",
+    maxLines: 120,
+    role: "MedicationRequest dosage instruction and timing fields"
   },
   {
     path: "apps/web/src/features/clinical-records/MedicationRequestPrescriptionFields.tsx",
