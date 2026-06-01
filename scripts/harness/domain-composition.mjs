@@ -161,6 +161,16 @@ const domainBudgets = [
     path: "packages/domain/src/observation/observation.types.ts",
     maxLines: 80,
     role: "Observation status, category, coding, quantity, snapshot and command input types"
+  },
+  {
+    path: "packages/domain/src/condition/condition.ts",
+    maxLines: 230,
+    role: "Condition recording, clinical status and timeline validation behavior"
+  },
+  {
+    path: "packages/domain/src/condition/condition.types.ts",
+    maxLines: 110,
+    role: "Condition status, category, severity, code, snapshot and command input types"
   }
 ];
 
@@ -240,6 +250,8 @@ const diagnosticReportTypesPath = resolve(
 );
 const observationAggregatePath = resolve("packages/domain/src/observation/observation.ts");
 const observationTypesPath = resolve("packages/domain/src/observation/observation.types.ts");
+const conditionAggregatePath = resolve("packages/domain/src/condition/condition.ts");
+const conditionTypesPath = resolve("packages/domain/src/condition/condition.types.ts");
 
 const domainReports = [];
 
@@ -304,6 +316,8 @@ const diagnosticReportAggregateSource = await readFile(diagnosticReportAggregate
 const diagnosticReportTypesSource = await readFile(diagnosticReportTypesPath, "utf8");
 const observationAggregateSource = await readFile(observationAggregatePath, "utf8");
 const observationTypesSource = await readFile(observationTypesPath, "utf8");
+const conditionAggregateSource = await readFile(conditionAggregatePath, "utf8");
+const conditionTypesSource = await readFile(conditionTypesPath, "utf8");
 
 for (const forbidden of [
   /export type RecordTransferStatus/,
@@ -810,6 +824,41 @@ for (const required of [
 
 if (!/from "\.\/observation\.types\.js"/.test(observationAggregateSource)) {
   throw new Error("Observation aggregate must depend on observation.types.ts for shared types.");
+}
+
+for (const forbidden of [
+  /export type ConditionClinicalStatus/,
+  /export type ConditionSnapshot/,
+  /const conditionClinicalStatuses/
+]) {
+  if (forbidden.test(conditionAggregateSource)) {
+    throw new Error(
+      "Condition type declarations and code sets belong in condition.types.ts, not the aggregate file."
+    );
+  }
+}
+
+for (const required of [
+  /export type ConditionClinicalStatus/,
+  /export type ConditionVerificationStatus/,
+  /export type ConditionCategory/,
+  /export type ConditionSeverity/,
+  /export type ConditionSnapshot/,
+  /export type CreateConditionInput/,
+  /export const conditionClinicalStatuses/,
+  /export const conditionVerificationStatuses/,
+  /export const conditionCategories/,
+  /export const conditionSeverities/
+]) {
+  if (!required.test(conditionTypesSource)) {
+    throw new Error(
+      "condition.types.ts must keep Condition statuses, category, severity, snapshot, command input and code-set definitions."
+    );
+  }
+}
+
+if (!/from "\.\/condition\.types\.js"/.test(conditionAggregateSource)) {
+  throw new Error("Condition aggregate must depend on condition.types.ts for shared types.");
 }
 
 console.log(
