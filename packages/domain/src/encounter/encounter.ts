@@ -1,50 +1,18 @@
 import { DomainError } from "../shared/domain-error.js";
-
-export type EncounterClass = "ambulatory" | "inpatient" | "emergency" | "virtual";
-
-export type EncounterStatus =
-  | "planned"
-  | "in-progress"
-  | "finished"
-  | "cancelled"
-  | "entered-in-error";
-
-const encounterClasses = new Set<EncounterClass>([
-  "ambulatory",
-  "inpatient",
-  "emergency",
-  "virtual"
-]);
-const encounterStatuses = new Set<EncounterStatus>([
-  "planned",
-  "in-progress",
-  "finished",
-  "cancelled",
-  "entered-in-error"
-]);
-
-export type EncounterSnapshot = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly status: EncounterStatus;
-  readonly class: EncounterClass;
-  readonly serviceType: string;
-  readonly reasonText: string;
-  readonly departmentId?: string;
-  readonly attendingPractitionerId: string;
-  readonly startedAt: string;
-  readonly endedAt?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type CreateEncounterInput = Omit<
+import { encounterClasses, encounterStatuses } from "./encounter.types.js";
+import type {
+  CreateEncounterInput,
+  EncounterClass,
   EncounterSnapshot,
-  "status" | "endedAt" | "createdAt" | "updatedAt"
-> & {
-  readonly status?: EncounterStatus;
-  readonly endedAt?: string;
-};
+  EncounterStatus
+} from "./encounter.types.js";
+
+export type {
+  CreateEncounterInput,
+  EncounterClass,
+  EncounterSnapshot,
+  EncounterStatus
+} from "./encounter.types.js";
 
 type EncounterProps = {
   id: string;

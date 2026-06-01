@@ -181,6 +181,16 @@ const domainBudgets = [
     path: "packages/domain/src/allergy-intolerance/allergy-intolerance.types.ts",
     maxLines: 110,
     role: "AllergyIntolerance status, category, reaction, snapshot and command input types"
+  },
+  {
+    path: "packages/domain/src/encounter/encounter.ts",
+    maxLines: 230,
+    role: "Encounter creation, lifecycle and finish behavior"
+  },
+  {
+    path: "packages/domain/src/encounter/encounter.types.ts",
+    maxLines: 80,
+    role: "Encounter class, status, snapshot and command input types"
   }
 ];
 
@@ -268,6 +278,8 @@ const allergyIntoleranceAggregatePath = resolve(
 const allergyIntoleranceTypesPath = resolve(
   "packages/domain/src/allergy-intolerance/allergy-intolerance.types.ts"
 );
+const encounterAggregatePath = resolve("packages/domain/src/encounter/encounter.ts");
+const encounterTypesPath = resolve("packages/domain/src/encounter/encounter.types.ts");
 
 const domainReports = [];
 
@@ -339,6 +351,8 @@ const allergyIntoleranceAggregateSource = await readFile(
   "utf8"
 );
 const allergyIntoleranceTypesSource = await readFile(allergyIntoleranceTypesPath, "utf8");
+const encounterAggregateSource = await readFile(encounterAggregatePath, "utf8");
+const encounterTypesSource = await readFile(encounterTypesPath, "utf8");
 
 for (const forbidden of [
   /export type RecordTransferStatus/,
@@ -921,6 +935,37 @@ if (!/from "\.\/allergy-intolerance\.types\.js"/.test(allergyIntoleranceAggregat
   throw new Error(
     "AllergyIntolerance aggregate must depend on allergy-intolerance.types.ts for shared types."
   );
+}
+
+for (const forbidden of [
+  /export type EncounterClass/,
+  /export type EncounterSnapshot/,
+  /const encounterClasses/
+]) {
+  if (forbidden.test(encounterAggregateSource)) {
+    throw new Error(
+      "Encounter type declarations and code sets belong in encounter.types.ts, not the aggregate file."
+    );
+  }
+}
+
+for (const required of [
+  /export type EncounterClass/,
+  /export type EncounterStatus/,
+  /export type EncounterSnapshot/,
+  /export type CreateEncounterInput/,
+  /export const encounterClasses/,
+  /export const encounterStatuses/
+]) {
+  if (!required.test(encounterTypesSource)) {
+    throw new Error(
+      "encounter.types.ts must keep Encounter class, status, snapshot, command input and code-set definitions."
+    );
+  }
+}
+
+if (!/from "\.\/encounter\.types\.js"/.test(encounterAggregateSource)) {
+  throw new Error("Encounter aggregate must depend on encounter.types.ts for shared types.");
 }
 
 console.log(
