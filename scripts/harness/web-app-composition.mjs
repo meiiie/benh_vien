@@ -63,6 +63,7 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/MedicationAdministrationPanel.tsx",
   "apps/web/src/features/clinical-records/MedicationDispenseForm.tsx",
   "apps/web/src/features/clinical-records/MedicationDispensePanel.tsx",
+  "apps/web/src/features/clinical-records/MedicationRequestForm.tsx",
   "apps/web/src/features/clinical-records/MedicationRequestPanel.tsx",
   "apps/web/src/features/clinical-records/medicationFormatters.ts",
   "apps/web/src/features/clinical-records/medicationCommandBuilders.ts",
@@ -209,6 +210,16 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/clinical-records/ProcedureForm.tsx",
     maxLines: 260,
     role: "Procedure field-heavy command form"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/MedicationRequestPanel.tsx",
+    maxLines: 180,
+    role: "MedicationRequest list, summary and form composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/MedicationRequestForm.tsx",
+    maxLines: 230,
+    role: "MedicationRequest prescribing command form"
   }
 ];
 
