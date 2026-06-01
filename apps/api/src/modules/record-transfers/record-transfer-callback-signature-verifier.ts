@@ -1,19 +1,21 @@
-import { timingSafeEqual } from "node:crypto";
 import type { IncomingHttpHeaders } from "node:http";
 import { readCallbackSecret } from "./record-transfer-callback-secret.js";
 import { readSingleHeader } from "./record-transfer-callback-headers.js";
 import {
-  maxCallbackClockSkewMs,
   maxSignatureLength,
   recordTransferCallbackSignatureHeader,
   recordTransferCallbackTimestampHeader,
   signatureAlgorithm
 } from "./record-transfer-callback-signature.constants.js";
 import { buildRecordTransferCallbackSignature } from "./record-transfer-callback-signature-builder.js";
-import type {
-  CallbackSecretLookup,
-  CallbackSignatureVerification
-} from "./record-transfer-callback-signature.types.js";
+import {
+  signatureInvalidFailure,
+  signatureRequiredFailure,
+  toSecretLookupFailure
+} from "./record-transfer-callback-signature-failures.js";
+import { safeEqual } from "./record-transfer-callback-signature-safe-equal.js";
+import { validateCallbackTimestamp } from "./record-transfer-callback-signature-timestamp.js";
+import type { CallbackSignatureVerification } from "./record-transfer-callback-signature.types.js";
 
 export function verifyRecordTransferCallbackSignature(input: {
   readonly headers: IncomingHttpHeaders;
@@ -83,97 +85,4 @@ export function verifyRecordTransferCallbackSignature(input: {
     timestamp,
     keyId: secretResult.keyId
   };
-}
-
-function toSecretLookupFailure(
-  secretResult: Extract<CallbackSecretLookup, { readonly error: string }>
-): CallbackSignatureVerification {
-  return {
-    required: true,
-    verified: false,
-    statusCode: secretResult.statusCode,
-    error: secretResult.errorCode,
-    message: secretResult.error,
-    keyId: secretResult.keyId
-  };
-}
-
-function signatureRequiredFailure(
-  keyId: string | undefined
-): CallbackSignatureVerification {
-  return {
-    required: true,
-    verified: false,
-    algorithm: signatureAlgorithm,
-    keyId,
-    statusCode: 403,
-    error: "RECORD_TRANSFER_CALLBACK_SIGNATURE_REQUIRED",
-    message:
-      "Callback xác nhận nhận hồ sơ phải có timestamp và chữ ký HMAC hợp lệ."
-  };
-}
-
-function signatureInvalidFailure(input: {
-  readonly timestamp: string;
-  readonly keyId: string | undefined;
-  readonly message: string;
-}): CallbackSignatureVerification {
-  return {
-    required: true,
-    verified: false,
-    algorithm: signatureAlgorithm,
-    timestamp: input.timestamp,
-    keyId: input.keyId,
-    statusCode: 403,
-    error: "RECORD_TRANSFER_CALLBACK_SIGNATURE_INVALID",
-    message: input.message
-  };
-}
-
-function validateCallbackTimestamp(
-  timestamp: string,
-  now: Date,
-  keyId: string | undefined
-): CallbackSignatureVerification | undefined {
-  const timestampMs = Date.parse(timestamp);
-  const nowMs = now.getTime();
-
-  if (!Number.isFinite(timestampMs)) {
-    return {
-      required: true,
-      verified: false,
-      algorithm: signatureAlgorithm,
-      timestamp,
-      keyId,
-      statusCode: 403,
-      error: "RECORD_TRANSFER_CALLBACK_TIMESTAMP_INVALID",
-      message: "Timestamp của callback không phải thời điểm ISO-8601 hợp lệ."
-    };
-  }
-
-  if (Math.abs(nowMs - timestampMs) > maxCallbackClockSkewMs) {
-    return {
-      required: true,
-      verified: false,
-      algorithm: signatureAlgorithm,
-      timestamp,
-      keyId,
-      statusCode: 403,
-      error: "RECORD_TRANSFER_CALLBACK_SIGNATURE_EXPIRED",
-      message: "Timestamp của callback nằm ngoài cửa sổ chấp nhận 5 phút."
-    };
-  }
-
-  return undefined;
-}
-
-function safeEqual(left: string, right: string): boolean {
-  const leftBuffer = Buffer.from(left);
-  const rightBuffer = Buffer.from(right);
-
-  if (leftBuffer.length !== rightBuffer.length) {
-    return false;
-  }
-
-  return timingSafeEqual(leftBuffer, rightBuffer);
 }

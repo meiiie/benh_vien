@@ -43,8 +43,23 @@ const securityBudgets = [
     role: "RecordTransfer callback secret JSON parsing and validation policy"
   },
   {
+    path: "apps/api/src/modules/record-transfers/record-transfer-callback-signature-failures.ts",
+    maxLines: 90,
+    role: "RecordTransfer callback signature failure response builders"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-callback-signature-timestamp.ts",
+    maxLines: 40,
+    role: "RecordTransfer callback timestamp freshness policy"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-callback-signature-safe-equal.ts",
+    maxLines: 30,
+    role: "RecordTransfer callback timing-safe signature comparison"
+  },
+  {
     path: "apps/api/src/modules/record-transfers/record-transfer-callback-signature-verifier.ts",
-    maxLines: 190,
+    maxLines: 100,
     role: "RecordTransfer callback signature verification policy"
   },
   {
@@ -198,6 +213,15 @@ const signatureBuilderPath = resolve(
 const signatureSecretPath = resolve(
   "apps/api/src/modules/record-transfers/record-transfer-callback-secret.ts"
 );
+const signatureFailuresPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-callback-signature-failures.ts"
+);
+const signatureTimestampPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-callback-signature-timestamp.ts"
+);
+const signatureSafeEqualPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-callback-signature-safe-equal.ts"
+);
 const signatureVerifierPath = resolve(
   "apps/api/src/modules/record-transfers/record-transfer-callback-signature-verifier.ts"
 );
@@ -266,6 +290,9 @@ for (const budget of securityBudgets) {
 const signatureRootSource = await readFile(signatureRootPath, "utf8");
 const signatureBuilderSource = await readFile(signatureBuilderPath, "utf8");
 const signatureSecretSource = await readFile(signatureSecretPath, "utf8");
+const signatureFailuresSource = await readFile(signatureFailuresPath, "utf8");
+const signatureTimestampSource = await readFile(signatureTimestampPath, "utf8");
+const signatureSafeEqualSource = await readFile(signatureSafeEqualPath, "utf8");
 const signatureVerifierSource = await readFile(signatureVerifierPath, "utf8");
 const accessContextRootSource = await readFile(accessContextRootPath, "utf8");
 const accessContextReaderSource = await readFile(accessContextReaderPath, "utf8");
@@ -377,12 +404,39 @@ assertForbidden(signatureSecretSource, [
   }
 ]);
 
+assertForbidden(signatureFailuresSource, [
+  {
+    pattern:
+      /\bcreateHmac\b|\btimingSafeEqual\b|\bDate\.parse\b|\bprocess\.env\b|\bJSON\.parse\b|\breadCallbackSecret\b|\bbuildRecordTransferCallbackSignature\b/,
+    message:
+      "Callback signature failure builders must only shape verification failures."
+  }
+]);
+
+assertForbidden(signatureTimestampSource, [
+  {
+    pattern:
+      /\bprocess\.env\b|\bJSON\.parse\b|\bcreateHmac\b|\btimingSafeEqual\b|\breadCallbackSecret\b|\bbuildRecordTransferCallbackSignature\b/,
+    message:
+      "Callback timestamp policy must not read secrets, parse env configuration or compare HMAC values."
+  }
+]);
+
+assertForbidden(signatureSafeEqualSource, [
+  {
+    pattern:
+      /\bprocess\.env\b|\bJSON\.parse\b|\bDate\.parse\b|\bcreateHmac\b|\breadCallbackSecret\b|\bbuildRecordTransferCallbackSignature\b/,
+    message:
+      "Callback timing-safe comparison must only compare already-built signatures."
+  }
+]);
+
 assertForbidden(signatureVerifierSource, [
   {
     pattern:
-      /\bprocess\.env\.BVS_RECORD_TRANSFER\b|\bJSON\.parse\b|\bvalidateCallbackSecret\b|\bcreateHmac\b/,
+      /\bprocess\.env\.BVS_RECORD_TRANSFER\b|\bJSON\.parse\b|\bvalidateCallbackSecret\b|\bcreateHmac\b|\bDate\.parse\b|\btimingSafeEqual\b/,
     message:
-      "Callback verifier must delegate secret lookup/config parsing and HMAC creation to focused modules."
+      "Callback verifier must delegate secret lookup/config parsing, timestamp parsing, HMAC creation and timing-safe comparison to focused modules."
   }
 ]);
 

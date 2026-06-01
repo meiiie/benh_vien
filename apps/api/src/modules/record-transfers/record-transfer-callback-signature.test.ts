@@ -108,6 +108,61 @@ describe("record transfer callback signature", () => {
     });
   });
 
+  it("rejects malformed, expired and oversized callback signatures", () => {
+    process.env.NODE_ENV = "development";
+    process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRET = callbackSecret;
+    delete process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON;
+    const timestamp = "2026-05-28T08:00:00.000Z";
+
+    expect(
+      verifyRecordTransferCallbackSignature({
+        headers: {
+          [recordTransferCallbackTimestampHeader]: "not-a-date",
+          [recordTransferCallbackSignatureHeader]: "invalid-signature"
+        },
+        recordTransferId,
+        body: callbackBody,
+        now: new Date("2026-05-28T08:00:00.000Z")
+      })
+    ).toMatchObject({
+      required: true,
+      verified: false,
+      error: "RECORD_TRANSFER_CALLBACK_TIMESTAMP_INVALID"
+    });
+
+    expect(
+      verifyRecordTransferCallbackSignature({
+        headers: {
+          [recordTransferCallbackTimestampHeader]: timestamp,
+          [recordTransferCallbackSignatureHeader]: "invalid-signature"
+        },
+        recordTransferId,
+        body: callbackBody,
+        now: new Date("2026-05-28T08:06:00.000Z")
+      })
+    ).toMatchObject({
+      required: true,
+      verified: false,
+      error: "RECORD_TRANSFER_CALLBACK_SIGNATURE_EXPIRED"
+    });
+
+    expect(
+      verifyRecordTransferCallbackSignature({
+        headers: {
+          [recordTransferCallbackTimestampHeader]: timestamp,
+          [recordTransferCallbackSignatureHeader]: "x".repeat(129)
+        },
+        recordTransferId,
+        body: callbackBody,
+        now: new Date("2026-05-28T08:00:00.000Z")
+      })
+    ).toMatchObject({
+      required: true,
+      verified: false,
+      error: "RECORD_TRANSFER_CALLBACK_SIGNATURE_INVALID"
+    });
+  });
+
   it("selects per-gateway callback secrets by key id when configured", () => {
     process.env.NODE_ENV = "development";
     delete process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRET;
