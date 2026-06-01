@@ -91,6 +91,31 @@ const routeBudgets = [
     path: "apps/api/src/modules/patients/patient-route-helpers.ts",
     maxLines: 260,
     role: "Patient route helper functions"
+  },
+  {
+    path: "apps/api/src/modules/procedures/procedure-routes.ts",
+    maxLines: 80,
+    role: "Procedure route composition root"
+  },
+  {
+    path: "apps/api/src/modules/procedures/procedure-query-routes.ts",
+    maxLines: 120,
+    role: "Procedure query and read route adapter"
+  },
+  {
+    path: "apps/api/src/modules/procedures/procedure-creation-routes.ts",
+    maxLines: 140,
+    role: "Procedure creation command route adapter"
+  },
+  {
+    path: "apps/api/src/modules/procedures/procedure-fhir-routes.ts",
+    maxLines: 90,
+    role: "Procedure FHIR export route adapter"
+  },
+  {
+    path: "apps/api/src/modules/procedures/procedure-route-helpers.ts",
+    maxLines: 150,
+    role: "Procedure response and reference validation helpers"
   }
 ];
 
@@ -180,6 +205,30 @@ const requiredPatientFhirRegistrations = [
   "registerPatientRecordBundleRoutes"
 ];
 
+const procedureRoutesPath = resolve("apps/api/src/modules/procedures/procedure-routes.ts");
+const forbiddenProcedureRoutePatterns = [
+  {
+    pattern:
+      /\bCreateProcedureRequestSchema\b|\bPatientProceduresParamsSchema\b|\bProcedureIdParamsSchema\b/,
+    message:
+      "Procedure request handling belongs in procedure-query-routes.ts, procedure-creation-routes.ts or procedure-fhir-routes.ts."
+  },
+  {
+    pattern: /\bProcedure\.record\b|\bDomainError\b|\bvalidateProcedureReferences\b/,
+    message:
+      "Procedure creation and validation policy belongs in procedure-creation-routes.ts and procedure-route-helpers.ts."
+  },
+  {
+    pattern: /\bmapProcedureToFhir\b/,
+    message: "Procedure FHIR export belongs in procedure-fhir-routes.ts."
+  }
+];
+const requiredProcedureRegistrations = [
+  "registerProcedureQueryRoutes",
+  "registerProcedureCreationRoutes",
+  "registerProcedureFhirRoutes"
+];
+
 const routeReports = [];
 
 for (const budget of routeBudgets) {
@@ -205,6 +254,7 @@ for (const budget of routeBudgets) {
 const recordTransferRoutesSource = await readFile(recordTransferRoutesPath, "utf8");
 const patientRoutesSource = await readFile(patientRoutesPath, "utf8");
 const patientFhirRoutesSource = await readFile(patientFhirRoutesPath, "utf8");
+const procedureRoutesSource = await readFile(procedureRoutesPath, "utf8");
 
 for (const forbidden of forbiddenRecordTransferRoutePatterns) {
   if (forbidden.pattern.test(recordTransferRoutesSource)) {
@@ -244,6 +294,20 @@ for (const registration of requiredPatientFhirRegistrations) {
   if (!patientFhirRoutesSource.includes(registration)) {
     throw new Error(
       `Patient FHIR root routes must register ${registration} so resource and Bundle export modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenProcedureRoutePatterns) {
+  if (forbidden.pattern.test(procedureRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredProcedureRegistrations) {
+  if (!procedureRoutesSource.includes(registration)) {
+    throw new Error(
+      `Procedure root routes must register ${registration} so query, command and FHIR modules remain wired.`
     );
   }
 }
