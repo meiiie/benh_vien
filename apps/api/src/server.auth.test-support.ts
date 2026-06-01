@@ -6,7 +6,77 @@ import type {
 } from "@benh-vien-so/domain";
 import { registerAuthRoutes } from "./modules/auth/auth-routes.js";
 import { createMemoryLoginRateLimiter } from "./modules/auth/login-rate-limit.js";
+import {
+  buildRecordTransferCallbackSignature,
+  recordTransferCallbackKeyIdHeader,
+  recordTransferCallbackSignatureHeader,
+  recordTransferCallbackTimestampHeader
+} from "./modules/record-transfers/record-transfer-callback-signature.js";
 import { buildServer } from "./server.js";
+
+export {
+  recordTransferCallbackKeyIdHeader,
+  recordTransferCallbackSignatureHeader,
+  recordTransferCallbackTimestampHeader
+};
+
+export const authBoundaryTestSecret =
+  "wiiicare-test-secret-at-least-32-characters";
+export const recordTransferCallbackTestSecret =
+  "wiiicare-record-transfer-callback-secret-for-tests";
+export const recordTransferCallbackTestKeyId = "gateway-hai-phong-referral";
+export const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+const authBoundaryEnvNames = [
+  "BVS_REPOSITORY",
+  "BVS_AUTH_SECRET",
+  "BVS_AUTH_TOKEN_TTL_SECONDS",
+  "BVS_CORS_ORIGINS",
+  "DATABASE_URL",
+  "NODE_ENV",
+  "BVS_PUBLIC_API_BASE_URL",
+  "BVS_AUTH_LOGIN_RATE_LIMIT_MAX",
+  "BVS_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS",
+  "BVS_RATE_LIMIT_STORE",
+  "BVS_VALKEY_URL",
+  "BVS_DEMO_AUTH_ENABLED",
+  "BVS_RECORD_TRANSFER_RETRY_WORKER_ENABLED",
+  "BVS_RECORD_TRANSFER_DELIVERY_WORKER_ENABLED",
+  "BVS_RECORD_TRANSFER_CALLBACK_SECRET",
+  "BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON",
+  "BVS_API_DOCS_ENABLED",
+  "BVS_HTTP_BODY_LIMIT_BYTES"
+] as const;
+
+type AuthBoundaryEnvName = (typeof authBoundaryEnvNames)[number];
+
+export type AuthBoundaryEnvSnapshot = Readonly<
+  Record<AuthBoundaryEnvName, string | undefined>
+>;
+
+export function captureAuthBoundaryEnv(): AuthBoundaryEnvSnapshot {
+  const snapshot = {} as Record<AuthBoundaryEnvName, string | undefined>;
+
+  for (const name of authBoundaryEnvNames) {
+    snapshot[name] = process.env[name];
+  }
+
+  return snapshot;
+}
+
+export function applyDefaultAuthBoundaryEnv(): void {
+  process.env.BVS_REPOSITORY = "in-memory";
+  process.env.BVS_AUTH_SECRET = authBoundaryTestSecret;
+  process.env.BVS_RECORD_TRANSFER_RETRY_WORKER_ENABLED = "false";
+  process.env.BVS_RECORD_TRANSFER_DELIVERY_WORKER_ENABLED = "false";
+}
+
+export function restoreAuthBoundaryEnv(snapshot: AuthBoundaryEnvSnapshot): void {
+  for (const name of authBoundaryEnvNames) {
+    restoreEnv(name, snapshot[name]);
+  }
+}
 
 export async function readyServer(
   options: Parameters<typeof buildServer>[0] = {}
@@ -164,4 +234,22 @@ export function restoreEnv(name: string, value: string | undefined): void {
   }
 
   process.env[name] = value;
+}
+
+export function signedRecordTransferCallbackHeaders(input: {
+  readonly recordTransferId: string;
+  readonly body: unknown;
+}): Record<string, string> {
+  const timestamp = new Date().toISOString();
+
+  return {
+    [recordTransferCallbackKeyIdHeader]: recordTransferCallbackTestKeyId,
+    [recordTransferCallbackTimestampHeader]: timestamp,
+    [recordTransferCallbackSignatureHeader]: buildRecordTransferCallbackSignature({
+      secret: recordTransferCallbackTestSecret,
+      timestamp,
+      recordTransferId: input.recordTransferId,
+      body: input.body
+    })
+  };
 }

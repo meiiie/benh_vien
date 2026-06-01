@@ -2,16 +2,12 @@ import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ProviderDirectoryRepository } from "@benh-vien-so/domain";
 import type { LoginRateLimiter } from "./modules/auth/login-rate-limit.js";
-import {
-  buildRecordTransferCallbackSignature,
-  recordTransferCallbackKeyIdHeader,
-  recordTransferCallbackSignatureHeader,
-  recordTransferCallbackTimestampHeader
-} from "./modules/record-transfers/record-transfer-callback-signature.js";
 import { buildServer } from "./server.js";
 import {
+  applyDefaultAuthBoundaryEnv,
   auditHeaders,
   bundleTransferHeaders,
+  captureAuthBoundaryEnv,
   expectOperationOutcome,
   FailingRecordTransferDeliveryAttemptRepository,
   login,
@@ -19,46 +15,23 @@ import {
   operationsHeaders,
   readyAuthRouteServer,
   readyServer,
-  restoreEnv,
-  treatmentHeaders
+  recordTransferCallbackKeyIdHeader,
+  recordTransferCallbackSignatureHeader,
+  recordTransferCallbackTestKeyId,
+  recordTransferCallbackTestSecret,
+  recordTransferCallbackTimestampHeader,
+  restoreAuthBoundaryEnv,
+  signedRecordTransferCallbackHeaders,
+  treatmentHeaders,
+  uuidPattern
 } from "./server.auth.test-support.js";
-
-const testSecret = "wiiicare-test-secret-at-least-32-characters";
-const callbackSecret = "wiiicare-record-transfer-callback-secret-for-tests";
-const callbackKeyId = "gateway-hai-phong-referral";
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 describe("API auth and RBAC boundary", () => {
   let app: FastifyInstance | undefined;
-  const originalRepository = process.env.BVS_REPOSITORY;
-  const originalAuthSecret = process.env.BVS_AUTH_SECRET;
-  const originalAuthTokenTtlSeconds = process.env.BVS_AUTH_TOKEN_TTL_SECONDS;
-  const originalCorsOrigins = process.env.BVS_CORS_ORIGINS;
-  const originalDatabaseUrl = process.env.DATABASE_URL;
-  const originalNodeEnv = process.env.NODE_ENV;
-  const originalPublicApiBaseUrl = process.env.BVS_PUBLIC_API_BASE_URL;
-  const originalAuthLoginRateLimitMax = process.env.BVS_AUTH_LOGIN_RATE_LIMIT_MAX;
-  const originalAuthLoginRateLimitWindowSeconds =
-    process.env.BVS_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS;
-  const originalRateLimitStore = process.env.BVS_RATE_LIMIT_STORE;
-  const originalValkeyUrl = process.env.BVS_VALKEY_URL;
-  const originalDemoAuthEnabled = process.env.BVS_DEMO_AUTH_ENABLED;
-  const originalRecordTransferRetryWorkerEnabled =
-    process.env.BVS_RECORD_TRANSFER_RETRY_WORKER_ENABLED;
-  const originalRecordTransferDeliveryWorkerEnabled =
-    process.env.BVS_RECORD_TRANSFER_DELIVERY_WORKER_ENABLED;
-  const originalRecordTransferCallbackSecret =
-    process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRET;
-  const originalRecordTransferCallbackSecretsJson =
-    process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON;
-  const originalApiDocsEnabled = process.env.BVS_API_DOCS_ENABLED;
-  const originalHttpBodyLimitBytes = process.env.BVS_HTTP_BODY_LIMIT_BYTES;
+  const originalEnv = captureAuthBoundaryEnv();
 
   beforeEach(() => {
-    process.env.BVS_REPOSITORY = "in-memory";
-    process.env.BVS_AUTH_SECRET = testSecret;
-    process.env.BVS_RECORD_TRANSFER_RETRY_WORKER_ENABLED = "false";
-    process.env.BVS_RECORD_TRANSFER_DELIVERY_WORKER_ENABLED = "false";
+    applyDefaultAuthBoundaryEnv();
   });
 
   afterEach(async () => {
@@ -67,39 +40,7 @@ describe("API auth and RBAC boundary", () => {
       app = undefined;
     }
 
-    restoreEnv("BVS_REPOSITORY", originalRepository);
-    restoreEnv("BVS_AUTH_SECRET", originalAuthSecret);
-    restoreEnv("BVS_AUTH_TOKEN_TTL_SECONDS", originalAuthTokenTtlSeconds);
-    restoreEnv("BVS_CORS_ORIGINS", originalCorsOrigins);
-    restoreEnv("DATABASE_URL", originalDatabaseUrl);
-    restoreEnv("NODE_ENV", originalNodeEnv);
-    restoreEnv("BVS_PUBLIC_API_BASE_URL", originalPublicApiBaseUrl);
-    restoreEnv("BVS_AUTH_LOGIN_RATE_LIMIT_MAX", originalAuthLoginRateLimitMax);
-    restoreEnv(
-      "BVS_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS",
-      originalAuthLoginRateLimitWindowSeconds
-    );
-    restoreEnv("BVS_RATE_LIMIT_STORE", originalRateLimitStore);
-    restoreEnv("BVS_VALKEY_URL", originalValkeyUrl);
-    restoreEnv("BVS_DEMO_AUTH_ENABLED", originalDemoAuthEnabled);
-    restoreEnv(
-      "BVS_RECORD_TRANSFER_RETRY_WORKER_ENABLED",
-      originalRecordTransferRetryWorkerEnabled
-    );
-    restoreEnv(
-      "BVS_RECORD_TRANSFER_DELIVERY_WORKER_ENABLED",
-      originalRecordTransferDeliveryWorkerEnabled
-    );
-    restoreEnv(
-      "BVS_RECORD_TRANSFER_CALLBACK_SECRET",
-      originalRecordTransferCallbackSecret
-    );
-    restoreEnv(
-      "BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON",
-      originalRecordTransferCallbackSecretsJson
-    );
-    restoreEnv("BVS_API_DOCS_ENABLED", originalApiDocsEnabled);
-    restoreEnv("BVS_HTTP_BODY_LIMIT_BYTES", originalHttpBodyLimitBytes);
+    restoreAuthBoundaryEnv(originalEnv);
   });
 
   it("returns a signed demo session for valid credentials", async () => {
@@ -4533,7 +4474,7 @@ describe("API auth and RBAC boundary", () => {
 
   it("requires a valid HMAC signature for acknowledgement callbacks when configured", async () => {
     process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON = JSON.stringify({
-      [callbackKeyId]: callbackSecret
+      [recordTransferCallbackTestKeyId]: recordTransferCallbackTestSecret
     });
     app = await readyServer();
     const clinicianToken = await loginForToken(app, "practitioner-demo-001", "clinician");
@@ -4574,7 +4515,7 @@ describe("API auth and RBAC boundary", () => {
       headers: {
         ...operationsHeaders(gatewayToken),
         "content-type": "application/json",
-        [recordTransferCallbackKeyIdHeader]: callbackKeyId
+        [recordTransferCallbackKeyIdHeader]: recordTransferCallbackTestKeyId
       },
       payload: callbackPayload
     });
@@ -4592,7 +4533,7 @@ describe("API auth and RBAC boundary", () => {
       headers: {
         ...operationsHeaders(gatewayToken),
         "content-type": "application/json",
-        [recordTransferCallbackKeyIdHeader]: callbackKeyId,
+        [recordTransferCallbackKeyIdHeader]: recordTransferCallbackTestKeyId,
         [recordTransferCallbackTimestampHeader]: invalidTimestamp,
         [recordTransferCallbackSignatureHeader]: "invalid-signature"
       },
@@ -4864,21 +4805,3 @@ describe("API auth and RBAC boundary", () => {
     });
   });
 });
-
-function signedRecordTransferCallbackHeaders(input: {
-  readonly recordTransferId: string;
-  readonly body: unknown;
-}): Record<string, string> {
-  const timestamp = new Date().toISOString();
-
-  return {
-    [recordTransferCallbackKeyIdHeader]: callbackKeyId,
-    [recordTransferCallbackTimestampHeader]: timestamp,
-    [recordTransferCallbackSignatureHeader]: buildRecordTransferCallbackSignature({
-      secret: callbackSecret,
-      timestamp,
-      recordTransferId: input.recordTransferId,
-      body: input.body
-    })
-  };
-}
