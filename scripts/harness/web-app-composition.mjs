@@ -79,7 +79,13 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/ServiceRequestForm.tsx",
   "apps/web/src/features/clinical-records/ServiceRequestPanel.tsx",
   "apps/web/src/features/clinical-records/WorkflowTaskPanel.tsx",
+  "apps/web/src/features/clinical-records/careWorkflowApi.ts",
+  "apps/web/src/features/clinical-records/clinicalEntryApi.ts",
   "apps/web/src/features/clinical-records/clinicalRecordApi.ts",
+  "apps/web/src/features/clinical-records/clinicalRecordHttp.ts",
+  "apps/web/src/features/clinical-records/diagnosticResultApi.ts",
+  "apps/web/src/features/clinical-records/encounterApi.ts",
+  "apps/web/src/features/clinical-records/medicationApi.ts",
   "apps/web/src/features/consents/ConsentInteropPanel.tsx",
   "apps/web/src/features/consents/consentApi.ts",
   "apps/web/src/features/consents/consentCommandBuilders.ts",
@@ -197,6 +203,41 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/clinical-records/clinicalRecordPanelRendererTypes.ts",
     maxLines: 210,
     role: "Clinical record panel renderer type contracts"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/clinicalRecordApi.ts",
+    maxLines: 20,
+    role: "Clinical record API compatibility barrel"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/clinicalRecordHttp.ts",
+    maxLines: 40,
+    role: "Clinical record treatment-purpose HTTP helper"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/encounterApi.ts",
+    maxLines: 60,
+    role: "Encounter API adapter"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/clinicalEntryApi.ts",
+    maxLines: 120,
+    role: "Allergy, condition and observation API adapter"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/medicationApi.ts",
+    maxLines: 150,
+    role: "Medication workflow API adapter"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/careWorkflowApi.ts",
+    maxLines: 130,
+    role: "ServiceRequest, Task and Procedure API adapter"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/diagnosticResultApi.ts",
+    maxLines: 120,
+    role: "DiagnosticReport and ImagingStudy API adapter"
   },
   {
     path: "apps/web/src/features/clinical-records/AllergyIntolerancePanel.tsx",
