@@ -129,8 +129,12 @@ const requiredModules = [
   "apps/web/src/features/provider-directory/ProviderDirectoryPanel.tsx",
   "apps/web/src/features/provider-directory/providerDirectoryApi.ts",
   "apps/web/src/features/provider-directory/providerDirectoryFormatters.ts",
+  "apps/web/src/features/record-transfers/RecordTransferActions.tsx",
   "apps/web/src/features/record-transfers/RecordTransferDeliveryAttemptList.tsx",
+  "apps/web/src/features/record-transfers/RecordTransferForm.tsx",
   "apps/web/src/features/record-transfers/RecordTransferInteropPanel.tsx",
+  "apps/web/src/features/record-transfers/RecordTransferList.tsx",
+  "apps/web/src/features/record-transfers/RecordTransferMetadata.tsx",
   "apps/web/src/features/record-transfers/RecordTransferOperationalSummary.tsx",
   "apps/web/src/features/record-transfers/recordTransferApi.ts",
   "apps/web/src/features/record-transfers/recordTransferCommandBuilders.ts",
@@ -239,8 +243,28 @@ const featureModuleBudgets = [
   },
   {
     path: "apps/web/src/features/record-transfers/RecordTransferInteropPanel.tsx",
-    maxLines: 340,
-    role: "Record transfer panel layout, metadata and command form"
+    maxLines: 160,
+    role: "Record transfer panel composition"
+  },
+  {
+    path: "apps/web/src/features/record-transfers/RecordTransferList.tsx",
+    maxLines: 70,
+    role: "Record transfer package list UI"
+  },
+  {
+    path: "apps/web/src/features/record-transfers/RecordTransferMetadata.tsx",
+    maxLines: 90,
+    role: "Record transfer operational metadata grid"
+  },
+  {
+    path: "apps/web/src/features/record-transfers/RecordTransferActions.tsx",
+    maxLines: 110,
+    role: "Record transfer lifecycle action buttons"
+  },
+  {
+    path: "apps/web/src/features/record-transfers/RecordTransferForm.tsx",
+    maxLines: 150,
+    role: "Record transfer creation command form"
   },
   {
     path: "apps/web/src/features/record-transfers/RecordTransferDeliveryAttemptList.tsx",
