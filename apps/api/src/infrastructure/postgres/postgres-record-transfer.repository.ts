@@ -6,7 +6,7 @@ import type {
   RecordTransfer,
   RecordTransferRepository,
 } from "@benh-vien-so/domain";
-import { upsertRecordTransferDeliveryAttempt } from "./postgres-record-transfer-delivery-attempt.repository.js";
+import { upsertRecordTransferDeliveryAttempt } from "./postgres-record-transfer-delivery-attempt.persistence.js";
 import { rowToRecordTransfer } from "./postgres-record-transfer.mapper.js";
 import { upsertRecordTransfer } from "./postgres-record-transfer.persistence.js";
 import { selectRecordTransferSql } from "./postgres-record-transfer.sql.js";

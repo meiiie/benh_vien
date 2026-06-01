@@ -28,6 +28,31 @@ const postgresBudgets = [
     role: "RecordTransfer PostgreSQL queryable and row types"
   },
   {
+    path: "apps/api/src/infrastructure/postgres/postgres-record-transfer-delivery-attempt.repository.ts",
+    maxLines: 90,
+    role: "RecordTransferDeliveryAttempt PostgreSQL repository orchestration"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-record-transfer-delivery-attempt.sql.ts",
+    maxLines: 80,
+    role: "RecordTransferDeliveryAttempt PostgreSQL SQL statements"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-record-transfer-delivery-attempt.mapper.ts",
+    maxLines: 90,
+    role: "RecordTransferDeliveryAttempt PostgreSQL row and parameter mapper"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-record-transfer-delivery-attempt.persistence.ts",
+    maxLines: 30,
+    role: "RecordTransferDeliveryAttempt PostgreSQL persistence command"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-record-transfer-delivery-attempt.types.ts",
+    maxLines: 50,
+    role: "RecordTransferDeliveryAttempt PostgreSQL queryable and row types"
+  },
+  {
     path: "apps/api/src/infrastructure/postgres/postgres-patient.repository.ts",
     maxLines: 110,
     role: "Patient PostgreSQL repository orchestration"
@@ -374,6 +399,21 @@ const recordTransferPersistencePath = resolve(
 const recordTransferTypesPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-record-transfer.types.ts"
 );
+const recordTransferDeliveryAttemptRepositoryPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-record-transfer-delivery-attempt.repository.ts"
+);
+const recordTransferDeliveryAttemptSqlPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-record-transfer-delivery-attempt.sql.ts"
+);
+const recordTransferDeliveryAttemptMapperPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-record-transfer-delivery-attempt.mapper.ts"
+);
+const recordTransferDeliveryAttemptPersistencePath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-record-transfer-delivery-attempt.persistence.ts"
+);
+const recordTransferDeliveryAttemptTypesPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-record-transfer-delivery-attempt.types.ts"
+);
 const patientRepositoryPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-patient.repository.ts"
 );
@@ -607,6 +647,26 @@ const recordTransferPersistenceSource = await readFile(
   "utf8"
 );
 const recordTransferTypesSource = await readFile(recordTransferTypesPath, "utf8");
+const recordTransferDeliveryAttemptRepositorySource = await readFile(
+  recordTransferDeliveryAttemptRepositoryPath,
+  "utf8"
+);
+const recordTransferDeliveryAttemptSqlSource = await readFile(
+  recordTransferDeliveryAttemptSqlPath,
+  "utf8"
+);
+const recordTransferDeliveryAttemptMapperSource = await readFile(
+  recordTransferDeliveryAttemptMapperPath,
+  "utf8"
+);
+const recordTransferDeliveryAttemptPersistenceSource = await readFile(
+  recordTransferDeliveryAttemptPersistencePath,
+  "utf8"
+);
+const recordTransferDeliveryAttemptTypesSource = await readFile(
+  recordTransferDeliveryAttemptTypesPath,
+  "utf8"
+);
 const patientRepositorySource = await readFile(patientRepositoryPath, "utf8");
 const patientSqlSource = await readFile(patientSqlPath, "utf8");
 const patientMapperSource = await readFile(patientMapperPath, "utf8");
@@ -776,6 +836,7 @@ const auditEventTypesSource = await readFile(auditEventTypesPath, "utf8");
 const requiredRepositoryImports = [
   "rowToRecordTransfer",
   "upsertRecordTransfer",
+  "upsertRecordTransferDeliveryAttempt",
   "selectRecordTransferSql",
   "RecordTransferRow"
 ];
@@ -783,6 +844,21 @@ const requiredRepositoryImports = [
 for (const importedName of requiredRepositoryImports) {
   if (!recordTransferRepositorySource.includes(importedName)) {
     throw new Error(`RecordTransfer PostgreSQL repository must compose ${importedName}.`);
+  }
+}
+
+const requiredRecordTransferDeliveryAttemptRepositoryImports = [
+  "rowToRecordTransferDeliveryAttempt",
+  "upsertRecordTransferDeliveryAttempt",
+  "selectRecordTransferDeliveryAttemptSql",
+  "RecordTransferDeliveryAttemptRow"
+];
+
+for (const importedName of requiredRecordTransferDeliveryAttemptRepositoryImports) {
+  if (!recordTransferDeliveryAttemptRepositorySource.includes(importedName)) {
+    throw new Error(
+      `RecordTransferDeliveryAttempt PostgreSQL repository must compose ${importedName}.`
+    );
   }
 }
 
@@ -974,9 +1050,9 @@ for (const importedName of requiredAuditEventRepositoryImports) {
 
 assertForbidden(recordTransferRepositorySource, [
   {
-    pattern: /\bINSERT INTO record_transfers\b|\bON CONFLICT \(id\)\b|\bRecordTransfer\.rehydrate\b|\bRecordTransferSnapshot\b/,
+    pattern: /\bINSERT INTO record_transfers\b|\bON CONFLICT \(id\)\b|\bRecordTransfer\.rehydrate\b|\bRecordTransferSnapshot\b|postgres-record-transfer-delivery-attempt\.repository\.js/,
     message:
-      "RecordTransfer PostgreSQL repository must delegate upsert SQL and row mapping to focused modules."
+      "RecordTransfer PostgreSQL repository must delegate upsert SQL, row mapping and delivery-attempt persistence to focused modules."
   }
 ]);
 
@@ -1009,6 +1085,46 @@ assertForbidden(recordTransferTypesSource, [
     pattern: /\bRecordTransfer\.rehydrate\b|\bquery\s*\(|\bINSERT INTO record_transfers\b/,
     message:
       "RecordTransfer PostgreSQL type module must only describe queryable and row contracts."
+  }
+]);
+
+assertForbidden(recordTransferDeliveryAttemptRepositorySource, [
+  {
+    pattern: /\bINSERT INTO record_transfer_delivery_attempts\b|\bON CONFLICT \(id\)\b|\bRecordTransferDeliveryAttempt\.rehydrate\b|\bRecordTransferDeliveryAttemptSnapshot\b/,
+    message:
+      "RecordTransferDeliveryAttempt PostgreSQL repository must delegate upsert SQL and row mapping to focused modules."
+  }
+]);
+
+assertForbidden(recordTransferDeliveryAttemptSqlSource, [
+  {
+    pattern: /@benh-vien-so\/domain|\bRecordTransferDeliveryAttempt\b|\bpg\b/,
+    message:
+      "RecordTransferDeliveryAttempt PostgreSQL SQL module must stay a pure SQL statement module without domain or pg dependencies."
+  }
+]);
+
+assertForbidden(recordTransferDeliveryAttemptMapperSource, [
+  {
+    pattern: /\bfrom "pg"\b|\bquery\s*\(|\bINSERT INTO record_transfer_delivery_attempts\b|\bON CONFLICT \(id\)\b/,
+    message:
+      "RecordTransferDeliveryAttempt PostgreSQL mapper must stay pure row/value mapping without pg I/O or SQL ownership."
+  }
+]);
+
+assertForbidden(recordTransferDeliveryAttemptPersistenceSource, [
+  {
+    pattern: /\bRecordTransferDeliveryAttempt\.rehydrate\b|\bRecordTransferDeliveryAttemptSnapshot\b|\bSELECT\b/,
+    message:
+      "RecordTransferDeliveryAttempt PostgreSQL persistence command must compose SQL and mapper without owning reads or domain hydration."
+  }
+]);
+
+assertForbidden(recordTransferDeliveryAttemptTypesSource, [
+  {
+    pattern: /\bRecordTransferDeliveryAttempt\.rehydrate\b|\bquery\s*\(|\bINSERT INTO record_transfer_delivery_attempts\b/,
+    message:
+      "RecordTransferDeliveryAttempt PostgreSQL type module must only describe queryable and row contracts."
   }
 ]);
 
