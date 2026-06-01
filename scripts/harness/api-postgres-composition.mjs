@@ -283,6 +283,31 @@ const postgresBudgets = [
     role: "AllergyIntolerance PostgreSQL row types"
   },
   {
+    path: "apps/api/src/infrastructure/postgres/postgres-clinical-document.repository.ts",
+    maxLines: 90,
+    role: "ClinicalDocument PostgreSQL repository orchestration"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-clinical-document.sql.ts",
+    maxLines: 70,
+    role: "ClinicalDocument PostgreSQL SQL statements"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-clinical-document.mapper.ts",
+    maxLines: 90,
+    role: "ClinicalDocument PostgreSQL row and parameter mapper"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-clinical-document.persistence.ts",
+    maxLines: 30,
+    role: "ClinicalDocument PostgreSQL persistence command"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-clinical-document.types.ts",
+    maxLines: 50,
+    role: "ClinicalDocument PostgreSQL row types"
+  },
+  {
     path: "apps/api/src/infrastructure/postgres/postgres-audit-event.repository.ts",
     maxLines: 110,
     role: "AuditEvent PostgreSQL repository integrity orchestration"
@@ -475,6 +500,21 @@ const allergyIntolerancePersistencePath = resolve(
 const allergyIntoleranceTypesPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-allergy-intolerance.types.ts"
 );
+const clinicalDocumentRepositoryPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-clinical-document.repository.ts"
+);
+const clinicalDocumentSqlPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-clinical-document.sql.ts"
+);
+const clinicalDocumentMapperPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-clinical-document.mapper.ts"
+);
+const clinicalDocumentPersistencePath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-clinical-document.persistence.ts"
+);
+const clinicalDocumentTypesPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-clinical-document.types.ts"
+);
 const auditEventRepositoryPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-audit-event.repository.ts"
 );
@@ -662,6 +702,23 @@ const allergyIntoleranceTypesSource = await readFile(
   allergyIntoleranceTypesPath,
   "utf8"
 );
+const clinicalDocumentRepositorySource = await readFile(
+  clinicalDocumentRepositoryPath,
+  "utf8"
+);
+const clinicalDocumentSqlSource = await readFile(clinicalDocumentSqlPath, "utf8");
+const clinicalDocumentMapperSource = await readFile(
+  clinicalDocumentMapperPath,
+  "utf8"
+);
+const clinicalDocumentPersistenceSource = await readFile(
+  clinicalDocumentPersistencePath,
+  "utf8"
+);
+const clinicalDocumentTypesSource = await readFile(
+  clinicalDocumentTypesPath,
+  "utf8"
+);
 const auditEventRepositorySource = await readFile(auditEventRepositoryPath, "utf8");
 const auditEventSqlSource = await readFile(auditEventSqlPath, "utf8");
 const auditEventMapperSource = await readFile(auditEventMapperPath, "utf8");
@@ -819,6 +876,21 @@ for (const importedName of requiredAllergyIntoleranceRepositoryImports) {
   if (!allergyIntoleranceRepositorySource.includes(importedName)) {
     throw new Error(
       `AllergyIntolerance PostgreSQL repository must compose ${importedName}.`
+    );
+  }
+}
+
+const requiredClinicalDocumentRepositoryImports = [
+  "rowToClinicalDocument",
+  "upsertClinicalDocument",
+  "selectClinicalDocumentSql",
+  "ClinicalDocumentRow"
+];
+
+for (const importedName of requiredClinicalDocumentRepositoryImports) {
+  if (!clinicalDocumentRepositorySource.includes(importedName)) {
+    throw new Error(
+      `ClinicalDocument PostgreSQL repository must compose ${importedName}.`
     );
   }
 }
@@ -1279,6 +1351,46 @@ assertForbidden(allergyIntoleranceTypesSource, [
     pattern: /\bAllergyIntolerance\.rehydrate\b|\bquery\s*\(|\bINSERT INTO allergy_intolerances\b/,
     message:
       "AllergyIntolerance PostgreSQL type module must only describe row contracts."
+  }
+]);
+
+assertForbidden(clinicalDocumentRepositorySource, [
+  {
+    pattern: /\bINSERT INTO clinical_documents\b|\bON CONFLICT \(id\)\b|\bClinicalDocument\.rehydrate\b|\bClinicalDocumentSnapshot\b/,
+    message:
+      "ClinicalDocument PostgreSQL repository must delegate upsert SQL and row mapping to focused modules."
+  }
+]);
+
+assertForbidden(clinicalDocumentSqlSource, [
+  {
+    pattern: /@benh-vien-so\/domain|\bClinicalDocument\b|\bpg\b/,
+    message:
+      "ClinicalDocument PostgreSQL SQL module must stay a pure SQL statement module without domain or pg dependencies."
+  }
+]);
+
+assertForbidden(clinicalDocumentMapperSource, [
+  {
+    pattern: /\bfrom "pg"\b|\bquery\s*\(|\bINSERT INTO clinical_documents\b|\bON CONFLICT \(id\)\b/,
+    message:
+      "ClinicalDocument PostgreSQL mapper must stay pure row/value mapping without pg I/O or SQL ownership."
+  }
+]);
+
+assertForbidden(clinicalDocumentPersistenceSource, [
+  {
+    pattern: /\bClinicalDocument\.rehydrate\b|\bClinicalDocumentSnapshot\b|\bSELECT\b/,
+    message:
+      "ClinicalDocument PostgreSQL persistence command must compose SQL and mapper without owning reads or domain hydration."
+  }
+]);
+
+assertForbidden(clinicalDocumentTypesSource, [
+  {
+    pattern: /\bClinicalDocument\.rehydrate\b|\bquery\s*\(|\bINSERT INTO clinical_documents\b/,
+    message:
+      "ClinicalDocument PostgreSQL type module must only describe row contracts."
   }
 ]);
 
