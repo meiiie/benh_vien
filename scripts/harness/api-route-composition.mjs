@@ -83,6 +83,31 @@ const routeBudgets = [
     role: "Auth controlled demo account catalog"
   },
   {
+    path: "apps/api/src/modules/audit-events/audit-event-routes.ts",
+    maxLines: 60,
+    role: "AuditEvent route composition root"
+  },
+  {
+    path: "apps/api/src/modules/audit-events/audit-event-query-routes.ts",
+    maxLines: 120,
+    role: "AuditEvent global and patient query route adapter"
+  },
+  {
+    path: "apps/api/src/modules/audit-events/audit-event-integrity-routes.ts",
+    maxLines: 90,
+    role: "AuditEvent patient integrity verification route adapter"
+  },
+  {
+    path: "apps/api/src/modules/audit-events/audit-event-fhir-routes.ts",
+    maxLines: 100,
+    role: "AuditEvent FHIR Bundle export route adapter"
+  },
+  {
+    path: "apps/api/src/modules/audit-events/audit-event-route-helpers.ts",
+    maxLines: 80,
+    role: "AuditEvent response and patient access helpers"
+  },
+  {
     path: "apps/api/src/modules/consents/consent-routes.ts",
     maxLines: 70,
     role: "Consent route composition root"
@@ -603,6 +628,33 @@ const forbiddenAuthRoutePatterns = [
 const requiredAuthRegistrations = [
   "registerAuthLoginRoutes",
   "registerAuthSessionRoutes"
+];
+
+const auditEventRoutesPath = resolve(
+  "apps/api/src/modules/audit-events/audit-event-routes.ts"
+);
+const forbiddenAuditEventRoutePatterns = [
+  {
+    pattern: /\bAuditEventsQuerySchema\b|\bPatientAuditEventsParamsSchema\b/,
+    message:
+      "AuditEvent request handling belongs in audit-event-query-routes.ts, audit-event-integrity-routes.ts or audit-event-fhir-routes.ts."
+  },
+  {
+    pattern:
+      /\brecordAuditEvent\b|\brequirePatientRecordAccessByPatientId\b|\bverifyPatientIntegrity\b/,
+    message:
+      "AuditEvent audit write, access and integrity policy belongs outside the root route."
+  },
+  {
+    pattern: /\bmapAuditEventsToFhirBundle\b|\btoAuditEventResponse\b/,
+    message:
+      "AuditEvent response and FHIR export details belong in helper or FHIR route modules."
+  }
+];
+const requiredAuditEventRegistrations = [
+  "registerAuditEventQueryRoutes",
+  "registerAuditEventIntegrityRoutes",
+  "registerAuditEventFhirRoutes"
 ];
 
 const consentRoutesPath = resolve("apps/api/src/modules/consents/consent-routes.ts");
@@ -1132,6 +1184,7 @@ for (const budget of routeBudgets) {
 const apiRoutesSource = await readFile(apiRoutesPath, "utf8");
 const apiDomainRoutesSource = await readFile(apiDomainRoutesPath, "utf8");
 const authRoutesSource = await readFile(authRoutesPath, "utf8");
+const auditEventRoutesSource = await readFile(auditEventRoutesPath, "utf8");
 const consentRoutesSource = await readFile(consentRoutesPath, "utf8");
 const recordTransferRoutesSource = await readFile(recordTransferRoutesPath, "utf8");
 const recordTransferCommandRoutesSource = await readFile(
@@ -1193,6 +1246,20 @@ for (const registration of requiredAuthRegistrations) {
   if (!authRoutesSource.includes(registration)) {
     throw new Error(
       `Auth root routes must register ${registration} so login and bearer session routes remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenAuditEventRoutePatterns) {
+  if (forbidden.pattern.test(auditEventRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredAuditEventRegistrations) {
+  if (!auditEventRoutesSource.includes(registration)) {
+    throw new Error(
+      `AuditEvent root routes must register ${registration} so query, integrity and FHIR modules remain wired.`
     );
   }
 }
