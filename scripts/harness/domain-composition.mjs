@@ -564,8 +564,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/fhir/map-patient-record-to-fhir-document-bundle.ts",
-    maxLines: 170,
+    maxLines: 100,
     role: "FHIR patient-record document Bundle and Composition mapper"
+  },
+  {
+    path: "packages/domain/src/fhir/patient-record-document-sections.ts",
+    maxLines: 130,
+    role: "FHIR patient-record document Composition section catalog"
   },
   {
     path: "packages/domain/src/fhir/map-provider-directory-to-fhir.ts",
@@ -877,6 +882,9 @@ const patientRecordBundleResourcesPath = resolve(
 const mapPatientRecordToFhirDocumentBundlePath = resolve(
   "packages/domain/src/fhir/map-patient-record-to-fhir-document-bundle.ts"
 );
+const patientRecordDocumentSectionsPath = resolve(
+  "packages/domain/src/fhir/patient-record-document-sections.ts"
+);
 
 const domainReports = [];
 
@@ -1136,6 +1144,10 @@ const patientRecordBundleResourcesSource = await readFile(
 );
 const mapPatientRecordToFhirDocumentBundleSource = await readFile(
   mapPatientRecordToFhirDocumentBundlePath,
+  "utf8"
+);
+const patientRecordDocumentSectionsSource = await readFile(
+  patientRecordDocumentSectionsPath,
   "utf8"
 );
 
@@ -3261,7 +3273,8 @@ for (const required of [
   /export function mapPatientRecordToFhirDocumentBundle/,
   /mapPatientRecordToFhirBundle/,
   /function buildComposition/,
-  /function buildSection/,
+  /buildPatientRecordDocumentSections/,
+  /from "\.\/patient-record-document-sections\.js"/,
   /resourceType:\s*"Bundle"/
 ]) {
   if (!required.test(mapPatientRecordToFhirDocumentBundleSource)) {
@@ -3273,11 +3286,43 @@ for (const required of [
 
 for (const forbidden of [
   /mapMedicationAdministrationToFhir/,
-  /mapProviderDirectoryToFhirResources/
+  /mapProviderDirectoryToFhirResources/,
+  /function buildSection/,
+  /function escapeXml/,
+  /"DocumentReference"/
 ]) {
   if (forbidden.test(mapPatientRecordToFhirDocumentBundleSource)) {
     throw new Error(
       "Document Bundle mapper must reuse the collection Bundle instead of remapping patient-record resources directly."
+    );
+  }
+}
+
+for (const required of [
+  /type PatientRecordDocumentSectionDefinition/,
+  /const patientRecordDocumentSectionDefinitions/,
+  /export function buildPatientRecordDocumentSections/,
+  /function buildPatientRecordDocumentSection/,
+  /function escapeXml/,
+  /"DocumentReference"/,
+  /"MedicationAdministration"/
+]) {
+  if (!required.test(patientRecordDocumentSectionsSource)) {
+    throw new Error(
+      "patient-record-document-sections.ts must keep the Composition section catalog, resource filtering and generated XHTML narrative helper."
+    );
+  }
+}
+
+for (const forbidden of [
+  /mapPatientRecordToFhirDocumentBundle/,
+  /resourceType:\s*"Bundle"/,
+  /resourceType:\s*"Composition"/,
+  /mapPatientRecordToFhirBundle/
+]) {
+  if (forbidden.test(patientRecordDocumentSectionsSource)) {
+    throw new Error(
+      "patient-record-document-sections.ts must stay a Composition section helper and must not build Bundle or Composition envelopes."
     );
   }
 }

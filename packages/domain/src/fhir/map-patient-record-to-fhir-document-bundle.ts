@@ -1,10 +1,7 @@
 import type { PatientRecordBundleInput } from "./map-patient-record-to-fhir-bundle.js";
 import { mapPatientRecordToFhirBundle } from "./map-patient-record-to-fhir-bundle.js";
-import type {
-  FhirBundle,
-  FhirBundleEntry,
-  FhirComposition
-} from "./fhir-types.js";
+import type { FhirBundle, FhirComposition } from "./fhir-types.js";
+import { buildPatientRecordDocumentSections } from "./patient-record-document-sections.js";
 
 export type PatientRecordDocumentBundleInput = PatientRecordBundleInput & {
   readonly authorPractitionerId?: string;
@@ -46,7 +43,7 @@ export function mapPatientRecordToFhirDocumentBundle(
 
 function buildComposition(
   input: PatientRecordDocumentBundleInput,
-  entries: readonly FhirBundleEntry[],
+  entries: FhirBundle["entry"],
   generatedAt: Date
 ): FhirComposition {
   const patientSnapshot = input.patient.toSnapshot();
@@ -86,57 +83,6 @@ function buildComposition(
           reference: `Organization/${custodianOrganizationId}`
         }
       : undefined,
-    section: [
-      buildSection("Cơ sở, nhân sự và endpoint liên thông", entries, [
-        "Organization",
-        "Practitioner",
-        "PractitionerRole",
-        "Endpoint"
-      ]),
-      buildSection("Đồng ý chia sẻ hồ sơ", entries, ["Consent"]),
-      buildSection("Lượt khám", entries, ["Encounter"]),
-      buildSection("Dị ứng và cảnh báo", entries, ["AllergyIntolerance"]),
-      buildSection("Chẩn đoán và vấn đề sức khỏe", entries, ["Condition"]),
-      buildSection("Y lệnh dịch vụ", entries, ["ServiceRequest"]),
-      buildSection("Luồng công việc thực thi chỉ định", entries, ["Task"]),
-      buildSection("Thủ thuật và hoạt động đã thực hiện", entries, ["Procedure"]),
-      buildSection("Chỉ số và kết quả nguyên tử", entries, ["Observation"]),
-      buildSection("Báo cáo kết quả", entries, ["DiagnosticReport"]),
-      buildSection("Nghiên cứu hình ảnh", entries, ["ImagingStudy"]),
-      buildSection("Chỉ định thuốc", entries, ["MedicationRequest"]),
-      buildSection("Cấp phát thuốc", entries, ["MedicationDispense"]),
-      buildSection("Dùng thuốc thực tế", entries, ["MedicationAdministration"]),
-      buildSection("Tài liệu lâm sàng", entries, ["DocumentReference"])
-    ]
+    section: buildPatientRecordDocumentSections(entries)
   };
-}
-
-function buildSection(
-  title: string,
-  entries: readonly FhirBundleEntry[],
-  resourceTypes: readonly FhirBundleEntry["resource"]["resourceType"][]
-): NonNullable<FhirComposition["section"]>[number] {
-  const sectionEntries = entries
-    .filter((entry) => resourceTypes.includes(entry.resource.resourceType))
-    .map((entry) => ({
-      reference: `${entry.resource.resourceType}/${entry.resource.id}`
-    }));
-
-  return {
-    title,
-    text: {
-      status: "generated",
-      div: `<div xmlns="http://www.w3.org/1999/xhtml">${escapeXml(title)}: ${sectionEntries.length} mục</div>`
-    },
-    entry: sectionEntries.length > 0 ? sectionEntries : undefined
-  };
-}
-
-function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
 }
