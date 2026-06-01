@@ -4,8 +4,13 @@ import { resolve } from "node:path";
 const domainBudgets = [
   {
     path: "packages/domain/src/record-transfer/record-transfer.ts",
-    maxLines: 650,
+    maxLines: 480,
     role: "RecordTransfer aggregate behavior"
+  },
+  {
+    path: "packages/domain/src/record-transfer/record-transfer.validation.ts",
+    maxLines: 230,
+    role: "RecordTransfer normalization and snapshot invariant guards"
   },
   {
     path: "packages/domain/src/record-transfer/record-transfer.types.ts",
@@ -282,6 +287,9 @@ const domainBudgets = [
 const recordTransferAggregatePath = resolve(
   "packages/domain/src/record-transfer/record-transfer.ts"
 );
+const recordTransferValidationPath = resolve(
+  "packages/domain/src/record-transfer/record-transfer.validation.ts"
+);
 const recordTransferTypesPath = resolve(
   "packages/domain/src/record-transfer/record-transfer.types.ts"
 );
@@ -412,6 +420,7 @@ for (const budget of domainBudgets) {
 }
 
 const aggregateSource = await readFile(recordTransferAggregatePath, "utf8");
+const recordTransferValidationSource = await readFile(recordTransferValidationPath, "utf8");
 const typesSource = await readFile(recordTransferTypesPath, "utf8");
 const providerDirectoryAggregateSource = await readFile(
   providerDirectoryAggregatePath,
@@ -488,11 +497,12 @@ const fhirBundleTypesSource = await readFile(fhirBundleTypesPath, "utf8");
 for (const forbidden of [
   /export type RecordTransferStatus/,
   /export type RecordTransferSnapshot/,
-  /const recordTransferStatuses/
+  /const recordTransferStatuses/,
+  /function validateRecordTransferSnapshot/
 ]) {
   if (forbidden.test(aggregateSource)) {
     throw new Error(
-      "RecordTransfer type declarations and status sets belong in record-transfer.types.ts, not the aggregate file."
+      "RecordTransfer aggregate must keep behavior only; types stay in record-transfer.types.ts and snapshot invariants stay in record-transfer.validation.ts."
     );
   }
 }
@@ -512,6 +522,25 @@ for (const required of [
 
 if (!/from "\.\/record-transfer\.types\.js"/.test(aggregateSource)) {
   throw new Error("RecordTransfer aggregate must depend on record-transfer.types.ts for shared types.");
+}
+
+if (!/from "\.\/record-transfer\.validation\.js"/.test(aggregateSource)) {
+  throw new Error(
+    "RecordTransfer aggregate must depend on record-transfer.validation.ts for normalization and snapshot invariants."
+  );
+}
+
+for (const required of [
+  /export function validateRecordTransferSnapshot/,
+  /export function normalizeRequired/,
+  /export function parseDate/,
+  /from "\.\/record-transfer\.types\.js"/
+]) {
+  if (!required.test(recordTransferValidationSource)) {
+    throw new Error(
+      "record-transfer.validation.ts must keep RecordTransfer normalization and snapshot invariant guards."
+    );
+  }
 }
 
 for (const forbidden of [
