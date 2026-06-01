@@ -104,8 +104,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/workflow-task/workflow-task.ts",
-    maxLines: 160,
+    maxLines: 100,
     role: "WorkflowTask aggregate lifecycle behavior"
+  },
+  {
+    path: "packages/domain/src/workflow-task/workflow-task.factory.ts",
+    maxLines: 150,
+    role: "WorkflowTask creation and persisted snapshot normalization"
   },
   {
     path: "packages/domain/src/workflow-task/workflow-task.validation.ts",
@@ -539,6 +544,9 @@ const patientTypesPath = resolve("packages/domain/src/patient/patient.types.ts")
 const workflowTaskAggregatePath = resolve(
   "packages/domain/src/workflow-task/workflow-task.ts"
 );
+const workflowTaskFactoryPath = resolve(
+  "packages/domain/src/workflow-task/workflow-task.factory.ts"
+);
 const workflowTaskValidationPath = resolve(
   "packages/domain/src/workflow-task/workflow-task.validation.ts"
 );
@@ -739,6 +747,7 @@ const patientAggregateSource = await readFile(patientAggregatePath, "utf8");
 const patientValidationSource = await readFile(patientValidationPath, "utf8");
 const patientTypesSource = await readFile(patientTypesPath, "utf8");
 const workflowTaskAggregateSource = await readFile(workflowTaskAggregatePath, "utf8");
+const workflowTaskFactorySource = await readFile(workflowTaskFactoryPath, "utf8");
 const workflowTaskValidationSource = await readFile(workflowTaskValidationPath, "utf8");
 const workflowTaskTypesSource = await readFile(workflowTaskTypesPath, "utf8");
 const procedureAggregateSource = await readFile(procedureAggregatePath, "utf8");
@@ -1231,13 +1240,16 @@ for (const forbidden of [
   /export type WorkflowTaskStatus/,
   /export type WorkflowTaskSnapshot/,
   /const workflowTaskStatuses/,
+  /\bassertCompletedTaskHasOutputReferences\b/,
+  /\bnormalizeRequired\b/,
+  /\bparseDate\b/,
   /function normalizeCode/,
   /function normalizeReferences/,
   /function validateTimeline/
 ]) {
   if (forbidden.test(workflowTaskAggregateSource)) {
     throw new Error(
-      "WorkflowTask aggregate must keep lifecycle behavior only; types stay in workflow-task.types.ts and code/reference/status/timeline guards stay in workflow-task.validation.ts."
+      "WorkflowTask aggregate must keep lifecycle behavior only; create/rehydrate normalization stays in workflow-task.factory.ts, types stay in workflow-task.types.ts and code/reference/status/timeline guards stay in workflow-task.validation.ts."
     );
   }
 }
@@ -1260,10 +1272,35 @@ if (!/from "\.\/workflow-task\.types\.js"/.test(workflowTaskAggregateSource)) {
   throw new Error("WorkflowTask aggregate must depend on workflow-task.types.ts for shared types.");
 }
 
-if (!/from "\.\/workflow-task\.validation\.js"/.test(workflowTaskAggregateSource)) {
+if (!/from "\.\/workflow-task\.factory\.js"/.test(workflowTaskAggregateSource)) {
   throw new Error(
-    "WorkflowTask aggregate must depend on workflow-task.validation.ts for code, reference, status and timeline guards."
+    "WorkflowTask aggregate must delegate create and rehydrate normalization to workflow-task.factory.ts."
   );
+}
+
+for (const required of [
+  /export function buildWorkflowTaskSnapshot/,
+  /export function normalizePersistedWorkflowTaskSnapshot/,
+  /export type WorkflowTaskProps/,
+  /from "\.\/workflow-task\.types\.js"/,
+  /from "\.\/workflow-task\.validation\.js"/
+]) {
+  if (!required.test(workflowTaskFactorySource)) {
+    throw new Error(
+      "workflow-task.factory.ts must keep WorkflowTask creation, persisted snapshot normalization and props construction."
+    );
+  }
+}
+
+for (const forbidden of [
+  /class WorkflowTask/,
+  /\btoSnapshot\b/
+]) {
+  if (forbidden.test(workflowTaskFactorySource)) {
+    throw new Error(
+      "workflow-task.factory.ts must not own WorkflowTask aggregate behavior or presentation snapshots."
+    );
+  }
 }
 
 for (const required of [
