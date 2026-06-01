@@ -1,13 +1,15 @@
 import type { ActorRole, Permission } from "./access-control.policy.js";
 import {
+  clinicalDocumentExportPermissions,
+  clinicalFhirExportPermissions,
+  nurseClinicalWorkflowPermissions
+} from "./access-control.clinical-permissions.js";
+import {
   adminPatientPermissions,
   adminRecordTransferPermissions,
   auditorReadPermissions,
-  clinicalDocumentExportPermissions,
-  clinicalFhirExportPermissions,
   clinicianPatientPermissions,
   consentManagementPermissions,
-  nurseClinicalWorkflowPermissions,
   providerDirectoryExportPermissions,
   recordTransferManagementPermissions
 } from "./access-control.permission-groups.js";

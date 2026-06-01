@@ -108,9 +108,14 @@ const domainBudgets = [
     role: "AccessControl role, purpose and permission type definitions"
   },
   {
+    path: "packages/domain/src/access-control/access-control.clinical-permissions.ts",
+    maxLines: 110,
+    role: "AccessControl clinical workflow and FHIR-export permission groups"
+  },
+  {
     path: "packages/domain/src/access-control/access-control.permission-groups.ts",
-    maxLines: 170,
-    role: "AccessControl reusable role-permission groups"
+    maxLines: 90,
+    role: "AccessControl administrative and record-sharing permission groups"
   },
   {
     path: "packages/domain/src/access-control/access-control.permissions.ts",
@@ -611,6 +616,9 @@ const accessControlOrganizationTreePath = resolve(
 const accessControlPolicyPath = resolve(
   "packages/domain/src/access-control/access-control.policy.ts"
 );
+const accessControlClinicalPermissionsPath = resolve(
+  "packages/domain/src/access-control/access-control.clinical-permissions.ts"
+);
 const accessControlPermissionGroupsPath = resolve(
   "packages/domain/src/access-control/access-control.permission-groups.ts"
 );
@@ -853,6 +861,10 @@ const accessControlOrganizationTreeSource = await readFile(
   "utf8"
 );
 const accessControlPolicySource = await readFile(accessControlPolicyPath, "utf8");
+const accessControlClinicalPermissionsSource = await readFile(
+  accessControlClinicalPermissionsPath,
+  "utf8"
+);
 const accessControlPermissionGroupsSource = await readFile(
   accessControlPermissionGroupsPath,
   "utf8"
@@ -1478,7 +1490,9 @@ for (const required of [
 for (const forbidden of [
   /export const rolePermissions/,
   /clinicianPatientPermissions/,
-  /clinicalFhirExportPermissions/
+  /clinicalFhirExportPermissions/,
+  /clinicalDocumentExportPermissions/,
+  /nurseClinicalWorkflowPermissions/
 ]) {
   if (forbidden.test(accessControlPolicySource)) {
     throw new Error(
@@ -1566,15 +1580,41 @@ for (const forbidden of [
 }
 
 for (const required of [
+  /export const clinicalFhirExportPermissions/,
+  /export const clinicalDocumentExportPermissions/,
+  /export const nurseClinicalWorkflowPermissions/,
+  /satisfies readonly Permission\[\]/,
+  /from "\.\/access-control\.policy\.js"/
+]) {
+  if (!required.test(accessControlClinicalPermissionsSource)) {
+    throw new Error(
+      "access-control.clinical-permissions.ts must keep typed clinical workflow and FHIR-export permission groups."
+    );
+  }
+}
+
+for (const forbidden of [
+  /rolePermissions/,
+  /ActorContext/,
+  /PurposeOfUse/,
+  /clinicianPatientPermissions/,
+  /\bcanAccess\b/,
+  /\bcanAccessPatientRecord\b/
+]) {
+  if (forbidden.test(accessControlClinicalPermissionsSource)) {
+    throw new Error(
+      "AccessControl clinical permission groups must not own role catalog, patient groups or authorization behavior."
+    );
+  }
+}
+
+for (const required of [
   /export const clinicianPatientPermissions/,
   /export const adminPatientPermissions/,
   /export const providerDirectoryExportPermissions/,
   /export const recordTransferManagementPermissions/,
   /export const adminRecordTransferPermissions/,
-  /export const clinicalFhirExportPermissions/,
-  /export const clinicalDocumentExportPermissions/,
   /export const consentManagementPermissions/,
-  /export const nurseClinicalWorkflowPermissions/,
   /export const auditorReadPermissions/,
   /satisfies readonly Permission\[\]/,
   /from "\.\/access-control\.policy\.js"/
@@ -1590,6 +1630,9 @@ for (const forbidden of [
   /rolePermissions/,
   /ActorContext/,
   /PurposeOfUse/,
+  /clinicalFhirExportPermissions/,
+  /clinicalDocumentExportPermissions/,
+  /nurseClinicalWorkflowPermissions/,
   /\bcanAccess\b/,
   /\bcanAccessPatientRecord\b/
 ]) {
@@ -1603,6 +1646,7 @@ for (const forbidden of [
 for (const required of [
   /export const rolePermissions/,
   /from "\.\/access-control\.policy\.js"/,
+  /from "\.\/access-control\.clinical-permissions\.js"/,
   /from "\.\/access-control\.permission-groups\.js"/,
   /clinician:/,
   /nurse:/,
