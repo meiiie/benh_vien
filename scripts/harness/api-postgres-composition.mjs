@@ -81,6 +81,31 @@ const postgresBudgets = [
     path: "apps/api/src/infrastructure/postgres/postgres-workflow-task.types.ts",
     maxLines: 50,
     role: "WorkflowTask PostgreSQL row types"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-procedure.repository.ts",
+    maxLines: 90,
+    role: "Procedure PostgreSQL repository orchestration"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-procedure.sql.ts",
+    maxLines: 80,
+    role: "Procedure PostgreSQL SQL statements"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-procedure.mapper.ts",
+    maxLines: 100,
+    role: "Procedure PostgreSQL row and parameter mapper"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-procedure.persistence.ts",
+    maxLines: 30,
+    role: "Procedure PostgreSQL persistence command"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-procedure.types.ts",
+    maxLines: 50,
+    role: "Procedure PostgreSQL row types"
   }
 ];
 
@@ -129,6 +154,21 @@ const workflowTaskPersistencePath = resolve(
 );
 const workflowTaskTypesPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-workflow-task.types.ts"
+);
+const procedureRepositoryPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-procedure.repository.ts"
+);
+const procedureSqlPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-procedure.sql.ts"
+);
+const procedureMapperPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-procedure.mapper.ts"
+);
+const procedurePersistencePath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-procedure.persistence.ts"
+);
+const procedureTypesPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-procedure.types.ts"
 );
 
 const postgresReports = [];
@@ -181,6 +221,11 @@ const workflowTaskPersistenceSource = await readFile(
   "utf8"
 );
 const workflowTaskTypesSource = await readFile(workflowTaskTypesPath, "utf8");
+const procedureRepositorySource = await readFile(procedureRepositoryPath, "utf8");
+const procedureSqlSource = await readFile(procedureSqlPath, "utf8");
+const procedureMapperSource = await readFile(procedureMapperPath, "utf8");
+const procedurePersistenceSource = await readFile(procedurePersistencePath, "utf8");
+const procedureTypesSource = await readFile(procedureTypesPath, "utf8");
 
 const requiredRepositoryImports = [
   "rowToRecordTransfer",
@@ -220,6 +265,19 @@ const requiredWorkflowTaskRepositoryImports = [
 for (const importedName of requiredWorkflowTaskRepositoryImports) {
   if (!workflowTaskRepositorySource.includes(importedName)) {
     throw new Error(`WorkflowTask PostgreSQL repository must compose ${importedName}.`);
+  }
+}
+
+const requiredProcedureRepositoryImports = [
+  "rowToProcedure",
+  "upsertProcedure",
+  "selectProcedureSql",
+  "ProcedureRow"
+];
+
+for (const importedName of requiredProcedureRepositoryImports) {
+  if (!procedureRepositorySource.includes(importedName)) {
+    throw new Error(`Procedure PostgreSQL repository must compose ${importedName}.`);
   }
 }
 
@@ -347,6 +405,45 @@ assertForbidden(workflowTaskTypesSource, [
     pattern: /\bWorkflowTask\.rehydrate\b|\bquery\s*\(|\bINSERT INTO workflow_tasks\b/,
     message:
       "WorkflowTask PostgreSQL type module must only describe row contracts."
+  }
+]);
+
+assertForbidden(procedureRepositorySource, [
+  {
+    pattern: /\bINSERT INTO procedures\b|\bON CONFLICT \(id\)\b|\bProcedure\.rehydrate\b|\bProcedureSnapshot\b|\bJSON\.parse\b|\bJSON\.stringify\b/,
+    message:
+      "Procedure PostgreSQL repository must delegate upsert SQL and JSON row mapping to focused modules."
+  }
+]);
+
+assertForbidden(procedureSqlSource, [
+  {
+    pattern: /@benh-vien-so\/domain|\bProcedure\b|\bpg\b/,
+    message:
+      "Procedure PostgreSQL SQL module must stay a pure SQL statement module without domain or pg dependencies."
+  }
+]);
+
+assertForbidden(procedureMapperSource, [
+  {
+    pattern: /\bfrom "pg"\b|\bquery\s*\(|\bINSERT INTO procedures\b|\bON CONFLICT \(id\)\b/,
+    message:
+      "Procedure PostgreSQL mapper must stay pure row/value mapping without pg I/O or SQL ownership."
+  }
+]);
+
+assertForbidden(procedurePersistenceSource, [
+  {
+    pattern: /\bProcedure\.rehydrate\b|\bProcedureSnapshot\b|\bSELECT\b|\bJSON\.parse\b/,
+    message:
+      "Procedure PostgreSQL persistence command must compose SQL and mapper without owning reads or domain hydration."
+  }
+]);
+
+assertForbidden(procedureTypesSource, [
+  {
+    pattern: /\bProcedure\.rehydrate\b|\bquery\s*\(|\bINSERT INTO procedures\b/,
+    message: "Procedure PostgreSQL type module must only describe row contracts."
   }
 ]);
 
