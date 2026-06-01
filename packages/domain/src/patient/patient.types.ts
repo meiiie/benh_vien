@@ -62,3 +62,21 @@ export type RegisterPatientInput = {
   readonly phone?: string;
   readonly managingOrganizationId: string;
 };
+
+export type PatientProps = {
+  id: string;
+  identifiers: PatientIdentifier[];
+  fullName: string;
+  birthDate?: string;
+  gender: AdministrativeGender;
+  address?: string;
+  phone?: string;
+  managingOrganizationId: string;
+  status: PatientRecordStatus;
+  mergedIntoPatientId?: string;
+  mergedAt?: Date;
+  mergedByActorId?: string;
+  mergeReason?: string;
+  createdAt: Date;
+  updatedAt: Date;
+};

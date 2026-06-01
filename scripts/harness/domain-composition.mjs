@@ -99,8 +99,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/patient/patient.ts",
-    maxLines: 310,
-    role: "Patient aggregate registration, demographic update and merge behavior"
+    maxLines: 230,
+    role: "Patient aggregate demographic update and merge behavior"
+  },
+  {
+    path: "packages/domain/src/patient/patient.factory.ts",
+    maxLines: 140,
+    role: "Patient registration and rehydration props factory"
   },
   {
     path: "packages/domain/src/patient/patient.validation.ts",
@@ -109,8 +114,8 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/patient/patient.types.ts",
-    maxLines: 90,
-    role: "Patient identifier, snapshot and registration input types"
+    maxLines: 120,
+    role: "Patient identifier, props, snapshot and registration input types"
   },
   {
     path: "packages/domain/src/workflow-task/workflow-task.ts",
@@ -585,6 +590,7 @@ const accessControlPermissionsPath = resolve(
   "packages/domain/src/access-control/access-control.permissions.ts"
 );
 const patientAggregatePath = resolve("packages/domain/src/patient/patient.ts");
+const patientFactoryPath = resolve("packages/domain/src/patient/patient.factory.ts");
 const patientValidationPath = resolve("packages/domain/src/patient/patient.validation.ts");
 const patientTypesPath = resolve("packages/domain/src/patient/patient.types.ts");
 const workflowTaskAggregatePath = resolve(
@@ -818,6 +824,7 @@ const accessControlOrganizationTreeSource = await readFile(
 const accessControlPolicySource = await readFile(accessControlPolicyPath, "utf8");
 const accessControlPermissionsSource = await readFile(accessControlPermissionsPath, "utf8");
 const patientAggregateSource = await readFile(patientAggregatePath, "utf8");
+const patientFactorySource = await readFile(patientFactoryPath, "utf8");
 const patientValidationSource = await readFile(patientValidationPath, "utf8");
 const patientTypesSource = await readFile(patientTypesPath, "utf8");
 const workflowTaskAggregateSource = await readFile(workflowTaskAggregatePath, "utf8");
@@ -1431,11 +1438,16 @@ for (const forbidden of [
   /export type AdministrativeGender/,
   /export type PatientSnapshot/,
   /const administrativeGenders/,
-  /function normalizeIdentifier/
+  /function normalizeIdentifier/,
+  /\bassertUniqueIdentifiers\b/,
+  /\bassertMergeState\b/,
+  /\bvalidateTimeline\b/,
+  /\bparseDate\b/,
+  /\bnormalizeStatus\b/
 ]) {
   if (forbidden.test(patientAggregateSource)) {
     throw new Error(
-      "Patient aggregate must keep registration, demographic update and merge behavior only; types stay in patient.types.ts and identifier/date/merge guards stay in patient.validation.ts."
+      "Patient aggregate must keep demographic update and merge behavior only; registration/rehydration props stay in patient.factory.ts, types stay in patient.types.ts and identifier/date/merge guards stay in patient.validation.ts."
     );
   }
 }
@@ -1443,13 +1455,14 @@ for (const forbidden of [
 for (const required of [
   /export type AdministrativeGender/,
   /export type PatientIdentifier/,
+  /export type PatientProps/,
   /export type PatientSnapshot/,
   /export type RegisterPatientInput/,
   /export const administrativeGenders/
 ]) {
   if (!required.test(patientTypesSource)) {
     throw new Error(
-      "patient.types.ts must keep Patient gender, identifier, snapshot, registration input and code-set definitions."
+      "patient.types.ts must keep Patient gender, identifier, props, snapshot, registration input and code-set definitions."
     );
   }
 }
@@ -1458,10 +1471,46 @@ if (!/from "\.\/patient\.types\.js"/.test(patientAggregateSource)) {
   throw new Error("Patient aggregate must depend on patient.types.ts for shared types.");
 }
 
+if (!/from "\.\/patient\.factory\.js"/.test(patientAggregateSource)) {
+  throw new Error(
+    "Patient aggregate must delegate registration and rehydration props to patient.factory.ts."
+  );
+}
+
 if (!/from "\.\/patient\.validation\.js"/.test(patientAggregateSource)) {
   throw new Error(
     "Patient aggregate must depend on patient.validation.ts for identifier, FHIR birth date, merge state and timeline guards."
   );
+}
+
+for (const required of [
+  /export function buildRegisteredPatientProps/,
+  /export function buildRehydratedPatientProps/,
+  /assertUniqueIdentifiers/,
+  /assertMergeState/,
+  /validateTimeline/,
+  /from "\.\/patient\.validation\.js"/,
+  /from "\.\/patient\.types\.js"/
+]) {
+  if (!required.test(patientFactorySource)) {
+    throw new Error(
+      "patient.factory.ts must keep Patient registration and rehydration props normalization."
+    );
+  }
+}
+
+for (const forbidden of [
+  /export class Patient/,
+  /private constructor/,
+  /updateDemographics/,
+  /markMerged/,
+  /toSnapshot/
+]) {
+  if (forbidden.test(patientFactorySource)) {
+    throw new Error(
+      "patient.factory.ts must not own Patient aggregate behavior."
+    );
+  }
 }
 
 for (const required of [
