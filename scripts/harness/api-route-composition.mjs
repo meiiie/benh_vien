@@ -58,6 +58,26 @@ const routeBudgets = [
     role: "HTTP API audit route wiring"
   },
   {
+    path: "apps/api/src/modules/provider-directory/provider-directory-routes.ts",
+    maxLines: 50,
+    role: "ProviderDirectory route composition root"
+  },
+  {
+    path: "apps/api/src/modules/provider-directory/provider-directory-query-routes.ts",
+    maxLines: 70,
+    role: "ProviderDirectory read route adapter"
+  },
+  {
+    path: "apps/api/src/modules/provider-directory/provider-directory-fhir-routes.ts",
+    maxLines: 110,
+    role: "ProviderDirectory FHIR Bundle and resource export route adapter"
+  },
+  {
+    path: "apps/api/src/modules/provider-directory/provider-directory-route-helpers.ts",
+    maxLines: 130,
+    role: "ProviderDirectory summary, resource lookup, FHIR mapping and OperationOutcome helpers"
+  },
+  {
     path: "apps/api/src/modules/auth/auth-routes.ts",
     maxLines: 60,
     role: "Auth route composition root"
@@ -604,6 +624,32 @@ const requiredApiDomainRegistrations = [
   "registerApiDiagnosticRoutes",
   "registerApiDocumentRoutes",
   "registerApiAuditRoutes"
+];
+
+const providerDirectoryRoutesPath = resolve(
+  "apps/api/src/modules/provider-directory/provider-directory-routes.ts"
+);
+const forbiddenProviderDirectoryRoutePatterns = [
+  {
+    pattern: /\bProviderDirectoryResourceParamsSchema\b/,
+    message:
+      "ProviderDirectory request handling belongs in provider-directory-fhir-routes.ts."
+  },
+  {
+    pattern: /\brecordAuditEvent\b|\bsendFhirOperationOutcome\b/,
+    message:
+      "ProviderDirectory audit and OperationOutcome policy belongs outside the root route."
+  },
+  {
+    pattern:
+      /\bmapProviderDirectoryToFhirBundle\b|\bmapProvider(?:Organization|Practitioner|PractitionerRole|Endpoint)ToFhir\b|\bfindProviderDirectoryResource\b/,
+    message:
+      "ProviderDirectory FHIR mapping and resource lookup belong in FHIR route or helper modules."
+  }
+];
+const requiredProviderDirectoryRegistrations = [
+  "registerProviderDirectoryQueryRoutes",
+  "registerProviderDirectoryFhirRoutes"
 ];
 
 const authRoutesPath = resolve("apps/api/src/modules/auth/auth-routes.ts");
@@ -1183,6 +1229,10 @@ for (const budget of routeBudgets) {
 
 const apiRoutesSource = await readFile(apiRoutesPath, "utf8");
 const apiDomainRoutesSource = await readFile(apiDomainRoutesPath, "utf8");
+const providerDirectoryRoutesSource = await readFile(
+  providerDirectoryRoutesPath,
+  "utf8"
+);
 const authRoutesSource = await readFile(authRoutesPath, "utf8");
 const auditEventRoutesSource = await readFile(auditEventRoutesPath, "utf8");
 const consentRoutesSource = await readFile(consentRoutesPath, "utf8");
@@ -1232,6 +1282,20 @@ for (const registration of requiredApiDomainRegistrations) {
   if (!apiDomainRoutesSource.includes(registration)) {
     throw new Error(
       `HTTP API domain route composition must register ${registration} so domain route groups remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenProviderDirectoryRoutePatterns) {
+  if (forbidden.pattern.test(providerDirectoryRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredProviderDirectoryRegistrations) {
+  if (!providerDirectoryRoutesSource.includes(registration)) {
+    throw new Error(
+      `ProviderDirectory root routes must register ${registration} so query and FHIR modules remain wired.`
     );
   }
 }
