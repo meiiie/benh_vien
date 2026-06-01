@@ -74,8 +74,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/access-control/access-control.ts",
-    maxLines: 240,
-    role: "AccessControl authorization decisions and patient organization scoping"
+    maxLines: 130,
+    role: "AccessControl authorization decisions"
+  },
+  {
+    path: "packages/domain/src/access-control/access-control.organization-scope.ts",
+    maxLines: 160,
+    role: "AccessControl practitioner organization scope traversal"
   },
   {
     path: "packages/domain/src/access-control/access-control.policy.ts",
@@ -532,6 +537,9 @@ const auditEventTypesPath = resolve("packages/domain/src/audit-event/audit-event
 const accessControlBehaviorPath = resolve(
   "packages/domain/src/access-control/access-control.ts"
 );
+const accessControlOrganizationScopePath = resolve(
+  "packages/domain/src/access-control/access-control.organization-scope.ts"
+);
 const accessControlPolicyPath = resolve(
   "packages/domain/src/access-control/access-control.policy.ts"
 );
@@ -741,6 +749,10 @@ const auditEventAggregateSource = await readFile(auditEventAggregatePath, "utf8"
 const auditEventValidationSource = await readFile(auditEventValidationPath, "utf8");
 const auditEventTypesSource = await readFile(auditEventTypesPath, "utf8");
 const accessControlBehaviorSource = await readFile(accessControlBehaviorPath, "utf8");
+const accessControlOrganizationScopeSource = await readFile(
+  accessControlOrganizationScopePath,
+  "utf8"
+);
 const accessControlPolicySource = await readFile(accessControlPolicyPath, "utf8");
 const accessControlPermissionsSource = await readFile(accessControlPermissionsPath, "utf8");
 const patientAggregateSource = await readFile(patientAggregatePath, "utf8");
@@ -1117,11 +1129,15 @@ for (const forbidden of [
   /export type ActorRole/,
   /export type Permission/,
   /const rolePermissions/,
-  /clinician: \[/
+  /clinician: \[/,
+  /\bfunction getActivePractitionerOrganizationIds\b/,
+  /\bfunction findAncestorOrganizationIds\b/,
+  /\bfunction findDescendantOrganizationIds\b/,
+  /\bfunction isPractitionerRoleEffective\b/
 ]) {
   if (forbidden.test(accessControlBehaviorSource)) {
     throw new Error(
-      "AccessControl role, purpose and permission catalog belongs in policy/permissions modules, not the behavior file."
+      "AccessControl role, purpose, permission catalog and organization scope traversal belong in focused policy/permissions/scope modules, not the behavior file."
     );
   }
 }
@@ -1160,6 +1176,40 @@ if (!/from "\.\/access-control\.permissions\.js"/.test(accessControlBehaviorSour
   throw new Error(
     "AccessControl behavior must depend on access-control.permissions.ts for the role-permission catalog."
   );
+}
+
+if (!/from "\.\/access-control\.organization-scope\.js"/.test(accessControlBehaviorSource)) {
+  throw new Error(
+    "AccessControl behavior must delegate practitioner organization scope traversal to access-control.organization-scope.ts."
+  );
+}
+
+for (const required of [
+  /export function getActivePractitionerOrganizationIds/,
+  /\bfunction findAncestorOrganizationIds\b/,
+  /\bfunction findDescendantOrganizationIds\b/,
+  /\bfunction isPractitionerRoleEffective\b/,
+  /from "\.\.\/provider-directory\/provider-directory\.js"/
+]) {
+  if (!required.test(accessControlOrganizationScopeSource)) {
+    throw new Error(
+      "access-control.organization-scope.ts must keep active practitioner role period and organization hierarchy traversal."
+    );
+  }
+}
+
+for (const forbidden of [
+  /rolePermissions/,
+  /actorRoles/,
+  /purposesOfUse/,
+  /\bcanAccess\b/,
+  /\bcanAccessPatientRecord\b/
+]) {
+  if (forbidden.test(accessControlOrganizationScopeSource)) {
+    throw new Error(
+      "AccessControl organization scope module must not own RBAC permission or public patient access decisions."
+    );
+  }
 }
 
 for (const required of [
