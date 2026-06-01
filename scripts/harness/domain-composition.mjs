@@ -538,6 +538,16 @@ const domainBudgets = [
     role: "FHIR CapabilityStatement resource types"
   },
   {
+    path: "packages/domain/src/fhir/build-capability-statement.ts",
+    maxLines: 90,
+    role: "FHIR CapabilityStatement instance builder"
+  },
+  {
+    path: "packages/domain/src/fhir/capability-statement-resources.ts",
+    maxLines: 130,
+    role: "FHIR CapabilityStatement supported resource catalog"
+  },
+  {
     path: "packages/domain/src/fhir/fhir-bundle.types.ts",
     maxLines: 90,
     role: "FHIR Bundle entry and bundle resource types"
@@ -836,6 +846,12 @@ const fhirOperationOutcomeTypesPath = resolve(
 const fhirCapabilityStatementTypesPath = resolve(
   "packages/domain/src/fhir/fhir-capability-statement.types.ts"
 );
+const buildCapabilityStatementPath = resolve(
+  "packages/domain/src/fhir/build-capability-statement.ts"
+);
+const capabilityStatementResourcesPath = resolve(
+  "packages/domain/src/fhir/capability-statement-resources.ts"
+);
 const fhirBundleTypesPath = resolve("packages/domain/src/fhir/fhir-bundle.types.ts");
 
 const domainReports = [];
@@ -1075,6 +1091,14 @@ const fhirOperationOutcomeTypesSource = await readFile(
 );
 const fhirCapabilityStatementTypesSource = await readFile(
   fhirCapabilityStatementTypesPath,
+  "utf8"
+);
+const buildCapabilityStatementSource = await readFile(
+  buildCapabilityStatementPath,
+  "utf8"
+);
+const capabilityStatementResourcesSource = await readFile(
+  capabilityStatementResourcesPath,
   "utf8"
 );
 const fhirBundleTypesSource = await readFile(fhirBundleTypesPath, "utf8");
@@ -3081,6 +3105,63 @@ for (const [source, required, fileName] of [
 ]) {
   if (!required.test(source)) {
     throw new Error(`${fileName} must retain its AuditEvent mapper helper export.`);
+  }
+}
+
+for (const required of [
+  /export function buildWiiiCareCapabilityStatement/,
+  /from "\.\/capability-statement-resources\.js"/,
+  /supportedCapabilityStatementResources\.map/,
+  /defaultCapabilityStatementResourceInteractions/,
+  /resourceType:\s*"CapabilityStatement"/
+]) {
+  if (!required.test(buildCapabilityStatementSource)) {
+    throw new Error(
+      "build-capability-statement.ts must keep the public CapabilityStatement builder and delegate supported resource metadata to capability-statement-resources.ts."
+    );
+  }
+}
+
+for (const forbidden of [
+  /type SupportedFhirResource/,
+  /const supportedResources/,
+  /type:\s*"DocumentReference"/,
+  /type:\s*"MedicationAdministration"/,
+  /type:\s*"AuditEvent"/
+]) {
+  if (forbidden.test(buildCapabilityStatementSource)) {
+    throw new Error(
+      "CapabilityStatement supported resource catalog belongs in capability-statement-resources.ts, not in the public builder."
+    );
+  }
+}
+
+for (const required of [
+  /export type SupportedCapabilityStatementResource/,
+  /export const defaultCapabilityStatementResourceInteractions/,
+  /export const supportedCapabilityStatementResources/,
+  /type:\s*"DocumentReference"/,
+  /type:\s*"Task"/,
+  /type:\s*"AuditEvent"/,
+  /from "\.\/fhir-types\.js"/
+]) {
+  if (!required.test(capabilityStatementResourcesSource)) {
+    throw new Error(
+      "capability-statement-resources.ts must keep the FHIR CapabilityStatement supported resource catalog and default interactions."
+    );
+  }
+}
+
+for (const forbidden of [
+  /buildWiiiCareCapabilityStatement/,
+  /resourceType:\s*"CapabilityStatement"/,
+  /kind:\s*"instance"/,
+  /implementation:/
+]) {
+  if (forbidden.test(capabilityStatementResourcesSource)) {
+    throw new Error(
+      "capability-statement-resources.ts must stay a resource catalog and must not build CapabilityStatement instances."
+    );
   }
 }
 
