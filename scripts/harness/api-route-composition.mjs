@@ -431,6 +431,31 @@ const routeBudgets = [
     path: "apps/api/src/modules/imaging-studies/imaging-study-route-helpers.ts",
     maxLines: 150,
     role: "ImagingStudy response, access, reference and domain error helpers"
+  },
+  {
+    path: "apps/api/src/modules/service-requests/service-request-routes.ts",
+    maxLines: 70,
+    role: "ServiceRequest route composition root"
+  },
+  {
+    path: "apps/api/src/modules/service-requests/service-request-query-routes.ts",
+    maxLines: 130,
+    role: "ServiceRequest list and read route adapter"
+  },
+  {
+    path: "apps/api/src/modules/service-requests/service-request-creation-routes.ts",
+    maxLines: 140,
+    role: "ServiceRequest creation and reference validation route adapter"
+  },
+  {
+    path: "apps/api/src/modules/service-requests/service-request-fhir-routes.ts",
+    maxLines: 90,
+    role: "ServiceRequest FHIR export route adapter"
+  },
+  {
+    path: "apps/api/src/modules/service-requests/service-request-route-helpers.ts",
+    maxLines: 150,
+    role: "ServiceRequest response, access, reference and domain error helpers"
   }
 ];
 
@@ -844,6 +869,34 @@ const requiredImagingStudyRegistrations = [
   "registerImagingStudyFhirRoutes"
 ];
 
+const serviceRequestRoutesPath = resolve(
+  "apps/api/src/modules/service-requests/service-request-routes.ts"
+);
+const forbiddenServiceRequestRoutePatterns = [
+  {
+    pattern:
+      /\bCreateServiceRequestRequestSchema\b|\bPatientServiceRequestsParamsSchema\b|\bServiceRequestIdParamsSchema\b/,
+    message:
+      "ServiceRequest request handling belongs in service-request-query-routes.ts, service-request-creation-routes.ts or service-request-fhir-routes.ts."
+  },
+  {
+    pattern:
+      /\bServiceRequest\.order\b|\bDomainError\b|\brequirePatientRecordAccessByPatientId\b|\bvalidateServiceRequestReferences\b/,
+    message:
+      "ServiceRequest creation, access and reference validation policy belongs outside the root route."
+  },
+  {
+    pattern: /\bmapServiceRequestToFhir\b|\btoServiceRequestResponse\b/,
+    message:
+      "ServiceRequest response and FHIR export details belong in helper or FHIR route modules."
+  }
+];
+const requiredServiceRequestRegistrations = [
+  "registerServiceRequestQueryRoutes",
+  "registerServiceRequestCreationRoutes",
+  "registerServiceRequestFhirRoutes"
+];
+
 const routeReports = [];
 
 for (const budget of routeBudgets) {
@@ -897,6 +950,7 @@ const medicationRequestRoutesSource = await readFile(
 const procedureRoutesSource = await readFile(procedureRoutesPath, "utf8");
 const diagnosticReportRoutesSource = await readFile(diagnosticReportRoutesPath, "utf8");
 const imagingStudyRoutesSource = await readFile(imagingStudyRoutesPath, "utf8");
+const serviceRequestRoutesSource = await readFile(serviceRequestRoutesPath, "utf8");
 
 for (const forbidden of forbiddenApiRoutesPatterns) {
   if (forbidden.pattern.test(apiRoutesSource)) {
@@ -1104,6 +1158,20 @@ for (const registration of requiredImagingStudyRegistrations) {
   if (!imagingStudyRoutesSource.includes(registration)) {
     throw new Error(
       `ImagingStudy root routes must register ${registration} so query, creation and FHIR modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenServiceRequestRoutePatterns) {
+  if (forbidden.pattern.test(serviceRequestRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredServiceRequestRegistrations) {
+  if (!serviceRequestRoutesSource.includes(registration)) {
+    throw new Error(
+      `ServiceRequest root routes must register ${registration} so query, creation and FHIR modules remain wired.`
     );
   }
 }
