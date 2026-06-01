@@ -1,4 +1,3 @@
-import { DomainError } from "../shared/domain-error.js";
 import {
   normalizeBundleType,
   normalizeOptional,
@@ -34,11 +33,15 @@ export function buildRecordTransferSnapshot(
     ? parseDate(input.nextRetryAt, "Thời điểm thử gửi lại hồ sơ không hợp lệ.")
     : undefined;
   const deadLetteredAt = input.deadLetteredAt
-    ? parseDate(input.deadLetteredAt, "Thời điểm đưa hồ sơ vào hàng lỗi cuối không hợp lệ.")
+    ? parseDate(
+        input.deadLetteredAt,
+        "Thời điểm đưa hồ sơ vào hàng lỗi cuối không hợp lệ."
+      )
     : undefined;
   const retryCount = normalizeRetryCount(input.retryCount ?? 0);
   const receivedByActorId = normalizeOptional(input.receivedByActorId);
   const acknowledgementReference = normalizeOptional(input.acknowledgementReference);
+  const failureReason = normalizeOptional(input.failureReason);
   const status = normalizeStatus(input.status ?? "requested");
   const priority = normalizePriority(input.priority ?? "routine");
   const bundleType = normalizeBundleType(input.bundleType);
@@ -51,74 +54,6 @@ export function buildRecordTransferSnapshot(
     input.recipientOrganizationId,
     "Cần có cơ sở y tế nhận hồ sơ."
   );
-
-  if (sourceOrganizationId === recipientOrganizationId) {
-    throw new DomainError("Cơ sở gửi và cơ sở nhận hồ sơ phải khác nhau.");
-  }
-
-  if (sentAt && sentAt < requestedAt) {
-    throw new DomainError("Thời điểm gửi hồ sơ không được trước thời điểm yêu cầu.");
-  }
-
-  if (receivedAt && !sentAt) {
-    throw new DomainError("Hồ sơ chỉ được ghi nhận tiếp nhận sau khi đã có thời điểm gửi.");
-  }
-
-  if (sentAt && receivedAt && receivedAt < sentAt) {
-    throw new DomainError("Thời điểm tiếp nhận hồ sơ không được trước thời điểm gửi.");
-  }
-
-  if ((receivedByActorId || acknowledgementReference) && !receivedAt) {
-    throw new DomainError(
-      "Thông tin xác nhận nhận hồ sơ chỉ hợp lệ sau khi có thời điểm tiếp nhận."
-    );
-  }
-
-  if (failedAt && failedAt < requestedAt) {
-    throw new DomainError("Thời điểm lỗi chuyển hồ sơ không được trước thời điểm yêu cầu.");
-  }
-
-  if (sentAt && failedAt && failedAt < sentAt) {
-    throw new DomainError("Thời điểm lỗi chuyển hồ sơ không được trước thời điểm gửi.");
-  }
-
-  if (nextRetryAt && !failedAt) {
-    throw new DomainError("Chỉ được hẹn thử gửi lại sau khi đã ghi nhận lỗi chuyển hồ sơ.");
-  }
-
-  if (failedAt && nextRetryAt && nextRetryAt < failedAt) {
-    throw new DomainError("Thời điểm thử gửi lại không được trước thời điểm lỗi chuyển hồ sơ.");
-  }
-
-  if (deadLetteredAt && !failedAt) {
-    throw new DomainError("Chỉ được đưa hồ sơ vào hàng lỗi cuối sau khi đã ghi nhận lỗi chuyển hồ sơ.");
-  }
-
-  if (failedAt && deadLetteredAt && deadLetteredAt < failedAt) {
-    throw new DomainError("Thời điểm đưa hồ sơ vào hàng lỗi cuối không được trước thời điểm lỗi chuyển hồ sơ.");
-  }
-
-  const failureReason = normalizeOptional(input.failureReason);
-
-  if (status === "failed" && (!failedAt || !failureReason)) {
-    throw new DomainError("Hồ sơ lỗi cần có thời điểm lỗi và lý do lỗi.");
-  }
-
-  if (status === "dead-lettered" && (!failedAt || !failureReason || !deadLetteredAt)) {
-    throw new DomainError(
-      "Hồ sơ đưa vào hàng lỗi cuối cần có thời điểm lỗi, lý do lỗi và thời điểm kết thúc retry."
-    );
-  }
-
-  if (status === "dead-lettered" && nextRetryAt) {
-    throw new DomainError("Hồ sơ đã vào hàng lỗi cuối không được giữ lịch thử gửi lại.");
-  }
-
-  if (deadLetteredAt && status !== "dead-lettered") {
-    throw new DomainError(
-      "Thời điểm đưa vào hàng lỗi cuối chỉ hợp lệ với hồ sơ ở trạng thái dead-lettered."
-    );
-  }
 
   const snapshot: RecordTransferSnapshot = {
     id: normalizeRequired(input.id, "Mã chuyển hồ sơ không được để trống."),

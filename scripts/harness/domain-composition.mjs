@@ -936,6 +936,12 @@ for (const required of [
   }
 }
 
+if (/DomainError/.test(recordTransferFactorySource)) {
+  throw new Error(
+    "record-transfer.factory.ts must build normalized snapshots; lifecycle invariant errors stay in record-transfer.validation.ts."
+  );
+}
+
 for (const required of [
   /export function validateRecordTransferSnapshot/,
   /export function normalizeRequired/,
