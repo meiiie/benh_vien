@@ -359,8 +359,28 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/fhir/fhir-clinical-core.types.ts",
-    maxLines: 240,
-    role: "FHIR encounter, condition, observation and allergy resource types"
+    maxLines: 20,
+    role: "FHIR clinical core compatibility barrel exports"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-encounter.types.ts",
+    maxLines: 70,
+    role: "FHIR Encounter resource type"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-condition.types.ts",
+    maxLines: 80,
+    role: "FHIR Condition resource type"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-observation.types.ts",
+    maxLines: 70,
+    role: "FHIR Observation resource type"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-allergy-intolerance.types.ts",
+    maxLines: 80,
+    role: "FHIR AllergyIntolerance resource type"
   },
   {
     path: "packages/domain/src/fhir/fhir-medication.types.ts",
@@ -595,6 +615,12 @@ const fhirAuditTypesPath = resolve("packages/domain/src/fhir/fhir-audit.types.ts
 const fhirClinicalCoreTypesPath = resolve(
   "packages/domain/src/fhir/fhir-clinical-core.types.ts"
 );
+const fhirEncounterTypesPath = resolve("packages/domain/src/fhir/fhir-encounter.types.ts");
+const fhirConditionTypesPath = resolve("packages/domain/src/fhir/fhir-condition.types.ts");
+const fhirObservationTypesPath = resolve("packages/domain/src/fhir/fhir-observation.types.ts");
+const fhirAllergyIntoleranceTypesPath = resolve(
+  "packages/domain/src/fhir/fhir-allergy-intolerance.types.ts"
+);
 const fhirMedicationTypesPath = resolve("packages/domain/src/fhir/fhir-medication.types.ts");
 const fhirMedicationRequestTypesPath = resolve(
   "packages/domain/src/fhir/fhir-medication-request.types.ts"
@@ -761,6 +787,13 @@ const fhirDocumentTypesSource = await readFile(fhirDocumentTypesPath, "utf8");
 const fhirPrivacyTypesSource = await readFile(fhirPrivacyTypesPath, "utf8");
 const fhirAuditTypesSource = await readFile(fhirAuditTypesPath, "utf8");
 const fhirClinicalCoreTypesSource = await readFile(fhirClinicalCoreTypesPath, "utf8");
+const fhirEncounterTypesSource = await readFile(fhirEncounterTypesPath, "utf8");
+const fhirConditionTypesSource = await readFile(fhirConditionTypesPath, "utf8");
+const fhirObservationTypesSource = await readFile(fhirObservationTypesPath, "utf8");
+const fhirAllergyIntoleranceTypesSource = await readFile(
+  fhirAllergyIntoleranceTypesPath,
+  "utf8"
+);
 const fhirMedicationTypesSource = await readFile(fhirMedicationTypesPath, "utf8");
 const fhirMedicationRequestTypesSource = await readFile(
   fhirMedicationRequestTypesPath,
@@ -2036,6 +2069,30 @@ for (const forbidden of [/export type FhirMedicationRequest/, /export type FhirE
 }
 
 for (const forbidden of [
+  /export type FhirEncounter/,
+  /export type FhirCondition/,
+  /export type FhirObservation/,
+  /export type FhirAllergyIntolerance/
+]) {
+  if (forbidden.test(fhirClinicalCoreTypesSource)) {
+    throw new Error(
+      "fhir-clinical-core.types.ts must remain a compatibility barrel; concrete clinical core resource types belong in focused clinical submodules."
+    );
+  }
+}
+
+for (const required of [
+  /export \* from "\.\/fhir-encounter\.types\.js"/,
+  /export \* from "\.\/fhir-condition\.types\.js"/,
+  /export \* from "\.\/fhir-observation\.types\.js"/,
+  /export \* from "\.\/fhir-allergy-intolerance\.types\.js"/
+]) {
+  if (!required.test(fhirClinicalCoreTypesSource)) {
+    throw new Error("fhir-clinical-core.types.ts must re-export all focused FHIR clinical core type modules.");
+  }
+}
+
+for (const forbidden of [
   /export type FhirMedicationRequest/,
   /export type FhirMedicationDispense/,
   /export type FhirMedicationAdministration/
@@ -2115,8 +2172,10 @@ for (const required of [
   [fhirDocumentTypesSource, /export type FhirComposition/, "fhir-document.types.ts"],
   [fhirPrivacyTypesSource, /export type FhirConsent/, "fhir-privacy.types.ts"],
   [fhirAuditTypesSource, /export type FhirAuditEvent/, "fhir-audit.types.ts"],
-  [fhirClinicalCoreTypesSource, /export type FhirEncounter/, "fhir-clinical-core.types.ts"],
-  [fhirClinicalCoreTypesSource, /export type FhirAllergyIntolerance/, "fhir-clinical-core.types.ts"],
+  [fhirEncounterTypesSource, /export type FhirEncounter/, "fhir-encounter.types.ts"],
+  [fhirConditionTypesSource, /export type FhirCondition/, "fhir-condition.types.ts"],
+  [fhirObservationTypesSource, /export type FhirObservation/, "fhir-observation.types.ts"],
+  [fhirAllergyIntoleranceTypesSource, /export type FhirAllergyIntolerance/, "fhir-allergy-intolerance.types.ts"],
   [fhirMedicationRequestTypesSource, /export type FhirMedicationRequest/, "fhir-medication-request.types.ts"],
   [fhirMedicationDispenseTypesSource, /export type FhirMedicationDispense/, "fhir-medication-dispense.types.ts"],
   [fhirMedicationAdministrationTypesSource, /export type FhirMedicationAdministration/, "fhir-medication-administration.types.ts"],
