@@ -1,6 +1,11 @@
 import { normalizeDicomUid } from "../shared/dicom-uid.js";
 import { DomainError } from "../shared/domain-error.js";
 import { normalizeFhirUnsignedInt } from "../shared/fhir-primitives.js";
+import {
+  normalizeOptionalText as normalizeOptional,
+  normalizeRequiredText as normalizeRequired,
+  parseRequiredDate as parseDate
+} from "../shared/normalization.js";
 import { imagingStudyStatuses } from "./imaging-study.types.js";
 import type {
   CreateImagingStudySeriesInput,
@@ -8,6 +13,12 @@ import type {
   ImagingStudySeries,
   ImagingStudyStatus
 } from "./imaging-study.types.js";
+
+export {
+  normalizeOptionalText as normalizeOptional,
+  normalizeRequiredText as normalizeRequired,
+  parseRequiredDate as parseDate
+} from "../shared/normalization.js";
 
 export function normalizeStudyInstanceUid(value: string): string {
   return normalizeDicomUid(value, "DICOM Study Instance UID không hợp lệ.");
@@ -59,21 +70,6 @@ export function normalizeStatus(value: ImagingStudyStatus): ImagingStudyStatus {
   return value;
 }
 
-export function normalizeRequired(value: string, message: string): string {
-  const normalized = value.trim().replace(/\s+/g, " ");
-
-  if (!normalized) {
-    throw new DomainError(message);
-  }
-
-  return normalized;
-}
-
-export function normalizeOptional(value: string | undefined): string | undefined {
-  const normalized = value?.trim().replace(/\s+/g, " ");
-  return normalized || undefined;
-}
-
 export function normalizeCount(value: number, message: string): number {
   return normalizeFhirUnsignedInt(value, message);
 }
@@ -116,16 +112,6 @@ export function validateTimeline(input: {
       throw new DomainError("Thời điểm bắt đầu series không được trước thời điểm bắt đầu nghiên cứu hình ảnh.");
     }
   }
-}
-
-export function parseDate(value: string, message: string): Date {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    throw new DomainError(message);
-  }
-
-  return date;
 }
 
 function normalizeCoding(coding: ImagingStudyCoding, label: string): ImagingStudyCoding {

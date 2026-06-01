@@ -1,5 +1,10 @@
 import { DomainError } from "../shared/domain-error.js";
 import {
+  normalizeOptionalText as normalizeOptional,
+  normalizeRequiredText as normalizeRequired,
+  parseRequiredDate as parseDate
+} from "../shared/normalization.js";
+import {
   workflowTaskIntents,
   workflowTaskPriorities,
   workflowTaskReferenceResourceTypes,
@@ -15,6 +20,12 @@ import type {
   WorkflowTaskReferenceResourceType,
   WorkflowTaskStatus
 } from "./workflow-task.types.js";
+
+export {
+  normalizeOptionalText as normalizeOptional,
+  normalizeRequiredText as normalizeRequired,
+  parseRequiredDate as parseDate
+} from "../shared/normalization.js";
 
 export function normalizeCode(code: WorkflowTaskCode): WorkflowTaskCode {
   return {
@@ -132,31 +143,6 @@ export function normalizePriority(value: WorkflowTaskPriority): WorkflowTaskPrio
   }
 
   return value;
-}
-
-export function normalizeRequired(value: string, message: string): string {
-  const normalized = value.trim().replace(/\s+/g, " ");
-
-  if (!normalized) {
-    throw new DomainError(message);
-  }
-
-  return normalized;
-}
-
-export function normalizeOptional(value: string | undefined): string | undefined {
-  const normalized = value?.trim().replace(/\s+/g, " ");
-  return normalized || undefined;
-}
-
-export function parseDate(value: string, message: string): Date {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    throw new DomainError(message);
-  }
-
-  return date;
 }
 
 function normalizeReferenceResourceType(resourceType: WorkflowTaskReferenceResourceType): WorkflowTaskReferenceResourceType {

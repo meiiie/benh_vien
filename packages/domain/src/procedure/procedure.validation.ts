@@ -1,11 +1,22 @@
 import { DomainError } from "../shared/domain-error.js";
 import {
+  normalizeOptionalText as normalizeOptional,
+  normalizeRequiredText as normalizeRequired,
+  parseRequiredDate as parseDate
+} from "../shared/normalization.js";
+import {
   procedureCategories,
   procedurePerformerActorTypes,
   procedureReportReferenceResourceTypes,
   procedureStatuses
 } from "./procedure.types.js";
 import type { ProcedureCategory, ProcedureCoding, ProcedurePerformedPeriod, ProcedurePerformer, ProcedurePerformerActorType, ProcedureReportReference, ProcedureStatus } from "./procedure.types.js";
+
+export {
+  normalizeOptionalText as normalizeOptional,
+  normalizeRequiredText as normalizeRequired,
+  parseRequiredDate as parseDate
+} from "../shared/normalization.js";
 
 export function normalizeRequiredCoding(code: ProcedureCoding): ProcedureCoding {
   return {
@@ -118,31 +129,6 @@ export function normalizeCategory(value: ProcedureCategory): ProcedureCategory {
   }
 
   return value;
-}
-
-export function normalizeRequired(value: string, message: string): string {
-  const normalized = value.trim().replace(/\s+/g, " ");
-
-  if (!normalized) {
-    throw new DomainError(message);
-  }
-
-  return normalized;
-}
-
-export function normalizeOptional(value: string | undefined): string | undefined {
-  const normalized = value?.trim().replace(/\s+/g, " ");
-  return normalized || undefined;
-}
-
-export function parseDate(value: string, message: string): Date {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    throw new DomainError(message);
-  }
-
-  return date;
 }
 
 function normalizePerformerActorType(value: ProcedurePerformerActorType): ProcedurePerformerActorType {
