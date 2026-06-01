@@ -69,8 +69,18 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/patients/patient-fhir-routes.ts",
-    maxLines: 340,
-    role: "Patient FHIR export routes"
+    maxLines: 90,
+    role: "Patient FHIR route composition root"
+  },
+  {
+    path: "apps/api/src/modules/patients/patient-fhir-resource-routes.ts",
+    maxLines: 90,
+    role: "Patient FHIR Patient resource export route"
+  },
+  {
+    path: "apps/api/src/modules/patients/patient-record-bundle-routes.ts",
+    maxLines: 300,
+    role: "Patient FHIR Bundle and document Bundle export routes"
   },
   {
     path: "apps/api/src/modules/patients/patient-route-helpers.ts",
@@ -146,6 +156,25 @@ const requiredPatientRegistrations = [
   "registerPatientFhirRoutes"
 ];
 
+const patientFhirRoutesPath = resolve("apps/api/src/modules/patients/patient-fhir-routes.ts");
+const forbiddenPatientFhirRoutePatterns = [
+  {
+    pattern:
+      /\bmapPatientToFhir\b|\bmapPatientRecordToFhirBundle\b|\bmapPatientRecordToFhirDocumentBundle\b/,
+    message:
+      "Patient FHIR mapping route handlers belong in patient-fhir-resource-routes.ts or patient-record-bundle-routes.ts."
+  },
+  {
+    pattern: /\bPatientIdParamsSchema\b|\breadBundleTransferContext\b/,
+    message:
+      "Patient FHIR route request handling belongs outside the patient-fhir-routes.ts composition root."
+  }
+];
+const requiredPatientFhirRegistrations = [
+  "registerPatientFhirResourceRoutes",
+  "registerPatientRecordBundleRoutes"
+];
+
 const routeReports = [];
 
 for (const budget of routeBudgets) {
@@ -170,6 +199,7 @@ for (const budget of routeBudgets) {
 
 const recordTransferRoutesSource = await readFile(recordTransferRoutesPath, "utf8");
 const patientRoutesSource = await readFile(patientRoutesPath, "utf8");
+const patientFhirRoutesSource = await readFile(patientFhirRoutesPath, "utf8");
 
 for (const forbidden of forbiddenRecordTransferRoutePatterns) {
   if (forbidden.pattern.test(recordTransferRoutesSource)) {
@@ -195,6 +225,20 @@ for (const registration of requiredPatientRegistrations) {
   if (!patientRoutesSource.includes(registration)) {
     throw new Error(
       `Patient root routes must register ${registration} so registry, merge, query and FHIR route modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenPatientFhirRoutePatterns) {
+  if (forbidden.pattern.test(patientFhirRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredPatientFhirRegistrations) {
+  if (!patientFhirRoutesSource.includes(registration)) {
+    throw new Error(
+      `Patient FHIR root routes must register ${registration} so resource and Bundle export modules remain wired.`
     );
   }
 }
