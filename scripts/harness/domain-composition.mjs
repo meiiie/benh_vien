@@ -14,8 +14,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/record-transfer/record-transfer.factory.ts",
-    maxLines: 260,
+    maxLines: 190,
     role: "RecordTransfer snapshot creation and rehydration"
+  },
+  {
+    path: "packages/domain/src/record-transfer/record-transfer.snapshot-validation.ts",
+    maxLines: 170,
+    role: "RecordTransfer snapshot timeline and terminal-state invariant guards"
   },
   {
     path: "packages/domain/src/record-transfer/record-transfer.lifecycle.ts",
@@ -24,8 +29,8 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/record-transfer/record-transfer.validation.ts",
-    maxLines: 230,
-    role: "RecordTransfer normalization and snapshot invariant guards"
+    maxLines: 80,
+    role: "RecordTransfer primitive and code-set normalization guards"
   },
   {
     path: "packages/domain/src/record-transfer/record-transfer.types.ts",
@@ -580,6 +585,9 @@ const recordTransferAggregatePath = resolve(
 const recordTransferFactoryPath = resolve(
   "packages/domain/src/record-transfer/record-transfer.factory.ts"
 );
+const recordTransferSnapshotValidationPath = resolve(
+  "packages/domain/src/record-transfer/record-transfer.snapshot-validation.ts"
+);
 const recordTransferLifecyclePath = resolve(
   "packages/domain/src/record-transfer/record-transfer.lifecycle.ts"
 );
@@ -838,6 +846,10 @@ for (const budget of domainBudgets) {
 
 const aggregateSource = await readFile(recordTransferAggregatePath, "utf8");
 const recordTransferFactorySource = await readFile(recordTransferFactoryPath, "utf8");
+const recordTransferSnapshotValidationSource = await readFile(
+  recordTransferSnapshotValidationPath,
+  "utf8"
+);
 const recordTransferLifecycleSource = await readFile(recordTransferLifecyclePath, "utf8");
 const recordTransferValidationSource = await readFile(recordTransferValidationPath, "utf8");
 const typesSource = await readFile(recordTransferTypesPath, "utf8");
@@ -1053,7 +1065,7 @@ for (const forbidden of [
 ]) {
   if (forbidden.test(aggregateSource)) {
     throw new Error(
-      "RecordTransfer aggregate must keep lifecycle behavior only; types stay in record-transfer.types.ts, snapshot construction stays in record-transfer.factory.ts and snapshot invariants stay in record-transfer.validation.ts."
+      "RecordTransfer aggregate must keep lifecycle behavior only; types stay in record-transfer.types.ts, snapshot construction stays in record-transfer.factory.ts and snapshot invariants stay in record-transfer.snapshot-validation.ts."
     );
   }
 }
@@ -1095,6 +1107,7 @@ for (const required of [
   /export function buildRecordTransferSnapshot/,
   /export function normalizePersistedRecordTransferSnapshot/,
   /from "\.\/record-transfer\.validation\.js"/,
+  /from "\.\/record-transfer\.snapshot-validation\.js"/,
   /from "\.\/record-transfer\.types\.js"/
 ]) {
   if (!required.test(recordTransferFactorySource)) {
@@ -1106,8 +1119,38 @@ for (const required of [
 
 if (/DomainError/.test(recordTransferFactorySource)) {
   throw new Error(
-    "record-transfer.factory.ts must build normalized snapshots; lifecycle invariant errors stay in record-transfer.validation.ts."
+    "record-transfer.factory.ts must build normalized snapshots; invariant errors stay in record-transfer.snapshot-validation.ts."
   );
+}
+
+for (const required of [
+  /export function validateRecordTransferSnapshot/,
+  /normalizeRequired/,
+  /normalizeStatus/,
+  /normalizePriority/,
+  /normalizeBundleType/,
+  /parseDate/,
+  /from "\.\/record-transfer\.validation\.js"/,
+  /from "\.\/record-transfer\.types\.js"/
+]) {
+  if (!required.test(recordTransferSnapshotValidationSource)) {
+    throw new Error(
+      "record-transfer.snapshot-validation.ts must keep RecordTransfer snapshot timeline and terminal-state invariants."
+    );
+  }
+}
+
+for (const forbidden of [
+  /buildRecordTransferSnapshot/,
+  /normalizePersistedRecordTransferSnapshot/,
+  /export function normalizeRequired/,
+  /export function parseDate/
+]) {
+  if (forbidden.test(recordTransferSnapshotValidationSource)) {
+    throw new Error(
+      "record-transfer.snapshot-validation.ts must not own factory behavior or primitive normalization definitions."
+    );
+  }
 }
 
 for (const required of [
@@ -1142,14 +1185,30 @@ for (const forbidden of [
 }
 
 for (const required of [
-  /export function validateRecordTransferSnapshot/,
   /export function normalizeRequired/,
   /export function parseDate/,
+  /export function normalizeStatus/,
+  /export function normalizePriority/,
+  /export function normalizeBundleType/,
+  /export function normalizeRetryCount/,
   /from "\.\/record-transfer\.types\.js"/
 ]) {
   if (!required.test(recordTransferValidationSource)) {
     throw new Error(
-      "record-transfer.validation.ts must keep RecordTransfer normalization and snapshot invariant guards."
+      "record-transfer.validation.ts must keep RecordTransfer primitive and code-set normalization guards."
+    );
+  }
+}
+
+for (const forbidden of [
+  /validateRecordTransferSnapshot/,
+  /RecordTransferSnapshot/,
+  /sourceOrganizationId === recipientOrganizationId/,
+  /status === "dead-lettered"/
+]) {
+  if (forbidden.test(recordTransferValidationSource)) {
+    throw new Error(
+      "RecordTransfer snapshot invariants must stay out of record-transfer.validation.ts."
     );
   }
 }

@@ -5,9 +5,9 @@ import {
   normalizeRequired,
   normalizeRetryCount,
   normalizeStatus,
-  parseDate,
-  validateRecordTransferSnapshot
+  parseDate
 } from "./record-transfer.validation.js";
+import { validateRecordTransferSnapshot } from "./record-transfer.snapshot-validation.js";
 import type {
   CreateRecordTransferInput,
   RecordTransferSnapshot
