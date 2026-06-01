@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 const postgresBudgets = [
   {
     path: "apps/api/src/infrastructure/postgres/postgres-record-transfer.repository.ts",
-    maxLines: 150,
+    maxLines: 110,
     role: "RecordTransfer PostgreSQL repository orchestration"
   },
   {
@@ -21,6 +21,11 @@ const postgresBudgets = [
     path: "apps/api/src/infrastructure/postgres/postgres-record-transfer.persistence.ts",
     maxLines: 30,
     role: "RecordTransfer PostgreSQL persistence command"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-record-transfer-retry-queries.ts",
+    maxLines: 70,
+    role: "RecordTransfer PostgreSQL retry and dead-letter read queries"
   },
   {
     path: "apps/api/src/infrastructure/postgres/postgres-record-transfer.types.ts",
@@ -496,6 +501,9 @@ const recordTransferMapperPath = resolve(
 const recordTransferPersistencePath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-record-transfer.persistence.ts"
 );
+const recordTransferRetryQueriesPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-record-transfer-retry-queries.ts"
+);
 const recordTransferTypesPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-record-transfer.types.ts"
 );
@@ -806,6 +814,10 @@ const recordTransferPersistenceSource = await readFile(
   recordTransferPersistencePath,
   "utf8"
 );
+const recordTransferRetryQueriesSource = await readFile(
+  recordTransferRetryQueriesPath,
+  "utf8"
+);
 const recordTransferTypesSource = await readFile(recordTransferTypesPath, "utf8");
 const recordTransferDeliveryAttemptRepositorySource = await readFile(
   recordTransferDeliveryAttemptRepositoryPath,
@@ -1029,6 +1041,8 @@ const requiredRepositoryImports = [
   "rowToRecordTransfer",
   "upsertRecordTransfer",
   "upsertRecordTransferDeliveryAttempt",
+  "findDueRecordTransferRetries",
+  "findDueRecordTransferDeadLetters",
   "selectRecordTransferSql",
   "RecordTransferRow"
 ];
@@ -1296,9 +1310,9 @@ for (const importedName of requiredAuditEventRepositoryImports) {
 
 assertForbidden(recordTransferRepositorySource, [
   {
-    pattern: /\bINSERT INTO record_transfers\b|\bON CONFLICT \(id\)\b|\bRecordTransfer\.rehydrate\b|\bRecordTransferSnapshot\b|postgres-record-transfer-delivery-attempt\.repository\.js/,
+    pattern: /\bINSERT INTO record_transfers\b|\bON CONFLICT \(id\)\b|\bRecordTransfer\.rehydrate\b|\bRecordTransferSnapshot\b|postgres-record-transfer-delivery-attempt\.repository\.js|\bnext_retry_at\b|\bretry_count\s*[<>]/,
     message:
-      "RecordTransfer PostgreSQL repository must delegate upsert SQL, row mapping and delivery-attempt persistence to focused modules."
+      "RecordTransfer PostgreSQL repository must delegate upsert SQL, row mapping, retry reads and delivery-attempt persistence to focused modules."
   }
 ]);
 
@@ -1323,6 +1337,15 @@ assertForbidden(recordTransferPersistenceSource, [
     pattern: /\bRecordTransfer\.rehydrate\b|\bRecordTransferSnapshot\b|\bINSERT INTO record_transfers\b/,
     message:
       "RecordTransfer PostgreSQL persistence command must compose SQL and mapper without owning domain hydration."
+  }
+]);
+
+assertForbidden(recordTransferRetryQueriesSource, [
+  {
+    pattern:
+      /\bINSERT INTO record_transfers\b|\bON CONFLICT \(id\)\b|\bBEGIN\b|\bCOMMIT\b|\bROLLBACK\b|\bupsertRecordTransfer\b|\bupsertRecordTransferDeliveryAttempt\b/,
+    message:
+      "RecordTransfer PostgreSQL retry query module must only own due retry/dead-letter SELECT reads."
   }
 ]);
 

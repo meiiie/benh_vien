@@ -9,6 +9,10 @@ import type {
 import { upsertRecordTransferDeliveryAttempt } from "./postgres-record-transfer-delivery-attempt.persistence.js";
 import { rowToRecordTransfer } from "./postgres-record-transfer.mapper.js";
 import { upsertRecordTransfer } from "./postgres-record-transfer.persistence.js";
+import {
+  findDueRecordTransferDeadLetters,
+  findDueRecordTransferRetries
+} from "./postgres-record-transfer-retry-queries.js";
 import { selectRecordTransferSql } from "./postgres-record-transfer.sql.js";
 import type { RecordTransferRow } from "./postgres-record-transfer.types.js";
 
@@ -42,45 +46,11 @@ export class PostgresRecordTransferRepository implements RecordTransferRepositor
   }
 
   async findDueRetries(input: FindDueRecordTransferRetriesInput): Promise<RecordTransfer[]> {
-    const limit = normalizeLimit(input.limit);
-
-    if (limit === 0) {
-      return [];
-    }
-
-    const result = await this.pool.query<RecordTransferRow>(
-      `${selectRecordTransferSql}
-      WHERE status = 'failed'
-        AND next_retry_at IS NOT NULL
-        AND next_retry_at <= $1
-        AND retry_count < $2
-      ORDER BY next_retry_at ASC, requested_at ASC
-      LIMIT $3`,
-      [input.dueAt, input.maxRetryCount ?? 2147483647, limit]
-    );
-
-    return result.rows.map(rowToRecordTransfer);
+    return findDueRecordTransferRetries(this.pool, input);
   }
 
   async findDueDeadLetters(input: FindDueRecordTransferRetriesInput): Promise<RecordTransfer[]> {
-    const limit = normalizeLimit(input.limit);
-
-    if (limit === 0) {
-      return [];
-    }
-
-    const result = await this.pool.query<RecordTransferRow>(
-      `${selectRecordTransferSql}
-      WHERE status = 'failed'
-        AND next_retry_at IS NOT NULL
-        AND next_retry_at <= $1
-        AND retry_count >= $2
-      ORDER BY next_retry_at ASC, requested_at ASC
-      LIMIT $3`,
-      [input.dueAt, input.maxRetryCount ?? 2147483647, limit]
-    );
-
-    return result.rows.map(rowToRecordTransfer);
+    return findDueRecordTransferDeadLetters(this.pool, input);
   }
 
   async save(recordTransfer: RecordTransfer): Promise<void> {
@@ -130,12 +100,4 @@ export async function seedRecordTransfersIfEmpty(
   for (const recordTransfer of seedRecordTransfers) {
     await repository.save(recordTransfer);
   }
-}
-
-function normalizeLimit(limit: number): number {
-  if (!Number.isInteger(limit) || limit < 1) {
-    return 0;
-  }
-
-  return limit;
 }
