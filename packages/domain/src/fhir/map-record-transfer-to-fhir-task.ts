@@ -1,5 +1,13 @@
 import type { RecordTransfer } from "../record-transfer/record-transfer.js";
 import type { FhirTask } from "./fhir-types.js";
+import {
+  buildRecordTransferBusinessStatus,
+  buildRecordTransferCode,
+  formatRecordTransferBundleOutput,
+  mapRecordTransferStatus,
+  recordTransferIdentifierSystem,
+  recordTransferTaskProfile
+} from "./map-record-transfer-task-codings.js";
 
 export function mapRecordTransferToFhirTask(recordTransfer: RecordTransfer): FhirTask {
   const snapshot = recordTransfer.toSnapshot();
@@ -8,37 +16,19 @@ export function mapRecordTransferToFhirTask(recordTransfer: RecordTransfer): Fhi
     resourceType: "Task",
     id: snapshot.id,
     meta: {
-      profile: ["http://hl7.org/fhir/StructureDefinition/Task"]
+      profile: [recordTransferTaskProfile]
     },
     identifier: [
       {
-        system: "urn:wiiicare:nexus:record-transfer",
+        system: recordTransferIdentifierSystem,
         value: snapshot.id
       }
     ],
     status: mapRecordTransferStatus(snapshot.status),
-    businessStatus: {
-      coding: [
-        {
-          system: "urn:wiiicare:nexus:record-transfer-status",
-          code: snapshot.status,
-          display: formatRecordTransferStatus(snapshot.status)
-        }
-      ],
-      text: formatRecordTransferStatus(snapshot.status)
-    },
+    businessStatus: buildRecordTransferBusinessStatus(snapshot.status),
     intent: "order",
     priority: snapshot.priority,
-    code: {
-      coding: [
-        {
-          system: "urn:wiiicare:nexus:task-code",
-          code: "inter-facility-record-transfer",
-          display: "Chuyển hồ sơ bệnh án liên viện"
-        }
-      ],
-      text: "Chuyển hồ sơ bệnh án liên viện"
-    },
+    code: buildRecordTransferCode(),
     description: snapshot.reason,
     focus: {
       reference: `Bundle/${snapshot.bundleId}`
@@ -75,10 +65,7 @@ export function mapRecordTransferToFhirTask(recordTransfer: RecordTransfer): Fhi
     output: [
       {
         type: {
-          text:
-            snapshot.bundleType === "document"
-              ? "FHIR document Bundle dự kiến chuyển"
-              : "FHIR collection Bundle dự kiến chuyển"
+          text: formatRecordTransferBundleOutput(snapshot.bundleType)
         },
         valueReference: {
           reference: `Bundle/${snapshot.bundleId}`,
@@ -113,43 +100,4 @@ function buildRecordTransferNotes(
   ].filter((note): note is string => Boolean(note));
 
   return notes.length > 0 ? notes.map((text) => ({ text })) : undefined;
-}
-
-function mapRecordTransferStatus(
-  status: ReturnType<RecordTransfer["toSnapshot"]>["status"]
-): FhirTask["status"] {
-  if (status === "ready") {
-    return "ready";
-  }
-
-  if (status === "completed") {
-    return "completed";
-  }
-
-  if (status === "cancelled") {
-    return "cancelled";
-  }
-
-  if (status === "failed" || status === "dead-lettered") {
-    return "failed";
-  }
-
-  return status;
-}
-
-function formatRecordTransferStatus(
-  status: ReturnType<RecordTransfer["toSnapshot"]>["status"]
-): string {
-  const labels: Record<ReturnType<RecordTransfer["toSnapshot"]>["status"], string> = {
-    cancelled: "Đã hủy",
-    completed: "Đã hoàn tất",
-    "dead-lettered": "Đã đưa vào hàng lỗi cuối",
-    draft: "Bản nháp",
-    failed: "Lỗi chuyển hồ sơ",
-    "in-progress": "Đang xử lý",
-    ready: "Sẵn sàng gửi",
-    requested: "Đã yêu cầu"
-  };
-
-  return labels[status];
 }

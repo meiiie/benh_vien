@@ -553,6 +553,16 @@ const domainBudgets = [
     role: "FHIR ProviderDirectory coding and identifier mapping"
   },
   {
+    path: "packages/domain/src/fhir/map-record-transfer-to-fhir-task.ts",
+    maxLines: 120,
+    role: "FHIR RecordTransfer public Task mapper orchestration"
+  },
+  {
+    path: "packages/domain/src/fhir/map-record-transfer-task-codings.ts",
+    maxLines: 100,
+    role: "FHIR RecordTransfer Task status, code and businessStatus mapping"
+  },
+  {
     path: "packages/domain/src/fhir/map-audit-event-to-fhir.ts",
     maxLines: 130,
     role: "FHIR AuditEvent public mapper and bundle orchestration"
@@ -777,6 +787,12 @@ const mapProviderDirectoryToFhirPath = resolve(
 );
 const mapProviderDirectoryCodingsPath = resolve(
   "packages/domain/src/fhir/map-provider-directory-codings.ts"
+);
+const mapRecordTransferToFhirTaskPath = resolve(
+  "packages/domain/src/fhir/map-record-transfer-to-fhir-task.ts"
+);
+const mapRecordTransferTaskCodingsPath = resolve(
+  "packages/domain/src/fhir/map-record-transfer-task-codings.ts"
 );
 const mapAuditEventToFhirPath = resolve("packages/domain/src/fhir/map-audit-event-to-fhir.ts");
 const mapAuditEventLabelsPath = resolve("packages/domain/src/fhir/map-audit-event-labels.ts");
@@ -1003,6 +1019,14 @@ const mapProviderDirectoryToFhirSource = await readFile(
 );
 const mapProviderDirectoryCodingsSource = await readFile(
   mapProviderDirectoryCodingsPath,
+  "utf8"
+);
+const mapRecordTransferToFhirTaskSource = await readFile(
+  mapRecordTransferToFhirTaskPath,
+  "utf8"
+);
+const mapRecordTransferTaskCodingsSource = await readFile(
+  mapRecordTransferTaskCodingsPath,
   "utf8"
 );
 const mapAuditEventToFhirSource = await readFile(mapAuditEventToFhirPath, "utf8");
@@ -1397,6 +1421,66 @@ for (const forbidden of [
   if (forbidden.test(mapProviderDirectoryCodingsSource)) {
     throw new Error(
       "map-provider-directory-codings.ts must stay a coding helper and must not own ProviderDirectory resource mapping."
+    );
+  }
+}
+
+for (const required of [
+  /export function mapRecordTransferToFhirTask/,
+  /resourceType:\s*"Task"/,
+  /from "\.\/map-record-transfer-task-codings\.js"/,
+  /buildRecordTransferBusinessStatus/,
+  /buildRecordTransferCode/,
+  /formatRecordTransferBundleOutput/,
+  /mapRecordTransferStatus/
+]) {
+  if (!required.test(mapRecordTransferToFhirTaskSource)) {
+    throw new Error(
+      "map-record-transfer-to-fhir-task.ts must keep public RecordTransfer Task orchestration and delegate Task coding helpers to map-record-transfer-task-codings.ts."
+    );
+  }
+}
+
+for (const forbidden of [
+  /function formatRecordTransferStatus/,
+  /Record<RecordTransferStatus, string>/,
+  /"urn:wiiicare:nexus:record-transfer-status"/,
+  /"urn:wiiicare:nexus:task-code"/,
+  /"inter-facility-record-transfer"/
+]) {
+  if (forbidden.test(mapRecordTransferToFhirTaskSource)) {
+    throw new Error(
+      "RecordTransfer Task coding helpers belong in map-record-transfer-task-codings.ts, not in the public FHIR Task mapper."
+    );
+  }
+}
+
+for (const required of [
+  /export const recordTransferTaskProfile/,
+  /export const recordTransferIdentifierSystem/,
+  /export function mapRecordTransferStatus/,
+  /export function buildRecordTransferBusinessStatus/,
+  /export function buildRecordTransferCode/,
+  /export function formatRecordTransferBundleOutput/,
+  /export function formatRecordTransferStatus/,
+  /from "\.\.\/record-transfer\/record-transfer\.types\.js"/,
+  /from "\.\/fhir-types\.js"/
+]) {
+  if (!required.test(mapRecordTransferTaskCodingsSource)) {
+    throw new Error(
+      "map-record-transfer-task-codings.ts must keep RecordTransfer Task profile, identifier, status, businessStatus, code and bundle-output mapping."
+    );
+  }
+}
+
+for (const forbidden of [
+  /resourceType:\s*"Task"/,
+  /function buildRecordTransferNotes/,
+  /mapRecordTransferToFhirTask/
+]) {
+  if (forbidden.test(mapRecordTransferTaskCodingsSource)) {
+    throw new Error(
+      "map-record-transfer-task-codings.ts must stay a Task coding helper and must not own RecordTransfer resource orchestration."
     );
   }
 }
