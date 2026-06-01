@@ -18,10 +18,10 @@ import type {
 import { requirePermission } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 import { validateRecordTransferEndpointForDelivery } from "./record-transfer-endpoint-policy.js";
+import { queueRecordTransferDeliveryAttempt } from "./record-transfer-delivery-attempt-route-helpers.js";
 import { loadRecordTransferForPatientAccess } from "./record-transfer-route-access.js";
 import {
   buildAcknowledgementReference,
-  queueRecordTransferDeliveryAttempt,
   resolveRecordTransferFhirEndpoint,
   toRecordTransferResponse
 } from "./record-transfer-route-helpers.js";
