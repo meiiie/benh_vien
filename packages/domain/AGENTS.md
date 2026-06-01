@@ -36,5 +36,6 @@ pnpm --filter @benh-vien-so/domain run build
 - Với `Encounter`, aggregate `encounter.ts` giữ creation, lifecycle và finish behavior; class, status, snapshot và command input type nằm trong `encounter.types.ts`.
 - Với `Consent`, aggregate `consent.ts` giữ grant/revoke và authorization behavior; status, category, snapshot và command input type nằm trong `consent.types.ts`.
 - Với `RecordTransfer`, aggregate `record-transfer.ts` giữ lifecycle behavior; normalization và snapshot invariant guard nằm trong `record-transfer.validation.ts`; status, snapshot và command input type nằm trong `record-transfer.types.ts`.
+- Với `ProviderDirectory`, aggregate `provider-directory.ts` giữ assembly behavior; normalization, reference guard và snapshot cloning nằm trong `provider-directory.validation.ts`; snapshot/code set/input type nằm trong `provider-directory.types.ts`.
 - Với FHIR type, `fhir-types.ts` và `fhir-clinical.types.ts` chỉ là barrel tương thích; resource declaration nằm trong các module `fhir-*.types.ts` theo nhóm shared/provider/document/privacy/audit/clinical/medication/careflow/diagnostics/patient/operation/capability/bundle.
 - Test tối thiểu cho invariant và mapping liên thông.

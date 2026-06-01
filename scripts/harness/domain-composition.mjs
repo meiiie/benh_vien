@@ -19,8 +19,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/provider-directory/provider-directory.ts",
-    maxLines: 540,
+    maxLines: 150,
     role: "ProviderDirectory aggregate behavior"
+  },
+  {
+    path: "packages/domain/src/provider-directory/provider-directory.validation.ts",
+    maxLines: 440,
+    role: "ProviderDirectory normalization, reference validation and snapshot cloning"
   },
   {
     path: "packages/domain/src/provider-directory/provider-directory.types.ts",
@@ -296,6 +301,9 @@ const recordTransferTypesPath = resolve(
 const providerDirectoryAggregatePath = resolve(
   "packages/domain/src/provider-directory/provider-directory.ts"
 );
+const providerDirectoryValidationPath = resolve(
+  "packages/domain/src/provider-directory/provider-directory.validation.ts"
+);
 const providerDirectoryTypesPath = resolve(
   "packages/domain/src/provider-directory/provider-directory.types.ts"
 );
@@ -426,6 +434,10 @@ const providerDirectoryAggregateSource = await readFile(
   providerDirectoryAggregatePath,
   "utf8"
 );
+const providerDirectoryValidationSource = await readFile(
+  providerDirectoryValidationPath,
+  "utf8"
+);
 const providerDirectoryTypesSource = await readFile(providerDirectoryTypesPath, "utf8");
 const auditEventAggregateSource = await readFile(auditEventAggregatePath, "utf8");
 const auditEventTypesSource = await readFile(auditEventTypesPath, "utf8");
@@ -546,11 +558,12 @@ for (const required of [
 for (const forbidden of [
   /export type ProviderDirectorySnapshot/,
   /export type ProviderOrganizationType/,
-  /const providerOrganizationTypes/
+  /const providerOrganizationTypes/,
+  /function normalizeOrganization/
 ]) {
   if (forbidden.test(providerDirectoryAggregateSource)) {
     throw new Error(
-      "ProviderDirectory type declarations and provider code sets belong in provider-directory.types.ts, not the aggregate file."
+      "ProviderDirectory aggregate must keep assembly behavior only; types stay in provider-directory.types.ts and normalization/reference guards stay in provider-directory.validation.ts."
     );
   }
 }
@@ -572,6 +585,26 @@ if (!/from "\.\/provider-directory\.types\.js"/.test(providerDirectoryAggregateS
   throw new Error(
     "ProviderDirectory aggregate must depend on provider-directory.types.ts for shared types."
   );
+}
+
+if (!/from "\.\/provider-directory\.validation\.js"/.test(providerDirectoryAggregateSource)) {
+  throw new Error(
+    "ProviderDirectory aggregate must depend on provider-directory.validation.ts for normalization and reference guards."
+  );
+}
+
+for (const required of [
+  /export function normalizeOrganization/,
+  /export function normalizePersistedOrganization/,
+  /export function validateReferences/,
+  /export function cloneOrganization/,
+  /from "\.\/provider-directory\.types\.js"/
+]) {
+  if (!required.test(providerDirectoryValidationSource)) {
+    throw new Error(
+      "provider-directory.validation.ts must keep ProviderDirectory normalization, reference validation and snapshot cloning."
+    );
+  }
 }
 
 for (const forbidden of [
