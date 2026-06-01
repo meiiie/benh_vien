@@ -111,6 +111,26 @@ const domainBudgets = [
     path: "packages/domain/src/medication-administration/medication-administration.types.ts",
     maxLines: 120,
     role: "MedicationAdministration status, category, performer, dosage and snapshot types"
+  },
+  {
+    path: "packages/domain/src/service-request/service-request.ts",
+    maxLines: 240,
+    role: "ServiceRequest ordering and scheduling validation behavior"
+  },
+  {
+    path: "packages/domain/src/service-request/service-request.types.ts",
+    maxLines: 120,
+    role: "ServiceRequest status, intent, category, priority and snapshot types"
+  },
+  {
+    path: "packages/domain/src/imaging-study/imaging-study.ts",
+    maxLines: 300,
+    role: "ImagingStudy DICOM UID, series count and timeline validation behavior"
+  },
+  {
+    path: "packages/domain/src/imaging-study/imaging-study.types.ts",
+    maxLines: 90,
+    role: "ImagingStudy status, coding, series, snapshot and command input types"
   }
 ];
 
@@ -168,6 +188,14 @@ const medicationAdministrationAggregatePath = resolve(
 const medicationAdministrationTypesPath = resolve(
   "packages/domain/src/medication-administration/medication-administration.types.ts"
 );
+const serviceRequestAggregatePath = resolve(
+  "packages/domain/src/service-request/service-request.ts"
+);
+const serviceRequestTypesPath = resolve(
+  "packages/domain/src/service-request/service-request.types.ts"
+);
+const imagingStudyAggregatePath = resolve("packages/domain/src/imaging-study/imaging-study.ts");
+const imagingStudyTypesPath = resolve("packages/domain/src/imaging-study/imaging-study.types.ts");
 
 const domainReports = [];
 
@@ -222,6 +250,10 @@ const medicationAdministrationTypesSource = await readFile(
   medicationAdministrationTypesPath,
   "utf8"
 );
+const serviceRequestAggregateSource = await readFile(serviceRequestAggregatePath, "utf8");
+const serviceRequestTypesSource = await readFile(serviceRequestTypesPath, "utf8");
+const imagingStudyAggregateSource = await readFile(imagingStudyAggregatePath, "utf8");
+const imagingStudyTypesSource = await readFile(imagingStudyTypesPath, "utf8");
 
 for (const forbidden of [
   /export type RecordTransferStatus/,
@@ -566,6 +598,70 @@ if (!/from "\.\/medication-administration\.types\.js"/.test(
 )) {
   throw new Error(
     "MedicationAdministration aggregate must depend on medication-administration.types.ts for shared types."
+  );
+}
+
+for (const forbidden of [
+  /export type ServiceRequestStatus/,
+  /export type ServiceRequestSnapshot/,
+  /const serviceRequestStatuses/
+]) {
+  if (forbidden.test(serviceRequestAggregateSource)) {
+    throw new Error(
+      "ServiceRequest type declarations and code sets belong in service-request.types.ts, not the aggregate file."
+    );
+  }
+}
+
+for (const required of [
+  /export type ServiceRequestStatus/,
+  /export type ServiceRequestIntent/,
+  /export type ServiceRequestSnapshot/,
+  /export type CreateServiceRequestInput/,
+  /export const serviceRequestStatuses/
+]) {
+  if (!required.test(serviceRequestTypesSource)) {
+    throw new Error(
+      "service-request.types.ts must keep ServiceRequest status, intent, snapshot, command input and code-set definitions."
+    );
+  }
+}
+
+if (!/from "\.\/service-request\.types\.js"/.test(serviceRequestAggregateSource)) {
+  throw new Error(
+    "ServiceRequest aggregate must depend on service-request.types.ts for shared types."
+  );
+}
+
+for (const forbidden of [
+  /export type ImagingStudyStatus/,
+  /export type ImagingStudySnapshot/,
+  /const imagingStudyStatuses/
+]) {
+  if (forbidden.test(imagingStudyAggregateSource)) {
+    throw new Error(
+      "ImagingStudy type declarations and code sets belong in imaging-study.types.ts, not the aggregate file."
+    );
+  }
+}
+
+for (const required of [
+  /export type ImagingStudyStatus/,
+  /export type ImagingStudySeries/,
+  /export type ImagingStudySnapshot/,
+  /export type CreateImagingStudyInput/,
+  /export const imagingStudyStatuses/
+]) {
+  if (!required.test(imagingStudyTypesSource)) {
+    throw new Error(
+      "imaging-study.types.ts must keep ImagingStudy status, series, snapshot, command input and code-set definitions."
+    );
+  }
+}
+
+if (!/from "\.\/imaging-study\.types\.js"/.test(imagingStudyAggregateSource)) {
+  throw new Error(
+    "ImagingStudy aggregate must depend on imaging-study.types.ts for shared types."
   );
 }
 
