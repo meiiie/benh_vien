@@ -31,6 +31,16 @@ const domainBudgets = [
     path: "packages/domain/src/audit-event/audit-event.types.ts",
     maxLines: 300,
     role: "AuditEvent action, resource, snapshot and integrity report types"
+  },
+  {
+    path: "packages/domain/src/access-control/access-control.ts",
+    maxLines: 240,
+    role: "AccessControl authorization decisions and patient organization scoping"
+  },
+  {
+    path: "packages/domain/src/access-control/access-control.policy.ts",
+    maxLines: 340,
+    role: "AccessControl role, purpose and permission catalog"
   }
 ];
 
@@ -48,6 +58,12 @@ const providerDirectoryTypesPath = resolve(
 );
 const auditEventAggregatePath = resolve("packages/domain/src/audit-event/audit-event.ts");
 const auditEventTypesPath = resolve("packages/domain/src/audit-event/audit-event.types.ts");
+const accessControlBehaviorPath = resolve(
+  "packages/domain/src/access-control/access-control.ts"
+);
+const accessControlPolicyPath = resolve(
+  "packages/domain/src/access-control/access-control.policy.ts"
+);
 
 const domainReports = [];
 
@@ -80,6 +96,8 @@ const providerDirectoryAggregateSource = await readFile(
 const providerDirectoryTypesSource = await readFile(providerDirectoryTypesPath, "utf8");
 const auditEventAggregateSource = await readFile(auditEventAggregatePath, "utf8");
 const auditEventTypesSource = await readFile(auditEventTypesPath, "utf8");
+const accessControlBehaviorSource = await readFile(accessControlBehaviorPath, "utf8");
+const accessControlPolicySource = await readFile(accessControlPolicyPath, "utf8");
 
 for (const forbidden of [
   /export type RecordTransferStatus/,
@@ -169,6 +187,40 @@ for (const required of [
 
 if (!/from "\.\/audit-event\.types\.js"/.test(auditEventAggregateSource)) {
   throw new Error("AuditEvent aggregate must depend on audit-event.types.ts for shared types.");
+}
+
+for (const forbidden of [
+  /export type ActorRole/,
+  /export type Permission/,
+  /const rolePermissions/,
+  /clinician: \[/
+]) {
+  if (forbidden.test(accessControlBehaviorSource)) {
+    throw new Error(
+      "AccessControl role, purpose and permission catalog belongs in access-control.policy.ts, not the behavior file."
+    );
+  }
+}
+
+for (const required of [
+  /export type ActorRole/,
+  /export type PurposeOfUse/,
+  /export type Permission/,
+  /export const actorRoles/,
+  /export const purposesOfUse/,
+  /export const rolePermissions/
+]) {
+  if (!required.test(accessControlPolicySource)) {
+    throw new Error(
+      "access-control.policy.ts must keep AccessControl roles, purposes, permissions and role-permission catalog definitions."
+    );
+  }
+}
+
+if (!/from "\.\/access-control\.policy\.js"/.test(accessControlBehaviorSource)) {
+  throw new Error(
+    "AccessControl behavior must depend on access-control.policy.ts for shared policy catalog types."
+  );
 }
 
 console.log(
