@@ -123,6 +123,31 @@ const routeBudgets = [
     role: "ClinicalDocument response and reference validation helpers"
   },
   {
+    path: "apps/api/src/modules/medication-administrations/medication-administration-routes.ts",
+    maxLines: 70,
+    role: "MedicationAdministration route composition root"
+  },
+  {
+    path: "apps/api/src/modules/medication-administrations/medication-administration-query-routes.ts",
+    maxLines: 130,
+    role: "MedicationAdministration list and read route adapter"
+  },
+  {
+    path: "apps/api/src/modules/medication-administrations/medication-administration-creation-routes.ts",
+    maxLines: 140,
+    role: "MedicationAdministration creation command route adapter"
+  },
+  {
+    path: "apps/api/src/modules/medication-administrations/medication-administration-fhir-routes.ts",
+    maxLines: 90,
+    role: "MedicationAdministration FHIR export route adapter"
+  },
+  {
+    path: "apps/api/src/modules/medication-administrations/medication-administration-route-helpers.ts",
+    maxLines: 120,
+    role: "MedicationAdministration response and reference validation helpers"
+  },
+  {
     path: "apps/api/src/modules/procedures/procedure-routes.ts",
     maxLines: 80,
     role: "Procedure route composition root"
@@ -265,6 +290,34 @@ const requiredClinicalDocumentRegistrations = [
   "registerClinicalDocumentFhirRoutes"
 ];
 
+const medicationAdministrationRoutesPath = resolve(
+  "apps/api/src/modules/medication-administrations/medication-administration-routes.ts"
+);
+const forbiddenMedicationAdministrationRoutePatterns = [
+  {
+    pattern:
+      /\bCreateMedicationAdministrationRequestSchema\b|\bPatientMedicationAdministrationsParamsSchema\b|\bMedicationAdministrationIdParamsSchema\b/,
+    message:
+      "MedicationAdministration request handling belongs in medication-administration-query-routes.ts, medication-administration-creation-routes.ts or medication-administration-fhir-routes.ts."
+  },
+  {
+    pattern:
+      /\bMedicationAdministration\.record\b|\bDomainError\b|\bvalidateMedicationAdministrationReferences\b/,
+    message:
+      "MedicationAdministration creation and validation policy belongs outside the root route."
+  },
+  {
+    pattern: /\bmapMedicationAdministrationToFhir\b/,
+    message:
+      "MedicationAdministration FHIR export belongs in medication-administration-fhir-routes.ts."
+  }
+];
+const requiredMedicationAdministrationRegistrations = [
+  "registerMedicationAdministrationQueryRoutes",
+  "registerMedicationAdministrationCreationRoutes",
+  "registerMedicationAdministrationFhirRoutes"
+];
+
 const procedureRoutesPath = resolve("apps/api/src/modules/procedures/procedure-routes.ts");
 const forbiddenProcedureRoutePatterns = [
   {
@@ -316,6 +369,10 @@ const patientRoutesSource = await readFile(patientRoutesPath, "utf8");
 const patientFhirRoutesSource = await readFile(patientFhirRoutesPath, "utf8");
 const clinicalDocumentRoutesSource = await readFile(
   clinicalDocumentRoutesPath,
+  "utf8"
+);
+const medicationAdministrationRoutesSource = await readFile(
+  medicationAdministrationRoutesPath,
   "utf8"
 );
 const procedureRoutesSource = await readFile(procedureRoutesPath, "utf8");
@@ -372,6 +429,20 @@ for (const registration of requiredClinicalDocumentRegistrations) {
   if (!clinicalDocumentRoutesSource.includes(registration)) {
     throw new Error(
       `ClinicalDocument root routes must register ${registration} so query, command and FHIR modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenMedicationAdministrationRoutePatterns) {
+  if (forbidden.pattern.test(medicationAdministrationRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredMedicationAdministrationRegistrations) {
+  if (!medicationAdministrationRoutesSource.includes(registration)) {
+    throw new Error(
+      `MedicationAdministration root routes must register ${registration} so query, command and FHIR modules remain wired.`
     );
   }
 }
