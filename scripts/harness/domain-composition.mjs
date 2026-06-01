@@ -109,8 +109,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/medication-request/medication-request.ts",
-    maxLines: 290,
-    role: "MedicationRequest prescribing and dosage validation behavior"
+    maxLines: 140,
+    role: "MedicationRequest prescribing and rehydration behavior"
+  },
+  {
+    path: "packages/domain/src/medication-request/medication-request.validation.ts",
+    maxLines: 150,
+    role: "MedicationRequest medication code, dosage, status and timeline guards"
   },
   {
     path: "packages/domain/src/medication-request/medication-request.types.ts",
@@ -119,8 +124,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/medication-dispense/medication-dispense.ts",
-    maxLines: 330,
-    role: "MedicationDispense dispensing lifecycle and quantity validation behavior"
+    maxLines: 160,
+    role: "MedicationDispense dispensing and rehydration behavior"
+  },
+  {
+    path: "packages/domain/src/medication-dispense/medication-dispense.validation.ts",
+    maxLines: 170,
+    role: "MedicationDispense quantity, dosage, status and handover lifecycle guards"
   },
   {
     path: "packages/domain/src/medication-dispense/medication-dispense.types.ts",
@@ -129,8 +139,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/medication-administration/medication-administration.ts",
-    maxLines: 300,
-    role: "MedicationAdministration administration lifecycle and dosage validation behavior"
+    maxLines: 140,
+    role: "MedicationAdministration administration and rehydration behavior"
+  },
+  {
+    path: "packages/domain/src/medication-administration/medication-administration.validation.ts",
+    maxLines: 180,
+    role: "MedicationAdministration effective period, performer, dosage and status guards"
   },
   {
     path: "packages/domain/src/medication-administration/medication-administration.types.ts",
@@ -396,17 +411,26 @@ const deliveryAttemptTypesPath = resolve(
 const medicationRequestAggregatePath = resolve(
   "packages/domain/src/medication-request/medication-request.ts"
 );
+const medicationRequestValidationPath = resolve(
+  "packages/domain/src/medication-request/medication-request.validation.ts"
+);
 const medicationRequestTypesPath = resolve(
   "packages/domain/src/medication-request/medication-request.types.ts"
 );
 const medicationDispenseAggregatePath = resolve(
   "packages/domain/src/medication-dispense/medication-dispense.ts"
 );
+const medicationDispenseValidationPath = resolve(
+  "packages/domain/src/medication-dispense/medication-dispense.validation.ts"
+);
 const medicationDispenseTypesPath = resolve(
   "packages/domain/src/medication-dispense/medication-dispense.types.ts"
 );
 const medicationAdministrationAggregatePath = resolve(
   "packages/domain/src/medication-administration/medication-administration.ts"
+);
+const medicationAdministrationValidationPath = resolve(
+  "packages/domain/src/medication-administration/medication-administration.validation.ts"
 );
 const medicationAdministrationTypesPath = resolve(
   "packages/domain/src/medication-administration/medication-administration.types.ts"
@@ -533,11 +557,23 @@ const deliveryAttemptAggregateSource = await readFile(deliveryAttemptAggregatePa
 const deliveryAttemptValidationSource = await readFile(deliveryAttemptValidationPath, "utf8");
 const deliveryAttemptTypesSource = await readFile(deliveryAttemptTypesPath, "utf8");
 const medicationRequestAggregateSource = await readFile(medicationRequestAggregatePath, "utf8");
+const medicationRequestValidationSource = await readFile(
+  medicationRequestValidationPath,
+  "utf8"
+);
 const medicationRequestTypesSource = await readFile(medicationRequestTypesPath, "utf8");
 const medicationDispenseAggregateSource = await readFile(medicationDispenseAggregatePath, "utf8");
+const medicationDispenseValidationSource = await readFile(
+  medicationDispenseValidationPath,
+  "utf8"
+);
 const medicationDispenseTypesSource = await readFile(medicationDispenseTypesPath, "utf8");
 const medicationAdministrationAggregateSource = await readFile(
   medicationAdministrationAggregatePath,
+  "utf8"
+);
+const medicationAdministrationValidationSource = await readFile(
+  medicationAdministrationValidationPath,
   "utf8"
 );
 const medicationAdministrationTypesSource = await readFile(
@@ -963,11 +999,14 @@ for (const required of [
 for (const forbidden of [
   /export type MedicationRequestStatus/,
   /export type MedicationRequestSnapshot/,
-  /const medicationRequestStatuses/
+  /const medicationRequestStatuses/,
+  /function normalizeMedicationCode/,
+  /function normalizeDosageInstruction/,
+  /function validatePersistenceTimeline/
 ]) {
   if (forbidden.test(medicationRequestAggregateSource)) {
     throw new Error(
-      "MedicationRequest type declarations and code sets belong in medication-request.types.ts, not the aggregate file."
+      "MedicationRequest aggregate must keep prescribe/rehydrate behavior only; types stay in medication-request.types.ts and code/dosage/status/timeline guards stay in medication-request.validation.ts."
     );
   }
 }
@@ -992,14 +1031,39 @@ if (!/from "\.\/medication-request\.types\.js"/.test(medicationRequestAggregateS
   );
 }
 
+if (!/from "\.\/medication-request\.validation\.js"/.test(medicationRequestAggregateSource)) {
+  throw new Error(
+    "MedicationRequest aggregate must depend on medication-request.validation.ts for code, dosage, status and timeline guards."
+  );
+}
+
+for (const required of [
+  /export function normalizeMedicationCode/,
+  /export function normalizeDosageInstruction/,
+  /export function normalizeStatus/,
+  /export function normalizeIntent/,
+  /export function validatePersistenceTimeline/,
+  /from "\.\/medication-request\.types\.js"/
+]) {
+  if (!required.test(medicationRequestValidationSource)) {
+    throw new Error(
+      "medication-request.validation.ts must keep MedicationRequest code, dosage, status, intent and timeline guards."
+    );
+  }
+}
+
 for (const forbidden of [
   /export type MedicationDispenseStatus/,
   /export type MedicationDispenseSnapshot/,
-  /const medicationDispenseStatuses/
+  /const medicationDispenseStatuses/,
+  /function normalizeRequiredCoding/,
+  /function normalizeQuantity/,
+  /function normalizeDosageInstruction/,
+  /function validatePersistenceTimeline/
 ]) {
   if (forbidden.test(medicationDispenseAggregateSource)) {
     throw new Error(
-      "MedicationDispense type declarations and code sets belong in medication-dispense.types.ts, not the aggregate file."
+      "MedicationDispense aggregate must keep record/rehydrate behavior only; types stay in medication-dispense.types.ts and quantity/dosage/status/lifecycle guards stay in medication-dispense.validation.ts."
     );
   }
 }
@@ -1024,14 +1088,39 @@ if (!/from "\.\/medication-dispense\.types\.js"/.test(medicationDispenseAggregat
   );
 }
 
+if (!/from "\.\/medication-dispense\.validation\.js"/.test(medicationDispenseAggregateSource)) {
+  throw new Error(
+    "MedicationDispense aggregate must depend on medication-dispense.validation.ts for quantity, dosage, status and handover lifecycle guards."
+  );
+}
+
+for (const required of [
+  /export function assertMedicationDispenseLifecycle/,
+  /export function normalizeRequiredCoding/,
+  /export function normalizeQuantity/,
+  /export function normalizeDosageInstruction/,
+  /export function normalizeStatus/,
+  /from "\.\/medication-dispense\.types\.js"/
+]) {
+  if (!required.test(medicationDispenseValidationSource)) {
+    throw new Error(
+      "medication-dispense.validation.ts must keep MedicationDispense quantity, dosage, status and handover lifecycle guards."
+    );
+  }
+}
+
 for (const forbidden of [
   /export type MedicationAdministrationStatus/,
   /export type MedicationAdministrationSnapshot/,
-  /const medicationAdministrationStatuses/
+  /const medicationAdministrationStatuses/,
+  /function normalizeEffectivePeriod/,
+  /function normalizePerformers/,
+  /function normalizeDosage/,
+  /function assertMedicationAdministrationLifecycle/
 ]) {
   if (forbidden.test(medicationAdministrationAggregateSource)) {
     throw new Error(
-      "MedicationAdministration type declarations and code sets belong in medication-administration.types.ts, not the aggregate file."
+      "MedicationAdministration aggregate must keep record/rehydrate behavior only; types stay in medication-administration.types.ts and effective-period/performer/dosage/status guards stay in medication-administration.validation.ts."
     );
   }
 }
@@ -1056,6 +1145,29 @@ if (!/from "\.\/medication-administration\.types\.js"/.test(
   throw new Error(
     "MedicationAdministration aggregate must depend on medication-administration.types.ts for shared types."
   );
+}
+
+if (!/from "\.\/medication-administration\.validation\.js"/.test(
+  medicationAdministrationAggregateSource
+)) {
+  throw new Error(
+    "MedicationAdministration aggregate must depend on medication-administration.validation.ts for effective period, performer, dosage and status guards."
+  );
+}
+
+for (const required of [
+  /export function normalizeEffectivePeriod/,
+  /export function normalizePerformers/,
+  /export function normalizeDosage/,
+  /export function assertMedicationAdministrationLifecycle/,
+  /export function normalizeStatus/,
+  /from "\.\/medication-administration\.types\.js"/
+]) {
+  if (!required.test(medicationAdministrationValidationSource)) {
+    throw new Error(
+      "medication-administration.validation.ts must keep MedicationAdministration effective-period, performer, dosage and status guards."
+    );
+  }
 }
 
 for (const forbidden of [
