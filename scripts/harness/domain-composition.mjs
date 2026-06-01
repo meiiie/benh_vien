@@ -108,8 +108,13 @@ const domainBudgets = [
     role: "AccessControl role, purpose and permission type definitions"
   },
   {
+    path: "packages/domain/src/access-control/access-control.permission-groups.ts",
+    maxLines: 170,
+    role: "AccessControl reusable role-permission groups"
+  },
+  {
     path: "packages/domain/src/access-control/access-control.permissions.ts",
-    maxLines: 240,
+    maxLines: 80,
     role: "AccessControl role-permission catalog"
   },
   {
@@ -606,6 +611,9 @@ const accessControlOrganizationTreePath = resolve(
 const accessControlPolicyPath = resolve(
   "packages/domain/src/access-control/access-control.policy.ts"
 );
+const accessControlPermissionGroupsPath = resolve(
+  "packages/domain/src/access-control/access-control.permission-groups.ts"
+);
 const accessControlPermissionsPath = resolve(
   "packages/domain/src/access-control/access-control.permissions.ts"
 );
@@ -845,6 +853,10 @@ const accessControlOrganizationTreeSource = await readFile(
   "utf8"
 );
 const accessControlPolicySource = await readFile(accessControlPolicyPath, "utf8");
+const accessControlPermissionGroupsSource = await readFile(
+  accessControlPermissionGroupsPath,
+  "utf8"
+);
 const accessControlPermissionsSource = await readFile(accessControlPermissionsPath, "utf8");
 const patientAggregateSource = await readFile(patientAggregatePath, "utf8");
 const patientFactorySource = await readFile(patientFactoryPath, "utf8");
@@ -1464,11 +1476,13 @@ for (const required of [
 }
 
 for (const forbidden of [
-  /export const rolePermissions/
+  /export const rolePermissions/,
+  /clinicianPatientPermissions/,
+  /clinicalFhirExportPermissions/
 ]) {
   if (forbidden.test(accessControlPolicySource)) {
     throw new Error(
-      "AccessControl role-permission catalog must stay out of access-control.policy.ts."
+      "AccessControl role-permission catalog and reusable permission groups must stay out of access-control.policy.ts."
     );
   }
 }
@@ -1552,8 +1566,49 @@ for (const forbidden of [
 }
 
 for (const required of [
-  /export const rolePermissions/,
+  /export const clinicianPatientPermissions/,
+  /export const adminPatientPermissions/,
+  /export const providerDirectoryExportPermissions/,
+  /export const recordTransferManagementPermissions/,
+  /export const adminRecordTransferPermissions/,
+  /export const clinicalFhirExportPermissions/,
+  /export const clinicalDocumentExportPermissions/,
+  /export const consentManagementPermissions/,
+  /export const nurseClinicalWorkflowPermissions/,
+  /export const auditorReadPermissions/,
+  /satisfies readonly Permission\[\]/,
   /from "\.\/access-control\.policy\.js"/
+]) {
+  if (!required.test(accessControlPermissionGroupsSource)) {
+    throw new Error(
+      "access-control.permission-groups.ts must keep reusable typed role-permission groups."
+    );
+  }
+}
+
+for (const forbidden of [
+  /rolePermissions/,
+  /ActorContext/,
+  /PurposeOfUse/,
+  /\bcanAccess\b/,
+  /\bcanAccessPatientRecord\b/
+]) {
+  if (forbidden.test(accessControlPermissionGroupsSource)) {
+    throw new Error(
+      "AccessControl permission groups must not own role catalog exports or authorization behavior."
+    );
+  }
+}
+
+for (const required of [
+  /export const rolePermissions/,
+  /from "\.\/access-control\.policy\.js"/,
+  /from "\.\/access-control\.permission-groups\.js"/,
+  /clinician:/,
+  /nurse:/,
+  /auditor:/,
+  /admin:/,
+  /integration:/
 ]) {
   if (!required.test(accessControlPermissionsSource)) {
     throw new Error(
@@ -1565,11 +1620,13 @@ for (const required of [
 for (const forbidden of [
   /export type ActorRole/,
   /export type PurposeOfUse/,
-  /export type Permission/
+  /export type Permission/,
+  /satisfies readonly Permission\[\]/,
+  /export const clinicianPatientPermissions/
 ]) {
   if (forbidden.test(accessControlPermissionsSource)) {
     throw new Error(
-      "AccessControl policy types must stay in access-control.policy.ts, not access-control.permissions.ts."
+      "AccessControl policy types and reusable permission groups must stay out of access-control.permissions.ts."
     );
   }
 }
