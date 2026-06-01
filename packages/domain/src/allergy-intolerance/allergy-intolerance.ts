@@ -1,83 +1,37 @@
 import { DomainError } from "../shared/domain-error.js";
-
-export type AllergyClinicalStatus = "active" | "inactive" | "resolved";
-export type AllergyVerificationStatus =
-  | "unconfirmed"
-  | "confirmed"
-  | "refuted"
-  | "entered-in-error";
-export type AllergyType = "allergy" | "intolerance";
-export type AllergyCategory = "food" | "medication" | "environment" | "biologic";
-export type AllergyCriticality = "low" | "high" | "unable-to-assess";
-export type AllergyReactionSeverity = "mild" | "moderate" | "severe";
-
-const allergyClinicalStatuses = new Set<AllergyClinicalStatus>([
-  "active",
-  "inactive",
-  "resolved"
-]);
-const allergyVerificationStatuses = new Set<AllergyVerificationStatus>([
-  "unconfirmed",
-  "confirmed",
-  "refuted",
-  "entered-in-error"
-]);
-const allergyTypes = new Set<AllergyType>(["allergy", "intolerance"]);
-const allergyCategories = new Set<AllergyCategory>([
-  "food",
-  "medication",
-  "environment",
-  "biologic"
-]);
-const allergyCriticalities = new Set<AllergyCriticality>([
-  "low",
-  "high",
-  "unable-to-assess"
-]);
-const allergyReactionSeverities = new Set<AllergyReactionSeverity>([
-  "mild",
-  "moderate",
-  "severe"
-]);
-
-export type AllergyCode = {
-  readonly system: string;
-  readonly code: string;
-  readonly display: string;
-};
-
-export type AllergyReaction = {
-  readonly manifestation: AllergyCode;
-  readonly severity?: AllergyReactionSeverity;
-  readonly description?: string;
-};
-
-export type AllergyIntoleranceSnapshot = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly encounterId?: string;
-  readonly clinicalStatus: AllergyClinicalStatus;
-  readonly verificationStatus: AllergyVerificationStatus;
-  readonly type: AllergyType;
-  readonly category: AllergyCategory;
-  readonly criticality?: AllergyCriticality;
-  readonly code: AllergyCode;
-  readonly reaction?: AllergyReaction;
-  readonly recordedAt: string;
-  readonly recorderPractitionerId: string;
-  readonly note?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type CreateAllergyIntoleranceInput = Omit<
+import {
+  allergyCategories,
+  allergyClinicalStatuses,
+  allergyCriticalities,
+  allergyReactionSeverities,
+  allergyTypes,
+  allergyVerificationStatuses
+} from "./allergy-intolerance.types.js";
+import type {
+  AllergyCategory,
+  AllergyClinicalStatus,
+  AllergyCode,
+  AllergyCriticality,
   AllergyIntoleranceSnapshot,
-  "clinicalStatus" | "verificationStatus" | "recordedAt" | "createdAt" | "updatedAt"
-> & {
-  readonly clinicalStatus?: AllergyClinicalStatus;
-  readonly verificationStatus?: AllergyVerificationStatus;
-  readonly recordedAt?: string;
-};
+  AllergyReaction,
+  AllergyReactionSeverity,
+  AllergyType,
+  AllergyVerificationStatus,
+  CreateAllergyIntoleranceInput
+} from "./allergy-intolerance.types.js";
+
+export type {
+  AllergyCategory,
+  AllergyClinicalStatus,
+  AllergyCode,
+  AllergyCriticality,
+  AllergyIntoleranceSnapshot,
+  AllergyReaction,
+  AllergyReactionSeverity,
+  AllergyType,
+  AllergyVerificationStatus,
+  CreateAllergyIntoleranceInput
+} from "./allergy-intolerance.types.js";
 
 export class AllergyIntolerance {
   private constructor(private readonly props: AllergyIntoleranceSnapshot) {}

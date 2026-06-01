@@ -171,6 +171,16 @@ const domainBudgets = [
     path: "packages/domain/src/condition/condition.types.ts",
     maxLines: 110,
     role: "Condition status, category, severity, code, snapshot and command input types"
+  },
+  {
+    path: "packages/domain/src/allergy-intolerance/allergy-intolerance.ts",
+    maxLines: 240,
+    role: "AllergyIntolerance recording, reaction and timeline validation behavior"
+  },
+  {
+    path: "packages/domain/src/allergy-intolerance/allergy-intolerance.types.ts",
+    maxLines: 110,
+    role: "AllergyIntolerance status, category, reaction, snapshot and command input types"
   }
 ];
 
@@ -252,6 +262,12 @@ const observationAggregatePath = resolve("packages/domain/src/observation/observ
 const observationTypesPath = resolve("packages/domain/src/observation/observation.types.ts");
 const conditionAggregatePath = resolve("packages/domain/src/condition/condition.ts");
 const conditionTypesPath = resolve("packages/domain/src/condition/condition.types.ts");
+const allergyIntoleranceAggregatePath = resolve(
+  "packages/domain/src/allergy-intolerance/allergy-intolerance.ts"
+);
+const allergyIntoleranceTypesPath = resolve(
+  "packages/domain/src/allergy-intolerance/allergy-intolerance.types.ts"
+);
 
 const domainReports = [];
 
@@ -318,6 +334,11 @@ const observationAggregateSource = await readFile(observationAggregatePath, "utf
 const observationTypesSource = await readFile(observationTypesPath, "utf8");
 const conditionAggregateSource = await readFile(conditionAggregatePath, "utf8");
 const conditionTypesSource = await readFile(conditionTypesPath, "utf8");
+const allergyIntoleranceAggregateSource = await readFile(
+  allergyIntoleranceAggregatePath,
+  "utf8"
+);
+const allergyIntoleranceTypesSource = await readFile(allergyIntoleranceTypesPath, "utf8");
 
 for (const forbidden of [
   /export type RecordTransferStatus/,
@@ -859,6 +880,47 @@ for (const required of [
 
 if (!/from "\.\/condition\.types\.js"/.test(conditionAggregateSource)) {
   throw new Error("Condition aggregate must depend on condition.types.ts for shared types.");
+}
+
+for (const forbidden of [
+  /export type AllergyClinicalStatus/,
+  /export type AllergyIntoleranceSnapshot/,
+  /const allergyClinicalStatuses/
+]) {
+  if (forbidden.test(allergyIntoleranceAggregateSource)) {
+    throw new Error(
+      "AllergyIntolerance type declarations and code sets belong in allergy-intolerance.types.ts, not the aggregate file."
+    );
+  }
+}
+
+for (const required of [
+  /export type AllergyClinicalStatus/,
+  /export type AllergyVerificationStatus/,
+  /export type AllergyType/,
+  /export type AllergyCategory/,
+  /export type AllergyCriticality/,
+  /export type AllergyReactionSeverity/,
+  /export type AllergyIntoleranceSnapshot/,
+  /export type CreateAllergyIntoleranceInput/,
+  /export const allergyClinicalStatuses/,
+  /export const allergyVerificationStatuses/,
+  /export const allergyTypes/,
+  /export const allergyCategories/,
+  /export const allergyCriticalities/,
+  /export const allergyReactionSeverities/
+]) {
+  if (!required.test(allergyIntoleranceTypesSource)) {
+    throw new Error(
+      "allergy-intolerance.types.ts must keep AllergyIntolerance statuses, category, reaction, snapshot, command input and code-set definitions."
+    );
+  }
+}
+
+if (!/from "\.\/allergy-intolerance\.types\.js"/.test(allergyIntoleranceAggregateSource)) {
+  throw new Error(
+    "AllergyIntolerance aggregate must depend on allergy-intolerance.types.ts for shared types."
+  );
 }
 
 console.log(

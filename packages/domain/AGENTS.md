@@ -32,4 +32,5 @@ pnpm --filter @benh-vien-so/domain run build
 - Với `DiagnosticReport`, aggregate `diagnostic-report.ts` giữ issuing, content và timeline validation behavior; status, category, code, snapshot và command input type nằm trong `diagnostic-report.types.ts`.
 - Với `Observation`, aggregate `observation.ts` giữ recording, value và timeline validation behavior; status, category, coding, quantity, snapshot và command input type nằm trong `observation.types.ts`.
 - Với `Condition`, aggregate `condition.ts` giữ recording, clinical status và timeline validation behavior; status, category, severity, code, snapshot và command input type nằm trong `condition.types.ts`.
+- Với `AllergyIntolerance`, aggregate `allergy-intolerance.ts` giữ recording, reaction và timeline validation behavior; status, category, reaction, snapshot và command input type nằm trong `allergy-intolerance.types.ts`.
 - Test tối thiểu cho invariant và mapping liên thông.
