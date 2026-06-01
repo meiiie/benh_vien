@@ -83,6 +83,9 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/MedicationDispensePanel.tsx",
   "apps/web/src/features/clinical-records/MedicationDispenseSupplyFields.tsx",
   "apps/web/src/features/clinical-records/MedicationRequestForm.tsx",
+  "apps/web/src/features/clinical-records/MedicationRequestContextFields.tsx",
+  "apps/web/src/features/clinical-records/MedicationRequestMedicationFields.tsx",
+  "apps/web/src/features/clinical-records/MedicationRequestPrescriptionFields.tsx",
   "apps/web/src/features/clinical-records/MedicationRequestPanel.tsx",
   "apps/web/src/features/clinical-records/medicationFormatters.ts",
   "apps/web/src/features/clinical-records/medicationAdministrationCommandBuilders.ts",
@@ -493,8 +496,23 @@ const featureModuleBudgets = [
   },
   {
     path: "apps/web/src/features/clinical-records/MedicationRequestForm.tsx",
-    maxLines: 230,
-    role: "MedicationRequest prescribing command form"
+    maxLines: 80,
+    role: "MedicationRequest prescribing command form composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/MedicationRequestContextFields.tsx",
+    maxLines: 100,
+    role: "MedicationRequest encounter, diagnosis, category and priority fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/MedicationRequestMedicationFields.tsx",
+    maxLines: 130,
+    role: "MedicationRequest medication code, dosage and timing fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/MedicationRequestPrescriptionFields.tsx",
+    maxLines: 70,
+    role: "MedicationRequest authored time, supply, requester and note fields"
   },
   {
     path: "apps/web/src/features/clinical-records/DiagnosticReportPanel.tsx",
