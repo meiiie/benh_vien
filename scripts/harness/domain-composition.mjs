@@ -64,8 +64,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/audit-event/audit-event.ts",
-    maxLines: 270,
-    role: "AuditEvent aggregate, sealing and integrity verification behavior"
+    maxLines: 160,
+    role: "AuditEvent aggregate record and rehydration behavior"
+  },
+  {
+    path: "packages/domain/src/audit-event/audit-event.integrity.ts",
+    maxLines: 150,
+    role: "AuditEvent sealing and integrity verification behavior"
   },
   {
     path: "packages/domain/src/audit-event/audit-event.validation.ts",
@@ -578,6 +583,7 @@ const providerDirectoryTypesPath = resolve(
   "packages/domain/src/provider-directory/provider-directory.types.ts"
 );
 const auditEventAggregatePath = resolve("packages/domain/src/audit-event/audit-event.ts");
+const auditEventIntegrityPath = resolve("packages/domain/src/audit-event/audit-event.integrity.ts");
 const auditEventValidationPath = resolve(
   "packages/domain/src/audit-event/audit-event.validation.ts"
 );
@@ -819,6 +825,7 @@ const providerDirectorySnapshotsSource = await readFile(
 );
 const providerDirectoryTypesSource = await readFile(providerDirectoryTypesPath, "utf8");
 const auditEventAggregateSource = await readFile(auditEventAggregatePath, "utf8");
+const auditEventIntegritySource = await readFile(auditEventIntegrityPath, "utf8");
 const auditEventValidationSource = await readFile(auditEventValidationPath, "utf8");
 const auditEventTypesSource = await readFile(auditEventTypesPath, "utf8");
 const accessControlBehaviorSource = await readFile(accessControlBehaviorPath, "utf8");
@@ -1290,11 +1297,13 @@ for (const forbidden of [
   /export type AuditAction/,
   /export type AuditEventSnapshot/,
   /const auditActions/,
-  /function hashAuditPayload/
+  /function hashAuditPayload/,
+  /function sealAuditEvent/,
+  /function buildAuditIntegrityReport/
 ]) {
   if (forbidden.test(auditEventAggregateSource)) {
     throw new Error(
-      "AuditEvent aggregate must keep record/seal/report behavior only; types stay in audit-event.types.ts and hashing/normalization guards stay in audit-event.validation.ts."
+      "AuditEvent aggregate must keep record/rehydrate behavior only; seal/report behavior stays in audit-event.integrity.ts, types stay in audit-event.types.ts and hashing/normalization guards stay in audit-event.validation.ts."
     );
   }
 }
@@ -1321,6 +1330,43 @@ if (!/from "\.\/audit-event\.validation\.js"/.test(auditEventAggregateSource)) {
   throw new Error(
     "AuditEvent aggregate must depend on audit-event.validation.ts for canonical hashing and normalization guards."
   );
+}
+
+if (!/from "\.\/audit-event\.integrity\.js"/.test(auditEventAggregateSource)) {
+  throw new Error(
+    "AuditEvent aggregate module must re-export audit-event.integrity.ts to preserve public imports."
+  );
+}
+
+for (const required of [
+  /export function sealAuditEvent/,
+  /export function buildAuditIntegrityReport/,
+  /hashAuditPayload/,
+  /hashCanonical/,
+  /normalizeHash/,
+  /assertValidDate/,
+  /AuditIntegrityReport/,
+  /from "\.\/audit-event\.js"/
+]) {
+  if (!required.test(auditEventIntegritySource)) {
+    throw new Error(
+      "audit-event.integrity.ts must keep AuditEvent sealing and integrity report behavior."
+    );
+  }
+}
+
+for (const forbidden of [
+  /export class AuditEvent/,
+  /normalizeAction/,
+  /normalizeResourceType/,
+  /normalizeSealMetadata/,
+  /RecordAuditEventInput/
+]) {
+  if (forbidden.test(auditEventIntegritySource)) {
+    throw new Error(
+      "audit-event.integrity.ts must not own AuditEvent recording or rehydration behavior."
+    );
+  }
 }
 
 for (const required of [
