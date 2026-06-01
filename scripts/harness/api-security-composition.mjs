@@ -88,6 +88,41 @@ const securityBudgets = [
     role: "Patient record ABAC error responses"
   },
   {
+    path: "apps/api/src/modules/auth/auth-session.ts",
+    maxLines: 30,
+    role: "Auth session public API barrel"
+  },
+  {
+    path: "apps/api/src/modules/auth/auth-session.types.ts",
+    maxLines: 40,
+    role: "Auth session actor and token payload type contracts"
+  },
+  {
+    path: "apps/api/src/modules/auth/auth-session-config.ts",
+    maxLines: 70,
+    role: "Auth session secret and token TTL policy"
+  },
+  {
+    path: "apps/api/src/modules/auth/auth-session-codec.ts",
+    maxLines: 60,
+    role: "Auth session HMAC and base64url codec"
+  },
+  {
+    path: "apps/api/src/modules/auth/auth-session-claims.ts",
+    maxLines: 90,
+    role: "Auth session actor claim and token lifetime validation"
+  },
+  {
+    path: "apps/api/src/modules/auth/auth-session-issuer.ts",
+    maxLines: 60,
+    role: "Auth session access-token issuer"
+  },
+  {
+    path: "apps/api/src/modules/auth/auth-session-verifier.ts",
+    maxLines: 80,
+    role: "Auth session access-token verifier"
+  },
+  {
     path: "apps/api/src/modules/auth/login-rate-limit.ts",
     maxLines: 30,
     role: "Login rate limiter public API barrel"
