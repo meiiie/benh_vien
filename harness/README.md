@@ -6,7 +6,7 @@
 pnpm run harness:api-postgres-composition
 ```
 
-Harness này khóa boundary persistence cho luồng chuyển hồ sơ bệnh án, hồ sơ bệnh nhân, WorkflowTask, Procedure, MedicationRequest, MedicationDispense, MedicationAdministration và AuditEvent: repository chỉ điều phối truy vấn và transaction, SQL nằm trong module SQL, mapper chỉ chuyển row/tham số, còn command persistence chỉ ghép queryable với SQL/mapper. Với AuditEvent, repository vẫn được giữ vai trò điều phối domain sealing và integrity chain, nhưng không sở hữu SQL dài hoặc JSON mapping. Mục tiêu là giữ lớp hạ tầng có thể mở rộng theo DDD mà không để logic domain, SQL dài và transaction bị trộn lẫn trong một file lớn.
+Harness này khóa boundary persistence cho luồng chuyển hồ sơ bệnh án, hồ sơ bệnh nhân, WorkflowTask, Procedure, MedicationRequest, MedicationDispense, MedicationAdministration, ServiceRequest và AuditEvent: repository chỉ điều phối truy vấn và transaction, SQL nằm trong module SQL, mapper chỉ chuyển row/tham số, còn command persistence chỉ ghép queryable với SQL/mapper. Với AuditEvent, repository vẫn được giữ vai trò điều phối domain sealing và integrity chain, nhưng không sở hữu SQL dài hoặc JSON mapping. Mục tiêu là giữ lớp hạ tầng có thể mở rộng theo DDD mà không để logic domain, SQL dài và transaction bị trộn lẫn trong một file lớn.
 
 Harness là lớp kiểm chứng quanh mô hình và runtime, không phụ thuộc vào trí nhớ của agent. Mục tiêu là biến các giả định quan trọng thành lệnh có thể chạy lại.
 

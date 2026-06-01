@@ -183,6 +183,31 @@ const postgresBudgets = [
     role: "MedicationAdministration PostgreSQL row types"
   },
   {
+    path: "apps/api/src/infrastructure/postgres/postgres-service-request.repository.ts",
+    maxLines: 90,
+    role: "ServiceRequest PostgreSQL repository orchestration"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-service-request.sql.ts",
+    maxLines: 70,
+    role: "ServiceRequest PostgreSQL SQL statements"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-service-request.mapper.ts",
+    maxLines: 90,
+    role: "ServiceRequest PostgreSQL row and parameter mapper"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-service-request.persistence.ts",
+    maxLines: 30,
+    role: "ServiceRequest PostgreSQL persistence command"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-service-request.types.ts",
+    maxLines: 50,
+    role: "ServiceRequest PostgreSQL row types"
+  },
+  {
     path: "apps/api/src/infrastructure/postgres/postgres-audit-event.repository.ts",
     maxLines: 110,
     role: "AuditEvent PostgreSQL repository integrity orchestration"
@@ -315,6 +340,21 @@ const medicationAdministrationPersistencePath = resolve(
 const medicationAdministrationTypesPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-medication-administration.types.ts"
 );
+const serviceRequestRepositoryPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-service-request.repository.ts"
+);
+const serviceRequestSqlPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-service-request.sql.ts"
+);
+const serviceRequestMapperPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-service-request.mapper.ts"
+);
+const serviceRequestPersistencePath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-service-request.persistence.ts"
+);
+const serviceRequestTypesPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-service-request.types.ts"
+);
 const auditEventRepositoryPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-audit-event.repository.ts"
 );
@@ -440,6 +480,20 @@ const medicationAdministrationTypesSource = await readFile(
   medicationAdministrationTypesPath,
   "utf8"
 );
+const serviceRequestRepositorySource = await readFile(
+  serviceRequestRepositoryPath,
+  "utf8"
+);
+const serviceRequestSqlSource = await readFile(serviceRequestSqlPath, "utf8");
+const serviceRequestMapperSource = await readFile(
+  serviceRequestMapperPath,
+  "utf8"
+);
+const serviceRequestPersistenceSource = await readFile(
+  serviceRequestPersistencePath,
+  "utf8"
+);
+const serviceRequestTypesSource = await readFile(serviceRequestTypesPath, "utf8");
 const auditEventRepositorySource = await readFile(auditEventRepositoryPath, "utf8");
 const auditEventSqlSource = await readFile(auditEventSqlPath, "utf8");
 const auditEventMapperSource = await readFile(auditEventMapperPath, "utf8");
@@ -542,6 +596,19 @@ for (const importedName of requiredMedicationAdministrationRepositoryImports) {
     throw new Error(
       `MedicationAdministration PostgreSQL repository must compose ${importedName}.`
     );
+  }
+}
+
+const requiredServiceRequestRepositoryImports = [
+  "rowToServiceRequest",
+  "upsertServiceRequest",
+  "selectServiceRequestSql",
+  "ServiceRequestRow"
+];
+
+for (const importedName of requiredServiceRequestRepositoryImports) {
+  if (!serviceRequestRepositorySource.includes(importedName)) {
+    throw new Error(`ServiceRequest PostgreSQL repository must compose ${importedName}.`);
   }
 }
 
@@ -844,6 +911,45 @@ assertForbidden(medicationAdministrationTypesSource, [
     pattern: /\bMedicationAdministration\.rehydrate\b|\bquery\s*\(|\bINSERT INTO medication_administrations\b/,
     message:
       "MedicationAdministration PostgreSQL type module must only describe row contracts."
+  }
+]);
+
+assertForbidden(serviceRequestRepositorySource, [
+  {
+    pattern: /\bINSERT INTO service_requests\b|\bON CONFLICT \(id\)\b|\bServiceRequest\.rehydrate\b|\bServiceRequestSnapshot\b|\bJSON\.parse\b|\bJSON\.stringify\b/,
+    message:
+      "ServiceRequest PostgreSQL repository must delegate upsert SQL and JSON row mapping to focused modules."
+  }
+]);
+
+assertForbidden(serviceRequestSqlSource, [
+  {
+    pattern: /@benh-vien-so\/domain|\bServiceRequest\b|\bpg\b/,
+    message:
+      "ServiceRequest PostgreSQL SQL module must stay a pure SQL statement module without domain or pg dependencies."
+  }
+]);
+
+assertForbidden(serviceRequestMapperSource, [
+  {
+    pattern: /\bfrom "pg"\b|\bquery\s*\(|\bINSERT INTO service_requests\b|\bON CONFLICT \(id\)\b/,
+    message:
+      "ServiceRequest PostgreSQL mapper must stay pure row/value mapping without pg I/O or SQL ownership."
+  }
+]);
+
+assertForbidden(serviceRequestPersistenceSource, [
+  {
+    pattern: /\bServiceRequest\.rehydrate\b|\bServiceRequestSnapshot\b|\bSELECT\b|\bJSON\.parse\b/,
+    message:
+      "ServiceRequest PostgreSQL persistence command must compose SQL and mapper without owning reads or domain hydration."
+  }
+]);
+
+assertForbidden(serviceRequestTypesSource, [
+  {
+    pattern: /\bServiceRequest\.rehydrate\b|\bquery\s*\(|\bINSERT INTO service_requests\b/,
+    message: "ServiceRequest PostgreSQL type module must only describe row contracts."
   }
 ]);
 

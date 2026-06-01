@@ -1,0 +1,56 @@
+export const selectServiceRequestSql = `SELECT
+  id,
+  patient_id,
+  encounter_id,
+  reason_condition_id,
+  status,
+  intent,
+  category,
+  priority,
+  code,
+  occurrence_at,
+  authored_on,
+  requester_practitioner_id,
+  performer_organization_id,
+  patient_instruction,
+  note,
+  created_at,
+  updated_at
+  FROM service_requests`;
+
+export const upsertServiceRequestSql = `INSERT INTO service_requests (
+  id,
+  patient_id,
+  encounter_id,
+  reason_condition_id,
+  status,
+  intent,
+  category,
+  priority,
+  code,
+  occurrence_at,
+  authored_on,
+  requester_practitioner_id,
+  performer_organization_id,
+  patient_instruction,
+  note,
+  created_at,
+  updated_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12, $13, $14, $15, $16, $17)
+ON CONFLICT (id) DO UPDATE SET
+  patient_id = EXCLUDED.patient_id,
+  encounter_id = EXCLUDED.encounter_id,
+  reason_condition_id = EXCLUDED.reason_condition_id,
+  status = EXCLUDED.status,
+  intent = EXCLUDED.intent,
+  category = EXCLUDED.category,
+  priority = EXCLUDED.priority,
+  code = EXCLUDED.code,
+  occurrence_at = EXCLUDED.occurrence_at,
+  authored_on = EXCLUDED.authored_on,
+  requester_practitioner_id = EXCLUDED.requester_practitioner_id,
+  performer_organization_id = EXCLUDED.performer_organization_id,
+  patient_instruction = EXCLUDED.patient_instruction,
+  note = EXCLUDED.note,
+  updated_at = EXCLUDED.updated_at`;
