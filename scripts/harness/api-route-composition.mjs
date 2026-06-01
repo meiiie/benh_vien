@@ -364,8 +364,18 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-outcomes.ts",
-    maxLines: 100,
-    role: "RecordTransfer acknowledgement callback duplicate and accepted outcomes"
+    maxLines: 20,
+    role: "RecordTransfer acknowledgement callback outcome public barrel"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-completed-outcome.ts",
+    maxLines: 70,
+    role: "RecordTransfer acknowledgement completed callback idempotency outcome"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-accepted-outcome.ts",
+    maxLines: 70,
+    role: "RecordTransfer acknowledgement accepted callback transition outcome"
   },
   {
     path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-policy.ts",
@@ -1090,6 +1100,12 @@ const recordTransferAcknowledgementRequestPath = resolve(
 const recordTransferAcknowledgementOutcomesPath = resolve(
   "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-outcomes.ts"
 );
+const recordTransferAcknowledgementCompletedOutcomePath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-completed-outcome.ts"
+);
+const recordTransferAcknowledgementAcceptedOutcomePath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-accepted-outcome.ts"
+);
 const forbiddenRecordTransferAcknowledgementRoutePatterns = [
   {
     pattern:
@@ -1127,7 +1143,7 @@ const forbiddenRecordTransferAcknowledgementHandlerPatterns = [
     pattern:
       /\brecordAcceptedAcknowledgementCallbackAudit\b|\brecordDuplicateAcknowledgementCallbackAudit\b|\bsendAcknowledgementConflict\b|\btoRecordTransferResponse\b|\bmarkReceived\b/,
     message:
-      "RecordTransfer acknowledgement duplicate and accepted outcomes belong in record-transfer-acknowledgement-outcomes.ts."
+      "RecordTransfer acknowledgement duplicate and accepted outcomes belong in the acknowledgement outcome modules."
   },
   {
     pattern:
@@ -1148,10 +1164,18 @@ const requiredRecordTransferAcknowledgementRequestHelpers = [
   "RecordTransferIdParamsSchema",
   "verifyRecordTransferCallbackSignature"
 ];
-const requiredRecordTransferAcknowledgementOutcomeHelpers = [
-  "recordAcceptedAcknowledgementCallbackAudit",
+const requiredRecordTransferAcknowledgementOutcomeExports = [
+  "acceptRecordTransferAcknowledgementCallback",
+  "handleCompletedAcknowledgementCallback"
+];
+const requiredRecordTransferAcknowledgementCompletedOutcomeHelpers = [
   "recordDuplicateAcknowledgementCallbackAudit",
   "sendAcknowledgementConflict",
+  "toRecordTransferResponse"
+];
+const requiredRecordTransferAcknowledgementAcceptedOutcomeHelpers = [
+  "recordAcceptedAcknowledgementCallbackAudit",
+  "markReceived",
   "toRecordTransferResponse"
 ];
 
@@ -1673,6 +1697,14 @@ const recordTransferAcknowledgementOutcomesSource = await readFile(
   recordTransferAcknowledgementOutcomesPath,
   "utf8"
 );
+const recordTransferAcknowledgementCompletedOutcomeSource = await readFile(
+  recordTransferAcknowledgementCompletedOutcomePath,
+  "utf8"
+);
+const recordTransferAcknowledgementAcceptedOutcomeSource = await readFile(
+  recordTransferAcknowledgementAcceptedOutcomePath,
+  "utf8"
+);
 const encounterRoutesSource = await readFile(encounterRoutesPath, "utf8");
 const patientRoutesSource = await readFile(patientRoutesPath, "utf8");
 const patientFhirRoutesSource = await readFile(patientFhirRoutesPath, "utf8");
@@ -1878,10 +1910,26 @@ for (const helper of requiredRecordTransferAcknowledgementRequestHelpers) {
   }
 }
 
-for (const helper of requiredRecordTransferAcknowledgementOutcomeHelpers) {
-  if (!recordTransferAcknowledgementOutcomesSource.includes(helper)) {
+for (const exportedHandler of requiredRecordTransferAcknowledgementOutcomeExports) {
+  if (!recordTransferAcknowledgementOutcomesSource.includes(exportedHandler)) {
     throw new Error(
-      `RecordTransfer acknowledgement callback outcomes must use ${helper} so duplicate and accepted responses remain split from the handler.`
+      `RecordTransfer acknowledgement outcome barrel must export ${exportedHandler} so the handler remains wired through one module boundary.`
+    );
+  }
+}
+
+for (const helper of requiredRecordTransferAcknowledgementCompletedOutcomeHelpers) {
+  if (!recordTransferAcknowledgementCompletedOutcomeSource.includes(helper)) {
+    throw new Error(
+      `RecordTransfer acknowledgement completed outcome must use ${helper} so duplicate callbacks remain idempotent and auditable.`
+    );
+  }
+}
+
+for (const helper of requiredRecordTransferAcknowledgementAcceptedOutcomeHelpers) {
+  if (!recordTransferAcknowledgementAcceptedOutcomeSource.includes(helper)) {
+    throw new Error(
+      `RecordTransfer acknowledgement accepted outcome must use ${helper} so accepted callbacks persist and audit the lifecycle transition.`
     );
   }
 }
