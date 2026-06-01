@@ -3,11 +3,6 @@ import { resolve } from "node:path";
 
 const testBudgets = [
   {
-    path: "apps/api/src/server.auth.test.ts",
-    maxLines: 900,
-    role: "API auth/RBAC integration scenarios outside login boundary"
-  },
-  {
     path: "apps/api/src/server.auth.login.test.ts",
     maxLines: 550,
     role: "API login and token boundary scenarios"
@@ -53,13 +48,24 @@ const testBudgets = [
     role: "API consent creation, FHIR export and revocation scenarios"
   },
   {
+    path: "apps/api/src/server.record-transfer-boundary.test.ts",
+    maxLines: 820,
+    role: "API record-transfer lifecycle, callback and consent-guard scenarios"
+  },
+  {
     path: "apps/api/src/server.auth.test-support.ts",
     maxLines: 320,
     role: "Shared API auth boundary test support"
   }
 ];
 
-const authBoundaryPath = resolve("apps/api/src/server.auth.test.ts");
+const retiredTestPaths = [
+  {
+    path: "apps/api/src/server.auth.test.ts",
+    role: "legacy mixed auth/RBAC God suite"
+  }
+];
+
 const loginBoundaryPath = resolve("apps/api/src/server.auth.login.test.ts");
 const runtimeBoundaryPath = resolve("apps/api/src/server.runtime.test.ts");
 const startupConfigBoundaryPath = resolve("apps/api/src/server.startup-config.test.ts");
@@ -69,59 +75,7 @@ const auditBoundaryPath = resolve("apps/api/src/server.audit-boundary.test.ts");
 const fhirBoundaryPath = resolve("apps/api/src/server.fhir-boundary.test.ts");
 const clinicalResourcesBoundaryPath = resolve("apps/api/src/server.clinical-resources.test.ts");
 const consentBoundaryPath = resolve("apps/api/src/server.consent-boundary.test.ts");
-
-const forbiddenAuthBoundaryPatterns = [
-  {
-    pattern: /\breadyAuthRouteServer\b/,
-    message:
-      "Auth route-only fixture belongs in server.auth.login.test.ts, not the broader server.auth.test.ts suite."
-  },
-  {
-    pattern: /returns a signed demo session|rate limits repeated login attempts/,
-    message:
-      "Login and token boundary scenarios belong in server.auth.login.test.ts."
-  },
-  {
-    pattern: /returns readiness checks|sets baseline HTTP security headers|returns redacted runtime metadata/,
-    message:
-      "Runtime, readiness and HTTP envelope scenarios belong in server.runtime.test.ts."
-  },
-  {
-    pattern: /requires explicit CORS origins|rejects unsafe CORS origins|requires PostgreSQL repositories|rejects local-only public API base URLs/,
-    message:
-      "Startup and production configuration scenarios belong in server.startup-config.test.ts."
-  },
-  {
-    pattern: /allows clinician treatment access to patient registry|blocks duplicate patient identifiers|merges a duplicate patient record/,
-    message:
-      "Patient registry, identifier conflict and merge scenarios belong in server.patient-registry.test.ts."
-  },
-  {
-    pattern: /filters treatment patient access by the actor provider organization/,
-    message:
-      "Patient access ABAC scenarios across clinical resources belong in server.patient-access.test.ts."
-  },
-  {
-    pattern: /allows auditor audit-purpose|exports patient audit trail|returns a verified audit integrity report/,
-    message:
-      "Audit access, AuditEvent FHIR export and integrity scenarios belong in server.audit-boundary.test.ts."
-  },
-  {
-    pattern: /denies nurse FHIR export|returns a patient-record FHIR Bundle|FHIR OperationOutcome|rejects malformed DICOM UIDs/,
-    message:
-      "FHIR export, document reference and OperationOutcome scenarios belong in server.fhir-boundary.test.ts."
-  },
-  {
-    pattern: /returns provider directory|lists workflow tasks|lists imaging studies|creates a medication administration/,
-    message:
-      "Provider directory and clinical resource scenarios belong in server.clinical-resources.test.ts."
-  },
-  {
-    pattern: /lists active patient consents|exports patient consent as FHIR Consent|revokes a patient consent/,
-    message:
-      "Consent creation, FHIR export and revocation scenarios belong in server.consent-boundary.test.ts."
-  }
-];
+const recordTransferBoundaryPath = resolve("apps/api/src/server.record-transfer-boundary.test.ts");
 
 const requiredLoginBoundaryPatterns = [
   /returns a signed demo session/,
@@ -139,7 +93,8 @@ const requiredStartupConfigBoundaryPatterns = [
   /requires explicit CORS origins/,
   /rejects unsafe CORS origins/,
   /requires PostgreSQL repositories/,
-  /rejects local-only public API base URLs/
+  /rejects local-only public API base URLs/,
+  /requires callback signature secrets at startup in production/
 ];
 const requiredPatientRegistryBoundaryPatterns = [
   /allows clinician treatment access to patient registry/,
@@ -159,6 +114,7 @@ const requiredAuditBoundaryPatterns = [
   /returns a verified audit integrity report/
 ];
 const requiredFhirBoundaryPatterns = [
+  /serves FHIR CapabilityStatement metadata without a demo session/,
   /denies nurse FHIR export even with treatment purpose/,
   /returns a patient-record FHIR Bundle for treatment export/,
   /exports clinical document attachment metadata as FHIR DocumentReference/,
@@ -177,8 +133,30 @@ const requiredConsentBoundaryPatterns = [
   /exports patient consent as FHIR Consent/,
   /revokes a patient consent and blocks later record sharing/
 ];
+const requiredRecordTransferBoundaryPatterns = [
+  /lists record transfer packages for a patient/,
+  /moves a record transfer through sent and received milestones/,
+  /accepts an operations acknowledgement callback for a sent record transfer/,
+  /requires a valid HMAC signature for acknowledgement callbacks/,
+  /records failed record transfer delivery and prepares a retry/,
+  /denies Bundle export when consent does not match the recipient/
+];
 
 const testReports = [];
+
+for (const retired of retiredTestPaths) {
+  try {
+    await stat(resolve(retired.path));
+  } catch (error) {
+    if (error && error.code === "ENOENT") {
+      continue;
+    }
+
+    throw error;
+  }
+
+  throw new Error(`${retired.path} has been retired; keep ${retired.role} split by boundary.`);
+}
 
 for (const budget of testBudgets) {
   const absolutePath = resolve(budget.path);
@@ -200,7 +178,6 @@ for (const budget of testBudgets) {
   });
 }
 
-const authBoundarySource = await readFile(authBoundaryPath, "utf8");
 const loginBoundarySource = await readFile(loginBoundaryPath, "utf8");
 const runtimeBoundarySource = await readFile(runtimeBoundaryPath, "utf8");
 const startupConfigBoundarySource = await readFile(startupConfigBoundaryPath, "utf8");
@@ -213,12 +190,7 @@ const clinicalResourcesBoundarySource = await readFile(
   "utf8"
 );
 const consentBoundarySource = await readFile(consentBoundaryPath, "utf8");
-
-for (const forbidden of forbiddenAuthBoundaryPatterns) {
-  if (forbidden.pattern.test(authBoundarySource)) {
-    throw new Error(forbidden.message);
-  }
-}
+const recordTransferBoundarySource = await readFile(recordTransferBoundaryPath, "utf8");
 
 for (const required of requiredLoginBoundaryPatterns) {
   if (!required.test(loginBoundarySource)) {
@@ -288,6 +260,14 @@ for (const required of requiredConsentBoundaryPatterns) {
   if (!required.test(consentBoundarySource)) {
     throw new Error(
       "server.consent-boundary.test.ts must keep consent listing, creation, FHIR export and revocation scenarios."
+    );
+  }
+}
+
+for (const required of requiredRecordTransferBoundaryPatterns) {
+  if (!required.test(recordTransferBoundarySource)) {
+    throw new Error(
+      "server.record-transfer-boundary.test.ts must keep record-transfer lifecycle, callback, retry and consent-guard scenarios."
     );
   }
 }

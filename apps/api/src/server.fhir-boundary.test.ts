@@ -29,6 +29,45 @@ describe("API FHIR interoperability boundary", () => {
     restoreAuthBoundaryEnv(originalEnv);
   });
 
+  it("serves FHIR CapabilityStatement metadata without a demo session", async () => {
+    process.env.BVS_PUBLIC_API_BASE_URL = "https://api.wiiicare.example.vn/api/v1/";
+    app = await readyServer();
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/fhir/metadata"
+    });
+    const body = response.json();
+
+    expect(response.statusCode).toBe(200);
+    expect(body).toMatchObject({
+      resourceType: "CapabilityStatement",
+      fhirVersion: "4.0.1",
+      implementation: {
+        url: "https://api.wiiicare.example.vn/api/v1"
+      },
+      rest: [
+        {
+          mode: "server",
+          resource: expect.arrayContaining([
+            expect.objectContaining({
+              type: "Patient"
+            }),
+            expect.objectContaining({
+              type: "Provenance"
+            }),
+            expect.objectContaining({
+              type: "Bundle"
+            }),
+            expect.objectContaining({
+              type: "AuditEvent"
+            })
+          ])
+        }
+      ]
+    });
+  });
+
   it("denies nurse FHIR export even with treatment purpose", async () => {
     app = await readyServer();
     const accessToken = await loginForToken(app, "nurse-demo-001", "nurse");

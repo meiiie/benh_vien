@@ -1,10 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { buildServer } from "./server.js";
 import {
   applyDefaultAuthBoundaryEnv,
-  auditHeaders,
-  bundleTransferHeaders,
   captureAuthBoundaryEnv,
   expectOperationOutcome,
   FailingRecordTransferDeliveryAttemptRepository,
@@ -21,7 +18,7 @@ import {
   treatmentHeaders
 } from "./server.auth.test-support.js";
 
-describe("API auth and RBAC boundary", () => {
+describe("API record-transfer boundary", () => {
   let app: FastifyInstance | undefined;
   const originalEnv = captureAuthBoundaryEnv();
 
@@ -36,58 +33,6 @@ describe("API auth and RBAC boundary", () => {
     }
 
     restoreAuthBoundaryEnv(originalEnv);
-  });
-
-  it("requires callback signature secrets at startup in production", async () => {
-    process.env.NODE_ENV = "production";
-    process.env.BVS_REPOSITORY = "postgres";
-    process.env.BVS_PUBLIC_API_BASE_URL = "https://api.wiiicare.example.vn/api/v1";
-    process.env.BVS_CORS_ORIGINS = "https://wiiicare.example.vn";
-    delete process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRET;
-    delete process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON;
-
-    await expect(buildServer({ logger: false })).rejects.toThrow(
-      "BVS_RECORD_TRANSFER_CALLBACK_SECRET hoặc BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON phải được cấu hình tối thiểu 32 ký tự trong production."
-    );
-  });
-
-  it("serves FHIR CapabilityStatement metadata without a demo session", async () => {
-    process.env.BVS_PUBLIC_API_BASE_URL = "https://api.wiiicare.example.vn/api/v1/";
-    app = await readyServer();
-
-    const response = await app.inject({
-      method: "GET",
-      url: "/api/v1/fhir/metadata"
-    });
-    const body = response.json();
-
-    expect(response.statusCode).toBe(200);
-    expect(body).toMatchObject({
-      resourceType: "CapabilityStatement",
-      fhirVersion: "4.0.1",
-      implementation: {
-        url: "https://api.wiiicare.example.vn/api/v1"
-      },
-      rest: [
-        {
-          mode: "server",
-          resource: expect.arrayContaining([
-            expect.objectContaining({
-              type: "Patient"
-            }),
-            expect.objectContaining({
-              type: "Provenance"
-            }),
-            expect.objectContaining({
-              type: "Bundle"
-            }),
-            expect.objectContaining({
-              type: "AuditEvent"
-            })
-          ])
-        }
-      ]
-    });
   });
 
   it("lists record transfer packages for a patient", async () => {
