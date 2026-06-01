@@ -1,68 +1,28 @@
 import { DomainError } from "../shared/domain-error.js";
+import {
+  administrativeGenders,
+  patientIdentifierTypes,
+  patientRecordStatuses
+} from "./patient.types.js";
+import type {
+  AdministrativeGender,
+  PatientIdentifier,
+  PatientIdentifierType,
+  PatientRecordStatus,
+  PatientSnapshot,
+  RegisterPatientInput
+} from "./patient.types.js";
 
-export type AdministrativeGender = "male" | "female" | "other" | "unknown";
-
-export type PatientIdentifierType =
-  | "national-id"
-  | "insurance-id"
-  | "hospital-mrn"
-  | "legacy-id";
-
-export type PatientRecordStatus = "active" | "merged" | "inactive";
-
-const administrativeGenders = new Set<AdministrativeGender>([
-  "male",
-  "female",
-  "other",
-  "unknown"
-]);
-const patientIdentifierTypes = new Set<PatientIdentifierType>([
-  "national-id",
-  "insurance-id",
-  "hospital-mrn",
-  "legacy-id"
-]);
-const patientRecordStatuses = new Set<PatientRecordStatus>([
-  "active",
-  "merged",
-  "inactive"
-]);
 const fhirDatePattern = /^\d{4}-\d{2}-\d{2}$/;
 
-export type PatientIdentifier = {
-  readonly system: string;
-  readonly value: string;
-  readonly type: PatientIdentifierType;
-};
-
-export type PatientSnapshot = {
-  readonly id: string;
-  readonly identifiers: readonly PatientIdentifier[];
-  readonly fullName: string;
-  readonly birthDate?: string;
-  readonly gender: AdministrativeGender;
-  readonly address?: string;
-  readonly phone?: string;
-  readonly managingOrganizationId: string;
-  readonly status: PatientRecordStatus;
-  readonly mergedIntoPatientId?: string;
-  readonly mergedAt?: string;
-  readonly mergedByActorId?: string;
-  readonly mergeReason?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type RegisterPatientInput = {
-  readonly id: string;
-  readonly identifiers: readonly PatientIdentifier[];
-  readonly fullName: string;
-  readonly birthDate?: string;
-  readonly gender?: AdministrativeGender;
-  readonly address?: string;
-  readonly phone?: string;
-  readonly managingOrganizationId: string;
-};
+export type {
+  AdministrativeGender,
+  PatientIdentifier,
+  PatientIdentifierType,
+  PatientRecordStatus,
+  PatientSnapshot,
+  RegisterPatientInput
+} from "./patient.types.js";
 
 type PatientProps = {
   id: string;

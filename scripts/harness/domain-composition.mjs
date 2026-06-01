@@ -41,6 +41,16 @@ const domainBudgets = [
     path: "packages/domain/src/access-control/access-control.policy.ts",
     maxLines: 340,
     role: "AccessControl role, purpose and permission catalog"
+  },
+  {
+    path: "packages/domain/src/patient/patient.ts",
+    maxLines: 470,
+    role: "Patient aggregate registration, demographic update and merge behavior"
+  },
+  {
+    path: "packages/domain/src/patient/patient.types.ts",
+    maxLines: 90,
+    role: "Patient identifier, snapshot and registration input types"
   }
 ];
 
@@ -64,6 +74,8 @@ const accessControlBehaviorPath = resolve(
 const accessControlPolicyPath = resolve(
   "packages/domain/src/access-control/access-control.policy.ts"
 );
+const patientAggregatePath = resolve("packages/domain/src/patient/patient.ts");
+const patientTypesPath = resolve("packages/domain/src/patient/patient.types.ts");
 
 const domainReports = [];
 
@@ -98,6 +110,8 @@ const auditEventAggregateSource = await readFile(auditEventAggregatePath, "utf8"
 const auditEventTypesSource = await readFile(auditEventTypesPath, "utf8");
 const accessControlBehaviorSource = await readFile(accessControlBehaviorPath, "utf8");
 const accessControlPolicySource = await readFile(accessControlPolicyPath, "utf8");
+const patientAggregateSource = await readFile(patientAggregatePath, "utf8");
+const patientTypesSource = await readFile(patientTypesPath, "utf8");
 
 for (const forbidden of [
   /export type RecordTransferStatus/,
@@ -221,6 +235,36 @@ if (!/from "\.\/access-control\.policy\.js"/.test(accessControlBehaviorSource)) 
   throw new Error(
     "AccessControl behavior must depend on access-control.policy.ts for shared policy catalog types."
   );
+}
+
+for (const forbidden of [
+  /export type AdministrativeGender/,
+  /export type PatientSnapshot/,
+  /const administrativeGenders/
+]) {
+  if (forbidden.test(patientAggregateSource)) {
+    throw new Error(
+      "Patient type declarations and code sets belong in patient.types.ts, not the aggregate file."
+    );
+  }
+}
+
+for (const required of [
+  /export type AdministrativeGender/,
+  /export type PatientIdentifier/,
+  /export type PatientSnapshot/,
+  /export type RegisterPatientInput/,
+  /export const administrativeGenders/
+]) {
+  if (!required.test(patientTypesSource)) {
+    throw new Error(
+      "patient.types.ts must keep Patient gender, identifier, snapshot, registration input and code-set definitions."
+    );
+  }
+}
+
+if (!/from "\.\/patient\.types\.js"/.test(patientAggregateSource)) {
+  throw new Error("Patient aggregate must depend on patient.types.ts for shared types.");
 }
 
 console.log(

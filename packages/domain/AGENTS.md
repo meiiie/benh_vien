@@ -21,4 +21,5 @@ pnpm --filter @benh-vien-so/domain run build
 - Với `ProviderDirectory`, aggregate `provider-directory.ts` giữ assemble/rehydrate/validation; type, snapshot, coding, telecom và endpoint code set nằm trong `provider-directory.types.ts`.
 - Với `AuditEvent`, aggregate `audit-event.ts` giữ record/rehydrate/seal/integrity behavior; action, resource, snapshot và integrity report type nằm trong `audit-event.types.ts`.
 - Với `AccessControl`, file `access-control.ts` giữ logic quyết định quyền và phạm vi bệnh nhân; role, purpose, permission và role-permission catalog nằm trong `access-control.policy.ts`.
+- Với `Patient`, aggregate `patient.ts` giữ register/update/merge behavior; gender, identifier, snapshot, registration input và code set nằm trong `patient.types.ts`.
 - Test tối thiểu cho invariant và mapping liên thông.
