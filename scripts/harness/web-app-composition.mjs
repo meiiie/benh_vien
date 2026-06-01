@@ -59,6 +59,7 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/encounterScopedFormUpdater.ts",
   "apps/web/src/features/clinical-records/encounterSelectors.ts",
   "apps/web/src/features/clinical-records/ImagingStudyPanel.tsx",
+  "apps/web/src/features/clinical-records/MedicationAdministrationForm.tsx",
   "apps/web/src/features/clinical-records/MedicationAdministrationPanel.tsx",
   "apps/web/src/features/clinical-records/MedicationDispenseForm.tsx",
   "apps/web/src/features/clinical-records/MedicationDispensePanel.tsx",
@@ -187,6 +188,16 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/clinical-records/MedicationDispenseForm.tsx",
     maxLines: 390,
     role: "MedicationDispense field-heavy command form"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/MedicationAdministrationPanel.tsx",
+    maxLines: 220,
+    role: "MedicationAdministration list, summary and form composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/MedicationAdministrationForm.tsx",
+    maxLines: 290,
+    role: "MedicationAdministration field-heavy command form"
   }
 ];
 
