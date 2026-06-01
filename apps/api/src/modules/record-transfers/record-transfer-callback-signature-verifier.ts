@@ -1,22 +1,11 @@
 import type { IncomingHttpHeaders } from "node:http";
 import { readCallbackSecret } from "./record-transfer-callback-secret.js";
 import { toSecretLookupFailure } from "./record-transfer-callback-secret-failure.js";
-import { readSingleHeader } from "./record-transfer-callback-headers.js";
-import {
-  maxSignatureLength,
-  recordTransferCallbackSignatureHeader,
-  recordTransferCallbackTimestampHeader,
-  signatureAlgorithm
-} from "./record-transfer-callback-signature.constants.js";
+import { signatureAlgorithm } from "./record-transfer-callback-signature.constants.js";
 import { buildRecordTransferCallbackSignature } from "./record-transfer-callback-signature-builder.js";
-import {
-  callbackSignatureInvalidLengthMessage,
-  callbackSignatureMismatchMessage
-} from "./record-transfer-callback-signature-failure-catalog.js";
-import {
-  signatureInvalidFailure,
-  signatureRequiredFailure
-} from "./record-transfer-callback-signature-failures.js";
+import { callbackSignatureMismatchMessage } from "./record-transfer-callback-signature-failure-catalog.js";
+import { signatureInvalidFailure } from "./record-transfer-callback-signature-failures.js";
+import { readReceivedCallbackSignature } from "./record-transfer-callback-signature-received.js";
 import { safeEqual } from "./record-transfer-callback-signature-safe-equal.js";
 import { validateCallbackTimestamp } from "./record-transfer-callback-signature-timestamp.js";
 import type { CallbackSignatureVerification } from "./record-transfer-callback-signature.types.js";
@@ -40,25 +29,17 @@ export function verifyRecordTransferCallbackSignature(input: {
     };
   }
 
-  const timestamp = readSingleHeader(input.headers[recordTransferCallbackTimestampHeader]);
-  const receivedSignature = readSingleHeader(
-    input.headers[recordTransferCallbackSignatureHeader]
-  );
+  const receivedSignatureResult = readReceivedCallbackSignature({
+    headers: input.headers,
+    keyId: secretResult.keyId
+  });
 
-  if (!timestamp || !receivedSignature) {
-    return signatureRequiredFailure(secretResult.keyId);
-  }
-
-  if (receivedSignature.length > maxSignatureLength) {
-    return signatureInvalidFailure({
-      timestamp,
-      keyId: secretResult.keyId,
-      message: callbackSignatureInvalidLengthMessage
-    });
+  if (!receivedSignatureResult.ok) {
+    return receivedSignatureResult.failure;
   }
 
   const timestampValidation = validateCallbackTimestamp(
-    timestamp,
+    receivedSignatureResult.timestamp,
     input.now ?? new Date(),
     secretResult.keyId
   );
@@ -69,14 +50,14 @@ export function verifyRecordTransferCallbackSignature(input: {
 
   const expectedSignature = buildRecordTransferCallbackSignature({
     secret: secretResult.secret,
-    timestamp,
+    timestamp: receivedSignatureResult.timestamp,
     recordTransferId: input.recordTransferId,
     body: input.body
   });
 
-  if (!safeEqual(receivedSignature, expectedSignature)) {
+  if (!safeEqual(receivedSignatureResult.receivedSignature, expectedSignature)) {
     return signatureInvalidFailure({
-      timestamp,
+      timestamp: receivedSignatureResult.timestamp,
       keyId: secretResult.keyId,
       message: callbackSignatureMismatchMessage
     });
@@ -86,7 +67,7 @@ export function verifyRecordTransferCallbackSignature(input: {
     required: true,
     verified: true,
     algorithm: signatureAlgorithm,
-    timestamp,
+    timestamp: receivedSignatureResult.timestamp,
     keyId: secretResult.keyId
   };
 }

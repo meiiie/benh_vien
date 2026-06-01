@@ -58,6 +58,11 @@ const securityBudgets = [
     role: "RecordTransfer callback signature failure response builders"
   },
   {
+    path: "apps/api/src/modules/record-transfers/record-transfer-callback-signature-received.ts",
+    maxLines: 70,
+    role: "RecordTransfer callback received timestamp and signature header policy"
+  },
+  {
     path: "apps/api/src/modules/record-transfers/record-transfer-callback-signature-timestamp.ts",
     maxLines: 40,
     role: "RecordTransfer callback timestamp freshness policy"
@@ -232,6 +237,9 @@ const signatureFailureCatalogPath = resolve(
 const signatureFailuresPath = resolve(
   "apps/api/src/modules/record-transfers/record-transfer-callback-signature-failures.ts"
 );
+const signatureReceivedPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-callback-signature-received.ts"
+);
 const signatureTimestampPath = resolve(
   "apps/api/src/modules/record-transfers/record-transfer-callback-signature-timestamp.ts"
 );
@@ -309,6 +317,7 @@ const signatureSecretSource = await readFile(signatureSecretPath, "utf8");
 const signatureSecretFailureSource = await readFile(signatureSecretFailurePath, "utf8");
 const signatureFailureCatalogSource = await readFile(signatureFailureCatalogPath, "utf8");
 const signatureFailuresSource = await readFile(signatureFailuresPath, "utf8");
+const signatureReceivedSource = await readFile(signatureReceivedPath, "utf8");
 const signatureTimestampSource = await readFile(signatureTimestampPath, "utf8");
 const signatureSafeEqualSource = await readFile(signatureSafeEqualPath, "utf8");
 const signatureVerifierSource = await readFile(signatureVerifierPath, "utf8");
@@ -446,6 +455,15 @@ assertForbidden(signatureFailureCatalogSource, [
       /\bcreateHmac\b|\btimingSafeEqual\b|\bDate\.parse\b|\bprocess\.env\b|\bJSON\.parse\b|\breadCallbackSecret\b|\bbuildRecordTransferCallbackSignature\b/,
     message:
       "Callback signature failure catalog must stay static error metadata, not verification logic."
+  }
+]);
+
+assertForbidden(signatureReceivedSource, [
+  {
+    pattern:
+      /\bcreateHmac\b|\btimingSafeEqual\b|\bDate\.parse\b|\bprocess\.env\b|\bJSON\.parse\b|\breadCallbackSecret\b|\bbuildRecordTransferCallbackSignature\b|\bsafeEqual\b|\bvalidateCallbackTimestamp\b/,
+    message:
+      "Callback received signature policy must only read required timestamp/signature headers and shape header failures."
   }
 ]);
 
