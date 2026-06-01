@@ -524,8 +524,13 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/patients/patient-record-bundle-route-helpers.ts",
-    maxLines: 170,
+    maxLines: 100,
     role: "Patient FHIR Bundle access and consent preparation helpers"
+  },
+  {
+    path: "apps/api/src/modules/patients/patient-record-bundle-error-responses.ts",
+    maxLines: 90,
+    role: "Patient FHIR Bundle error response helpers"
   },
   {
     path: "apps/api/src/modules/patients/patient-record-bundle-transfer-context.ts",
@@ -1215,6 +1220,23 @@ const requiredPatientFhirRegistrations = [
   "registerPatientRecordBundleRoutes"
 ];
 
+const patientRecordBundleRouteHelpersPath = resolve(
+  "apps/api/src/modules/patients/patient-record-bundle-route-helpers.ts"
+);
+const forbiddenPatientRecordBundleHelperPatterns = [
+  {
+    pattern:
+      /\bsendFhirOperationOutcome\b|\bPATIENT_NOT_FOUND\b|\bMISSING_BUNDLE_TRANSFER_CONTEXT\b|\bCONSENT_NOT_VALID_FOR_TRANSFER\b/,
+    message:
+      "Patient Bundle OperationOutcome and error payload details belong in patient-record-bundle-error-responses.ts."
+  }
+];
+const requiredPatientRecordBundleHelpers = [
+  "requirePatientRecordAccess",
+  "readBundleTransferContext",
+  "loadPatientRecordBundleCollections"
+];
+
 const clinicalDocumentRoutesPath = resolve(
   "apps/api/src/modules/clinical-documents/clinical-document-routes.ts"
 );
@@ -1530,6 +1552,10 @@ const recordTransferAcknowledgementRoutesSource = await readFile(
 const encounterRoutesSource = await readFile(encounterRoutesPath, "utf8");
 const patientRoutesSource = await readFile(patientRoutesPath, "utf8");
 const patientFhirRoutesSource = await readFile(patientFhirRoutesPath, "utf8");
+const patientRecordBundleRouteHelpersSource = await readFile(
+  patientRecordBundleRouteHelpersPath,
+  "utf8"
+);
 const clinicalDocumentRoutesSource = await readFile(
   clinicalDocumentRoutesPath,
   "utf8"
@@ -1782,6 +1808,20 @@ for (const registration of requiredPatientFhirRegistrations) {
   if (!patientFhirRoutesSource.includes(registration)) {
     throw new Error(
       `Patient FHIR root routes must register ${registration} so resource and Bundle export modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenPatientRecordBundleHelperPatterns) {
+  if (forbidden.pattern.test(patientRecordBundleRouteHelpersSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const helper of requiredPatientRecordBundleHelpers) {
+  if (!patientRecordBundleRouteHelpersSource.includes(helper)) {
+    throw new Error(
+      `Patient record Bundle helper must use ${helper} so access, transfer context and collection loading remain wired.`
     );
   }
 }
