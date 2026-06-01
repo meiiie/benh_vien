@@ -81,6 +81,36 @@ const domainBudgets = [
     path: "packages/domain/src/record-transfer-delivery-attempt/record-transfer-delivery-attempt.types.ts",
     maxLines: 90,
     role: "RecordTransferDeliveryAttempt status, bundle, snapshot and command input types"
+  },
+  {
+    path: "packages/domain/src/medication-request/medication-request.ts",
+    maxLines: 290,
+    role: "MedicationRequest prescribing and dosage validation behavior"
+  },
+  {
+    path: "packages/domain/src/medication-request/medication-request.types.ts",
+    maxLines: 130,
+    role: "MedicationRequest status, intent, priority, dosage and snapshot types"
+  },
+  {
+    path: "packages/domain/src/medication-dispense/medication-dispense.ts",
+    maxLines: 330,
+    role: "MedicationDispense dispensing lifecycle and quantity validation behavior"
+  },
+  {
+    path: "packages/domain/src/medication-dispense/medication-dispense.types.ts",
+    maxLines: 90,
+    role: "MedicationDispense status, category, snapshot and command input types"
+  },
+  {
+    path: "packages/domain/src/medication-administration/medication-administration.ts",
+    maxLines: 300,
+    role: "MedicationAdministration administration lifecycle and dosage validation behavior"
+  },
+  {
+    path: "packages/domain/src/medication-administration/medication-administration.types.ts",
+    maxLines: 120,
+    role: "MedicationAdministration status, category, performer, dosage and snapshot types"
   }
 ];
 
@@ -119,6 +149,24 @@ const deliveryAttemptAggregatePath = resolve(
 );
 const deliveryAttemptTypesPath = resolve(
   "packages/domain/src/record-transfer-delivery-attempt/record-transfer-delivery-attempt.types.ts"
+);
+const medicationRequestAggregatePath = resolve(
+  "packages/domain/src/medication-request/medication-request.ts"
+);
+const medicationRequestTypesPath = resolve(
+  "packages/domain/src/medication-request/medication-request.types.ts"
+);
+const medicationDispenseAggregatePath = resolve(
+  "packages/domain/src/medication-dispense/medication-dispense.ts"
+);
+const medicationDispenseTypesPath = resolve(
+  "packages/domain/src/medication-dispense/medication-dispense.types.ts"
+);
+const medicationAdministrationAggregatePath = resolve(
+  "packages/domain/src/medication-administration/medication-administration.ts"
+);
+const medicationAdministrationTypesPath = resolve(
+  "packages/domain/src/medication-administration/medication-administration.types.ts"
 );
 
 const domainReports = [];
@@ -162,6 +210,18 @@ const procedureAggregateSource = await readFile(procedureAggregatePath, "utf8");
 const procedureTypesSource = await readFile(procedureTypesPath, "utf8");
 const deliveryAttemptAggregateSource = await readFile(deliveryAttemptAggregatePath, "utf8");
 const deliveryAttemptTypesSource = await readFile(deliveryAttemptTypesPath, "utf8");
+const medicationRequestAggregateSource = await readFile(medicationRequestAggregatePath, "utf8");
+const medicationRequestTypesSource = await readFile(medicationRequestTypesPath, "utf8");
+const medicationDispenseAggregateSource = await readFile(medicationDispenseAggregatePath, "utf8");
+const medicationDispenseTypesSource = await readFile(medicationDispenseTypesPath, "utf8");
+const medicationAdministrationAggregateSource = await readFile(
+  medicationAdministrationAggregatePath,
+  "utf8"
+);
+const medicationAdministrationTypesSource = await readFile(
+  medicationAdministrationTypesPath,
+  "utf8"
+);
 
 for (const forbidden of [
   /export type RecordTransferStatus/,
@@ -408,6 +468,104 @@ if (!/from "\.\/record-transfer-delivery-attempt\.types\.js"/.test(
 )) {
   throw new Error(
     "RecordTransferDeliveryAttempt aggregate must depend on record-transfer-delivery-attempt.types.ts for shared types."
+  );
+}
+
+for (const forbidden of [
+  /export type MedicationRequestStatus/,
+  /export type MedicationRequestSnapshot/,
+  /const medicationRequestStatuses/
+]) {
+  if (forbidden.test(medicationRequestAggregateSource)) {
+    throw new Error(
+      "MedicationRequest type declarations and code sets belong in medication-request.types.ts, not the aggregate file."
+    );
+  }
+}
+
+for (const required of [
+  /export type MedicationRequestStatus/,
+  /export type MedicationTimingUnit/,
+  /export type MedicationRequestSnapshot/,
+  /export type CreateMedicationRequestInput/,
+  /export const medicationRequestStatuses/
+]) {
+  if (!required.test(medicationRequestTypesSource)) {
+    throw new Error(
+      "medication-request.types.ts must keep MedicationRequest status, timing, snapshot, command input and code-set definitions."
+    );
+  }
+}
+
+if (!/from "\.\/medication-request\.types\.js"/.test(medicationRequestAggregateSource)) {
+  throw new Error(
+    "MedicationRequest aggregate must depend on medication-request.types.ts for shared types."
+  );
+}
+
+for (const forbidden of [
+  /export type MedicationDispenseStatus/,
+  /export type MedicationDispenseSnapshot/,
+  /const medicationDispenseStatuses/
+]) {
+  if (forbidden.test(medicationDispenseAggregateSource)) {
+    throw new Error(
+      "MedicationDispense type declarations and code sets belong in medication-dispense.types.ts, not the aggregate file."
+    );
+  }
+}
+
+for (const required of [
+  /export type MedicationDispenseStatus/,
+  /export type MedicationDispenseCategory/,
+  /export type MedicationDispenseSnapshot/,
+  /export type RecordMedicationDispenseInput/,
+  /export const medicationDispenseStatuses/
+]) {
+  if (!required.test(medicationDispenseTypesSource)) {
+    throw new Error(
+      "medication-dispense.types.ts must keep MedicationDispense status, category, snapshot, command input and code-set definitions."
+    );
+  }
+}
+
+if (!/from "\.\/medication-dispense\.types\.js"/.test(medicationDispenseAggregateSource)) {
+  throw new Error(
+    "MedicationDispense aggregate must depend on medication-dispense.types.ts for shared types."
+  );
+}
+
+for (const forbidden of [
+  /export type MedicationAdministrationStatus/,
+  /export type MedicationAdministrationSnapshot/,
+  /const medicationAdministrationStatuses/
+]) {
+  if (forbidden.test(medicationAdministrationAggregateSource)) {
+    throw new Error(
+      "MedicationAdministration type declarations and code sets belong in medication-administration.types.ts, not the aggregate file."
+    );
+  }
+}
+
+for (const required of [
+  /export type MedicationAdministrationStatus/,
+  /export type MedicationAdministrationCategory/,
+  /export type MedicationAdministrationSnapshot/,
+  /export type RecordMedicationAdministrationInput/,
+  /export const medicationAdministrationStatuses/
+]) {
+  if (!required.test(medicationAdministrationTypesSource)) {
+    throw new Error(
+      "medication-administration.types.ts must keep MedicationAdministration status, category, snapshot, command input and code-set definitions."
+    );
+  }
+}
+
+if (!/from "\.\/medication-administration\.types\.js"/.test(
+  medicationAdministrationAggregateSource
+)) {
+  throw new Error(
+    "MedicationAdministration aggregate must depend on medication-administration.types.ts for shared types."
   );
 }
 

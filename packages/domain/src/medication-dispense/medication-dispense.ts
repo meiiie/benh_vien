@@ -3,70 +3,25 @@ import type {
   MedicationCode,
   MedicationQuantity
 } from "../medication-request/medication-request.js";
+import { medicationTimingUnits } from "../medication-request/medication-request.types.js";
 import { DomainError } from "../shared/domain-error.js";
-
-export type MedicationDispenseStatus =
-  | "preparation"
-  | "in-progress"
-  | "cancelled"
-  | "on-hold"
-  | "completed"
-  | "entered-in-error"
-  | "stopped"
-  | "declined"
-  | "unknown";
-
-export type MedicationDispenseCategory =
-  | "inpatient"
-  | "outpatient"
-  | "community"
-  | "discharge";
-
-const medicationDispenseStatuses = new Set<MedicationDispenseStatus>([
-  "preparation",
-  "in-progress",
-  "cancelled",
-  "on-hold",
-  "completed",
-  "entered-in-error",
-  "stopped",
-  "declined",
-  "unknown"
-]);
-const medicationDispenseCategories = new Set<MedicationDispenseCategory>([
-  "inpatient",
-  "outpatient",
-  "community",
-  "discharge"
-]);
-const medicationTimingUnits = new Set(["h", "d", "wk"]);
-
-export type MedicationDispenseSnapshot = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly encounterId?: string;
-  readonly medicationRequestId?: string;
-  readonly status: MedicationDispenseStatus;
-  readonly statusReason?: MedicationCode;
-  readonly category: MedicationDispenseCategory;
-  readonly medicationCode: MedicationCode;
-  readonly quantity?: MedicationQuantity;
-  readonly daysSupply?: MedicationQuantity;
-  readonly whenPrepared?: string;
-  readonly whenHandedOver?: string;
-  readonly dispenserPractitionerId?: string;
-  readonly destinationLocationId?: string;
-  readonly receiverPractitionerId?: string;
-  readonly dosageInstruction?: DosageInstruction;
-  readonly note?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type RecordMedicationDispenseInput = Omit<
+import {
+  medicationDispenseCategories,
+  medicationDispenseStatuses
+} from "./medication-dispense.types.js";
+import type {
+  MedicationDispenseCategory,
   MedicationDispenseSnapshot,
-  "createdAt" | "updatedAt"
->;
+  MedicationDispenseStatus,
+  RecordMedicationDispenseInput
+} from "./medication-dispense.types.js";
+
+export type {
+  MedicationDispenseCategory,
+  MedicationDispenseSnapshot,
+  MedicationDispenseStatus,
+  RecordMedicationDispenseInput
+} from "./medication-dispense.types.js";
 
 export class MedicationDispense {
   private constructor(private readonly props: MedicationDispenseSnapshot) {}

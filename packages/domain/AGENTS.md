@@ -25,4 +25,5 @@ pnpm --filter @benh-vien-so/domain run build
 - Với `WorkflowTask`, aggregate `workflow-task.ts` giữ lifecycle/reference normalization behavior; status, intent, priority, reference, snapshot và input type nằm trong `workflow-task.types.ts`.
 - Với `Procedure`, aggregate `procedure.ts` giữ lifecycle/performer/report-reference behavior; status, category, performer, report reference, snapshot và input type nằm trong `procedure.types.ts`.
 - Với `RecordTransferDeliveryAttempt`, aggregate `record-transfer-delivery-attempt.ts` giữ queue/terminal update/delivery validation behavior; status, bundle, snapshot và command input type nằm trong `record-transfer-delivery-attempt.types.ts`.
+- Với miền thuốc, `medication-request.ts`, `medication-dispense.ts` và `medication-administration.ts` giữ behavior; status, category/intent/priority, dosage, performer, snapshot và command input type nằm trong các file `*.types.ts` tương ứng.
 - Test tối thiểu cho invariant và mapping liên thông.

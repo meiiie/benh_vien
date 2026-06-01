@@ -1,92 +1,31 @@
 import type { MedicationCode, MedicationQuantity } from "../medication-request/medication-request.js";
 import { DomainError } from "../shared/domain-error.js";
-
-export type MedicationAdministrationStatus =
-  | "in-progress"
-  | "not-done"
-  | "on-hold"
-  | "completed"
-  | "entered-in-error"
-  | "stopped"
-  | "unknown";
-
-export type MedicationAdministrationCategory =
-  | "inpatient"
-  | "outpatient"
-  | "community"
-  | "patient-specified";
-
-export type MedicationAdministrationPerformerActorType =
-  | "Practitioner"
-  | "PractitionerRole"
-  | "Patient"
-  | "RelatedPerson"
-  | "Device";
-
-const medicationAdministrationStatuses = new Set<MedicationAdministrationStatus>([
-  "in-progress",
-  "not-done",
-  "on-hold",
-  "completed",
-  "entered-in-error",
-  "stopped",
-  "unknown"
-]);
-const medicationAdministrationCategories =
-  new Set<MedicationAdministrationCategory>([
-    "inpatient",
-    "outpatient",
-    "community",
-    "patient-specified"
-  ]);
-const medicationAdministrationPerformerActorTypes =
-  new Set<MedicationAdministrationPerformerActorType>([
-    "Practitioner",
-    "PractitionerRole",
-    "Patient",
-    "RelatedPerson",
-    "Device"
-  ]);
-
-export type MedicationAdministrationPerformer = {
-  readonly actorType: MedicationAdministrationPerformerActorType;
-  readonly actorId: string;
-  readonly function?: MedicationCode;
-};
-
-export type MedicationAdministrationEffectivePeriod = {
-  readonly start?: string;
-  readonly end?: string;
-};
-
-export type MedicationAdministrationDosage = {
-  readonly text?: string;
-  readonly route?: MedicationCode;
-  readonly doseQuantity?: MedicationQuantity;
-};
-
-export type MedicationAdministrationSnapshot = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly encounterId?: string;
-  readonly medicationRequestId?: string;
-  readonly reasonConditionId?: string;
-  readonly status: MedicationAdministrationStatus;
-  readonly statusReason?: MedicationCode;
-  readonly category: MedicationAdministrationCategory;
-  readonly medicationCode: MedicationCode;
-  readonly effectivePeriod: MedicationAdministrationEffectivePeriod;
-  readonly performers: readonly MedicationAdministrationPerformer[];
-  readonly dosage?: MedicationAdministrationDosage;
-  readonly note?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type RecordMedicationAdministrationInput = Omit<
+import {
+  medicationAdministrationCategories,
+  medicationAdministrationPerformerActorTypes,
+  medicationAdministrationStatuses
+} from "./medication-administration.types.js";
+import type {
+  MedicationAdministrationCategory,
+  MedicationAdministrationDosage,
+  MedicationAdministrationEffectivePeriod,
+  MedicationAdministrationPerformer,
+  MedicationAdministrationPerformerActorType,
   MedicationAdministrationSnapshot,
-  "createdAt" | "updatedAt"
->;
+  MedicationAdministrationStatus,
+  RecordMedicationAdministrationInput
+} from "./medication-administration.types.js";
+
+export type {
+  MedicationAdministrationCategory,
+  MedicationAdministrationDosage,
+  MedicationAdministrationEffectivePeriod,
+  MedicationAdministrationPerformer,
+  MedicationAdministrationPerformerActorType,
+  MedicationAdministrationSnapshot,
+  MedicationAdministrationStatus,
+  RecordMedicationAdministrationInput
+} from "./medication-administration.types.js";
 
 export class MedicationAdministration {
   private constructor(private readonly props: MedicationAdministrationSnapshot) {}
