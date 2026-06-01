@@ -1,107 +1,33 @@
 import { DomainError } from "../shared/domain-error.js";
-
-export type ProcedureStatus =
-  | "preparation"
-  | "in-progress"
-  | "not-done"
-  | "on-hold"
-  | "stopped"
-  | "completed"
-  | "entered-in-error"
-  | "unknown";
-
-export type ProcedureCategory =
-  | "surgical"
-  | "diagnostic"
-  | "therapeutic"
-  | "counseling"
-  | "rehabilitation"
-  | "other";
-
-const procedureStatuses = new Set<ProcedureStatus>([
-  "preparation",
-  "in-progress",
-  "not-done",
-  "on-hold",
-  "stopped",
-  "completed",
-  "entered-in-error",
-  "unknown"
-]);
-const procedureCategories = new Set<ProcedureCategory>([
-  "surgical",
-  "diagnostic",
-  "therapeutic",
-  "counseling",
-  "rehabilitation",
-  "other"
-]);
-
-export type ProcedureCoding = {
-  readonly system: string;
-  readonly code: string;
-  readonly display: string;
-};
-
-export type ProcedurePerformerActorType = "Practitioner" | "PractitionerRole" | "Organization";
-
-const procedurePerformerActorTypes = new Set<ProcedurePerformerActorType>([
-  "Practitioner",
-  "PractitionerRole",
-  "Organization"
-]);
-const procedureReportReferenceResourceTypes = new Set<
-  "DiagnosticReport" | "DocumentReference" | "Composition"
->([
-  "DiagnosticReport",
-  "DocumentReference",
-  "Composition"
-]);
-
-export type ProcedurePerformer = {
-  readonly actorType: ProcedurePerformerActorType;
-  readonly actorId: string;
-  readonly function?: ProcedureCoding;
-  readonly onBehalfOfOrganizationId?: string;
-};
-
-export type ProcedurePerformedPeriod = {
-  readonly start?: string;
-  readonly end?: string;
-};
-
-export type ProcedureReportReference = {
-  readonly resourceType: "DiagnosticReport" | "DocumentReference" | "Composition";
-  readonly id: string;
-};
-
-export type ProcedureSnapshot = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly encounterId?: string;
-  readonly basedOnServiceRequestId?: string;
-  readonly partOfProcedureId?: string;
-  readonly status: ProcedureStatus;
-  readonly statusReason?: ProcedureCoding;
-  readonly category: ProcedureCategory;
-  readonly code: ProcedureCoding;
-  readonly performedPeriod?: ProcedurePerformedPeriod;
-  readonly recorderPractitionerId?: string;
-  readonly asserterPractitionerId?: string;
-  readonly performers: readonly ProcedurePerformer[];
-  readonly reasonConditionId?: string;
-  readonly bodySite?: ProcedureCoding;
-  readonly outcome?: ProcedureCoding;
-  readonly reportReferences: readonly ProcedureReportReference[];
-  readonly note?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type CreateProcedureInput = Omit<
+import {
+  procedureCategories,
+  procedurePerformerActorTypes,
+  procedureReportReferenceResourceTypes,
+  procedureStatuses
+} from "./procedure.types.js";
+import type {
+  CreateProcedureInput,
+  ProcedureCategory,
+  ProcedureCoding,
+  ProcedurePerformedPeriod,
+  ProcedurePerformer,
+  ProcedurePerformerActorType,
+  ProcedureReportReference,
   ProcedureSnapshot,
-  "createdAt" | "updatedAt"
->;
+  ProcedureStatus
+} from "./procedure.types.js";
+
+export type {
+  CreateProcedureInput,
+  ProcedureCategory,
+  ProcedureCoding,
+  ProcedurePerformedPeriod,
+  ProcedurePerformer,
+  ProcedurePerformerActorType,
+  ProcedureReportReference,
+  ProcedureSnapshot,
+  ProcedureStatus
+} from "./procedure.types.js";
 
 export class Procedure {
   private constructor(private readonly props: ProcedureSnapshot) {}

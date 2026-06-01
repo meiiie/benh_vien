@@ -23,4 +23,5 @@ pnpm --filter @benh-vien-so/domain run build
 - Với `AccessControl`, file `access-control.ts` giữ logic quyết định quyền và phạm vi bệnh nhân; role, purpose, permission và role-permission catalog nằm trong `access-control.policy.ts`.
 - Với `Patient`, aggregate `patient.ts` giữ register/update/merge behavior; gender, identifier, snapshot, registration input và code set nằm trong `patient.types.ts`.
 - Với `WorkflowTask`, aggregate `workflow-task.ts` giữ lifecycle/reference normalization behavior; status, intent, priority, reference, snapshot và input type nằm trong `workflow-task.types.ts`.
+- Với `Procedure`, aggregate `procedure.ts` giữ lifecycle/performer/report-reference behavior; status, category, performer, report reference, snapshot và input type nằm trong `procedure.types.ts`.
 - Test tối thiểu cho invariant và mapping liên thông.

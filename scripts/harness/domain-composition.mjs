@@ -61,6 +61,16 @@ const domainBudgets = [
     path: "packages/domain/src/workflow-task/workflow-task.types.ts",
     maxLines: 160,
     role: "WorkflowTask status, intent, priority, reference and snapshot types"
+  },
+  {
+    path: "packages/domain/src/procedure/procedure.ts",
+    maxLines: 330,
+    role: "Procedure aggregate lifecycle, performer and report reference behavior"
+  },
+  {
+    path: "packages/domain/src/procedure/procedure.types.ts",
+    maxLines: 130,
+    role: "Procedure status, category, performer, report reference and snapshot types"
   }
 ];
 
@@ -92,6 +102,8 @@ const workflowTaskAggregatePath = resolve(
 const workflowTaskTypesPath = resolve(
   "packages/domain/src/workflow-task/workflow-task.types.ts"
 );
+const procedureAggregatePath = resolve("packages/domain/src/procedure/procedure.ts");
+const procedureTypesPath = resolve("packages/domain/src/procedure/procedure.types.ts");
 
 const domainReports = [];
 
@@ -130,6 +142,8 @@ const patientAggregateSource = await readFile(patientAggregatePath, "utf8");
 const patientTypesSource = await readFile(patientTypesPath, "utf8");
 const workflowTaskAggregateSource = await readFile(workflowTaskAggregatePath, "utf8");
 const workflowTaskTypesSource = await readFile(workflowTaskTypesPath, "utf8");
+const procedureAggregateSource = await readFile(procedureAggregatePath, "utf8");
+const procedureTypesSource = await readFile(procedureTypesPath, "utf8");
 
 for (const forbidden of [
   /export type RecordTransferStatus/,
@@ -313,6 +327,36 @@ for (const required of [
 
 if (!/from "\.\/workflow-task\.types\.js"/.test(workflowTaskAggregateSource)) {
   throw new Error("WorkflowTask aggregate must depend on workflow-task.types.ts for shared types.");
+}
+
+for (const forbidden of [
+  /export type ProcedureStatus/,
+  /export type ProcedureSnapshot/,
+  /const procedureStatuses/
+]) {
+  if (forbidden.test(procedureAggregateSource)) {
+    throw new Error(
+      "Procedure type declarations and code sets belong in procedure.types.ts, not the aggregate file."
+    );
+  }
+}
+
+for (const required of [
+  /export type ProcedureStatus/,
+  /export type ProcedureCategory/,
+  /export type ProcedureSnapshot/,
+  /export type CreateProcedureInput/,
+  /export const procedureStatuses/
+]) {
+  if (!required.test(procedureTypesSource)) {
+    throw new Error(
+      "procedure.types.ts must keep Procedure status, category, snapshot, command input and code-set definitions."
+    );
+  }
+}
+
+if (!/from "\.\/procedure\.types\.js"/.test(procedureAggregateSource)) {
+  throw new Error("Procedure aggregate must depend on procedure.types.ts for shared types.");
 }
 
 console.log(
