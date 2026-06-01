@@ -151,6 +151,16 @@ const domainBudgets = [
     path: "packages/domain/src/diagnostic-report/diagnostic-report.types.ts",
     maxLines: 100,
     role: "DiagnosticReport status, category, code, snapshot and command input types"
+  },
+  {
+    path: "packages/domain/src/observation/observation.ts",
+    maxLines: 210,
+    role: "Observation recording, value and timeline validation behavior"
+  },
+  {
+    path: "packages/domain/src/observation/observation.types.ts",
+    maxLines: 80,
+    role: "Observation status, category, coding, quantity, snapshot and command input types"
   }
 ];
 
@@ -228,6 +238,8 @@ const diagnosticReportAggregatePath = resolve(
 const diagnosticReportTypesPath = resolve(
   "packages/domain/src/diagnostic-report/diagnostic-report.types.ts"
 );
+const observationAggregatePath = resolve("packages/domain/src/observation/observation.ts");
+const observationTypesPath = resolve("packages/domain/src/observation/observation.types.ts");
 
 const domainReports = [];
 
@@ -290,6 +302,8 @@ const clinicalDocumentAggregateSource = await readFile(clinicalDocumentAggregate
 const clinicalDocumentTypesSource = await readFile(clinicalDocumentTypesPath, "utf8");
 const diagnosticReportAggregateSource = await readFile(diagnosticReportAggregatePath, "utf8");
 const diagnosticReportTypesSource = await readFile(diagnosticReportTypesPath, "utf8");
+const observationAggregateSource = await readFile(observationAggregatePath, "utf8");
+const observationTypesSource = await readFile(observationTypesPath, "utf8");
 
 for (const forbidden of [
   /export type RecordTransferStatus/,
@@ -764,6 +778,38 @@ if (!/from "\.\/diagnostic-report\.types\.js"/.test(diagnosticReportAggregateSou
   throw new Error(
     "DiagnosticReport aggregate must depend on diagnostic-report.types.ts for shared types."
   );
+}
+
+for (const forbidden of [
+  /export type ObservationStatus/,
+  /export type ObservationSnapshot/,
+  /const observationStatuses/
+]) {
+  if (forbidden.test(observationAggregateSource)) {
+    throw new Error(
+      "Observation type declarations and code sets belong in observation.types.ts, not the aggregate file."
+    );
+  }
+}
+
+for (const required of [
+  /export type ObservationStatus/,
+  /export type ObservationCategory/,
+  /export type ObservationQuantity/,
+  /export type ObservationSnapshot/,
+  /export type CreateObservationInput/,
+  /export const observationStatuses/,
+  /export const observationCategories/
+]) {
+  if (!required.test(observationTypesSource)) {
+    throw new Error(
+      "observation.types.ts must keep Observation status, category, quantity, snapshot, command input and code-set definitions."
+    );
+  }
+}
+
+if (!/from "\.\/observation\.types\.js"/.test(observationAggregateSource)) {
+  throw new Error("Observation aggregate must depend on observation.types.ts for shared types.");
 }
 
 console.log(
