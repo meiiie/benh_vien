@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 const testBudgets = [
   {
     path: "apps/api/src/server.auth.test.ts",
-    maxLines: 3000,
+    maxLines: 2600,
     role: "API auth/RBAC integration scenarios outside login boundary"
   },
   {
@@ -33,6 +33,11 @@ const testBudgets = [
     role: "API patient access ABAC scenarios across clinical resources"
   },
   {
+    path: "apps/api/src/server.audit-boundary.test.ts",
+    maxLines: 480,
+    role: "API audit access, AuditEvent FHIR export and integrity scenarios"
+  },
+  {
     path: "apps/api/src/server.auth.test-support.ts",
     maxLines: 320,
     role: "Shared API auth boundary test support"
@@ -45,6 +50,7 @@ const runtimeBoundaryPath = resolve("apps/api/src/server.runtime.test.ts");
 const startupConfigBoundaryPath = resolve("apps/api/src/server.startup-config.test.ts");
 const patientRegistryBoundaryPath = resolve("apps/api/src/server.patient-registry.test.ts");
 const patientAccessBoundaryPath = resolve("apps/api/src/server.patient-access.test.ts");
+const auditBoundaryPath = resolve("apps/api/src/server.audit-boundary.test.ts");
 
 const forbiddenAuthBoundaryPatterns = [
   {
@@ -76,6 +82,11 @@ const forbiddenAuthBoundaryPatterns = [
     pattern: /filters treatment patient access by the actor provider organization/,
     message:
       "Patient access ABAC scenarios across clinical resources belong in server.patient-access.test.ts."
+  },
+  {
+    pattern: /allows auditor audit-purpose|exports patient audit trail|returns a verified audit integrity report/,
+    message:
+      "Audit access, AuditEvent FHIR export and integrity scenarios belong in server.audit-boundary.test.ts."
   }
 ];
 
@@ -108,6 +119,12 @@ const requiredPatientAccessBoundaryPatterns = [
   /record-transfer-list-abac-denied-001/,
   /imaging-study-export-abac-denied-001/
 ];
+const requiredAuditBoundaryPatterns = [
+  /allows auditor audit-purpose patient registry context/,
+  /allows auditor audit-purpose access to patient audit events/,
+  /exports patient audit trail as a FHIR AuditEvent Bundle/,
+  /returns a verified audit integrity report/
+];
 
 const testReports = [];
 
@@ -137,6 +154,7 @@ const runtimeBoundarySource = await readFile(runtimeBoundaryPath, "utf8");
 const startupConfigBoundarySource = await readFile(startupConfigBoundaryPath, "utf8");
 const patientRegistryBoundarySource = await readFile(patientRegistryBoundaryPath, "utf8");
 const patientAccessBoundarySource = await readFile(patientAccessBoundaryPath, "utf8");
+const auditBoundarySource = await readFile(auditBoundaryPath, "utf8");
 
 for (const forbidden of forbiddenAuthBoundaryPatterns) {
   if (forbidden.pattern.test(authBoundarySource)) {
@@ -180,6 +198,14 @@ for (const required of requiredPatientAccessBoundaryPatterns) {
   if (!required.test(patientAccessBoundarySource)) {
     throw new Error(
       "server.patient-access.test.ts must keep patient-scope ABAC denials across list, read and FHIR export scenarios."
+    );
+  }
+}
+
+for (const required of requiredAuditBoundaryPatterns) {
+  if (!required.test(auditBoundarySource)) {
+    throw new Error(
+      "server.audit-boundary.test.ts must keep audit-purpose access, AuditEvent FHIR export and audit integrity scenarios."
     );
   }
 }
