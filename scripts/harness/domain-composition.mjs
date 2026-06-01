@@ -201,6 +201,81 @@ const domainBudgets = [
     path: "packages/domain/src/consent/consent.types.ts",
     maxLines: 70,
     role: "Consent status, category, snapshot and command input types"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-types.ts",
+    maxLines: 20,
+    role: "FHIR compatibility barrel exports"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-shared.types.ts",
+    maxLines: 40,
+    role: "FHIR shared identifier and contact point types"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-provider.types.ts",
+    maxLines: 140,
+    role: "FHIR provider directory resource types"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-document.types.ts",
+    maxLines: 150,
+    role: "FHIR document, provenance and composition types"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-privacy.types.ts",
+    maxLines: 110,
+    role: "FHIR consent and privacy resource types"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-audit.types.ts",
+    maxLines: 90,
+    role: "FHIR audit event resource types"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-clinical.types.ts",
+    maxLines: 20,
+    role: "FHIR clinical compatibility barrel exports"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-clinical-core.types.ts",
+    maxLines: 240,
+    role: "FHIR encounter, condition, observation and allergy resource types"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-medication.types.ts",
+    maxLines: 330,
+    role: "FHIR medication request, dispense and administration resource types"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-careflow.types.ts",
+    maxLines: 310,
+    role: "FHIR service request, task and procedure resource types"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-diagnostics.types.ts",
+    maxLines: 150,
+    role: "FHIR diagnostic report and imaging study resource types"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-patient.types.ts",
+    maxLines: 60,
+    role: "FHIR patient resource types"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-operation-outcome.types.ts",
+    maxLines: 80,
+    role: "FHIR OperationOutcome resource types"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-capability-statement.types.ts",
+    maxLines: 80,
+    role: "FHIR CapabilityStatement resource types"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-bundle.types.ts",
+    maxLines: 90,
+    role: "FHIR Bundle entry and bundle resource types"
   }
 ];
 
@@ -292,6 +367,27 @@ const encounterAggregatePath = resolve("packages/domain/src/encounter/encounter.
 const encounterTypesPath = resolve("packages/domain/src/encounter/encounter.types.ts");
 const consentAggregatePath = resolve("packages/domain/src/consent/consent.ts");
 const consentTypesPath = resolve("packages/domain/src/consent/consent.types.ts");
+const fhirTypesPath = resolve("packages/domain/src/fhir/fhir-types.ts");
+const fhirClinicalBarrelPath = resolve("packages/domain/src/fhir/fhir-clinical.types.ts");
+const fhirSharedTypesPath = resolve("packages/domain/src/fhir/fhir-shared.types.ts");
+const fhirProviderTypesPath = resolve("packages/domain/src/fhir/fhir-provider.types.ts");
+const fhirDocumentTypesPath = resolve("packages/domain/src/fhir/fhir-document.types.ts");
+const fhirPrivacyTypesPath = resolve("packages/domain/src/fhir/fhir-privacy.types.ts");
+const fhirAuditTypesPath = resolve("packages/domain/src/fhir/fhir-audit.types.ts");
+const fhirClinicalCoreTypesPath = resolve(
+  "packages/domain/src/fhir/fhir-clinical-core.types.ts"
+);
+const fhirMedicationTypesPath = resolve("packages/domain/src/fhir/fhir-medication.types.ts");
+const fhirCareflowTypesPath = resolve("packages/domain/src/fhir/fhir-careflow.types.ts");
+const fhirDiagnosticsTypesPath = resolve("packages/domain/src/fhir/fhir-diagnostics.types.ts");
+const fhirPatientTypesPath = resolve("packages/domain/src/fhir/fhir-patient.types.ts");
+const fhirOperationOutcomeTypesPath = resolve(
+  "packages/domain/src/fhir/fhir-operation-outcome.types.ts"
+);
+const fhirCapabilityStatementTypesPath = resolve(
+  "packages/domain/src/fhir/fhir-capability-statement.types.ts"
+);
+const fhirBundleTypesPath = resolve("packages/domain/src/fhir/fhir-bundle.types.ts");
 
 const domainReports = [];
 
@@ -367,6 +463,27 @@ const encounterAggregateSource = await readFile(encounterAggregatePath, "utf8");
 const encounterTypesSource = await readFile(encounterTypesPath, "utf8");
 const consentAggregateSource = await readFile(consentAggregatePath, "utf8");
 const consentTypesSource = await readFile(consentTypesPath, "utf8");
+const fhirTypesSource = await readFile(fhirTypesPath, "utf8");
+const fhirClinicalBarrelSource = await readFile(fhirClinicalBarrelPath, "utf8");
+const fhirSharedTypesSource = await readFile(fhirSharedTypesPath, "utf8");
+const fhirProviderTypesSource = await readFile(fhirProviderTypesPath, "utf8");
+const fhirDocumentTypesSource = await readFile(fhirDocumentTypesPath, "utf8");
+const fhirPrivacyTypesSource = await readFile(fhirPrivacyTypesPath, "utf8");
+const fhirAuditTypesSource = await readFile(fhirAuditTypesPath, "utf8");
+const fhirClinicalCoreTypesSource = await readFile(fhirClinicalCoreTypesPath, "utf8");
+const fhirMedicationTypesSource = await readFile(fhirMedicationTypesPath, "utf8");
+const fhirCareflowTypesSource = await readFile(fhirCareflowTypesPath, "utf8");
+const fhirDiagnosticsTypesSource = await readFile(fhirDiagnosticsTypesPath, "utf8");
+const fhirPatientTypesSource = await readFile(fhirPatientTypesPath, "utf8");
+const fhirOperationOutcomeTypesSource = await readFile(
+  fhirOperationOutcomeTypesPath,
+  "utf8"
+);
+const fhirCapabilityStatementTypesSource = await readFile(
+  fhirCapabilityStatementTypesPath,
+  "utf8"
+);
+const fhirBundleTypesSource = await readFile(fhirBundleTypesPath, "utf8");
 
 for (const forbidden of [
   /export type RecordTransferStatus/,
@@ -1012,6 +1129,73 @@ for (const required of [
 
 if (!/from "\.\/consent\.types\.js"/.test(consentAggregateSource)) {
   throw new Error("Consent aggregate must depend on consent.types.ts for shared types.");
+}
+
+for (const forbidden of [
+  /export type FhirPatient/,
+  /export type FhirBundle/,
+  /AdministrativeGender/
+]) {
+  if (forbidden.test(fhirTypesSource)) {
+    throw new Error(
+      "fhir-types.ts must remain a compatibility barrel; concrete FHIR resource declarations belong in focused fhir-*.types.ts modules."
+    );
+  }
+}
+
+for (const required of [
+  /export \* from "\.\/fhir-shared\.types\.js"/,
+  /export \* from "\.\/fhir-provider\.types\.js"/,
+  /export \* from "\.\/fhir-clinical\.types\.js"/,
+  /export \* from "\.\/fhir-bundle\.types\.js"/
+]) {
+  if (!required.test(fhirTypesSource)) {
+    throw new Error("fhir-types.ts must re-export all focused FHIR type modules.");
+  }
+}
+
+for (const forbidden of [/export type FhirMedicationRequest/, /export type FhirEncounter/]) {
+  if (forbidden.test(fhirClinicalBarrelSource)) {
+    throw new Error(
+      "fhir-clinical.types.ts must remain a compatibility barrel; concrete clinical resource types belong in focused clinical submodules."
+    );
+  }
+}
+
+for (const required of [
+  /export type FhirIdentifier/,
+  /export type FhirContactPoint/
+]) {
+  if (!required.test(fhirSharedTypesSource)) {
+    throw new Error("fhir-shared.types.ts must keep shared FHIR identifier and contact point types.");
+  }
+}
+
+for (const required of [
+  [fhirProviderTypesSource, /export type FhirOrganization/, "fhir-provider.types.ts"],
+  [fhirProviderTypesSource, /export type FhirPractitionerRole/, "fhir-provider.types.ts"],
+  [fhirDocumentTypesSource, /export type FhirDocumentReference/, "fhir-document.types.ts"],
+  [fhirDocumentTypesSource, /export type FhirComposition/, "fhir-document.types.ts"],
+  [fhirPrivacyTypesSource, /export type FhirConsent/, "fhir-privacy.types.ts"],
+  [fhirAuditTypesSource, /export type FhirAuditEvent/, "fhir-audit.types.ts"],
+  [fhirClinicalCoreTypesSource, /export type FhirEncounter/, "fhir-clinical-core.types.ts"],
+  [fhirClinicalCoreTypesSource, /export type FhirAllergyIntolerance/, "fhir-clinical-core.types.ts"],
+  [fhirMedicationTypesSource, /export type FhirMedicationRequest/, "fhir-medication.types.ts"],
+  [fhirMedicationTypesSource, /export type FhirMedicationAdministration/, "fhir-medication.types.ts"],
+  [fhirCareflowTypesSource, /export type FhirServiceRequest/, "fhir-careflow.types.ts"],
+  [fhirCareflowTypesSource, /export type FhirProcedure/, "fhir-careflow.types.ts"],
+  [fhirDiagnosticsTypesSource, /export type FhirDiagnosticReport/, "fhir-diagnostics.types.ts"],
+  [fhirDiagnosticsTypesSource, /export type FhirImagingStudy/, "fhir-diagnostics.types.ts"],
+  [fhirPatientTypesSource, /export type FhirPatient/, "fhir-patient.types.ts"],
+  [fhirOperationOutcomeTypesSource, /export type FhirOperationOutcome/, "fhir-operation-outcome.types.ts"],
+  [fhirCapabilityStatementTypesSource, /export type FhirCapabilityStatement/, "fhir-capability-statement.types.ts"],
+  [fhirBundleTypesSource, /export type FhirBundleEntry/, "fhir-bundle.types.ts"],
+  [fhirBundleTypesSource, /export type FhirBundle/, "fhir-bundle.types.ts"]
+]) {
+  const [source, pattern, moduleName] = required;
+  if (!pattern.test(source)) {
+    throw new Error(`${moduleName} is missing its required focused FHIR type declaration.`);
+  }
 }
 
 console.log(

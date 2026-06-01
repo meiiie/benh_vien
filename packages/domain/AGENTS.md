@@ -35,4 +35,5 @@ pnpm --filter @benh-vien-so/domain run build
 - Với `AllergyIntolerance`, aggregate `allergy-intolerance.ts` giữ recording, reaction và timeline validation behavior; status, category, reaction, snapshot và command input type nằm trong `allergy-intolerance.types.ts`.
 - Với `Encounter`, aggregate `encounter.ts` giữ creation, lifecycle và finish behavior; class, status, snapshot và command input type nằm trong `encounter.types.ts`.
 - Với `Consent`, aggregate `consent.ts` giữ grant/revoke và authorization behavior; status, category, snapshot và command input type nằm trong `consent.types.ts`.
+- Với FHIR type, `fhir-types.ts` và `fhir-clinical.types.ts` chỉ là barrel tương thích; resource declaration nằm trong các module `fhir-*.types.ts` theo nhóm shared/provider/document/privacy/audit/clinical/medication/careflow/diagnostics/patient/operation/capability/bundle.
 - Test tối thiểu cho invariant và mapping liên thông.
