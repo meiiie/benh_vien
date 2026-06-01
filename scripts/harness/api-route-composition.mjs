@@ -344,8 +344,28 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-routes.ts",
-    maxLines: 140,
-    role: "RecordTransfer acknowledgement callback adapter"
+    maxLines: 50,
+    role: "RecordTransfer acknowledgement callback route composition root"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-route-dependencies.ts",
+    maxLines: 30,
+    role: "RecordTransfer acknowledgement callback route dependency type contract"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-handler.ts",
+    maxLines: 105,
+    role: "RecordTransfer acknowledgement callback handler"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-request.ts",
+    maxLines: 60,
+    role: "RecordTransfer acknowledgement callback request parsing and signature verification"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-outcomes.ts",
+    maxLines: 100,
+    role: "RecordTransfer acknowledgement callback duplicate and accepted outcomes"
   },
   {
     path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-policy.ts",
@@ -1061,7 +1081,38 @@ const requiredRecordTransferCommandRegistrations = [
 const recordTransferAcknowledgementRoutesPath = resolve(
   "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-routes.ts"
 );
+const recordTransferAcknowledgementHandlerPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-handler.ts"
+);
+const recordTransferAcknowledgementRequestPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-request.ts"
+);
+const recordTransferAcknowledgementOutcomesPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-outcomes.ts"
+);
 const forbiddenRecordTransferAcknowledgementRoutePatterns = [
+  {
+    pattern:
+      /\bRecordTransferAcknowledgementCallbackRequestSchema\b|\bRecordTransferIdParamsSchema\b|\brequirePermission\b|\bverifyRecordTransferCallbackSignature\b/,
+    message:
+      "RecordTransfer acknowledgement permission belongs in the handler, while request parsing and signature handling belong in record-transfer-acknowledgement-request.ts."
+  },
+  {
+    pattern:
+      /\bensureAcknowledgementCallbackAccess\b|\brecordAcceptedAcknowledgementCallbackAudit\b|\brecordDuplicateAcknowledgementCallbackAudit\b|\bmarkReceived\b/,
+    message:
+      "RecordTransfer acknowledgement callback workflow belongs in the handler and outcome modules."
+  },
+  {
+    pattern: /\btoRecordTransferResponse\b|\bsendRecordTransferDomainError\b/,
+    message:
+      "RecordTransfer acknowledgement response and domain-error handling belong in the callback handler."
+  }
+];
+const requiredRecordTransferAcknowledgementRegistrations = [
+  "handleRecordTransferAcknowledgementCallback"
+];
+const forbiddenRecordTransferAcknowledgementHandlerPatterns = [
   {
     pattern: /\bcanAcknowledgeForRecipient\b|\bfindDirectory\b/,
     message:
@@ -1071,13 +1122,37 @@ const forbiddenRecordTransferAcknowledgementRoutePatterns = [
     pattern: /\brecordAuditEvent\b|\btoCallbackSignatureAuditMetadata\b/,
     message:
       "RecordTransfer acknowledgement audit metadata belongs in record-transfer-acknowledgement-audit.ts."
+  },
+  {
+    pattern:
+      /\brecordAcceptedAcknowledgementCallbackAudit\b|\brecordDuplicateAcknowledgementCallbackAudit\b|\bsendAcknowledgementConflict\b|\btoRecordTransferResponse\b|\bmarkReceived\b/,
+    message:
+      "RecordTransfer acknowledgement duplicate and accepted outcomes belong in record-transfer-acknowledgement-outcomes.ts."
+  },
+  {
+    pattern:
+      /\bRecordTransferAcknowledgementCallbackRequestSchema\b|\bRecordTransferIdParamsSchema\b|\bverifyRecordTransferCallbackSignature\b/,
+    message:
+      "RecordTransfer acknowledgement request parsing and signature verification belong in record-transfer-acknowledgement-request.ts."
   }
 ];
-const requiredRecordTransferAcknowledgementHelpers = [
+const requiredRecordTransferAcknowledgementHandlerHelpers = [
   "ensureAcknowledgementCallbackAccess",
   "sendAcknowledgementSignatureFailure",
+  "parseRecordTransferAcknowledgementCallbackRequest",
+  "handleCompletedAcknowledgementCallback",
+  "acceptRecordTransferAcknowledgementCallback"
+];
+const requiredRecordTransferAcknowledgementRequestHelpers = [
+  "RecordTransferAcknowledgementCallbackRequestSchema",
+  "RecordTransferIdParamsSchema",
+  "verifyRecordTransferCallbackSignature"
+];
+const requiredRecordTransferAcknowledgementOutcomeHelpers = [
   "recordAcceptedAcknowledgementCallbackAudit",
-  "recordDuplicateAcknowledgementCallbackAudit"
+  "recordDuplicateAcknowledgementCallbackAudit",
+  "sendAcknowledgementConflict",
+  "toRecordTransferResponse"
 ];
 
 const encounterRoutesPath = resolve("apps/api/src/modules/encounters/encounter-routes.ts");
@@ -1586,6 +1661,18 @@ const recordTransferAcknowledgementRoutesSource = await readFile(
   recordTransferAcknowledgementRoutesPath,
   "utf8"
 );
+const recordTransferAcknowledgementHandlerSource = await readFile(
+  recordTransferAcknowledgementHandlerPath,
+  "utf8"
+);
+const recordTransferAcknowledgementRequestSource = await readFile(
+  recordTransferAcknowledgementRequestPath,
+  "utf8"
+);
+const recordTransferAcknowledgementOutcomesSource = await readFile(
+  recordTransferAcknowledgementOutcomesPath,
+  "utf8"
+);
 const encounterRoutesSource = await readFile(encounterRoutesPath, "utf8");
 const patientRoutesSource = await readFile(patientRoutesPath, "utf8");
 const patientFhirRoutesSource = await readFile(patientFhirRoutesPath, "utf8");
@@ -1761,10 +1848,40 @@ for (const forbidden of forbiddenRecordTransferAcknowledgementRoutePatterns) {
   }
 }
 
-for (const helper of requiredRecordTransferAcknowledgementHelpers) {
-  if (!recordTransferAcknowledgementRoutesSource.includes(helper)) {
+for (const registration of requiredRecordTransferAcknowledgementRegistrations) {
+  if (!recordTransferAcknowledgementRoutesSource.includes(registration)) {
     throw new Error(
-      `RecordTransfer acknowledgement route must use ${helper} so callback access and audit policy remain split.`
+      `RecordTransfer acknowledgement root routes must register ${registration} so callback handling remains wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenRecordTransferAcknowledgementHandlerPatterns) {
+  if (forbidden.pattern.test(recordTransferAcknowledgementHandlerSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const helper of requiredRecordTransferAcknowledgementHandlerHelpers) {
+  if (!recordTransferAcknowledgementHandlerSource.includes(helper)) {
+    throw new Error(
+      `RecordTransfer acknowledgement callback handler must use ${helper} so callback access and outcome policy remain split.`
+    );
+  }
+}
+
+for (const helper of requiredRecordTransferAcknowledgementRequestHelpers) {
+  if (!recordTransferAcknowledgementRequestSource.includes(helper)) {
+    throw new Error(
+      `RecordTransfer acknowledgement callback request parser must use ${helper} so params, body and signature verification remain centralized.`
+    );
+  }
+}
+
+for (const helper of requiredRecordTransferAcknowledgementOutcomeHelpers) {
+  if (!recordTransferAcknowledgementOutcomesSource.includes(helper)) {
+    throw new Error(
+      `RecordTransfer acknowledgement callback outcomes must use ${helper} so duplicate and accepted responses remain split from the handler.`
     );
   }
 }
