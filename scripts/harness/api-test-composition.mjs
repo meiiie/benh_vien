@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 const testBudgets = [
   {
     path: "apps/api/src/server.auth.test.ts",
-    maxLines: 2600,
+    maxLines: 2050,
     role: "API auth/RBAC integration scenarios outside login boundary"
   },
   {
@@ -38,6 +38,11 @@ const testBudgets = [
     role: "API audit access, AuditEvent FHIR export and integrity scenarios"
   },
   {
+    path: "apps/api/src/server.fhir-boundary.test.ts",
+    maxLines: 680,
+    role: "API FHIR export, document reference and OperationOutcome scenarios"
+  },
+  {
     path: "apps/api/src/server.auth.test-support.ts",
     maxLines: 320,
     role: "Shared API auth boundary test support"
@@ -51,6 +56,7 @@ const startupConfigBoundaryPath = resolve("apps/api/src/server.startup-config.te
 const patientRegistryBoundaryPath = resolve("apps/api/src/server.patient-registry.test.ts");
 const patientAccessBoundaryPath = resolve("apps/api/src/server.patient-access.test.ts");
 const auditBoundaryPath = resolve("apps/api/src/server.audit-boundary.test.ts");
+const fhirBoundaryPath = resolve("apps/api/src/server.fhir-boundary.test.ts");
 
 const forbiddenAuthBoundaryPatterns = [
   {
@@ -87,6 +93,11 @@ const forbiddenAuthBoundaryPatterns = [
     pattern: /allows auditor audit-purpose|exports patient audit trail|returns a verified audit integrity report/,
     message:
       "Audit access, AuditEvent FHIR export and integrity scenarios belong in server.audit-boundary.test.ts."
+  },
+  {
+    pattern: /denies nurse FHIR export|returns a patient-record FHIR Bundle|FHIR OperationOutcome|rejects malformed DICOM UIDs/,
+    message:
+      "FHIR export, document reference and OperationOutcome scenarios belong in server.fhir-boundary.test.ts."
   }
 ];
 
@@ -125,6 +136,13 @@ const requiredAuditBoundaryPatterns = [
   /exports patient audit trail as a FHIR AuditEvent Bundle/,
   /returns a verified audit integrity report/
 ];
+const requiredFhirBoundaryPatterns = [
+  /denies nurse FHIR export even with treatment purpose/,
+  /returns a patient-record FHIR Bundle for treatment export/,
+  /exports clinical document attachment metadata as FHIR DocumentReference/,
+  /negotiates validation errors as FHIR OperationOutcome/,
+  /rejects malformed DICOM UIDs/
+];
 
 const testReports = [];
 
@@ -155,6 +173,7 @@ const startupConfigBoundarySource = await readFile(startupConfigBoundaryPath, "u
 const patientRegistryBoundarySource = await readFile(patientRegistryBoundaryPath, "utf8");
 const patientAccessBoundarySource = await readFile(patientAccessBoundaryPath, "utf8");
 const auditBoundarySource = await readFile(auditBoundaryPath, "utf8");
+const fhirBoundarySource = await readFile(fhirBoundaryPath, "utf8");
 
 for (const forbidden of forbiddenAuthBoundaryPatterns) {
   if (forbidden.pattern.test(authBoundarySource)) {
@@ -206,6 +225,14 @@ for (const required of requiredAuditBoundaryPatterns) {
   if (!required.test(auditBoundarySource)) {
     throw new Error(
       "server.audit-boundary.test.ts must keep audit-purpose access, AuditEvent FHIR export and audit integrity scenarios."
+    );
+  }
+}
+
+for (const required of requiredFhirBoundaryPatterns) {
+  if (!required.test(fhirBoundarySource)) {
+    throw new Error(
+      "server.fhir-boundary.test.ts must keep FHIR Bundle, DocumentReference, OperationOutcome and FHIR validation scenarios."
     );
   }
 }
