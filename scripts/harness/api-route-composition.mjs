@@ -574,8 +574,18 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/clinical-documents/clinical-document-fhir-routes.ts",
-    maxLines: 160,
-    role: "ClinicalDocument FHIR DocumentReference and Provenance route adapter"
+    maxLines: 50,
+    role: "ClinicalDocument FHIR route composition root"
+  },
+  {
+    path: "apps/api/src/modules/clinical-documents/clinical-document-fhir-resource-routes.ts",
+    maxLines: 100,
+    role: "ClinicalDocument FHIR DocumentReference export route adapter"
+  },
+  {
+    path: "apps/api/src/modules/clinical-documents/clinical-document-provenance-routes.ts",
+    maxLines: 110,
+    role: "ClinicalDocument FHIR Provenance export route adapter"
   },
   {
     path: "apps/api/src/modules/clinical-documents/clinical-document-route-helpers.ts",
@@ -1235,6 +1245,28 @@ const requiredClinicalDocumentRegistrations = [
   "registerClinicalDocumentFhirRoutes"
 ];
 
+const clinicalDocumentFhirRoutesPath = resolve(
+  "apps/api/src/modules/clinical-documents/clinical-document-fhir-routes.ts"
+);
+const forbiddenClinicalDocumentFhirRoutePatterns = [
+  {
+    pattern:
+      /\bClinicalDocumentIdParamsSchema\b|\brequirePatientRecordAccessByPatientId\b|\brecordAuditEvent\b/,
+    message:
+      "ClinicalDocument FHIR request handling and audit policy belong in resource or Provenance route modules."
+  },
+  {
+    pattern:
+      /\bDomainError\b|\bmapClinicalDocumentToFhir\b|\bmapClinicalDocumentToFhirProvenance\b|\bsendFhirOperationOutcome\b/,
+    message:
+      "ClinicalDocument FHIR mapping and OperationOutcome details belong outside the FHIR route composition root."
+  }
+];
+const requiredClinicalDocumentFhirRegistrations = [
+  "registerClinicalDocumentFhirResourceRoutes",
+  "registerClinicalDocumentProvenanceRoutes"
+];
+
 const medicationAdministrationRoutesPath = resolve(
   "apps/api/src/modules/medication-administrations/medication-administration-routes.ts"
 );
@@ -1502,6 +1534,10 @@ const clinicalDocumentRoutesSource = await readFile(
   clinicalDocumentRoutesPath,
   "utf8"
 );
+const clinicalDocumentFhirRoutesSource = await readFile(
+  clinicalDocumentFhirRoutesPath,
+  "utf8"
+);
 const medicationAdministrationRoutesSource = await readFile(
   medicationAdministrationRoutesPath,
   "utf8"
@@ -1760,6 +1796,20 @@ for (const registration of requiredClinicalDocumentRegistrations) {
   if (!clinicalDocumentRoutesSource.includes(registration)) {
     throw new Error(
       `ClinicalDocument root routes must register ${registration} so query, command and FHIR modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenClinicalDocumentFhirRoutePatterns) {
+  if (forbidden.pattern.test(clinicalDocumentFhirRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredClinicalDocumentFhirRegistrations) {
+  if (!clinicalDocumentFhirRoutesSource.includes(registration)) {
+    throw new Error(
+      `ClinicalDocument FHIR root routes must register ${registration} so DocumentReference and Provenance exports remain wired.`
     );
   }
 }
