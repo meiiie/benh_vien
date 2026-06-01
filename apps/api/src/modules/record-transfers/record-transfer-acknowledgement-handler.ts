@@ -1,9 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { requirePermission } from "../access-control/access-context.js";
-import {
-  ensureAcknowledgementCallbackAccess,
-  sendAcknowledgementSignatureFailure
-} from "./record-transfer-acknowledgement-policy.js";
+import { ensureAcknowledgementCallbackAccess } from "./record-transfer-acknowledgement-policy.js";
+import { sendAcknowledgementSignatureFailure } from "./record-transfer-acknowledgement-responses.js";
 import {
   acceptRecordTransferAcknowledgementCallback,
   handleCompletedAcknowledgementCallback

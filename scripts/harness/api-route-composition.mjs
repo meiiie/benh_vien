@@ -379,8 +379,13 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-policy.ts",
-    maxLines: 130,
-    role: "RecordTransfer acknowledgement callback access and error policy"
+    maxLines: 80,
+    role: "RecordTransfer acknowledgement callback access policy"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-responses.ts",
+    maxLines: 80,
+    role: "RecordTransfer acknowledgement callback HTTP error responses"
   },
   {
     path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-audit.ts",
@@ -1131,6 +1136,12 @@ const recordTransferAcknowledgementCompletedOutcomePath = resolve(
 const recordTransferAcknowledgementAcceptedOutcomePath = resolve(
   "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-accepted-outcome.ts"
 );
+const recordTransferAcknowledgementPolicyPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-policy.ts"
+);
+const recordTransferAcknowledgementResponsesPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-responses.ts"
+);
 const forbiddenRecordTransferAcknowledgementRoutePatterns = [
   {
     pattern:
@@ -1176,6 +1187,31 @@ const forbiddenRecordTransferAcknowledgementHandlerPatterns = [
     message:
       "RecordTransfer acknowledgement request parsing and signature verification belong in record-transfer-acknowledgement-request.ts."
   }
+];
+const forbiddenRecordTransferAcknowledgementPolicyPatterns = [
+  {
+    pattern:
+      /\breply\.status\b|\bsignatureVerification\.statusCode\b|\bRECORD_TRANSFER_ALREADY_COMPLETED\b|\btoAcknowledgementActor\b/,
+    message:
+      "RecordTransfer acknowledgement HTTP response envelopes belong in record-transfer-acknowledgement-responses.ts."
+  }
+];
+const requiredRecordTransferAcknowledgementPolicyHelpers = [
+  "sendAcknowledgementForbidden",
+  "canAcknowledgeForRecipient"
+];
+const forbiddenRecordTransferAcknowledgementResponsePatterns = [
+  {
+    pattern: /\bfindDirectory\b|\bcanAcknowledgeForRecipient\b|\bmarkReceived\b|\brecordAuditEvent\b/,
+    message:
+      "RecordTransfer acknowledgement responses must stay transport-only; access, lifecycle transitions and audit belong in their own modules."
+  }
+];
+const requiredRecordTransferAcknowledgementResponseHelpers = [
+  "sendAcknowledgementForbidden",
+  "sendAcknowledgementSignatureFailure",
+  "sendAcknowledgementConflict",
+  "toAcknowledgementActor"
 ];
 const requiredRecordTransferAcknowledgementHandlerHelpers = [
   "ensureAcknowledgementCallbackAccess",
@@ -1769,6 +1805,14 @@ const recordTransferAcknowledgementAcceptedOutcomeSource = await readFile(
   recordTransferAcknowledgementAcceptedOutcomePath,
   "utf8"
 );
+const recordTransferAcknowledgementPolicySource = await readFile(
+  recordTransferAcknowledgementPolicyPath,
+  "utf8"
+);
+const recordTransferAcknowledgementResponsesSource = await readFile(
+  recordTransferAcknowledgementResponsesPath,
+  "utf8"
+);
 const encounterRoutesSource = await readFile(encounterRoutesPath, "utf8");
 const patientRoutesSource = await readFile(patientRoutesPath, "utf8");
 const patientFhirRoutesSource = await readFile(patientFhirRoutesPath, "utf8");
@@ -1968,6 +2012,34 @@ for (const registration of requiredRecordTransferAcknowledgementRegistrations) {
 for (const forbidden of forbiddenRecordTransferAcknowledgementHandlerPatterns) {
   if (forbidden.pattern.test(recordTransferAcknowledgementHandlerSource)) {
     throw new Error(forbidden.message);
+  }
+}
+
+for (const forbidden of forbiddenRecordTransferAcknowledgementPolicyPatterns) {
+  if (forbidden.pattern.test(recordTransferAcknowledgementPolicySource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const helper of requiredRecordTransferAcknowledgementPolicyHelpers) {
+  if (!recordTransferAcknowledgementPolicySource.includes(helper)) {
+    throw new Error(
+      `RecordTransfer acknowledgement access policy must use ${helper} so purpose and recipient checks stay centralized.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenRecordTransferAcknowledgementResponsePatterns) {
+  if (forbidden.pattern.test(recordTransferAcknowledgementResponsesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const helper of requiredRecordTransferAcknowledgementResponseHelpers) {
+  if (!recordTransferAcknowledgementResponsesSource.includes(helper)) {
+    throw new Error(
+      `RecordTransfer acknowledgement response helper must expose ${helper} so callback error envelopes stay centralized.`
+    );
   }
 }
 

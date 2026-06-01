@@ -6,7 +6,7 @@ import type {
   RecordTransferSnapshot
 } from "@benh-vien-so/domain";
 import { recordDuplicateAcknowledgementCallbackAudit } from "./record-transfer-acknowledgement-audit.js";
-import { sendAcknowledgementConflict } from "./record-transfer-acknowledgement-policy.js";
+import { sendAcknowledgementConflict } from "./record-transfer-acknowledgement-responses.js";
 import type { CallbackSignatureVerification } from "./record-transfer-callback-signature.js";
 import { toRecordTransferResponse } from "./record-transfer-route-helpers.js";
 
