@@ -28,7 +28,7 @@ import { recordAuditEvent } from "../audit-events/audit-context.js";
 import { preparePatientRecordBundleContext } from "./patient-record-bundle-route-helpers.js";
 import {
   buildPatientRecordBundleAuditMetadata
-} from "./patient-route-helpers.js";
+} from "./patient-record-bundle-collections.js";
 
 export async function registerPatientRecordBundleRoutes(
   app: FastifyInstance,

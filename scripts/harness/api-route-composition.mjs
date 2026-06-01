@@ -400,12 +400,32 @@ const routeBudgets = [
   {
     path: "apps/api/src/modules/patients/patient-record-bundle-route-helpers.ts",
     maxLines: 170,
-    role: "Patient FHIR Bundle transfer context, consent and collection helpers"
+    role: "Patient FHIR Bundle access and consent preparation helpers"
+  },
+  {
+    path: "apps/api/src/modules/patients/patient-record-bundle-transfer-context.ts",
+    maxLines: 50,
+    role: "Patient FHIR Bundle transfer-context header reader"
+  },
+  {
+    path: "apps/api/src/modules/patients/patient-record-bundle-collections.ts",
+    maxLines: 180,
+    role: "Patient FHIR Bundle collection loading and audit metadata"
+  },
+  {
+    path: "apps/api/src/modules/patients/patient-identifier-conflict.ts",
+    maxLines: 90,
+    role: "Patient identifier conflict audit and response helper"
+  },
+  {
+    path: "apps/api/src/modules/patients/patient-response.ts",
+    maxLines: 20,
+    role: "Patient response DTO mapper"
   },
   {
     path: "apps/api/src/modules/patients/patient-route-helpers.ts",
-    maxLines: 260,
-    role: "Patient route helper functions"
+    maxLines: 20,
+    role: "Patient route helper compatibility barrel"
   },
   {
     path: "apps/api/src/modules/clinical-documents/clinical-document-routes.ts",

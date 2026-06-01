@@ -9,10 +9,12 @@ import {
 } from "../access-control/access-context.js";
 import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
 import {
-  loadPatientRecordBundleCollections,
+  loadPatientRecordBundleCollections
+} from "./patient-record-bundle-collections.js";
+import type { LoadPatientRecordBundleCollectionsInput } from "./patient-record-bundle-collections.js";
+import {
   readBundleTransferContext
-} from "./patient-route-helpers.js";
-import type { LoadPatientRecordBundleCollectionsInput } from "./patient-route-helpers.js";
+} from "./patient-record-bundle-transfer-context.js";
 
 type PatientRecordBundleType = "collection" | "document";
 
