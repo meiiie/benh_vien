@@ -1,6 +1,7 @@
 import type { PatientSnapshot } from "../patient/patient.js";
 import type { ProviderDirectorySnapshot } from "../provider-directory/provider-directory.js";
-import { actorRoles, purposesOfUse, rolePermissions } from "./access-control.policy.js";
+import { rolePermissions } from "./access-control.permissions.js";
+import { actorRoles, purposesOfUse } from "./access-control.policy.js";
 import type {
   ActorContext,
   ActorRole,

@@ -74,8 +74,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/access-control/access-control.policy.ts",
-    maxLines: 340,
-    role: "AccessControl role, purpose and permission catalog"
+    maxLines: 120,
+    role: "AccessControl role, purpose and permission type definitions"
+  },
+  {
+    path: "packages/domain/src/access-control/access-control.permissions.ts",
+    maxLines: 240,
+    role: "AccessControl role-permission catalog"
   },
   {
     path: "packages/domain/src/patient/patient.ts",
@@ -435,6 +440,9 @@ const accessControlBehaviorPath = resolve(
 const accessControlPolicyPath = resolve(
   "packages/domain/src/access-control/access-control.policy.ts"
 );
+const accessControlPermissionsPath = resolve(
+  "packages/domain/src/access-control/access-control.permissions.ts"
+);
 const patientAggregatePath = resolve("packages/domain/src/patient/patient.ts");
 const patientValidationPath = resolve("packages/domain/src/patient/patient.validation.ts");
 const patientTypesPath = resolve("packages/domain/src/patient/patient.types.ts");
@@ -611,6 +619,7 @@ const auditEventValidationSource = await readFile(auditEventValidationPath, "utf
 const auditEventTypesSource = await readFile(auditEventTypesPath, "utf8");
 const accessControlBehaviorSource = await readFile(accessControlBehaviorPath, "utf8");
 const accessControlPolicySource = await readFile(accessControlPolicyPath, "utf8");
+const accessControlPermissionsSource = await readFile(accessControlPermissionsPath, "utf8");
 const patientAggregateSource = await readFile(patientAggregatePath, "utf8");
 const patientValidationSource = await readFile(patientValidationPath, "utf8");
 const patientTypesSource = await readFile(patientTypesPath, "utf8");
@@ -960,7 +969,7 @@ for (const forbidden of [
 ]) {
   if (forbidden.test(accessControlBehaviorSource)) {
     throw new Error(
-      "AccessControl role, purpose and permission catalog belongs in access-control.policy.ts, not the behavior file."
+      "AccessControl role, purpose and permission catalog belongs in policy/permissions modules, not the behavior file."
     );
   }
 }
@@ -970,20 +979,58 @@ for (const required of [
   /export type PurposeOfUse/,
   /export type Permission/,
   /export const actorRoles/,
-  /export const purposesOfUse/,
-  /export const rolePermissions/
+  /export const purposesOfUse/
 ]) {
   if (!required.test(accessControlPolicySource)) {
     throw new Error(
-      "access-control.policy.ts must keep AccessControl roles, purposes, permissions and role-permission catalog definitions."
+      "access-control.policy.ts must keep AccessControl roles, purposes and permission definitions."
+    );
+  }
+}
+
+for (const forbidden of [
+  /export const rolePermissions/
+]) {
+  if (forbidden.test(accessControlPolicySource)) {
+    throw new Error(
+      "AccessControl role-permission catalog must stay out of access-control.policy.ts."
     );
   }
 }
 
 if (!/from "\.\/access-control\.policy\.js"/.test(accessControlBehaviorSource)) {
   throw new Error(
-    "AccessControl behavior must depend on access-control.policy.ts for shared policy catalog types."
+    "AccessControl behavior must depend on access-control.policy.ts for shared policy types."
   );
+}
+
+if (!/from "\.\/access-control\.permissions\.js"/.test(accessControlBehaviorSource)) {
+  throw new Error(
+    "AccessControl behavior must depend on access-control.permissions.ts for the role-permission catalog."
+  );
+}
+
+for (const required of [
+  /export const rolePermissions/,
+  /from "\.\/access-control\.policy\.js"/
+]) {
+  if (!required.test(accessControlPermissionsSource)) {
+    throw new Error(
+      "access-control.permissions.ts must keep AccessControl role-permission catalog definitions."
+    );
+  }
+}
+
+for (const forbidden of [
+  /export type ActorRole/,
+  /export type PurposeOfUse/,
+  /export type Permission/
+]) {
+  if (forbidden.test(accessControlPermissionsSource)) {
+    throw new Error(
+      "AccessControl policy types must stay in access-control.policy.ts, not access-control.permissions.ts."
+    );
+  }
 }
 
 for (const forbidden of [
