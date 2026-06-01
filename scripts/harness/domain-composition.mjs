@@ -74,8 +74,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/workflow-task/workflow-task.ts",
-    maxLines: 340,
-    role: "WorkflowTask aggregate lifecycle and reference normalization behavior"
+    maxLines: 160,
+    role: "WorkflowTask aggregate lifecycle behavior"
+  },
+  {
+    path: "packages/domain/src/workflow-task/workflow-task.validation.ts",
+    maxLines: 170,
+    role: "WorkflowTask code, reference, status and timeline guards"
   },
   {
     path: "packages/domain/src/workflow-task/workflow-task.types.ts",
@@ -394,6 +399,9 @@ const patientTypesPath = resolve("packages/domain/src/patient/patient.types.ts")
 const workflowTaskAggregatePath = resolve(
   "packages/domain/src/workflow-task/workflow-task.ts"
 );
+const workflowTaskValidationPath = resolve(
+  "packages/domain/src/workflow-task/workflow-task.validation.ts"
+);
 const workflowTaskTypesPath = resolve(
   "packages/domain/src/workflow-task/workflow-task.types.ts"
 );
@@ -550,6 +558,7 @@ const patientAggregateSource = await readFile(patientAggregatePath, "utf8");
 const patientValidationSource = await readFile(patientValidationPath, "utf8");
 const patientTypesSource = await readFile(patientTypesPath, "utf8");
 const workflowTaskAggregateSource = await readFile(workflowTaskAggregatePath, "utf8");
+const workflowTaskValidationSource = await readFile(workflowTaskValidationPath, "utf8");
 const workflowTaskTypesSource = await readFile(workflowTaskTypesPath, "utf8");
 const procedureAggregateSource = await readFile(procedureAggregatePath, "utf8");
 const procedureTypesSource = await readFile(procedureTypesPath, "utf8");
@@ -880,11 +889,14 @@ for (const required of [
 for (const forbidden of [
   /export type WorkflowTaskStatus/,
   /export type WorkflowTaskSnapshot/,
-  /const workflowTaskStatuses/
+  /const workflowTaskStatuses/,
+  /function normalizeCode/,
+  /function normalizeReferences/,
+  /function validateTimeline/
 ]) {
   if (forbidden.test(workflowTaskAggregateSource)) {
     throw new Error(
-      "WorkflowTask type declarations and code sets belong in workflow-task.types.ts, not the aggregate file."
+      "WorkflowTask aggregate must keep lifecycle behavior only; types stay in workflow-task.types.ts and code/reference/status/timeline guards stay in workflow-task.validation.ts."
     );
   }
 }
@@ -905,6 +917,27 @@ for (const required of [
 
 if (!/from "\.\/workflow-task\.types\.js"/.test(workflowTaskAggregateSource)) {
   throw new Error("WorkflowTask aggregate must depend on workflow-task.types.ts for shared types.");
+}
+
+if (!/from "\.\/workflow-task\.validation\.js"/.test(workflowTaskAggregateSource)) {
+  throw new Error(
+    "WorkflowTask aggregate must depend on workflow-task.validation.ts for code, reference, status and timeline guards."
+  );
+}
+
+for (const required of [
+  /export function normalizeCode/,
+  /export function normalizeReferences/,
+  /export function validateTimeline/,
+  /export function assertCompletedTaskHasOutputReferences/,
+  /export function normalizeStatus/,
+  /from "\.\/workflow-task\.types\.js"/
+]) {
+  if (!required.test(workflowTaskValidationSource)) {
+    throw new Error(
+      "workflow-task.validation.ts must keep WorkflowTask code, reference, status and timeline guards."
+    );
+  }
 }
 
 for (const forbidden of [
