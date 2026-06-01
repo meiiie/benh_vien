@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 const testBudgets = [
   {
     path: "apps/api/src/server.auth.test.ts",
-    maxLines: 3900,
+    maxLines: 3700,
     role: "API auth/RBAC integration scenarios outside login boundary"
   },
   {
@@ -23,6 +23,11 @@ const testBudgets = [
     role: "API startup and production configuration scenarios"
   },
   {
+    path: "apps/api/src/server.patient-registry.test.ts",
+    maxLines: 360,
+    role: "API patient registry, identifier conflict and merge scenarios"
+  },
+  {
     path: "apps/api/src/server.auth.test-support.ts",
     maxLines: 320,
     role: "Shared API auth boundary test support"
@@ -33,6 +38,7 @@ const authBoundaryPath = resolve("apps/api/src/server.auth.test.ts");
 const loginBoundaryPath = resolve("apps/api/src/server.auth.login.test.ts");
 const runtimeBoundaryPath = resolve("apps/api/src/server.runtime.test.ts");
 const startupConfigBoundaryPath = resolve("apps/api/src/server.startup-config.test.ts");
+const patientRegistryBoundaryPath = resolve("apps/api/src/server.patient-registry.test.ts");
 
 const forbiddenAuthBoundaryPatterns = [
   {
@@ -54,6 +60,11 @@ const forbiddenAuthBoundaryPatterns = [
     pattern: /requires explicit CORS origins|rejects unsafe CORS origins|requires PostgreSQL repositories|rejects local-only public API base URLs/,
     message:
       "Startup and production configuration scenarios belong in server.startup-config.test.ts."
+  },
+  {
+    pattern: /allows clinician treatment access to patient registry|blocks duplicate patient identifiers|merges a duplicate patient record/,
+    message:
+      "Patient registry, identifier conflict and merge scenarios belong in server.patient-registry.test.ts."
   }
 ];
 
@@ -74,6 +85,11 @@ const requiredStartupConfigBoundaryPatterns = [
   /rejects unsafe CORS origins/,
   /requires PostgreSQL repositories/,
   /rejects local-only public API base URLs/
+];
+const requiredPatientRegistryBoundaryPatterns = [
+  /allows clinician treatment access to patient registry/,
+  /blocks duplicate patient identifiers/,
+  /merges a duplicate patient record/
 ];
 
 const testReports = [];
@@ -102,6 +118,7 @@ const authBoundarySource = await readFile(authBoundaryPath, "utf8");
 const loginBoundarySource = await readFile(loginBoundaryPath, "utf8");
 const runtimeBoundarySource = await readFile(runtimeBoundaryPath, "utf8");
 const startupConfigBoundarySource = await readFile(startupConfigBoundaryPath, "utf8");
+const patientRegistryBoundarySource = await readFile(patientRegistryBoundaryPath, "utf8");
 
 for (const forbidden of forbiddenAuthBoundaryPatterns) {
   if (forbidden.pattern.test(authBoundarySource)) {
@@ -129,6 +146,14 @@ for (const required of requiredStartupConfigBoundaryPatterns) {
   if (!required.test(startupConfigBoundarySource)) {
     throw new Error(
       "server.startup-config.test.ts must keep core CORS, repository, public API URL and production startup validation scenarios."
+    );
+  }
+}
+
+for (const required of requiredPatientRegistryBoundaryPatterns) {
+  if (!required.test(patientRegistryBoundarySource)) {
+    throw new Error(
+      "server.patient-registry.test.ts must keep core patient registry access, identifier conflict and merge scenarios."
     );
   }
 }
