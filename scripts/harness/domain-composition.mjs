@@ -219,8 +219,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/encounter/encounter.ts",
-    maxLines: 230,
+    maxLines: 190,
     role: "Encounter creation, lifecycle and finish behavior"
+  },
+  {
+    path: "packages/domain/src/encounter/encounter.validation.ts",
+    maxLines: 90,
+    role: "Encounter class, status and timeline guards"
   },
   {
     path: "packages/domain/src/encounter/encounter.types.ts",
@@ -418,6 +423,7 @@ const allergyIntoleranceTypesPath = resolve(
   "packages/domain/src/allergy-intolerance/allergy-intolerance.types.ts"
 );
 const encounterAggregatePath = resolve("packages/domain/src/encounter/encounter.ts");
+const encounterValidationPath = resolve("packages/domain/src/encounter/encounter.validation.ts");
 const encounterTypesPath = resolve("packages/domain/src/encounter/encounter.types.ts");
 const consentAggregatePath = resolve("packages/domain/src/consent/consent.ts");
 const consentTypesPath = resolve("packages/domain/src/consent/consent.types.ts");
@@ -530,6 +536,7 @@ const allergyIntoleranceAggregateSource = await readFile(
 );
 const allergyIntoleranceTypesSource = await readFile(allergyIntoleranceTypesPath, "utf8");
 const encounterAggregateSource = await readFile(encounterAggregatePath, "utf8");
+const encounterValidationSource = await readFile(encounterValidationPath, "utf8");
 const encounterTypesSource = await readFile(encounterTypesPath, "utf8");
 const consentAggregateSource = await readFile(consentAggregatePath, "utf8");
 const consentTypesSource = await readFile(consentTypesPath, "utf8");
@@ -1291,11 +1298,13 @@ if (!/from "\.\/allergy-intolerance\.types\.js"/.test(allergyIntoleranceAggregat
 for (const forbidden of [
   /export type EncounterClass/,
   /export type EncounterSnapshot/,
-  /const encounterClasses/
+  /const encounterClasses/,
+  /function normalizeRequired/,
+  /function validateLifecycle/
 ]) {
   if (forbidden.test(encounterAggregateSource)) {
     throw new Error(
-      "Encounter type declarations and code sets belong in encounter.types.ts, not the aggregate file."
+      "Encounter aggregate must keep creation/lifecycle behavior only; types stay in encounter.types.ts and class/status/timeline guards stay in encounter.validation.ts."
     );
   }
 }
@@ -1317,6 +1326,26 @@ for (const required of [
 
 if (!/from "\.\/encounter\.types\.js"/.test(encounterAggregateSource)) {
   throw new Error("Encounter aggregate must depend on encounter.types.ts for shared types.");
+}
+
+if (!/from "\.\/encounter\.validation\.js"/.test(encounterAggregateSource)) {
+  throw new Error(
+    "Encounter aggregate must depend on encounter.validation.ts for class, status and timeline guards."
+  );
+}
+
+for (const required of [
+  /export function normalizeClass/,
+  /export function normalizeStatus/,
+  /export function validateLifecycle/,
+  /export function validatePersistenceTimeline/,
+  /from "\.\/encounter\.types\.js"/
+]) {
+  if (!required.test(encounterValidationSource)) {
+    throw new Error(
+      "encounter.validation.ts must keep Encounter class, status and timeline guards."
+    );
+  }
 }
 
 for (const forbidden of [

@@ -33,7 +33,7 @@ pnpm --filter @benh-vien-so/domain run build
 - Với `Observation`, aggregate `observation.ts` giữ recording, value và timeline validation behavior; status, category, coding, quantity, snapshot và command input type nằm trong `observation.types.ts`.
 - Với `Condition`, aggregate `condition.ts` giữ recording, clinical status và timeline validation behavior; status, category, severity, code, snapshot và command input type nằm trong `condition.types.ts`.
 - Với `AllergyIntolerance`, aggregate `allergy-intolerance.ts` giữ recording, reaction và timeline validation behavior; status, category, reaction, snapshot và command input type nằm trong `allergy-intolerance.types.ts`.
-- Với `Encounter`, aggregate `encounter.ts` giữ creation, lifecycle và finish behavior; class, status, snapshot và command input type nằm trong `encounter.types.ts`.
+- Với `Encounter`, aggregate `encounter.ts` giữ creation, lifecycle và finish behavior; class/status/timeline guard nằm trong `encounter.validation.ts`; class, status, snapshot và command input type nằm trong `encounter.types.ts`.
 - Với `Consent`, aggregate `consent.ts` giữ grant/revoke và authorization behavior; status, category, snapshot và command input type nằm trong `consent.types.ts`.
 - Với `Patient`, aggregate `patient.ts` giữ registration, demographic update và merge behavior; identifier, FHIR birth date, merge state và timeline guard nằm trong `patient.validation.ts`; gender/identifier/status/snapshot/input type nằm trong `patient.types.ts`.
 - Với `RecordTransfer`, aggregate `record-transfer.ts` giữ lifecycle behavior; normalization và snapshot invariant guard nằm trong `record-transfer.validation.ts`; status, snapshot và command input type nằm trong `record-transfer.types.ts`.
