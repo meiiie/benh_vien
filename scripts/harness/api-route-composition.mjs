@@ -208,6 +208,31 @@ const routeBudgets = [
     role: "MedicationAdministration response and reference validation helpers"
   },
   {
+    path: "apps/api/src/modules/medication-dispenses/medication-dispense-routes.ts",
+    maxLines: 70,
+    role: "MedicationDispense route composition root"
+  },
+  {
+    path: "apps/api/src/modules/medication-dispenses/medication-dispense-query-routes.ts",
+    maxLines: 130,
+    role: "MedicationDispense list and read route adapter"
+  },
+  {
+    path: "apps/api/src/modules/medication-dispenses/medication-dispense-creation-routes.ts",
+    maxLines: 130,
+    role: "MedicationDispense creation command route adapter"
+  },
+  {
+    path: "apps/api/src/modules/medication-dispenses/medication-dispense-fhir-routes.ts",
+    maxLines: 90,
+    role: "MedicationDispense FHIR export route adapter"
+  },
+  {
+    path: "apps/api/src/modules/medication-dispenses/medication-dispense-route-helpers.ts",
+    maxLines: 100,
+    role: "MedicationDispense response and reference validation helpers"
+  },
+  {
     path: "apps/api/src/modules/procedures/procedure-routes.ts",
     maxLines: 80,
     role: "Procedure route composition root"
@@ -400,6 +425,33 @@ const requiredMedicationAdministrationRegistrations = [
   "registerMedicationAdministrationFhirRoutes"
 ];
 
+const medicationDispenseRoutesPath = resolve(
+  "apps/api/src/modules/medication-dispenses/medication-dispense-routes.ts"
+);
+const forbiddenMedicationDispenseRoutePatterns = [
+  {
+    pattern:
+      /\bCreateMedicationDispenseRequestSchema\b|\bPatientMedicationDispensesParamsSchema\b|\bMedicationDispenseIdParamsSchema\b/,
+    message:
+      "MedicationDispense request handling belongs in medication-dispense-query-routes.ts, medication-dispense-creation-routes.ts or medication-dispense-fhir-routes.ts."
+  },
+  {
+    pattern:
+      /\bMedicationDispense\.record\b|\bDomainError\b|\bvalidateMedicationDispenseReferences\b/,
+    message:
+      "MedicationDispense creation and validation policy belongs outside the root route."
+  },
+  {
+    pattern: /\bmapMedicationDispenseToFhir\b/,
+    message: "MedicationDispense FHIR export belongs in medication-dispense-fhir-routes.ts."
+  }
+];
+const requiredMedicationDispenseRegistrations = [
+  "registerMedicationDispenseQueryRoutes",
+  "registerMedicationDispenseCreationRoutes",
+  "registerMedicationDispenseFhirRoutes"
+];
+
 const procedureRoutesPath = resolve("apps/api/src/modules/procedures/procedure-routes.ts");
 const forbiddenProcedureRoutePatterns = [
   {
@@ -457,6 +509,10 @@ const clinicalDocumentRoutesSource = await readFile(
 );
 const medicationAdministrationRoutesSource = await readFile(
   medicationAdministrationRoutesPath,
+  "utf8"
+);
+const medicationDispenseRoutesSource = await readFile(
+  medicationDispenseRoutesPath,
   "utf8"
 );
 const procedureRoutesSource = await readFile(procedureRoutesPath, "utf8");
@@ -541,6 +597,20 @@ for (const registration of requiredMedicationAdministrationRegistrations) {
   if (!medicationAdministrationRoutesSource.includes(registration)) {
     throw new Error(
       `MedicationAdministration root routes must register ${registration} so query, command and FHIR modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenMedicationDispenseRoutePatterns) {
+  if (forbidden.pattern.test(medicationDispenseRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredMedicationDispenseRegistrations) {
+  if (!medicationDispenseRoutesSource.includes(registration)) {
+    throw new Error(
+      `MedicationDispense root routes must register ${registration} so query, command and FHIR modules remain wired.`
     );
   }
 }
