@@ -284,8 +284,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/clinical-document/clinical-document.ts",
-    maxLines: 210,
-    role: "ClinicalDocument signing, attachment validation and timeline behavior"
+    maxLines: 130,
+    role: "ClinicalDocument aggregate signing behavior"
+  },
+  {
+    path: "packages/domain/src/clinical-document/clinical-document.factory.ts",
+    maxLines: 130,
+    role: "ClinicalDocument create and rehydrate props factory"
   },
   {
     path: "packages/domain/src/clinical-document/clinical-document.validation.ts",
@@ -704,6 +709,9 @@ const imagingStudyTypesPath = resolve("packages/domain/src/imaging-study/imaging
 const clinicalDocumentAggregatePath = resolve(
   "packages/domain/src/clinical-document/clinical-document.ts"
 );
+const clinicalDocumentFactoryPath = resolve(
+  "packages/domain/src/clinical-document/clinical-document.factory.ts"
+);
 const clinicalDocumentValidationPath = resolve(
   "packages/domain/src/clinical-document/clinical-document.validation.ts"
 );
@@ -927,6 +935,7 @@ const imagingStudyAggregateSource = await readFile(imagingStudyAggregatePath, "u
 const imagingStudyValidationSource = await readFile(imagingStudyValidationPath, "utf8");
 const imagingStudyTypesSource = await readFile(imagingStudyTypesPath, "utf8");
 const clinicalDocumentAggregateSource = await readFile(clinicalDocumentAggregatePath, "utf8");
+const clinicalDocumentFactorySource = await readFile(clinicalDocumentFactoryPath, "utf8");
 const clinicalDocumentValidationSource = await readFile(
   clinicalDocumentValidationPath,
   "utf8"
@@ -2346,11 +2355,19 @@ for (const forbidden of [
   /export type ClinicalDocumentType/,
   /export type ClinicalDocumentSnapshot/,
   /const clinicalDocumentStatuses/,
-  /function normalizeAttachmentSize/
+  /type ClinicalDocumentProps =/,
+  /function normalizeAttachmentSize/,
+  /normalizeAttachmentContentType/,
+  /normalizeAttachmentHash/,
+  /normalizeAttachmentSize/,
+  /normalizeStatus/,
+  /parseOptionalDate/,
+  /parseRequiredDate/,
+  /validateTimeline/
 ]) {
   if (forbidden.test(clinicalDocumentAggregateSource)) {
     throw new Error(
-      "ClinicalDocument aggregate must keep create/sign behavior only; types stay in clinical-document.types.ts and attachment/status/timeline guards stay in clinical-document.validation.ts."
+      "ClinicalDocument aggregate must keep signing behavior only; create/rehydrate normalization stays in clinical-document.factory.ts, types stay in clinical-document.types.ts and guards stay in clinical-document.validation.ts."
     );
   }
 }
@@ -2359,12 +2376,13 @@ for (const required of [
   /export type ClinicalDocumentType/,
   /export type ClinicalDocumentStatus/,
   /export type ClinicalDocumentSnapshot/,
+  /export type ClinicalDocumentProps/,
   /export type CreateClinicalDocumentInput/,
   /export const clinicalDocumentStatuses/
 ]) {
   if (!required.test(clinicalDocumentTypesSource)) {
     throw new Error(
-      "clinical-document.types.ts must keep ClinicalDocument document type, status, snapshot, command input and code-set definitions."
+      "clinical-document.types.ts must keep ClinicalDocument document type, status, props, snapshot, command input and code-set definitions."
     );
   }
 }
@@ -2377,8 +2395,46 @@ if (!/from "\.\/clinical-document\.types\.js"/.test(clinicalDocumentAggregateSou
 
 if (!/from "\.\/clinical-document\.validation\.js"/.test(clinicalDocumentAggregateSource)) {
   throw new Error(
-    "ClinicalDocument aggregate must depend on clinical-document.validation.ts for attachment, status and timeline guards."
+    "ClinicalDocument aggregate must depend on clinical-document.validation.ts for signing timestamp guard."
   );
+}
+
+if (!/from "\.\/clinical-document\.factory\.js"/.test(clinicalDocumentAggregateSource)) {
+  throw new Error(
+    "ClinicalDocument aggregate must delegate create and rehydrate normalization to clinical-document.factory.ts."
+  );
+}
+
+for (const required of [
+  /export function buildClinicalDocumentProps/,
+  /export function buildRehydratedClinicalDocumentProps/,
+  /normalizeAttachmentContentType/,
+  /normalizeAttachmentHash/,
+  /normalizeAttachmentSize/,
+  /normalizeStatus/,
+  /parseOptionalDate/,
+  /parseRequiredDate/,
+  /validateTimeline/,
+  /from "\.\/clinical-document\.validation\.js"/,
+  /from "\.\/clinical-document\.types\.js"/
+]) {
+  if (!required.test(clinicalDocumentFactorySource)) {
+    throw new Error(
+      "clinical-document.factory.ts must keep ClinicalDocument create and rehydrate props normalization."
+    );
+  }
+}
+
+for (const forbidden of [
+  /export class ClinicalDocument/,
+  /\bsign\(/,
+  /toSnapshot\(/
+]) {
+  if (forbidden.test(clinicalDocumentFactorySource)) {
+    throw new Error(
+      "ClinicalDocument factory must not own aggregate behavior."
+    );
+  }
 }
 
 for (const required of [

@@ -38,6 +38,17 @@ export type ClinicalDocumentSnapshot = {
   readonly updatedAt: string;
 };
 
+export type ClinicalDocumentProps = Omit<
+  ClinicalDocumentSnapshot,
+  "status" | "attachmentCreatedAt" | "signedAt" | "createdAt" | "updatedAt"
+> & {
+  status: ClinicalDocumentStatus;
+  readonly attachmentCreatedAt?: Date;
+  signedAt?: Date;
+  readonly createdAt: Date;
+  updatedAt: Date;
+};
+
 export type CreateClinicalDocumentInput = Omit<
   ClinicalDocumentSnapshot,
   "status" | "signedAt" | "createdAt" | "updatedAt"
