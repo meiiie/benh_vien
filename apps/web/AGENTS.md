@@ -11,6 +11,7 @@
 - `src/pages` chỉ chứa route/page renderer và layout hiển thị. Không đặt HTTP route, FHIR mapper, consent/audit orchestration hoặc handler matrix ở đây.
 - `src/features` sở hữu UI panel, API adapter, selector, command builder và helper của từng feature.
 - Với feature chuyển hồ sơ, `RecordTransferInteropPanel.tsx` chỉ giữ layout chính, metadata và form command; lịch sử delivery attempt nằm trong `RecordTransferDeliveryAttemptList.tsx`; tóm tắt vận hành nằm trong `RecordTransferOperationalSummary.tsx`. Chạy `pnpm run harness:web-app-composition` khi đổi các file này.
+- Với tài liệu bệnh án, `ClinicalDocumentPanel.tsx` giữ danh sách, tóm tắt và thao tác ký; form tạo `DocumentReference` nằm trong `ClinicalDocumentForm.tsx` để metadata tệp đính kèm không trộn vào panel hiển thị.
 - Với feature hồ sơ lâm sàng, `clinicalRecordPanelRenderers.tsx` chỉ lắp JSX cho các panel; hợp đồng type của collections/forms/handlers/selections nằm trong `clinicalRecordPanelRendererTypes.ts` để không biến renderer thành God module.
 - Với MedicationDispense, `MedicationDispensePanel.tsx` giữ danh sách, tóm tắt và composition; form cấp phát nhiều trường nằm trong `MedicationDispenseForm.tsx` để không trộn form command vào panel hiển thị.
 - Với MedicationAdministration, `MedicationAdministrationPanel.tsx` giữ danh sách, tóm tắt và composition; form dùng thuốc thực tế nằm trong `MedicationAdministrationForm.tsx` để giữ ranh giới kê đơn/cấp phát/dùng thuốc rõ ràng.

@@ -38,6 +38,7 @@ const requiredModules = [
   "apps/web/src/features/audit/AuditPanels.tsx",
   "apps/web/src/features/audit/auditPanelRenderers.tsx",
   "apps/web/src/features/audit/auditApi.ts",
+  "apps/web/src/features/clinical-documents/ClinicalDocumentForm.tsx",
   "apps/web/src/features/clinical-documents/ClinicalDocumentPanel.tsx",
   "apps/web/src/features/clinical-documents/clinicalDocumentApi.ts",
   "apps/web/src/features/clinical-documents/clinicalDocumentCommandBuilders.ts",
@@ -157,6 +158,16 @@ const forbiddenPageCompositionModules = [
 ];
 const maxAppLines = 2_647;
 const featureModuleBudgets = [
+  {
+    path: "apps/web/src/features/clinical-documents/ClinicalDocumentPanel.tsx",
+    maxLines: 190,
+    role: "Clinical document list, summary and form composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-documents/ClinicalDocumentForm.tsx",
+    maxLines: 180,
+    role: "Clinical document metadata and attachment command form"
+  },
   {
     path: "apps/web/src/features/record-transfers/RecordTransferInteropPanel.tsx",
     maxLines: 340,
