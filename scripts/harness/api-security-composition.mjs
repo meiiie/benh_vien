@@ -86,6 +86,41 @@ const securityBudgets = [
     path: "apps/api/src/modules/access-control/patient-record-access-responses.ts",
     maxLines: 120,
     role: "Patient record ABAC error responses"
+  },
+  {
+    path: "apps/api/src/modules/auth/login-rate-limit.ts",
+    maxLines: 30,
+    role: "Login rate limiter public API barrel"
+  },
+  {
+    path: "apps/api/src/modules/auth/login-rate-limit.types.ts",
+    maxLines: 70,
+    role: "Login rate limiter type contracts"
+  },
+  {
+    path: "apps/api/src/modules/auth/login-rate-limit-config.ts",
+    maxLines: 90,
+    role: "Login rate limiter environment configuration"
+  },
+  {
+    path: "apps/api/src/modules/auth/login-rate-limit-key.ts",
+    maxLines: 20,
+    role: "Login rate limiter hashed key builder"
+  },
+  {
+    path: "apps/api/src/modules/auth/login-rate-limit-memory.ts",
+    maxLines: 80,
+    role: "Login rate limiter in-memory store"
+  },
+  {
+    path: "apps/api/src/modules/auth/login-rate-limit-valkey.ts",
+    maxLines: 160,
+    role: "Login rate limiter Valkey store"
+  },
+  {
+    path: "apps/api/src/modules/auth/login-rate-limit-factory.ts",
+    maxLines: 40,
+    role: "Login rate limiter environment factory"
   }
 ];
 
@@ -108,6 +143,16 @@ const accessContextReaderPath = resolve(
 const accessPermissionPath = resolve("apps/api/src/modules/access-control/access-permission.ts");
 const patientRecordAccessPath = resolve(
   "apps/api/src/modules/access-control/patient-record-access.ts"
+);
+const loginRateLimitRootPath = resolve("apps/api/src/modules/auth/login-rate-limit.ts");
+const loginRateLimitConfigPath = resolve(
+  "apps/api/src/modules/auth/login-rate-limit-config.ts"
+);
+const loginRateLimitKeyPath = resolve("apps/api/src/modules/auth/login-rate-limit-key.ts");
+const loginRateLimitMemoryPath = resolve("apps/api/src/modules/auth/login-rate-limit-memory.ts");
+const loginRateLimitValkeyPath = resolve("apps/api/src/modules/auth/login-rate-limit-valkey.ts");
+const loginRateLimitFactoryPath = resolve(
+  "apps/api/src/modules/auth/login-rate-limit-factory.ts"
 );
 
 const securityReports = [];
@@ -146,6 +191,12 @@ const accessContextRootSource = await readFile(accessContextRootPath, "utf8");
 const accessContextReaderSource = await readFile(accessContextReaderPath, "utf8");
 const accessPermissionSource = await readFile(accessPermissionPath, "utf8");
 const patientRecordAccessSource = await readFile(patientRecordAccessPath, "utf8");
+const loginRateLimitRootSource = await readFile(loginRateLimitRootPath, "utf8");
+const loginRateLimitConfigSource = await readFile(loginRateLimitConfigPath, "utf8");
+const loginRateLimitKeySource = await readFile(loginRateLimitKeyPath, "utf8");
+const loginRateLimitMemorySource = await readFile(loginRateLimitMemoryPath, "utf8");
+const loginRateLimitValkeySource = await readFile(loginRateLimitValkeyPath, "utf8");
+const loginRateLimitFactorySource = await readFile(loginRateLimitFactoryPath, "utf8");
 
 const requiredSignatureRootExports = [
   "recordTransferCallbackTimestampHeader",
@@ -176,6 +227,21 @@ const requiredAccessContextExports = [
 for (const exportedName of requiredAccessContextExports) {
   if (!accessContextRootSource.includes(exportedName)) {
     throw new Error(`Access control public API must re-export ${exportedName}.`);
+  }
+}
+
+const requiredLoginRateLimitExports = [
+  "createLoginRateLimiterFromEnv",
+  "createLoginRateLimitKey",
+  "createMemoryLoginRateLimiter",
+  "createValkeyLoginRateLimiter",
+  "LoginRateLimiter",
+  "ValkeyLoginRateLimitClient"
+];
+
+for (const exportedName of requiredLoginRateLimitExports) {
+  if (!loginRateLimitRootSource.includes(exportedName)) {
+    throw new Error(`Login rate limiter public API must re-export ${exportedName}.`);
   }
 }
 
@@ -246,6 +312,54 @@ assertForbidden(patientRecordAccessSource, [
       /\breadBearerToken\b|\bverifyAccessToken\b|\breadActorContextResult\b|\bsendFhirOperationOutcome\b/,
     message:
       "Patient record ABAC gate must not parse sessions or format HTTP/FHIR responses directly."
+  }
+]);
+
+assertForbidden(loginRateLimitRootSource, [
+  {
+    pattern: /\bprocess\.env\b|\bcreateClient\b|\bcreateHash\b|\beval\b|\bredis\.call\b/,
+    message:
+      "login-rate-limit.ts must stay a public API barrel, not env, hash or Valkey logic."
+  }
+]);
+
+assertForbidden(loginRateLimitConfigSource, [
+  {
+    pattern: /\bcreateClient\b|\bcreateHash\b|\beval\b|\bredis\.call\b/,
+    message:
+      "Login rate-limit config must only resolve environment policy, not perform hashing or store I/O."
+  }
+]);
+
+assertForbidden(loginRateLimitKeySource, [
+  {
+    pattern: /\bprocess\.env\b|\bcreateClient\b|\beval\b|\bredis\.call\b/,
+    message:
+      "Login rate-limit key builder must only hash stable request identity material."
+  }
+]);
+
+assertForbidden(loginRateLimitMemorySource, [
+  {
+    pattern: /\bprocess\.env\b|\bcreateClient\b|\bcreateHash\b|\beval\b|\bredis\.call\b/,
+    message:
+      "Memory login rate limiter must stay local-state only, without env, hashing or Valkey logic."
+  }
+]);
+
+assertForbidden(loginRateLimitValkeySource, [
+  {
+    pattern: /\bprocess\.env\b|\bcreateHash\b|\breadLoginRateLimitStore\b|\breadValkeyUrl\b/,
+    message:
+      "Valkey login rate limiter must not read environment or hash raw identity material directly."
+  }
+]);
+
+assertForbidden(loginRateLimitFactorySource, [
+  {
+    pattern: /\bcreateClient\b|\bcreateHash\b|\beval\b|\bredis\.call\b/,
+    message:
+      "Login rate-limit factory must compose config and stores without owning store internals."
   }
 ]);
 
