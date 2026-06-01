@@ -51,6 +51,16 @@ const domainBudgets = [
     path: "packages/domain/src/patient/patient.types.ts",
     maxLines: 90,
     role: "Patient identifier, snapshot and registration input types"
+  },
+  {
+    path: "packages/domain/src/workflow-task/workflow-task.ts",
+    maxLines: 340,
+    role: "WorkflowTask aggregate lifecycle and reference normalization behavior"
+  },
+  {
+    path: "packages/domain/src/workflow-task/workflow-task.types.ts",
+    maxLines: 160,
+    role: "WorkflowTask status, intent, priority, reference and snapshot types"
   }
 ];
 
@@ -76,6 +86,12 @@ const accessControlPolicyPath = resolve(
 );
 const patientAggregatePath = resolve("packages/domain/src/patient/patient.ts");
 const patientTypesPath = resolve("packages/domain/src/patient/patient.types.ts");
+const workflowTaskAggregatePath = resolve(
+  "packages/domain/src/workflow-task/workflow-task.ts"
+);
+const workflowTaskTypesPath = resolve(
+  "packages/domain/src/workflow-task/workflow-task.types.ts"
+);
 
 const domainReports = [];
 
@@ -112,6 +128,8 @@ const accessControlBehaviorSource = await readFile(accessControlBehaviorPath, "u
 const accessControlPolicySource = await readFile(accessControlPolicyPath, "utf8");
 const patientAggregateSource = await readFile(patientAggregatePath, "utf8");
 const patientTypesSource = await readFile(patientTypesPath, "utf8");
+const workflowTaskAggregateSource = await readFile(workflowTaskAggregatePath, "utf8");
+const workflowTaskTypesSource = await readFile(workflowTaskTypesPath, "utf8");
 
 for (const forbidden of [
   /export type RecordTransferStatus/,
@@ -265,6 +283,36 @@ for (const required of [
 
 if (!/from "\.\/patient\.types\.js"/.test(patientAggregateSource)) {
   throw new Error("Patient aggregate must depend on patient.types.ts for shared types.");
+}
+
+for (const forbidden of [
+  /export type WorkflowTaskStatus/,
+  /export type WorkflowTaskSnapshot/,
+  /const workflowTaskStatuses/
+]) {
+  if (forbidden.test(workflowTaskAggregateSource)) {
+    throw new Error(
+      "WorkflowTask type declarations and code sets belong in workflow-task.types.ts, not the aggregate file."
+    );
+  }
+}
+
+for (const required of [
+  /export type WorkflowTaskStatus/,
+  /export type WorkflowTaskReferenceResourceType/,
+  /export type WorkflowTaskSnapshot/,
+  /export type CreateWorkflowTaskInput/,
+  /export const workflowTaskStatuses/
+]) {
+  if (!required.test(workflowTaskTypesSource)) {
+    throw new Error(
+      "workflow-task.types.ts must keep WorkflowTask status, reference, snapshot, command input and code-set definitions."
+    );
+  }
+}
+
+if (!/from "\.\/workflow-task\.types\.js"/.test(workflowTaskAggregateSource)) {
+  throw new Error("WorkflowTask aggregate must depend on workflow-task.types.ts for shared types.");
 }
 
 console.log(
