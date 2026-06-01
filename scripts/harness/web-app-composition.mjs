@@ -58,6 +58,9 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/clinicalEntryCommandBuilders.ts",
   "apps/web/src/features/clinical-records/clinicalRecordPanelRenderers.tsx",
   "apps/web/src/features/clinical-records/clinicalRecordPanelRendererTypes.ts",
+  "apps/web/src/features/clinical-records/clinicalRecordPanelRendererDataTypes.ts",
+  "apps/web/src/features/clinical-records/clinicalRecordPanelRendererCommandTypes.ts",
+  "apps/web/src/features/clinical-records/clinicalRecordPanelRendererStatusTypes.ts",
   "apps/web/src/features/clinical-records/ConditionForm.tsx",
   "apps/web/src/features/clinical-records/ConditionPanel.tsx",
   "apps/web/src/features/clinical-records/conditionFormatters.ts",
@@ -290,8 +293,23 @@ const featureModuleBudgets = [
   },
   {
     path: "apps/web/src/features/clinical-records/clinicalRecordPanelRendererTypes.ts",
-    maxLines: 210,
-    role: "Clinical record panel renderer type contracts"
+    maxLines: 80,
+    role: "Clinical record panel renderer public type composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/clinicalRecordPanelRendererDataTypes.ts",
+    maxLines: 90,
+    role: "Clinical record panel collection and selection type contracts"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/clinicalRecordPanelRendererCommandTypes.ts",
+    maxLines: 110,
+    role: "Clinical record panel form and handler type contracts"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/clinicalRecordPanelRendererStatusTypes.ts",
+    maxLines: 50,
+    role: "Clinical record panel loading and submitting type contracts"
   },
   {
     path: "apps/web/src/features/clinical-records/clinicalRecordState.ts",
