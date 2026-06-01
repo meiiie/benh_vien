@@ -3,10 +3,8 @@ import {
   createSeedRecordTransfers,
   InMemoryRecordTransferRepository
 } from "./in-memory-record-transfer.repository.js";
-import {
-  PostgresRecordTransferRepository,
-  seedRecordTransfersIfEmpty
-} from "../../infrastructure/postgres/postgres-record-transfer.repository.js";
+import { PostgresRecordTransferRepository } from "../../infrastructure/postgres/postgres-record-transfer.repository.js";
+import { seedRecordTransfersIfEmpty } from "../../infrastructure/postgres/postgres-record-transfer.seeding.js";
 
 export async function createRecordTransferRepository(): Promise<RecordTransferRepository> {
   const seedRecordTransfers = createSeedRecordTransfers();

@@ -4,7 +4,7 @@ import type {
   FindDueRecordTransferRetriesInput,
   RecordTransferDeliveryAttempt,
   RecordTransfer,
-  RecordTransferRepository,
+  RecordTransferRepository
 } from "@benh-vien-so/domain";
 import { upsertRecordTransferDeliveryAttempt } from "./postgres-record-transfer-delivery-attempt.persistence.js";
 import { rowToRecordTransfer } from "./postgres-record-transfer.mapper.js";
@@ -78,26 +78,5 @@ export class PostgresRecordTransferRepository implements RecordTransferRepositor
 
   async close(): Promise<void> {
     await this.pool.end();
-  }
-}
-
-export async function seedRecordTransfersIfEmpty(
-  repository: RecordTransferRepository,
-  seedRecordTransfers: readonly RecordTransfer[]
-): Promise<void> {
-  const firstPatientId = seedRecordTransfers[0]?.patientId;
-
-  if (!firstPatientId) {
-    return;
-  }
-
-  const recordTransfers = await repository.findByPatientId(firstPatientId);
-
-  if (recordTransfers.length > 0) {
-    return;
-  }
-
-  for (const recordTransfer of seedRecordTransfers) {
-    await repository.save(recordTransfer);
   }
 }

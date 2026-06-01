@@ -28,6 +28,11 @@ const postgresBudgets = [
     role: "RecordTransfer PostgreSQL retry and dead-letter read queries"
   },
   {
+    path: "apps/api/src/infrastructure/postgres/postgres-record-transfer.seeding.ts",
+    maxLines: 40,
+    role: "RecordTransfer PostgreSQL dev seed orchestration through repository contract"
+  },
+  {
     path: "apps/api/src/infrastructure/postgres/postgres-record-transfer.types.ts",
     maxLines: 50,
     role: "RecordTransfer PostgreSQL queryable and row types"
@@ -504,6 +509,9 @@ const recordTransferPersistencePath = resolve(
 const recordTransferRetryQueriesPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-record-transfer-retry-queries.ts"
 );
+const recordTransferSeedingPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-record-transfer.seeding.ts"
+);
 const recordTransferTypesPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-record-transfer.types.ts"
 );
@@ -818,6 +826,7 @@ const recordTransferRetryQueriesSource = await readFile(
   recordTransferRetryQueriesPath,
   "utf8"
 );
+const recordTransferSeedingSource = await readFile(recordTransferSeedingPath, "utf8");
 const recordTransferTypesSource = await readFile(recordTransferTypesPath, "utf8");
 const recordTransferDeliveryAttemptRepositorySource = await readFile(
   recordTransferDeliveryAttemptRepositoryPath,
@@ -1310,9 +1319,9 @@ for (const importedName of requiredAuditEventRepositoryImports) {
 
 assertForbidden(recordTransferRepositorySource, [
   {
-    pattern: /\bINSERT INTO record_transfers\b|\bON CONFLICT \(id\)\b|\bRecordTransfer\.rehydrate\b|\bRecordTransferSnapshot\b|postgres-record-transfer-delivery-attempt\.repository\.js|\bnext_retry_at\b|\bretry_count\s*[<>]/,
+    pattern: /\bINSERT INTO record_transfers\b|\bON CONFLICT \(id\)\b|\bRecordTransfer\.rehydrate\b|\bRecordTransferSnapshot\b|postgres-record-transfer-delivery-attempt\.repository\.js|\bnext_retry_at\b|\bretry_count\s*[<>]|\bseedRecordTransfersIfEmpty\b/,
     message:
-      "RecordTransfer PostgreSQL repository must delegate upsert SQL, row mapping, retry reads and delivery-attempt persistence to focused modules."
+      "RecordTransfer PostgreSQL repository must delegate upsert SQL, row mapping, retry reads, delivery-attempt persistence and dev seeding to focused modules."
   }
 ]);
 
@@ -1346,6 +1355,27 @@ assertForbidden(recordTransferRetryQueriesSource, [
       /\bINSERT INTO record_transfers\b|\bON CONFLICT \(id\)\b|\bBEGIN\b|\bCOMMIT\b|\bROLLBACK\b|\bupsertRecordTransfer\b|\bupsertRecordTransferDeliveryAttempt\b/,
     message:
       "RecordTransfer PostgreSQL retry query module must only own due retry/dead-letter SELECT reads."
+  }
+]);
+
+for (const required of [
+  /export async function seedRecordTransfersIfEmpty/,
+  /\bRecordTransferRepository\b/,
+  /\bfindByPatientId\b/,
+  /\bsave\b/
+]) {
+  if (!required.test(recordTransferSeedingSource)) {
+    throw new Error(
+      "RecordTransfer PostgreSQL seeding must use the repository contract to seed demo transfers."
+    );
+  }
+}
+
+assertForbidden(recordTransferSeedingSource, [
+  {
+    pattern: /\bfrom "pg"\b|\bcreatePostgresRepositoryPool\b|\bquery\s*\(|\bPostgresRecordTransferRepository\b/,
+    message:
+      "RecordTransfer PostgreSQL seeding must stay adapter-agnostic and avoid direct pg or concrete repository dependencies."
   }
 ]);
 
