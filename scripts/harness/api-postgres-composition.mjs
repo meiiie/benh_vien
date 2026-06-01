@@ -78,6 +78,31 @@ const postgresBudgets = [
     role: "Consent PostgreSQL row types"
   },
   {
+    path: "apps/api/src/infrastructure/postgres/postgres-observation.repository.ts",
+    maxLines: 80,
+    role: "Observation PostgreSQL repository orchestration"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-observation.sql.ts",
+    maxLines: 60,
+    role: "Observation PostgreSQL SQL statements"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-observation.mapper.ts",
+    maxLines: 80,
+    role: "Observation PostgreSQL row and parameter mapper"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-observation.persistence.ts",
+    maxLines: 30,
+    role: "Observation PostgreSQL persistence command"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-observation.types.ts",
+    maxLines: 40,
+    role: "Observation PostgreSQL row types"
+  },
+  {
     path: "apps/api/src/infrastructure/postgres/postgres-patient.repository.ts",
     maxLines: 110,
     role: "Patient PostgreSQL repository orchestration"
@@ -454,6 +479,21 @@ const consentPersistencePath = resolve(
 const consentTypesPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-consent.types.ts"
 );
+const observationRepositoryPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-observation.repository.ts"
+);
+const observationSqlPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-observation.sql.ts"
+);
+const observationMapperPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-observation.mapper.ts"
+);
+const observationPersistencePath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-observation.persistence.ts"
+);
+const observationTypesPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-observation.types.ts"
+);
 const patientRepositoryPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-patient.repository.ts"
 );
@@ -712,6 +752,14 @@ const consentSqlSource = await readFile(consentSqlPath, "utf8");
 const consentMapperSource = await readFile(consentMapperPath, "utf8");
 const consentPersistenceSource = await readFile(consentPersistencePath, "utf8");
 const consentTypesSource = await readFile(consentTypesPath, "utf8");
+const observationRepositorySource = await readFile(observationRepositoryPath, "utf8");
+const observationSqlSource = await readFile(observationSqlPath, "utf8");
+const observationMapperSource = await readFile(observationMapperPath, "utf8");
+const observationPersistenceSource = await readFile(
+  observationPersistencePath,
+  "utf8"
+);
+const observationTypesSource = await readFile(observationTypesPath, "utf8");
 const patientRepositorySource = await readFile(patientRepositoryPath, "utf8");
 const patientSqlSource = await readFile(patientSqlPath, "utf8");
 const patientMapperSource = await readFile(patientMapperPath, "utf8");
@@ -917,6 +965,19 @@ const requiredConsentRepositoryImports = [
 for (const importedName of requiredConsentRepositoryImports) {
   if (!consentRepositorySource.includes(importedName)) {
     throw new Error(`Consent PostgreSQL repository must compose ${importedName}.`);
+  }
+}
+
+const requiredObservationRepositoryImports = [
+  "rowToObservation",
+  "upsertObservation",
+  "selectObservationSql",
+  "ObservationRow"
+];
+
+for (const importedName of requiredObservationRepositoryImports) {
+  if (!observationRepositorySource.includes(importedName)) {
+    throw new Error(`Observation PostgreSQL repository must compose ${importedName}.`);
   }
 }
 
@@ -1222,6 +1283,45 @@ assertForbidden(consentTypesSource, [
   {
     pattern: /\bConsent\.rehydrate\b|\bquery\s*\(|\bINSERT INTO consents\b/,
     message: "Consent PostgreSQL type module must only describe row contracts."
+  }
+]);
+
+assertForbidden(observationRepositorySource, [
+  {
+    pattern: /\bINSERT INTO observations\b|\bON CONFLICT \(id\)\b|\bObservation\.rehydrate\b|\bObservationSnapshot\b|\bJSON\.parse\b|\bJSON\.stringify\b/,
+    message:
+      "Observation PostgreSQL repository must delegate upsert SQL and JSON row mapping to focused modules."
+  }
+]);
+
+assertForbidden(observationSqlSource, [
+  {
+    pattern: /@benh-vien-so\/domain|\bObservation\b|\bpg\b/,
+    message:
+      "Observation PostgreSQL SQL module must stay a pure SQL statement module without domain or pg dependencies."
+  }
+]);
+
+assertForbidden(observationMapperSource, [
+  {
+    pattern: /\bfrom "pg"\b|\bquery\s*\(|\bINSERT INTO observations\b|\bON CONFLICT \(id\)\b/,
+    message:
+      "Observation PostgreSQL mapper must stay pure row/value mapping without pg I/O or SQL ownership."
+  }
+]);
+
+assertForbidden(observationPersistenceSource, [
+  {
+    pattern: /\bObservation\.rehydrate\b|\bObservationSnapshot\b|\bSELECT\b|\bJSON\.parse\b/,
+    message:
+      "Observation PostgreSQL persistence command must compose SQL and mapper without owning reads or domain hydration."
+  }
+]);
+
+assertForbidden(observationTypesSource, [
+  {
+    pattern: /\bObservation\.rehydrate\b|\bquery\s*\(|\bINSERT INTO observations\b/,
+    message: "Observation PostgreSQL type module must only describe row contracts."
   }
 ]);
 
