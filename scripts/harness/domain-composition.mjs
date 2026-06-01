@@ -139,8 +139,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/service-request/service-request.ts",
-    maxLines: 240,
-    role: "ServiceRequest ordering and scheduling validation behavior"
+    maxLines: 150,
+    role: "ServiceRequest ordering and scheduling behavior"
+  },
+  {
+    path: "packages/domain/src/service-request/service-request.validation.ts",
+    maxLines: 120,
+    role: "ServiceRequest code, status, priority and timeline guards"
   },
   {
     path: "packages/domain/src/service-request/service-request.types.ts",
@@ -409,6 +414,9 @@ const medicationAdministrationTypesPath = resolve(
 const serviceRequestAggregatePath = resolve(
   "packages/domain/src/service-request/service-request.ts"
 );
+const serviceRequestValidationPath = resolve(
+  "packages/domain/src/service-request/service-request.validation.ts"
+);
 const serviceRequestTypesPath = resolve(
   "packages/domain/src/service-request/service-request.types.ts"
 );
@@ -537,6 +545,7 @@ const medicationAdministrationTypesSource = await readFile(
   "utf8"
 );
 const serviceRequestAggregateSource = await readFile(serviceRequestAggregatePath, "utf8");
+const serviceRequestValidationSource = await readFile(serviceRequestValidationPath, "utf8");
 const serviceRequestTypesSource = await readFile(serviceRequestTypesPath, "utf8");
 const imagingStudyAggregateSource = await readFile(imagingStudyAggregatePath, "utf8");
 const imagingStudyTypesSource = await readFile(imagingStudyTypesPath, "utf8");
@@ -1052,11 +1061,13 @@ if (!/from "\.\/medication-administration\.types\.js"/.test(
 for (const forbidden of [
   /export type ServiceRequestStatus/,
   /export type ServiceRequestSnapshot/,
-  /const serviceRequestStatuses/
+  /const serviceRequestStatuses/,
+  /function normalizeCode/,
+  /function validateTimeline/
 ]) {
   if (forbidden.test(serviceRequestAggregateSource)) {
     throw new Error(
-      "ServiceRequest type declarations and code sets belong in service-request.types.ts, not the aggregate file."
+      "ServiceRequest aggregate must keep order/rehydrate behavior only; types stay in service-request.types.ts and code/status/priority/timeline guards stay in service-request.validation.ts."
     );
   }
 }
@@ -1079,6 +1090,26 @@ if (!/from "\.\/service-request\.types\.js"/.test(serviceRequestAggregateSource)
   throw new Error(
     "ServiceRequest aggregate must depend on service-request.types.ts for shared types."
   );
+}
+
+if (!/from "\.\/service-request\.validation\.js"/.test(serviceRequestAggregateSource)) {
+  throw new Error(
+    "ServiceRequest aggregate must depend on service-request.validation.ts for code, status, priority and timeline guards."
+  );
+}
+
+for (const required of [
+  /export function normalizeCode/,
+  /export function normalizeStatus/,
+  /export function normalizePriority/,
+  /export function validateTimeline/,
+  /from "\.\/service-request\.types\.js"/
+]) {
+  if (!required.test(serviceRequestValidationSource)) {
+    throw new Error(
+      "service-request.validation.ts must keep ServiceRequest code, status, priority and timeline guards."
+    );
+  }
 }
 
 for (const forbidden of [
