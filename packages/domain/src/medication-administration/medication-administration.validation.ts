@@ -8,17 +8,11 @@ import {
   normalizeRequiredText as normalizeRequired,
   parseRequiredDate as parseDate
 } from "../shared/normalization.js";
-import {
-  medicationAdministrationCategories,
-  medicationAdministrationPerformerActorTypes,
-  medicationAdministrationStatuses
-} from "./medication-administration.types.js";
+import { normalizePerformerActorType } from "./medication-administration.code-set-guards.js";
 import type {
-  MedicationAdministrationCategory,
   MedicationAdministrationDosage,
   MedicationAdministrationEffectivePeriod,
   MedicationAdministrationPerformer,
-  MedicationAdministrationPerformerActorType,
   MedicationAdministrationStatus
 } from "./medication-administration.types.js";
 
@@ -112,26 +106,6 @@ export function assertMedicationAdministrationLifecycle(
   }
 }
 
-export function normalizeStatus(
-  value: MedicationAdministrationStatus
-): MedicationAdministrationStatus {
-  if (!medicationAdministrationStatuses.has(value)) {
-    throw new DomainError("Trạng thái dùng thuốc không hợp lệ.");
-  }
-
-  return value;
-}
-
-export function normalizeCategory(
-  value: MedicationAdministrationCategory
-): MedicationAdministrationCategory {
-  if (!medicationAdministrationCategories.has(value)) {
-    throw new DomainError("Nhóm dùng thuốc không hợp lệ.");
-  }
-
-  return value;
-}
-
 export function validatePersistenceTimeline(createdAt: Date, updatedAt: Date): void {
   if (updatedAt.getTime() < createdAt.getTime()) {
     throw new DomainError("Thời điểm cập nhật lần dùng thuốc không được trước thời điểm tạo lần dùng.");
@@ -149,14 +123,4 @@ function normalizeQuantity(quantity: MedicationQuantity): MedicationQuantity {
     system: normalizeOptional(quantity.system),
     code: normalizeOptional(quantity.code)
   };
-}
-
-function normalizePerformerActorType(
-  value: MedicationAdministrationPerformerActorType
-): MedicationAdministrationPerformerActorType {
-  if (!medicationAdministrationPerformerActorTypes.has(value)) {
-    throw new DomainError("Loại chủ thể thực hiện dùng thuốc không hợp lệ.");
-  }
-
-  return value;
 }

@@ -209,8 +209,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/medication-administration/medication-administration.validation.ts",
-    maxLines: 180,
-    role: "MedicationAdministration effective period, performer, dosage and status guards"
+    maxLines: 140,
+    role: "MedicationAdministration effective period, performer structure, dosage and lifecycle guards"
+  },
+  {
+    path: "packages/domain/src/medication-administration/medication-administration.code-set-guards.ts",
+    maxLines: 60,
+    role: "MedicationAdministration status, category and performer code-set guards"
   },
   {
     path: "packages/domain/src/medication-administration/medication-administration.types.ts",
@@ -621,6 +626,9 @@ const medicationAdministrationAggregatePath = resolve(
 const medicationAdministrationValidationPath = resolve(
   "packages/domain/src/medication-administration/medication-administration.validation.ts"
 );
+const medicationAdministrationCodeSetGuardsPath = resolve(
+  "packages/domain/src/medication-administration/medication-administration.code-set-guards.ts"
+);
 const medicationAdministrationTypesPath = resolve(
   "packages/domain/src/medication-administration/medication-administration.types.ts"
 );
@@ -822,6 +830,10 @@ const medicationAdministrationAggregateSource = await readFile(
 );
 const medicationAdministrationValidationSource = await readFile(
   medicationAdministrationValidationPath,
+  "utf8"
+);
+const medicationAdministrationCodeSetGuardsSource = await readFile(
+  medicationAdministrationCodeSetGuardsPath,
   "utf8"
 );
 const medicationAdministrationTypesSource = await readFile(
@@ -1742,7 +1754,7 @@ for (const forbidden of [
 ]) {
   if (forbidden.test(medicationAdministrationAggregateSource)) {
     throw new Error(
-      "MedicationAdministration aggregate must keep record/rehydrate behavior only; types stay in medication-administration.types.ts and effective-period/performer/dosage/status guards stay in medication-administration.validation.ts."
+      "MedicationAdministration aggregate must keep record/rehydrate behavior only; types stay in medication-administration.types.ts, effective-period/performer/dosage/lifecycle guards stay in medication-administration.validation.ts, and code-set guards stay in medication-administration.code-set-guards.ts."
     );
   }
 }
@@ -1773,7 +1785,15 @@ if (!/from "\.\/medication-administration\.validation\.js"/.test(
   medicationAdministrationAggregateSource
 )) {
   throw new Error(
-    "MedicationAdministration aggregate must depend on medication-administration.validation.ts for effective period, performer, dosage and status guards."
+    "MedicationAdministration aggregate must depend on medication-administration.validation.ts for effective period, performer, dosage and lifecycle guards."
+  );
+}
+
+if (!/from "\.\/medication-administration\.code-set-guards\.js"/.test(
+  medicationAdministrationAggregateSource
+)) {
+  throw new Error(
+    "MedicationAdministration aggregate must depend on medication-administration.code-set-guards.ts for status and category guards."
   );
 }
 
@@ -1782,12 +1802,37 @@ for (const required of [
   /export function normalizePerformers/,
   /export function normalizeDosage/,
   /export function assertMedicationAdministrationLifecycle/,
-  /export function normalizeStatus/,
+  /from "\.\/medication-administration\.code-set-guards\.js"/,
   /from "\.\/medication-administration\.types\.js"/
 ]) {
   if (!required.test(medicationAdministrationValidationSource)) {
     throw new Error(
-      "medication-administration.validation.ts must keep MedicationAdministration effective-period, performer, dosage and status guards."
+      "medication-administration.validation.ts must keep MedicationAdministration effective-period, performer structure, dosage and lifecycle guards."
+    );
+  }
+}
+
+for (const forbidden of [
+  /export function normalizeStatus/,
+  /export function normalizeCategory/,
+  /\bmedicationAdministrationStatuses\b|\bmedicationAdministrationCategories\b|\bmedicationAdministrationPerformerActorTypes\b/
+]) {
+  if (forbidden.test(medicationAdministrationValidationSource)) {
+    throw new Error(
+      "MedicationAdministration status, category and performer actor code-set guards belong in medication-administration.code-set-guards.ts."
+    );
+  }
+}
+
+for (const required of [
+  /export function normalizeStatus/,
+  /export function normalizeCategory/,
+  /export function normalizePerformerActorType/,
+  /from "\.\/medication-administration\.types\.js"/
+]) {
+  if (!required.test(medicationAdministrationCodeSetGuardsSource)) {
+    throw new Error(
+      "medication-administration.code-set-guards.ts must keep MedicationAdministration status, category and performer actor code-set guards."
     );
   }
 }

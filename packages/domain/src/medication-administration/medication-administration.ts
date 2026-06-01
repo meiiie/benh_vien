@@ -1,6 +1,5 @@
 import {
   assertMedicationAdministrationLifecycle,
-  normalizeCategory,
   normalizeCoding,
   normalizeDosage,
   normalizeEffectivePeriod,
@@ -8,10 +7,13 @@ import {
   normalizePerformers,
   normalizeRequired,
   normalizeRequiredCoding,
-  normalizeStatus,
   parseDate,
   validatePersistenceTimeline
 } from "./medication-administration.validation.js";
+import {
+  normalizeCategory,
+  normalizeStatus
+} from "./medication-administration.code-set-guards.js";
 import type {
   MedicationAdministrationSnapshot,
   RecordMedicationAdministrationInput
