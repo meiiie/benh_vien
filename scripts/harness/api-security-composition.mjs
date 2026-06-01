@@ -46,6 +46,46 @@ const securityBudgets = [
     path: "apps/api/src/modules/record-transfers/record-transfer-callback-signature-verifier.ts",
     maxLines: 190,
     role: "RecordTransfer callback signature verification policy"
+  },
+  {
+    path: "apps/api/src/modules/access-control/access-context.ts",
+    maxLines: 30,
+    role: "Access control public API barrel"
+  },
+  {
+    path: "apps/api/src/modules/access-control/access-context-http.ts",
+    maxLines: 40,
+    role: "Access control HTTP header and media negotiation helpers"
+  },
+  {
+    path: "apps/api/src/modules/access-control/access-context-authenticated-actor.ts",
+    maxLines: 40,
+    role: "Access control authenticated actor identity reader"
+  },
+  {
+    path: "apps/api/src/modules/access-control/access-context-reader.ts",
+    maxLines: 70,
+    role: "Access control actor context reader"
+  },
+  {
+    path: "apps/api/src/modules/access-control/access-permission.ts",
+    maxLines: 60,
+    role: "Access control permission gate"
+  },
+  {
+    path: "apps/api/src/modules/access-control/access-permission-responses.ts",
+    maxLines: 130,
+    role: "Access control permission error responses"
+  },
+  {
+    path: "apps/api/src/modules/access-control/patient-record-access.ts",
+    maxLines: 100,
+    role: "Patient record ABAC access gate"
+  },
+  {
+    path: "apps/api/src/modules/access-control/patient-record-access-responses.ts",
+    maxLines: 120,
+    role: "Patient record ABAC error responses"
   }
 ];
 
@@ -60,6 +100,14 @@ const signatureSecretPath = resolve(
 );
 const signatureVerifierPath = resolve(
   "apps/api/src/modules/record-transfers/record-transfer-callback-signature-verifier.ts"
+);
+const accessContextRootPath = resolve("apps/api/src/modules/access-control/access-context.ts");
+const accessContextReaderPath = resolve(
+  "apps/api/src/modules/access-control/access-context-reader.ts"
+);
+const accessPermissionPath = resolve("apps/api/src/modules/access-control/access-permission.ts");
+const patientRecordAccessPath = resolve(
+  "apps/api/src/modules/access-control/patient-record-access.ts"
 );
 
 const securityReports = [];
@@ -94,6 +142,10 @@ const signatureRootSource = await readFile(signatureRootPath, "utf8");
 const signatureBuilderSource = await readFile(signatureBuilderPath, "utf8");
 const signatureSecretSource = await readFile(signatureSecretPath, "utf8");
 const signatureVerifierSource = await readFile(signatureVerifierPath, "utf8");
+const accessContextRootSource = await readFile(accessContextRootPath, "utf8");
+const accessContextReaderSource = await readFile(accessContextReaderPath, "utf8");
+const accessPermissionSource = await readFile(accessPermissionPath, "utf8");
+const patientRecordAccessSource = await readFile(patientRecordAccessPath, "utf8");
 
 const requiredSignatureRootExports = [
   "recordTransferCallbackTimestampHeader",
@@ -109,6 +161,21 @@ for (const exportedName of requiredSignatureRootExports) {
     throw new Error(
       `RecordTransfer callback signature public API must re-export ${exportedName}.`
     );
+  }
+}
+
+const requiredAccessContextExports = [
+  "readAuthenticatedActorIdentity",
+  "readActorContext",
+  "requirePermission",
+  "requirePatientRecordAccess",
+  "requirePatientRecordAccessByPatientId",
+  "filterPatientsByAccess"
+];
+
+for (const exportedName of requiredAccessContextExports) {
+  if (!accessContextRootSource.includes(exportedName)) {
+    throw new Error(`Access control public API must re-export ${exportedName}.`);
   }
 }
 
@@ -144,6 +211,41 @@ assertForbidden(signatureVerifierSource, [
       /\bprocess\.env\.BVS_RECORD_TRANSFER\b|\bJSON\.parse\b|\bvalidateCallbackSecret\b|\bcreateHmac\b/,
     message:
       "Callback verifier must delegate secret lookup/config parsing and HMAC creation to focused modules."
+  }
+]);
+
+assertForbidden(accessContextRootSource, [
+  {
+    pattern:
+      /\bFastifyRequest\b|\bFastifyReply\b|\bcanAccess\b|\bcanAccessPatientRecord\b|\breadBearerToken\b|\bverifyAccessToken\b|\bsendFhirOperationOutcome\b/,
+    message:
+      "access-context.ts must stay a public API barrel, not access-control policy or HTTP response logic."
+  }
+]);
+
+assertForbidden(accessContextReaderSource, [
+  {
+    pattern: /\bFastifyReply\b|\bcanAccess\b|\bcanAccessPatientRecord\b|\bsendFhirOperationOutcome\b/,
+    message:
+      "Access context reader must only derive actor context from trusted server-side inputs."
+  }
+]);
+
+assertForbidden(accessPermissionSource, [
+  {
+    pattern:
+      /\bPatientRepository\b|\bProviderDirectoryRepository\b|\bcanAccessPatientRecord\b|\bsendFhirOperationOutcome\b/,
+    message:
+      "Permission gate must not mix patient-record ABAC lookup or HTTP/FHIR response formatting."
+  }
+]);
+
+assertForbidden(patientRecordAccessSource, [
+  {
+    pattern:
+      /\breadBearerToken\b|\bverifyAccessToken\b|\breadActorContextResult\b|\bsendFhirOperationOutcome\b/,
+    message:
+      "Patient record ABAC gate must not parse sessions or format HTTP/FHIR responses directly."
   }
 ]);
 
