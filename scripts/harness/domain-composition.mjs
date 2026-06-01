@@ -9,13 +9,18 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/record-transfer/record-transfer.ts",
-    maxLines: 300,
+    maxLines: 240,
     role: "RecordTransfer lifecycle aggregate behavior"
   },
   {
     path: "packages/domain/src/record-transfer/record-transfer.factory.ts",
     maxLines: 260,
     role: "RecordTransfer snapshot creation and rehydration"
+  },
+  {
+    path: "packages/domain/src/record-transfer/record-transfer.lifecycle.ts",
+    maxLines: 90,
+    role: "RecordTransfer status transition guards"
   },
   {
     path: "packages/domain/src/record-transfer/record-transfer.validation.ts",
@@ -545,6 +550,9 @@ const recordTransferAggregatePath = resolve(
 const recordTransferFactoryPath = resolve(
   "packages/domain/src/record-transfer/record-transfer.factory.ts"
 );
+const recordTransferLifecyclePath = resolve(
+  "packages/domain/src/record-transfer/record-transfer.lifecycle.ts"
+);
 const recordTransferValidationPath = resolve(
   "packages/domain/src/record-transfer/record-transfer.validation.ts"
 );
@@ -786,6 +794,7 @@ for (const budget of domainBudgets) {
 
 const aggregateSource = await readFile(recordTransferAggregatePath, "utf8");
 const recordTransferFactorySource = await readFile(recordTransferFactoryPath, "utf8");
+const recordTransferLifecycleSource = await readFile(recordTransferLifecyclePath, "utf8");
 const recordTransferValidationSource = await readFile(recordTransferValidationPath, "utf8");
 const typesSource = await readFile(recordTransferTypesPath, "utf8");
 const providerDirectoryAggregateSource = await readFile(
@@ -1014,6 +1023,12 @@ if (!/from "\.\/record-transfer\.factory\.js"/.test(aggregateSource)) {
   throw new Error("RecordTransfer aggregate must depend on record-transfer.factory.ts for create/rehydrate snapshot construction.");
 }
 
+if (!/from "\.\/record-transfer\.lifecycle\.js"/.test(aggregateSource)) {
+  throw new Error(
+    "RecordTransfer aggregate must depend on record-transfer.lifecycle.ts for status transition guards."
+  );
+}
+
 if (!/from "\.\/record-transfer\.validation\.js"/.test(aggregateSource)) {
   throw new Error(
     "RecordTransfer aggregate must depend on record-transfer.validation.ts for lifecycle date and text guards."
@@ -1037,6 +1052,37 @@ if (/DomainError/.test(recordTransferFactorySource)) {
   throw new Error(
     "record-transfer.factory.ts must build normalized snapshots; lifecycle invariant errors stay in record-transfer.validation.ts."
   );
+}
+
+for (const required of [
+  /export function assertCanMarkSent/,
+  /export function assertCanMarkReceived/,
+  /export function assertCanMarkFailed/,
+  /export function assertCanRetry/,
+  /export function assertCanMarkDeadLettered/,
+  /RecordTransferStatus/,
+  /DomainError/
+]) {
+  if (!required.test(recordTransferLifecycleSource)) {
+    throw new Error(
+      "record-transfer.lifecycle.ts must keep RecordTransfer status transition guard functions."
+    );
+  }
+}
+
+for (const forbidden of [
+  /buildRecordTransferSnapshot/,
+  /normalizePersistedRecordTransferSnapshot/,
+  /validateRecordTransferSnapshot/,
+  /this\.props/,
+  /updatedAt/,
+  /toSnapshot/
+]) {
+  if (forbidden.test(recordTransferLifecycleSource)) {
+    throw new Error(
+      "record-transfer.lifecycle.ts must stay a pure status guard module and must not own snapshot mutation or validation."
+    );
+  }
 }
 
 for (const required of [

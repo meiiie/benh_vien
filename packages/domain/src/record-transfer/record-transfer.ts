@@ -4,6 +4,13 @@ import {
   normalizePersistedRecordTransferSnapshot
 } from "./record-transfer.factory.js";
 import {
+  assertCanMarkDeadLettered,
+  assertCanMarkFailed,
+  assertCanMarkReceived,
+  assertCanMarkSent,
+  assertCanRetry
+} from "./record-transfer.lifecycle.js";
+import {
   normalizeOptional,
   normalizeRequired,
   parseDate
@@ -51,23 +58,7 @@ export class RecordTransfer {
   }
 
   markSent(input: MarkRecordTransferSentInput = {}): void {
-    if (this.props.status === "completed") {
-      throw new DomainError("Hồ sơ đã được tiếp nhận, không thể gửi lại.");
-    }
-
-    if (
-      this.props.status === "cancelled" ||
-      this.props.status === "failed" ||
-      this.props.status === "dead-lettered"
-    ) {
-      throw new DomainError(
-        "Không thể gửi hồ sơ khi yêu cầu đã hủy, thất bại hoặc đã vào hàng lỗi cuối."
-      );
-    }
-
-    if (this.props.sentAt) {
-      throw new DomainError("Hồ sơ đã có thời điểm gửi.");
-    }
+    assertCanMarkSent(this.props.status, this.props.sentAt);
 
     const sentAt = input.sentAt
       ? parseDate(input.sentAt, "Thời điểm gửi hồ sơ không hợp lệ.")
@@ -91,28 +82,12 @@ export class RecordTransfer {
   }
 
   markReceived(input: MarkRecordTransferReceivedInput = {}): void {
-    if (this.props.status === "completed") {
-      throw new DomainError("Hồ sơ đã được ghi nhận tiếp nhận.");
-    }
-
-    if (
-      this.props.status === "cancelled" ||
-      this.props.status === "failed" ||
-      this.props.status === "dead-lettered"
-    ) {
-      throw new DomainError(
-        "Không thể tiếp nhận hồ sơ khi yêu cầu đã hủy, thất bại hoặc đã vào hàng lỗi cuối."
-      );
-    }
-
-    if (!this.props.sentAt) {
-      throw new DomainError("Hồ sơ chỉ được tiếp nhận sau khi đã có thời điểm gửi.");
-    }
+    const sentAtValue = assertCanMarkReceived(this.props.status, this.props.sentAt);
 
     const receivedAt = input.receivedAt
       ? parseDate(input.receivedAt, "Thời điểm tiếp nhận hồ sơ không hợp lệ.")
       : new Date();
-    const sentAt = parseDate(this.props.sentAt, "Thời điểm gửi hồ sơ không hợp lệ.");
+    const sentAt = parseDate(sentAtValue, "Thời điểm gửi hồ sơ không hợp lệ.");
 
     if (receivedAt < sentAt) {
       throw new DomainError("Thời điểm tiếp nhận hồ sơ không được trước thời điểm gửi.");
@@ -131,17 +106,7 @@ export class RecordTransfer {
   }
 
   markFailed(input: MarkRecordTransferFailedInput): void {
-    if (this.props.status === "completed") {
-      throw new DomainError("Hồ sơ đã được tiếp nhận, không thể đánh dấu lỗi gửi.");
-    }
-
-    if (this.props.status === "cancelled") {
-      throw new DomainError("Không thể đánh dấu lỗi cho yêu cầu chuyển hồ sơ đã hủy.");
-    }
-
-    if (this.props.status === "dead-lettered") {
-      throw new DomainError("Không thể đánh dấu lỗi cho hồ sơ đã vào hàng lỗi cuối.");
-    }
+    assertCanMarkFailed(this.props.status);
 
     const failedAt = input.failedAt
       ? parseDate(input.failedAt, "Thời điểm lỗi chuyển hồ sơ không hợp lệ.")
@@ -183,11 +148,7 @@ export class RecordTransfer {
   }
 
   retry(input: RetryRecordTransferInput = {}): void {
-    if (this.props.status !== "failed") {
-      throw new DomainError(
-        "Chỉ có thể thử gửi lại khi yêu cầu chuyển hồ sơ đang ở trạng thái lỗi."
-      );
-    }
+    assertCanRetry(this.props.status);
 
     const retryAt = input.retryAt
       ? parseDate(input.retryAt, "Thời điểm thử gửi lại hồ sơ không hợp lệ.")
@@ -218,20 +179,16 @@ export class RecordTransfer {
   }
 
   markDeadLettered(input: MarkRecordTransferDeadLetteredInput = {}): void {
-    if (this.props.status !== "failed") {
-      throw new DomainError(
-        "Chỉ có thể đưa vào hàng lỗi cuối khi yêu cầu chuyển hồ sơ đang ở trạng thái lỗi."
-      );
-    }
-
-    if (!this.props.failedAt || !this.props.failureReason) {
-      throw new DomainError("Hồ sơ vào hàng lỗi cuối cần có thời điểm lỗi và lý do lỗi trước đó.");
-    }
+    const failedAtValue = assertCanMarkDeadLettered(
+      this.props.status,
+      this.props.failedAt,
+      this.props.failureReason
+    );
 
     const deadLetteredAt = input.deadLetteredAt
       ? parseDate(input.deadLetteredAt, "Thời điểm đưa hồ sơ vào hàng lỗi cuối không hợp lệ.")
       : new Date();
-    const failedAt = parseDate(this.props.failedAt, "Thời điểm lỗi chuyển hồ sơ không hợp lệ.");
+    const failedAt = parseDate(failedAtValue, "Thời điểm lỗi chuyển hồ sơ không hợp lệ.");
 
     if (deadLetteredAt < failedAt) {
       throw new DomainError(
