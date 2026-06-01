@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 const testBudgets = [
   {
     path: "apps/api/src/server.auth.test.ts",
-    maxLines: 1100,
+    maxLines: 900,
     role: "API auth/RBAC integration scenarios outside login boundary"
   },
   {
@@ -48,6 +48,11 @@ const testBudgets = [
     role: "API provider directory and clinical resource scenarios"
   },
   {
+    path: "apps/api/src/server.consent-boundary.test.ts",
+    maxLines: 300,
+    role: "API consent creation, FHIR export and revocation scenarios"
+  },
+  {
     path: "apps/api/src/server.auth.test-support.ts",
     maxLines: 320,
     role: "Shared API auth boundary test support"
@@ -63,6 +68,7 @@ const patientAccessBoundaryPath = resolve("apps/api/src/server.patient-access.te
 const auditBoundaryPath = resolve("apps/api/src/server.audit-boundary.test.ts");
 const fhirBoundaryPath = resolve("apps/api/src/server.fhir-boundary.test.ts");
 const clinicalResourcesBoundaryPath = resolve("apps/api/src/server.clinical-resources.test.ts");
+const consentBoundaryPath = resolve("apps/api/src/server.consent-boundary.test.ts");
 
 const forbiddenAuthBoundaryPatterns = [
   {
@@ -109,6 +115,11 @@ const forbiddenAuthBoundaryPatterns = [
     pattern: /returns provider directory|lists workflow tasks|lists imaging studies|creates a medication administration/,
     message:
       "Provider directory and clinical resource scenarios belong in server.clinical-resources.test.ts."
+  },
+  {
+    pattern: /lists active patient consents|exports patient consent as FHIR Consent|revokes a patient consent/,
+    message:
+      "Consent creation, FHIR export and revocation scenarios belong in server.consent-boundary.test.ts."
   }
 ];
 
@@ -160,6 +171,12 @@ const requiredClinicalResourcesBoundaryPatterns = [
   /lists medication administrations and exports them as FHIR MedicationAdministration/,
   /lists imaging studies and exports them as FHIR ImagingStudy/
 ];
+const requiredConsentBoundaryPatterns = [
+  /lists active patient consents for treatment users/,
+  /creates a patient consent and uses it for Bundle export/,
+  /exports patient consent as FHIR Consent/,
+  /revokes a patient consent and blocks later record sharing/
+];
 
 const testReports = [];
 
@@ -195,6 +212,7 @@ const clinicalResourcesBoundarySource = await readFile(
   clinicalResourcesBoundaryPath,
   "utf8"
 );
+const consentBoundarySource = await readFile(consentBoundaryPath, "utf8");
 
 for (const forbidden of forbiddenAuthBoundaryPatterns) {
   if (forbidden.pattern.test(authBoundarySource)) {
@@ -262,6 +280,14 @@ for (const required of requiredClinicalResourcesBoundaryPatterns) {
   if (!required.test(clinicalResourcesBoundarySource)) {
     throw new Error(
       "server.clinical-resources.test.ts must keep provider directory, workflow, medication and imaging resource scenarios."
+    );
+  }
+}
+
+for (const required of requiredConsentBoundaryPatterns) {
+  if (!required.test(consentBoundarySource)) {
+    throw new Error(
+      "server.consent-boundary.test.ts must keep consent listing, creation, FHIR export and revocation scenarios."
     );
   }
 }
