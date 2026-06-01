@@ -34,7 +34,13 @@ const requiredModules = [
   "apps/web/src/application/patientPanelContext.ts",
   "apps/web/src/application/workspaceSelection.ts",
   "apps/web/src/components/AppShell.tsx",
+  "apps/web/src/config/demoCareWorkflowDefaults.ts",
   "apps/web/src/config/demoClinicalDefaults.ts",
+  "apps/web/src/config/demoClinicalEntryDefaults.ts",
+  "apps/web/src/config/demoMedicationDefaults.ts",
+  "apps/web/src/config/demoPatientDefaults.ts",
+  "apps/web/src/config/demoReferenceContent.ts",
+  "apps/web/src/config/demoTransferDefaults.ts",
   "apps/web/src/features/audit/AuditPanels.tsx",
   "apps/web/src/features/audit/auditPanelRenderers.tsx",
   "apps/web/src/features/audit/auditApi.ts",
@@ -186,6 +192,41 @@ const forbiddenPageCompositionModules = [
 ];
 const maxAppLines = 2_647;
 const featureModuleBudgets = [
+  {
+    path: "apps/web/src/config/demoClinicalDefaults.ts",
+    maxLines: 20,
+    role: "Demo defaults compatibility barrel"
+  },
+  {
+    path: "apps/web/src/config/demoPatientDefaults.ts",
+    maxLines: 40,
+    role: "Demo patient registry defaults"
+  },
+  {
+    path: "apps/web/src/config/demoClinicalEntryDefaults.ts",
+    maxLines: 90,
+    role: "Demo encounter, document, allergy, condition and observation defaults"
+  },
+  {
+    path: "apps/web/src/config/demoMedicationDefaults.ts",
+    maxLines: 90,
+    role: "Demo medication workflow defaults"
+  },
+  {
+    path: "apps/web/src/config/demoCareWorkflowDefaults.ts",
+    maxLines: 120,
+    role: "Demo care workflow, diagnostics and imaging defaults"
+  },
+  {
+    path: "apps/web/src/config/demoTransferDefaults.ts",
+    maxLines: 50,
+    role: "Demo record-transfer and gateway acknowledgement defaults"
+  },
+  {
+    path: "apps/web/src/config/demoReferenceContent.ts",
+    maxLines: 70,
+    role: "Demo workflow and reference signal content"
+  },
   {
     path: "apps/web/src/features/clinical-documents/ClinicalDocumentPanel.tsx",
     maxLines: 190,
