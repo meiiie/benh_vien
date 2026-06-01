@@ -74,6 +74,7 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/ObservationPanel.tsx",
   "apps/web/src/features/clinical-records/ProcedureForm.tsx",
   "apps/web/src/features/clinical-records/ProcedurePanel.tsx",
+  "apps/web/src/features/clinical-records/ServiceRequestForm.tsx",
   "apps/web/src/features/clinical-records/ServiceRequestPanel.tsx",
   "apps/web/src/features/clinical-records/WorkflowTaskPanel.tsx",
   "apps/web/src/features/clinical-records/clinicalRecordApi.ts",
@@ -234,6 +235,16 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/clinical-records/ProcedureForm.tsx",
     maxLines: 260,
     role: "Procedure field-heavy command form"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/ServiceRequestPanel.tsx",
+    maxLines: 170,
+    role: "ServiceRequest order list, summary and form composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/ServiceRequestForm.tsx",
+    maxLines: 210,
+    role: "ServiceRequest LIS/RIS/PACS order command form"
   },
   {
     path: "apps/web/src/features/clinical-records/MedicationRequestPanel.tsx",

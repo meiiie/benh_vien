@@ -17,6 +17,7 @@
 - Với MedicationDispense, `MedicationDispensePanel.tsx` giữ danh sách, tóm tắt và composition; form cấp phát nhiều trường nằm trong `MedicationDispenseForm.tsx` để không trộn form command vào panel hiển thị.
 - Với MedicationAdministration, `MedicationAdministrationPanel.tsx` giữ danh sách, tóm tắt và composition; form dùng thuốc thực tế nằm trong `MedicationAdministrationForm.tsx` để giữ ranh giới kê đơn/cấp phát/dùng thuốc rõ ràng.
 - Với MedicationRequest, `MedicationRequestPanel.tsx` giữ danh sách, tóm tắt và composition; form chỉ định/kê đơn nằm trong `MedicationRequestForm.tsx` để medication workflow giữ rõ ba bước kê đơn, cấp phát và dùng thuốc.
+- Với ServiceRequest, `ServiceRequestPanel.tsx` giữ danh sách, tóm tắt y lệnh dịch vụ và composition; form chỉ định xét nghiệm/hình ảnh/dịch vụ nằm trong `ServiceRequestForm.tsx` để đường LIS/RIS/PACS bắt đầu từ y lệnh có cấu trúc.
 - Với Procedure, `ProcedurePanel.tsx` giữ danh sách, tóm tắt và composition; form ghi nhận thủ thuật/hoạt động y tế nằm trong `ProcedureForm.tsx` để care workflow dễ mở rộng performer, report và body site.
 - Với DiagnosticReport, `DiagnosticReportPanel.tsx` giữ danh sách, tóm tắt LIS/RIS và composition; form gom Observation, y lệnh gốc và tệp kết quả nằm trong `DiagnosticReportForm.tsx` để đường xét nghiệm/chẩn đoán hình ảnh không trộn vào panel hiển thị.
 - Với ImagingStudy, `ImagingStudyPanel.tsx` giữ danh sách, tóm tắt PACS/DICOM và composition; form DICOM metadata nằm trong `ImagingStudyForm.tsx` để đường tích hợp PACS/DICOMweb không trộn vào panel hiển thị.
