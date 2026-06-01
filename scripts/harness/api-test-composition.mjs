@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 const testBudgets = [
   {
     path: "apps/api/src/server.auth.test.ts",
-    maxLines: 4100,
+    maxLines: 3900,
     role: "API auth/RBAC integration scenarios outside login boundary"
   },
   {
@@ -18,6 +18,11 @@ const testBudgets = [
     role: "API runtime, readiness and HTTP envelope scenarios"
   },
   {
+    path: "apps/api/src/server.startup-config.test.ts",
+    maxLines: 260,
+    role: "API startup and production configuration scenarios"
+  },
+  {
     path: "apps/api/src/server.auth.test-support.ts",
     maxLines: 320,
     role: "Shared API auth boundary test support"
@@ -27,6 +32,7 @@ const testBudgets = [
 const authBoundaryPath = resolve("apps/api/src/server.auth.test.ts");
 const loginBoundaryPath = resolve("apps/api/src/server.auth.login.test.ts");
 const runtimeBoundaryPath = resolve("apps/api/src/server.runtime.test.ts");
+const startupConfigBoundaryPath = resolve("apps/api/src/server.startup-config.test.ts");
 
 const forbiddenAuthBoundaryPatterns = [
   {
@@ -43,6 +49,11 @@ const forbiddenAuthBoundaryPatterns = [
     pattern: /returns readiness checks|sets baseline HTTP security headers|returns redacted runtime metadata/,
     message:
       "Runtime, readiness and HTTP envelope scenarios belong in server.runtime.test.ts."
+  },
+  {
+    pattern: /requires explicit CORS origins|rejects unsafe CORS origins|requires PostgreSQL repositories|rejects local-only public API base URLs/,
+    message:
+      "Startup and production configuration scenarios belong in server.startup-config.test.ts."
   }
 ];
 
@@ -57,6 +68,12 @@ const requiredRuntimeBoundaryPatterns = [
   /returns redacted runtime metadata/,
   /sets baseline HTTP security headers/,
   /returns a safe validation error envelope/
+];
+const requiredStartupConfigBoundaryPatterns = [
+  /requires explicit CORS origins/,
+  /rejects unsafe CORS origins/,
+  /requires PostgreSQL repositories/,
+  /rejects local-only public API base URLs/
 ];
 
 const testReports = [];
@@ -84,6 +101,7 @@ for (const budget of testBudgets) {
 const authBoundarySource = await readFile(authBoundaryPath, "utf8");
 const loginBoundarySource = await readFile(loginBoundaryPath, "utf8");
 const runtimeBoundarySource = await readFile(runtimeBoundaryPath, "utf8");
+const startupConfigBoundarySource = await readFile(startupConfigBoundaryPath, "utf8");
 
 for (const forbidden of forbiddenAuthBoundaryPatterns) {
   if (forbidden.pattern.test(authBoundarySource)) {
@@ -103,6 +121,14 @@ for (const required of requiredRuntimeBoundaryPatterns) {
   if (!required.test(runtimeBoundarySource)) {
     throw new Error(
       "server.runtime.test.ts must keep core readiness, runtime metadata, security header and safe error envelope scenarios."
+    );
+  }
+}
+
+for (const required of requiredStartupConfigBoundaryPatterns) {
+  if (!required.test(startupConfigBoundarySource)) {
+    throw new Error(
+      "server.startup-config.test.ts must keep core CORS, repository, public API URL and production startup validation scenarios."
     );
   }
 }
