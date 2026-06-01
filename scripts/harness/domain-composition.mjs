@@ -314,8 +314,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/consent/consent.ts",
-    maxLines: 190,
-    role: "Consent grant, revoke and record-sharing authorization behavior"
+    maxLines: 130,
+    role: "Consent revoke and record-sharing authorization behavior"
+  },
+  {
+    path: "packages/domain/src/consent/consent.factory.ts",
+    maxLines: 140,
+    role: "Consent grant and persisted snapshot normalization"
   },
   {
     path: "packages/domain/src/consent/consent.validation.ts",
@@ -628,6 +633,7 @@ const encounterAggregatePath = resolve("packages/domain/src/encounter/encounter.
 const encounterValidationPath = resolve("packages/domain/src/encounter/encounter.validation.ts");
 const encounterTypesPath = resolve("packages/domain/src/encounter/encounter.types.ts");
 const consentAggregatePath = resolve("packages/domain/src/consent/consent.ts");
+const consentFactoryPath = resolve("packages/domain/src/consent/consent.factory.ts");
 const consentValidationPath = resolve("packages/domain/src/consent/consent.validation.ts");
 const consentTypesPath = resolve("packages/domain/src/consent/consent.types.ts");
 const fhirTypesPath = resolve("packages/domain/src/fhir/fhir-types.ts");
@@ -802,6 +808,7 @@ const encounterAggregateSource = await readFile(encounterAggregatePath, "utf8");
 const encounterValidationSource = await readFile(encounterValidationPath, "utf8");
 const encounterTypesSource = await readFile(encounterTypesPath, "utf8");
 const consentAggregateSource = await readFile(consentAggregatePath, "utf8");
+const consentFactorySource = await readFile(consentFactoryPath, "utf8");
 const consentValidationSource = await readFile(consentValidationPath, "utf8");
 const consentTypesSource = await readFile(consentTypesPath, "utf8");
 const fhirTypesSource = await readFile(fhirTypesPath, "utf8");
@@ -2013,11 +2020,16 @@ for (const forbidden of [
   /export type ConsentSnapshot/,
   /const consentStatuses/,
   /function normalizeRequired/,
-  /function assertValidPeriod/
+  /function assertValidPeriod/,
+  /\bassertPersistenceTimeline\b/,
+  /\bassertValidStatus\b/,
+  /\bassertValidCategory\b/,
+  /\bassertValidPeriod\b/,
+  /\bparseDate\b/
 ]) {
   if (forbidden.test(consentAggregateSource)) {
     throw new Error(
-      "Consent aggregate must keep grant/revoke/authorization behavior only; types stay in consent.types.ts and period/status/category guards stay in consent.validation.ts."
+      "Consent aggregate must keep revoke/authorization behavior only; grant/rehydrate normalization stays in consent.factory.ts, types stay in consent.types.ts and period/status/category guards stay in consent.validation.ts."
     );
   }
 }
@@ -2046,6 +2058,36 @@ if (!/from "\.\/consent\.validation\.js"/.test(consentAggregateSource)) {
   throw new Error(
     "Consent aggregate must depend on consent.validation.ts for period, revocation, status and category guards."
   );
+}
+
+if (!/from "\.\/consent\.factory\.js"/.test(consentAggregateSource)) {
+  throw new Error("Consent aggregate must delegate grant and rehydrate normalization to consent.factory.ts.");
+}
+
+for (const required of [
+  /export function buildConsentSnapshot/,
+  /export function normalizePersistedConsentSnapshot/,
+  /export type ConsentProps/,
+  /from "\.\/consent\.types\.js"/,
+  /from "\.\/consent\.validation\.js"/
+]) {
+  if (!required.test(consentFactorySource)) {
+    throw new Error(
+      "consent.factory.ts must keep Consent grant, persisted snapshot normalization and mutable props construction."
+    );
+  }
+}
+
+for (const forbidden of [
+  /class Consent/,
+  /\ballowsRecordSharing\b/,
+  /\brevoke\(/
+]) {
+  if (forbidden.test(consentFactorySource)) {
+    throw new Error(
+      "consent.factory.ts must not own Consent aggregate behavior such as revoke or authorization."
+    );
+  }
 }
 
 for (const required of [
