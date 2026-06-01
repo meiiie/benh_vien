@@ -456,6 +456,31 @@ const routeBudgets = [
     path: "apps/api/src/modules/service-requests/service-request-route-helpers.ts",
     maxLines: 150,
     role: "ServiceRequest response, access, reference and domain error helpers"
+  },
+  {
+    path: "apps/api/src/modules/workflow-tasks/workflow-task-routes.ts",
+    maxLines: 70,
+    role: "WorkflowTask route composition root"
+  },
+  {
+    path: "apps/api/src/modules/workflow-tasks/workflow-task-query-routes.ts",
+    maxLines: 130,
+    role: "WorkflowTask list and read route adapter"
+  },
+  {
+    path: "apps/api/src/modules/workflow-tasks/workflow-task-creation-routes.ts",
+    maxLines: 140,
+    role: "WorkflowTask creation and reference validation route adapter"
+  },
+  {
+    path: "apps/api/src/modules/workflow-tasks/workflow-task-fhir-routes.ts",
+    maxLines: 90,
+    role: "WorkflowTask FHIR export route adapter"
+  },
+  {
+    path: "apps/api/src/modules/workflow-tasks/workflow-task-route-helpers.ts",
+    maxLines: 150,
+    role: "WorkflowTask response, access, reference and domain error helpers"
   }
 ];
 
@@ -897,6 +922,34 @@ const requiredServiceRequestRegistrations = [
   "registerServiceRequestFhirRoutes"
 ];
 
+const workflowTaskRoutesPath = resolve(
+  "apps/api/src/modules/workflow-tasks/workflow-task-routes.ts"
+);
+const forbiddenWorkflowTaskRoutePatterns = [
+  {
+    pattern:
+      /\bCreateWorkflowTaskRequestSchema\b|\bPatientWorkflowTasksParamsSchema\b|\bWorkflowTaskIdParamsSchema\b/,
+    message:
+      "WorkflowTask request handling belongs in workflow-task-query-routes.ts, workflow-task-creation-routes.ts or workflow-task-fhir-routes.ts."
+  },
+  {
+    pattern:
+      /\bWorkflowTask\.create\b|\bDomainError\b|\brequirePatientRecordAccessByPatientId\b|\bvalidateWorkflowTaskReferences\b/,
+    message:
+      "WorkflowTask creation, access and reference validation policy belongs outside the root route."
+  },
+  {
+    pattern: /\bmapWorkflowTaskToFhir\b|\btoWorkflowTaskResponse\b/,
+    message:
+      "WorkflowTask response and FHIR export details belong in helper or FHIR route modules."
+  }
+];
+const requiredWorkflowTaskRegistrations = [
+  "registerWorkflowTaskQueryRoutes",
+  "registerWorkflowTaskCreationRoutes",
+  "registerWorkflowTaskFhirRoutes"
+];
+
 const routeReports = [];
 
 for (const budget of routeBudgets) {
@@ -951,6 +1004,7 @@ const procedureRoutesSource = await readFile(procedureRoutesPath, "utf8");
 const diagnosticReportRoutesSource = await readFile(diagnosticReportRoutesPath, "utf8");
 const imagingStudyRoutesSource = await readFile(imagingStudyRoutesPath, "utf8");
 const serviceRequestRoutesSource = await readFile(serviceRequestRoutesPath, "utf8");
+const workflowTaskRoutesSource = await readFile(workflowTaskRoutesPath, "utf8");
 
 for (const forbidden of forbiddenApiRoutesPatterns) {
   if (forbidden.pattern.test(apiRoutesSource)) {
@@ -1172,6 +1226,20 @@ for (const registration of requiredServiceRequestRegistrations) {
   if (!serviceRequestRoutesSource.includes(registration)) {
     throw new Error(
       `ServiceRequest root routes must register ${registration} so query, creation and FHIR modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenWorkflowTaskRoutePatterns) {
+  if (forbidden.pattern.test(workflowTaskRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredWorkflowTaskRegistrations) {
+  if (!workflowTaskRoutesSource.includes(registration)) {
+    throw new Error(
+      `WorkflowTask root routes must register ${registration} so query, creation and FHIR modules remain wired.`
     );
   }
 }
