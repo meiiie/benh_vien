@@ -58,6 +58,31 @@ const routeBudgets = [
     role: "HTTP API audit route wiring"
   },
   {
+    path: "apps/api/src/modules/auth/auth-routes.ts",
+    maxLines: 60,
+    role: "Auth route composition root"
+  },
+  {
+    path: "apps/api/src/modules/auth/auth-login-routes.ts",
+    maxLines: 180,
+    role: "Auth login route, rate-limit and demo IAM adapter"
+  },
+  {
+    path: "apps/api/src/modules/auth/auth-session-routes.ts",
+    maxLines: 60,
+    role: "Auth bearer session route adapter"
+  },
+  {
+    path: "apps/api/src/modules/auth/auth-login-audit.ts",
+    maxLines: 80,
+    role: "Auth login audit and username hashing helpers"
+  },
+  {
+    path: "apps/api/src/modules/auth/auth-demo-accounts.ts",
+    maxLines: 80,
+    role: "Auth controlled demo account catalog"
+  },
+  {
     path: "apps/api/src/modules/record-transfers/record-transfer-routes.ts",
     maxLines: 80,
     role: "RecordTransfer route composition root"
@@ -319,6 +344,30 @@ const requiredApiDomainRegistrations = [
   "registerApiDiagnosticRoutes",
   "registerApiDocumentRoutes",
   "registerApiAuditRoutes"
+];
+
+const authRoutesPath = resolve("apps/api/src/modules/auth/auth-routes.ts");
+const forbiddenAuthRoutePatterns = [
+  {
+    pattern:
+      /\bLoginRequestSchema\b|\bverifyPassword\b|\bdemoAccounts\b|\bdummyPasswordHash\b/,
+    message:
+      "Auth login parsing, credential checks and demo account catalog belong outside auth-routes.ts."
+  },
+  {
+    pattern: /\bcreateAccessToken\b|\bverifyAccessToken\b|\breadBearerToken\b/,
+    message:
+      "Auth token creation and bearer session handling belong in login/session route modules."
+  },
+  {
+    pattern: /\brecordLoginAuditEvent\b|\bhashLoginUsername\b|\breadUsernameHash\b/,
+    message:
+      "Auth login audit and username hashing belong in auth-login-audit.ts."
+  }
+];
+const requiredAuthRegistrations = [
+  "registerAuthLoginRoutes",
+  "registerAuthSessionRoutes"
 ];
 
 const recordTransferRoutesPath = resolve(
@@ -600,6 +649,7 @@ for (const budget of routeBudgets) {
 
 const apiRoutesSource = await readFile(apiRoutesPath, "utf8");
 const apiDomainRoutesSource = await readFile(apiDomainRoutesPath, "utf8");
+const authRoutesSource = await readFile(authRoutesPath, "utf8");
 const recordTransferRoutesSource = await readFile(recordTransferRoutesPath, "utf8");
 const recordTransferCommandRoutesSource = await readFile(
   recordTransferCommandRoutesPath,
@@ -635,6 +685,20 @@ for (const registration of requiredApiDomainRegistrations) {
   if (!apiDomainRoutesSource.includes(registration)) {
     throw new Error(
       `HTTP API domain route composition must register ${registration} so domain route groups remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenAuthRoutePatterns) {
+  if (forbidden.pattern.test(authRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredAuthRegistrations) {
+  if (!authRoutesSource.includes(registration)) {
+    throw new Error(
+      `Auth root routes must register ${registration} so login and bearer session routes remain wired.`
     );
   }
 }
