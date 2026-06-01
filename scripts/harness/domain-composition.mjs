@@ -124,8 +124,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/workflow-task/workflow-task.validation.ts",
-    maxLines: 170,
-    role: "WorkflowTask code, reference, status and timeline guards"
+    maxLines: 140,
+    role: "WorkflowTask code, reference structure and timeline guards"
+  },
+  {
+    path: "packages/domain/src/workflow-task/workflow-task.code-set-guards.ts",
+    maxLines: 70,
+    role: "WorkflowTask status, intent, priority and reference code-set guards"
   },
   {
     path: "packages/domain/src/workflow-task/workflow-task.types.ts",
@@ -566,6 +571,9 @@ const workflowTaskFactoryPath = resolve(
 const workflowTaskValidationPath = resolve(
   "packages/domain/src/workflow-task/workflow-task.validation.ts"
 );
+const workflowTaskCodeSetGuardsPath = resolve(
+  "packages/domain/src/workflow-task/workflow-task.code-set-guards.ts"
+);
 const workflowTaskTypesPath = resolve(
   "packages/domain/src/workflow-task/workflow-task.types.ts"
 );
@@ -773,6 +781,10 @@ const patientTypesSource = await readFile(patientTypesPath, "utf8");
 const workflowTaskAggregateSource = await readFile(workflowTaskAggregatePath, "utf8");
 const workflowTaskFactorySource = await readFile(workflowTaskFactoryPath, "utf8");
 const workflowTaskValidationSource = await readFile(workflowTaskValidationPath, "utf8");
+const workflowTaskCodeSetGuardsSource = await readFile(
+  workflowTaskCodeSetGuardsPath,
+  "utf8"
+);
 const workflowTaskTypesSource = await readFile(workflowTaskTypesPath, "utf8");
 const procedureAggregateSource = await readFile(procedureAggregatePath, "utf8");
 const procedureValidationSource = await readFile(procedureValidationPath, "utf8");
@@ -1350,7 +1362,7 @@ for (const forbidden of [
 ]) {
   if (forbidden.test(workflowTaskAggregateSource)) {
     throw new Error(
-      "WorkflowTask aggregate must keep lifecycle behavior only; create/rehydrate normalization stays in workflow-task.factory.ts, types stay in workflow-task.types.ts and code/reference/status/timeline guards stay in workflow-task.validation.ts."
+      "WorkflowTask aggregate must keep lifecycle behavior only; create/rehydrate normalization stays in workflow-task.factory.ts, types stay in workflow-task.types.ts, code/reference/timeline guards stay in workflow-task.validation.ts, and code-set guards stay in workflow-task.code-set-guards.ts."
     );
   }
 }
@@ -1384,7 +1396,8 @@ for (const required of [
   /export function normalizePersistedWorkflowTaskSnapshot/,
   /export type WorkflowTaskProps/,
   /from "\.\/workflow-task\.types\.js"/,
-  /from "\.\/workflow-task\.validation\.js"/
+  /from "\.\/workflow-task\.validation\.js"/,
+  /from "\.\/workflow-task\.code-set-guards\.js"/
 ]) {
   if (!required.test(workflowTaskFactorySource)) {
     throw new Error(
@@ -1409,12 +1422,39 @@ for (const required of [
   /export function normalizeReferences/,
   /export function validateTimeline/,
   /export function assertCompletedTaskHasOutputReferences/,
-  /export function normalizeStatus/,
+  /from "\.\/workflow-task\.code-set-guards\.js"/,
   /from "\.\/workflow-task\.types\.js"/
 ]) {
   if (!required.test(workflowTaskValidationSource)) {
     throw new Error(
-      "workflow-task.validation.ts must keep WorkflowTask code, reference, status and timeline guards."
+      "workflow-task.validation.ts must keep WorkflowTask code, reference structure and timeline guards."
+    );
+  }
+}
+
+for (const forbidden of [
+  /export function normalizeStatus/,
+  /export function normalizeIntent/,
+  /export function normalizePriority/,
+  /\bworkflowTaskStatuses\b|\bworkflowTaskIntents\b|\bworkflowTaskPriorities\b/
+]) {
+  if (forbidden.test(workflowTaskValidationSource)) {
+    throw new Error(
+      "WorkflowTask status, intent and priority code-set guards belong in workflow-task.code-set-guards.ts."
+    );
+  }
+}
+
+for (const required of [
+  /export function normalizeStatus/,
+  /export function normalizeIntent/,
+  /export function normalizePriority/,
+  /export function normalizeReferenceResourceType/,
+  /from "\.\/workflow-task\.types\.js"/
+]) {
+  if (!required.test(workflowTaskCodeSetGuardsSource)) {
+    throw new Error(
+      "workflow-task.code-set-guards.ts must keep WorkflowTask status, intent, priority and reference resource code-set guards."
     );
   }
 }

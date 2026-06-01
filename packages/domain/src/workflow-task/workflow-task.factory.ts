@@ -3,15 +3,17 @@ import {
   normalizeBusinessStatus,
   normalizeCode,
   normalizeExecutionPeriod,
-  normalizeIntent,
   normalizeOptional,
-  normalizePriority,
   normalizeReferences,
   normalizeRequired,
-  normalizeStatus,
   parseDate,
   validateTimeline
 } from "./workflow-task.validation.js";
+import {
+  normalizeIntent,
+  normalizePriority,
+  normalizeStatus
+} from "./workflow-task.code-set-guards.js";
 import type {
   CreateWorkflowTaskInput,
   WorkflowTaskSnapshot

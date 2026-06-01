@@ -4,20 +4,12 @@ import {
   normalizeRequiredText as normalizeRequired,
   parseRequiredDate as parseDate
 } from "../shared/normalization.js";
-import {
-  workflowTaskIntents,
-  workflowTaskPriorities,
-  workflowTaskReferenceResourceTypes,
-  workflowTaskStatuses
-} from "./workflow-task.types.js";
+import { normalizeReferenceResourceType } from "./workflow-task.code-set-guards.js";
 import type {
   WorkflowTaskBusinessStatus,
   WorkflowTaskCode,
   WorkflowTaskExecutionPeriod,
-  WorkflowTaskIntent,
-  WorkflowTaskPriority,
   WorkflowTaskReference,
-  WorkflowTaskReferenceResourceType,
   WorkflowTaskStatus
 } from "./workflow-task.types.js";
 
@@ -119,36 +111,4 @@ export function assertCompletedTaskHasOutputReferences(
       "Công việc đã hoàn tất cần gắn tối thiểu một kết quả đầu ra để truy vết y lệnh."
     );
   }
-}
-
-export function normalizeStatus(value: WorkflowTaskStatus): WorkflowTaskStatus {
-  if (!workflowTaskStatuses.has(value)) {
-    throw new DomainError("Trạng thái công việc không hợp lệ.");
-  }
-
-  return value;
-}
-
-export function normalizeIntent(value: WorkflowTaskIntent): WorkflowTaskIntent {
-  if (!workflowTaskIntents.has(value)) {
-    throw new DomainError("Mục đích công việc không hợp lệ.");
-  }
-
-  return value;
-}
-
-export function normalizePriority(value: WorkflowTaskPriority): WorkflowTaskPriority {
-  if (!workflowTaskPriorities.has(value)) {
-    throw new DomainError("Mức ưu tiên công việc không hợp lệ.");
-  }
-
-  return value;
-}
-
-function normalizeReferenceResourceType(resourceType: WorkflowTaskReferenceResourceType): WorkflowTaskReferenceResourceType {
-  if (!workflowTaskReferenceResourceTypes.has(resourceType)) {
-    throw new DomainError("Loại tài nguyên tham chiếu công việc không hợp lệ.");
-  }
-
-  return resourceType;
 }
