@@ -24,8 +24,23 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/provider-directory/provider-directory.validation.ts",
-    maxLines: 440,
-    role: "ProviderDirectory normalization, reference validation and snapshot cloning"
+    maxLines: 220,
+    role: "ProviderDirectory resource normalization guards"
+  },
+  {
+    path: "packages/domain/src/provider-directory/provider-directory.primitives.ts",
+    maxLines: 180,
+    role: "ProviderDirectory coding, telecom, date and code-set primitive guards"
+  },
+  {
+    path: "packages/domain/src/provider-directory/provider-directory.references.ts",
+    maxLines: 80,
+    role: "ProviderDirectory cross-resource reference and uniqueness guards"
+  },
+  {
+    path: "packages/domain/src/provider-directory/provider-directory.snapshots.ts",
+    maxLines: 70,
+    role: "ProviderDirectory defensive snapshot cloning"
   },
   {
     path: "packages/domain/src/provider-directory/provider-directory.types.ts",
@@ -389,6 +404,15 @@ const providerDirectoryAggregatePath = resolve(
 const providerDirectoryValidationPath = resolve(
   "packages/domain/src/provider-directory/provider-directory.validation.ts"
 );
+const providerDirectoryPrimitivesPath = resolve(
+  "packages/domain/src/provider-directory/provider-directory.primitives.ts"
+);
+const providerDirectoryReferencesPath = resolve(
+  "packages/domain/src/provider-directory/provider-directory.references.ts"
+);
+const providerDirectorySnapshotsPath = resolve(
+  "packages/domain/src/provider-directory/provider-directory.snapshots.ts"
+);
 const providerDirectoryTypesPath = resolve(
   "packages/domain/src/provider-directory/provider-directory.types.ts"
 );
@@ -560,6 +584,18 @@ const providerDirectoryValidationSource = await readFile(
   providerDirectoryValidationPath,
   "utf8"
 );
+const providerDirectoryPrimitivesSource = await readFile(
+  providerDirectoryPrimitivesPath,
+  "utf8"
+);
+const providerDirectoryReferencesSource = await readFile(
+  providerDirectoryReferencesPath,
+  "utf8"
+);
+const providerDirectorySnapshotsSource = await readFile(
+  providerDirectorySnapshotsPath,
+  "utf8"
+);
 const providerDirectoryTypesSource = await readFile(providerDirectoryTypesPath, "utf8");
 const auditEventAggregateSource = await readFile(auditEventAggregatePath, "utf8");
 const auditEventValidationSource = await readFile(auditEventValidationPath, "utf8");
@@ -716,11 +752,13 @@ for (const forbidden of [
   /export type ProviderDirectorySnapshot/,
   /export type ProviderOrganizationType/,
   /const providerOrganizationTypes/,
-  /function normalizeOrganization/
+  /function normalizeOrganization/,
+  /function validateReferences/,
+  /function cloneOrganization/
 ]) {
   if (forbidden.test(providerDirectoryAggregateSource)) {
     throw new Error(
-      "ProviderDirectory aggregate must keep assembly behavior only; types stay in provider-directory.types.ts and normalization/reference guards stay in provider-directory.validation.ts."
+      "ProviderDirectory aggregate must keep assembly behavior only; types stay in provider-directory.types.ts, normalization stays in provider-directory.validation.ts, reference guards stay in provider-directory.references.ts, and snapshot cloning stays in provider-directory.snapshots.ts."
     );
   }
 }
@@ -746,20 +784,91 @@ if (!/from "\.\/provider-directory\.types\.js"/.test(providerDirectoryAggregateS
 
 if (!/from "\.\/provider-directory\.validation\.js"/.test(providerDirectoryAggregateSource)) {
   throw new Error(
-    "ProviderDirectory aggregate must depend on provider-directory.validation.ts for normalization and reference guards."
+    "ProviderDirectory aggregate must depend on provider-directory.validation.ts for normalization guards."
+  );
+}
+
+if (!/from "\.\/provider-directory\.primitives\.js"/.test(providerDirectoryAggregateSource)) {
+  throw new Error(
+    "ProviderDirectory aggregate must depend on provider-directory.primitives.ts for date and timestamp primitive guards."
+  );
+}
+
+if (!/from "\.\/provider-directory\.references\.js"/.test(providerDirectoryAggregateSource)) {
+  throw new Error(
+    "ProviderDirectory aggregate must depend on provider-directory.references.ts for cross-resource reference guards."
+  );
+}
+
+if (!/from "\.\/provider-directory\.snapshots\.js"/.test(providerDirectoryAggregateSource)) {
+  throw new Error(
+    "ProviderDirectory aggregate must depend on provider-directory.snapshots.ts for defensive snapshot cloning."
   );
 }
 
 for (const required of [
   /export function normalizeOrganization/,
   /export function normalizePersistedOrganization/,
-  /export function validateReferences/,
-  /export function cloneOrganization/,
+  /from "\.\/provider-directory\.primitives\.js"/,
   /from "\.\/provider-directory\.types\.js"/
 ]) {
   if (!required.test(providerDirectoryValidationSource)) {
     throw new Error(
-      "provider-directory.validation.ts must keep ProviderDirectory normalization, reference validation and snapshot cloning."
+      "provider-directory.validation.ts must keep ProviderDirectory resource normalization guards."
+    );
+  }
+}
+
+for (const forbidden of [
+  /export function validateReferences/,
+  /export function cloneOrganization/,
+  /export function normalizeIdentifier/,
+  /export function normalizeTimestamp/
+]) {
+  if (forbidden.test(providerDirectoryValidationSource)) {
+    throw new Error(
+      "ProviderDirectory primitive guards, reference guards and snapshot cloning must stay out of provider-directory.validation.ts."
+    );
+  }
+}
+
+for (const required of [
+  /export function normalizeIdentifier/,
+  /export function normalizeTelecom/,
+  /export function normalizeCoding/,
+  /export function normalizeTimestamp/,
+  /export function assertValidDate/,
+  /from "\.\/provider-directory\.types\.js"/
+]) {
+  if (!required.test(providerDirectoryPrimitivesSource)) {
+    throw new Error(
+      "provider-directory.primitives.ts must keep ProviderDirectory coding, telecom, date and code-set primitive guards."
+    );
+  }
+}
+
+for (const required of [
+  /export function validateReferences/,
+  /export function validateUniqueIds/,
+  /from "\.\/provider-directory\.types\.js"/
+]) {
+  if (!required.test(providerDirectoryReferencesSource)) {
+    throw new Error(
+      "provider-directory.references.ts must keep ProviderDirectory cross-resource reference and uniqueness guards."
+    );
+  }
+}
+
+for (const required of [
+  /export function cloneOrganization/,
+  /export function clonePractitioner/,
+  /export function cloneEndpoint/,
+  /export function clonePractitionerRole/,
+  /from "\.\/provider-directory\.types\.js"/
+]) {
+  if (!required.test(providerDirectorySnapshotsSource)) {
+    throw new Error(
+      "provider-directory.snapshots.ts must keep ProviderDirectory defensive snapshot cloning."
     );
   }
 }

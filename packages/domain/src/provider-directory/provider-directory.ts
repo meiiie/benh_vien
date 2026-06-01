@@ -1,9 +1,18 @@
 import {
-  assertValidDate,
   cloneEndpoint,
   cloneOrganization,
   clonePractitioner,
-  clonePractitionerRole,
+  clonePractitionerRole
+} from "./provider-directory.snapshots.js";
+import {
+  assertValidDate,
+  normalizeTimestamp
+} from "./provider-directory.primitives.js";
+import {
+  validateReferences,
+  validateUniqueIds
+} from "./provider-directory.references.js";
+import {
   normalizeEndpoint,
   normalizeOrganization,
   normalizePersistedEndpoint,
@@ -11,10 +20,7 @@ import {
   normalizePersistedPractitioner,
   normalizePersistedPractitionerRole,
   normalizePractitioner,
-  normalizePractitionerRole,
-  normalizeTimestamp,
-  validateReferences,
-  validateUniqueIds
+  normalizePractitionerRole
 } from "./provider-directory.validation.js";
 import type {
   ProviderDirectoryInput,
