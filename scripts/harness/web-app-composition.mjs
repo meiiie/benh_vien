@@ -60,6 +60,7 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/encounterSelectors.ts",
   "apps/web/src/features/clinical-records/ImagingStudyPanel.tsx",
   "apps/web/src/features/clinical-records/MedicationAdministrationPanel.tsx",
+  "apps/web/src/features/clinical-records/MedicationDispenseForm.tsx",
   "apps/web/src/features/clinical-records/MedicationDispensePanel.tsx",
   "apps/web/src/features/clinical-records/MedicationRequestPanel.tsx",
   "apps/web/src/features/clinical-records/medicationFormatters.ts",
@@ -176,6 +177,16 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/clinical-records/clinicalRecordPanelRendererTypes.ts",
     maxLines: 210,
     role: "Clinical record panel renderer type contracts"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/MedicationDispensePanel.tsx",
+    maxLines: 220,
+    role: "MedicationDispense list, summary and form composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/MedicationDispenseForm.tsx",
+    maxLines: 390,
+    role: "MedicationDispense field-heavy command form"
   }
 ];
 
