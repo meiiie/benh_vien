@@ -64,8 +64,11 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/encounterSelectors.ts",
   "apps/web/src/features/clinical-records/ImagingStudyForm.tsx",
   "apps/web/src/features/clinical-records/ImagingStudyPanel.tsx",
+  "apps/web/src/features/clinical-records/MedicationAdministrationContextFields.tsx",
+  "apps/web/src/features/clinical-records/MedicationAdministrationDosageFields.tsx",
   "apps/web/src/features/clinical-records/MedicationAdministrationForm.tsx",
   "apps/web/src/features/clinical-records/MedicationAdministrationPanel.tsx",
+  "apps/web/src/features/clinical-records/MedicationAdministrationPerformerFields.tsx",
   "apps/web/src/features/clinical-records/MedicationDispenseContextFields.tsx",
   "apps/web/src/features/clinical-records/MedicationDispenseDosageFields.tsx",
   "apps/web/src/features/clinical-records/MedicationDispenseForm.tsx",
@@ -328,8 +331,23 @@ const featureModuleBudgets = [
   },
   {
     path: "apps/web/src/features/clinical-records/MedicationAdministrationForm.tsx",
-    maxLines: 290,
-    role: "MedicationAdministration field-heavy command form"
+    maxLines: 90,
+    role: "MedicationAdministration command form composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/MedicationAdministrationContextFields.tsx",
+    maxLines: 150,
+    role: "MedicationAdministration encounter, request, condition and category fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/MedicationAdministrationPerformerFields.tsx",
+    maxLines: 100,
+    role: "MedicationAdministration effective time and performer fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/MedicationAdministrationDosageFields.tsx",
+    maxLines: 120,
+    role: "MedicationAdministration actual medication and dosage fields"
   },
   {
     path: "apps/web/src/features/clinical-records/ProcedurePanel.tsx",
