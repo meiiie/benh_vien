@@ -83,6 +83,41 @@ const routeBudgets = [
     role: "Runtime diagnostics redaction and repository metadata helpers"
   },
   {
+    path: "apps/api/src/modules/http/runtime-config.ts",
+    maxLines: 30,
+    role: "Runtime config public barrel"
+  },
+  {
+    path: "apps/api/src/modules/http/runtime-config-env.ts",
+    maxLines: 60,
+    role: "Runtime config primitive environment readers"
+  },
+  {
+    path: "apps/api/src/modules/http/runtime-config-repository.ts",
+    maxLines: 30,
+    role: "Runtime repository mode policy"
+  },
+  {
+    path: "apps/api/src/modules/http/runtime-config-public-api.ts",
+    maxLines: 50,
+    role: "Runtime public API base URL policy"
+  },
+  {
+    path: "apps/api/src/modules/http/runtime-config-http.ts",
+    maxLines: 40,
+    role: "Runtime HTTP body limit and API docs policy"
+  },
+  {
+    path: "apps/api/src/modules/http/runtime-config-cors.ts",
+    maxLines: 70,
+    role: "Runtime production CORS policy"
+  },
+  {
+    path: "apps/api/src/modules/http/runtime-config-workers.ts",
+    maxLines: 100,
+    role: "Runtime record-transfer worker scheduling policy"
+  },
+  {
     path: "apps/api/src/modules/provider-directory/provider-directory-routes.ts",
     maxLines: 50,
     role: "ProviderDirectory route composition root"
