@@ -1,20 +1,19 @@
 import type {
   AuditAction,
-  AuditEvent,
-  AuditEventSnapshot,
-  AuditResourceType
+  AuditEvent
 } from "../audit-event/audit-event.js";
 import type { FhirAuditEvent, FhirBundle } from "./fhir-types.js";
-
-type FhirAuditEventEntityDetail = NonNullable<
-  NonNullable<FhirAuditEvent["entity"]>[number]["detail"]
->[number];
-type FhirAuditEventEntityWhat = NonNullable<
-  NonNullable<FhirAuditEvent["entity"]>[number]["what"]
->;
-type FhirAuditEventAgentWho = NonNullable<
-  NonNullable<FhirAuditEvent["agent"]>[number]["who"]
->;
+import { buildEntityDetails } from "./map-audit-event-details.js";
+import {
+  mapAuditAction,
+  mapAuditOutcome,
+  mapAuditOutcomeDescription,
+  mapPurposeOfUse
+} from "./map-audit-event-outcome.js";
+import {
+  buildAuditAgentReference,
+  buildAuditEntityReference
+} from "./map-audit-event-references.js";
 
 const auditActionLabels: Record<AuditAction, string> = {
   "patient.merge": "Merge hồ sơ bệnh nhân",
@@ -103,28 +102,6 @@ const auditActionLabels: Record<AuditAction, string> = {
   "audit-event.integrity-verify": "Kiểm tra toàn vẹn audit"
 };
 
-const fhirResourceByAuditResource: Record<AuditResourceType, string> = {
-  Patient: "Patient",
-  ProviderDirectory: "Bundle",
-  RecordTransfer: "Task",
-  Encounter: "Encounter",
-  AllergyIntolerance: "AllergyIntolerance",
-  Condition: "Condition",
-  MedicationRequest: "MedicationRequest",
-  MedicationDispense: "MedicationDispense",
-  MedicationAdministration: "MedicationAdministration",
-  Observation: "Observation",
-  ServiceRequest: "ServiceRequest",
-  Task: "Task",
-  Procedure: "Procedure",
-  DiagnosticReport: "DiagnosticReport",
-  ImagingStudy: "ImagingStudy",
-  ClinicalDocument: "DocumentReference",
-  Consent: "Consent",
-  AuditEvent: "AuditEvent"
-};
-const fhirIdPattern = /^[A-Za-z0-9-.]{1,64}$/;
-
 export function mapAuditEventToFhir(event: AuditEvent): FhirAuditEvent {
   const snapshot = event.toSnapshot();
   const details = buildEntityDetails(snapshot);
@@ -190,60 +167,6 @@ export function mapAuditEventToFhir(event: AuditEvent): FhirAuditEvent {
   };
 }
 
-function buildAuditAgentReference(snapshot: AuditEventSnapshot): FhirAuditEventAgentWho {
-  if (
-    snapshot.actorId !== "anonymous" &&
-    !isSystemActor(snapshot) &&
-    fhirIdPattern.test(snapshot.actorId)
-  ) {
-    return {
-      reference: `Practitioner/${snapshot.actorId}`,
-      display: snapshot.actorId
-    };
-  }
-
-  return {
-    identifier: {
-      system: "urn:wiiicare:nexus:audit-actor",
-      value: snapshot.actorId,
-      type: {
-        text: "Internal audit actor identifier"
-      }
-    },
-    display: snapshot.actorId
-  };
-}
-
-function buildAuditEntityReference(snapshot: AuditEventSnapshot): FhirAuditEventEntityWhat {
-  const display = `${snapshot.resourceType}/${snapshot.resourceId}`;
-  const fhirResourceType = fhirResourceByAuditResource[snapshot.resourceType];
-
-  if (fhirIdPattern.test(snapshot.resourceId)) {
-    return {
-      reference: `${fhirResourceType}/${snapshot.resourceId}`,
-      display
-    };
-  }
-
-  return {
-    identifier: {
-      system: `urn:wiiicare:nexus:audit-resource:${snapshot.resourceType}`,
-      value: snapshot.resourceId,
-      type: {
-        text: "Internal audit resource identifier"
-      }
-    },
-    display
-  };
-}
-
-function isSystemActor(snapshot: AuditEventSnapshot): boolean {
-  return (
-    snapshot.metadata.actorRole === "integration" ||
-    snapshot.actorId.startsWith("system-")
-  );
-}
-
 export function mapAuditEventsToFhirBundle(
   patientId: string,
   events: readonly AuditEvent[],
@@ -272,134 +195,4 @@ export function mapAuditEventsToFhirBundle(
       };
     })
   };
-}
-
-function mapAuditAction(action: AuditAction): FhirAuditEvent["action"] {
-  if (action.endsWith(".create")) {
-    return "C";
-  }
-
-  if (
-    action.endsWith(".sign") ||
-    action.endsWith(".finish") ||
-    action.endsWith(".revoke") ||
-    action.endsWith(".merge") ||
-    action.endsWith(".dead-letter") ||
-    action.endsWith(".acknowledgement-callback")
-  ) {
-    return "U";
-  }
-
-  if (
-    action.endsWith(".integrity-verify") ||
-    action.endsWith(".identifier-conflict") ||
-    action === "access.denied" ||
-    action.startsWith("auth.login.")
-  ) {
-    return "E";
-  }
-
-  return "R";
-}
-
-function mapAuditOutcome(action: AuditAction): FhirAuditEvent["outcome"] {
-  return action === "access.denied" ||
-    action === "auth.login.failure" ||
-    action === "patient.identifier-conflict"
-    ? "4"
-    : "0";
-}
-
-function mapAuditOutcomeDescription(action: AuditAction): string {
-  if (action === "auth.login.failure") {
-    return "Authentication failed";
-  }
-
-  if (action === "access.denied") {
-    return "Access denied";
-  }
-
-  return action === "patient.identifier-conflict"
-    ? "Patient identifier conflict"
-    : "Success";
-}
-
-function mapPurposeOfUse(purposeOfUse: string) {
-  const purposeMap: Record<string, { readonly code: string; readonly display: string }> = {
-    TREATMENT: {
-      code: "TREAT",
-      display: "Treatment"
-    },
-    AUDIT: {
-      code: "AUDIT",
-      display: "Audit"
-    },
-    OPERATIONS: {
-      code: "HOPERAT",
-      display: "Healthcare operations"
-    }
-  };
-  const mapped = purposeMap[purposeOfUse] ?? {
-    code: purposeOfUse,
-    display: purposeOfUse
-  };
-
-  return {
-    system: "http://terminology.hl7.org/CodeSystem/v3-ActReason",
-    code: mapped.code,
-    display: mapped.display
-  };
-}
-
-function buildEntityDetails(snapshot: AuditEventSnapshot): readonly FhirAuditEventEntityDetail[] {
-  const details: FhirAuditEventEntityDetail[] = [];
-
-  if (snapshot.patientId) {
-    details.push({
-      type: "patientId",
-      valueString: snapshot.patientId
-    });
-  }
-
-  if (snapshot.purposeOfUse) {
-    details.push({
-      type: "purposeOfUse",
-      valueString: snapshot.purposeOfUse
-    });
-  }
-
-  if (snapshot.hashAlgorithm) {
-    details.push({
-      type: "hashAlgorithm",
-      valueString: snapshot.hashAlgorithm
-    });
-  }
-
-  if (snapshot.previousHash) {
-    details.push({
-      type: "previousHash",
-      valueString: snapshot.previousHash
-    });
-  }
-
-  if (snapshot.payloadHash) {
-    details.push({
-      type: "payloadHash",
-      valueString: snapshot.payloadHash
-    });
-  }
-
-  if (snapshot.integrityHash) {
-    details.push({
-      type: "integrityHash",
-      valueString: snapshot.integrityHash
-    });
-  }
-
-  details.push({
-    type: "metadata",
-    valueString: JSON.stringify(snapshot.metadata)
-  });
-
-  return details;
 }

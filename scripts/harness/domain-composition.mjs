@@ -461,6 +461,26 @@ const domainBudgets = [
     path: "packages/domain/src/fhir/fhir-bundle.types.ts",
     maxLines: 90,
     role: "FHIR Bundle entry and bundle resource types"
+  },
+  {
+    path: "packages/domain/src/fhir/map-audit-event-to-fhir.ts",
+    maxLines: 220,
+    role: "FHIR AuditEvent public mapper and bundle orchestration"
+  },
+  {
+    path: "packages/domain/src/fhir/map-audit-event-details.ts",
+    maxLines: 60,
+    role: "FHIR AuditEvent entity detail mapping"
+  },
+  {
+    path: "packages/domain/src/fhir/map-audit-event-outcome.ts",
+    maxLines: 100,
+    role: "FHIR AuditEvent action, outcome and purpose coding"
+  },
+  {
+    path: "packages/domain/src/fhir/map-audit-event-references.ts",
+    maxLines: 110,
+    role: "FHIR AuditEvent actor and entity reference mapping"
   }
 ];
 
