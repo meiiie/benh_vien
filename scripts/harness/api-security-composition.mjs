@@ -43,6 +43,16 @@ const securityBudgets = [
     role: "RecordTransfer callback secret JSON parsing and validation policy"
   },
   {
+    path: "apps/api/src/modules/record-transfers/record-transfer-callback-secret-failure.ts",
+    maxLines: 30,
+    role: "RecordTransfer callback secret lookup failure bridge"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-callback-signature-failure-catalog.ts",
+    maxLines: 50,
+    role: "RecordTransfer callback signature failure catalog"
+  },
+  {
     path: "apps/api/src/modules/record-transfers/record-transfer-callback-signature-failures.ts",
     maxLines: 90,
     role: "RecordTransfer callback signature failure response builders"
@@ -213,6 +223,12 @@ const signatureBuilderPath = resolve(
 const signatureSecretPath = resolve(
   "apps/api/src/modules/record-transfers/record-transfer-callback-secret.ts"
 );
+const signatureSecretFailurePath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-callback-secret-failure.ts"
+);
+const signatureFailureCatalogPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-callback-signature-failure-catalog.ts"
+);
 const signatureFailuresPath = resolve(
   "apps/api/src/modules/record-transfers/record-transfer-callback-signature-failures.ts"
 );
@@ -290,6 +306,8 @@ for (const budget of securityBudgets) {
 const signatureRootSource = await readFile(signatureRootPath, "utf8");
 const signatureBuilderSource = await readFile(signatureBuilderPath, "utf8");
 const signatureSecretSource = await readFile(signatureSecretPath, "utf8");
+const signatureSecretFailureSource = await readFile(signatureSecretFailurePath, "utf8");
+const signatureFailureCatalogSource = await readFile(signatureFailureCatalogPath, "utf8");
 const signatureFailuresSource = await readFile(signatureFailuresPath, "utf8");
 const signatureTimestampSource = await readFile(signatureTimestampPath, "utf8");
 const signatureSafeEqualSource = await readFile(signatureSafeEqualPath, "utf8");
@@ -404,12 +422,30 @@ assertForbidden(signatureSecretSource, [
   }
 ]);
 
+assertForbidden(signatureSecretFailureSource, [
+  {
+    pattern:
+      /\bcreateHmac\b|\btimingSafeEqual\b|\bDate\.parse\b|\bprocess\.env\b|\bJSON\.parse\b|\bbuildRecordTransferCallbackSignature\b/,
+    message:
+      "Callback secret lookup failure bridge must only map secret lookup failures into verification failures."
+  }
+]);
+
 assertForbidden(signatureFailuresSource, [
   {
     pattern:
       /\bcreateHmac\b|\btimingSafeEqual\b|\bDate\.parse\b|\bprocess\.env\b|\bJSON\.parse\b|\breadCallbackSecret\b|\bbuildRecordTransferCallbackSignature\b/,
     message:
       "Callback signature failure builders must only shape verification failures."
+  }
+]);
+
+assertForbidden(signatureFailureCatalogSource, [
+  {
+    pattern:
+      /\bcreateHmac\b|\btimingSafeEqual\b|\bDate\.parse\b|\bprocess\.env\b|\bJSON\.parse\b|\breadCallbackSecret\b|\bbuildRecordTransferCallbackSignature\b/,
+    message:
+      "Callback signature failure catalog must stay static error metadata, not verification logic."
   }
 ]);
 

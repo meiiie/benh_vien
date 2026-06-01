@@ -1,5 +1,6 @@
 import type { IncomingHttpHeaders } from "node:http";
 import { readCallbackSecret } from "./record-transfer-callback-secret.js";
+import { toSecretLookupFailure } from "./record-transfer-callback-secret-failure.js";
 import { readSingleHeader } from "./record-transfer-callback-headers.js";
 import {
   maxSignatureLength,
@@ -9,9 +10,12 @@ import {
 } from "./record-transfer-callback-signature.constants.js";
 import { buildRecordTransferCallbackSignature } from "./record-transfer-callback-signature-builder.js";
 import {
+  callbackSignatureInvalidLengthMessage,
+  callbackSignatureMismatchMessage
+} from "./record-transfer-callback-signature-failure-catalog.js";
+import {
   signatureInvalidFailure,
-  signatureRequiredFailure,
-  toSecretLookupFailure
+  signatureRequiredFailure
 } from "./record-transfer-callback-signature-failures.js";
 import { safeEqual } from "./record-transfer-callback-signature-safe-equal.js";
 import { validateCallbackTimestamp } from "./record-transfer-callback-signature-timestamp.js";
@@ -49,7 +53,7 @@ export function verifyRecordTransferCallbackSignature(input: {
     return signatureInvalidFailure({
       timestamp,
       keyId: secretResult.keyId,
-      message: "Chữ ký callback vượt quá độ dài cho phép."
+      message: callbackSignatureInvalidLengthMessage
     });
   }
 
@@ -74,7 +78,7 @@ export function verifyRecordTransferCallbackSignature(input: {
     return signatureInvalidFailure({
       timestamp,
       keyId: secretResult.keyId,
-      message: "Chữ ký callback không khớp payload tiếp nhận."
+      message: callbackSignatureMismatchMessage
     });
   }
 
