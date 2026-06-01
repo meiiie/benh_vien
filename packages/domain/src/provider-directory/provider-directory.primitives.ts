@@ -1,5 +1,10 @@
 import { DomainError } from "../shared/domain-error.js";
 import {
+  normalizeOptionalText as normalizeOptional,
+  normalizeRequiredText as normalizeRequired,
+  parseRequiredDate
+} from "../shared/normalization.js";
+import {
   providerEndpointConnectionTypes,
   providerEndpointStatuses,
   providerOrganizationTypes,
@@ -15,6 +20,11 @@ import type {
   ProviderPractitionerRoleSnapshot,
   ProviderTelecom
 } from "./provider-directory.types.js";
+
+export {
+  normalizeOptionalText as normalizeOptional,
+  normalizeRequiredText as normalizeRequired
+} from "../shared/normalization.js";
 
 export function normalizeIdentifier(identifier: ProviderIdentifier): ProviderIdentifier {
   return {
@@ -38,21 +48,6 @@ export function normalizeCoding(coding: ProviderCoding): ProviderCoding {
     code: normalizeRequired(coding.code, "Coding.code không được để trống."),
     display: normalizeRequired(coding.display, "Coding.display không được để trống.")
   };
-}
-
-export function normalizeRequired(value: string, message: string): string {
-  const normalized = value.trim().replace(/\s+/g, " ");
-
-  if (!normalized) {
-    throw new DomainError(message);
-  }
-
-  return normalized;
-}
-
-export function normalizeOptional(value: string | undefined): string | undefined {
-  const normalized = value?.trim().replace(/\s+/g, " ");
-  return normalized || undefined;
 }
 
 export function normalizeTextList(values: readonly string[] | undefined): string[] | undefined {
@@ -100,10 +95,7 @@ export function assertPersistenceTimeline(createdAt: Date, updatedAt: Date, reso
 }
 
 export function parseDate(value: string, message: string): Date {
-  const date = new Date(normalizeRequired(value, message));
-  assertValidDate(date, message);
-
-  return date;
+  return parseRequiredDate(normalizeRequired(value, message), message);
 }
 
 export function assertValidDate(value: Date, message: string): void {

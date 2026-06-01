@@ -1,5 +1,10 @@
 import { DomainError } from "../shared/domain-error.js";
 import {
+  normalizeOptionalText,
+  normalizeRequiredText,
+  parseRequiredDate
+} from "../shared/normalization.js";
+import {
   recordTransferBundleTypes,
   recordTransferPriorities,
   recordTransferStatuses
@@ -143,28 +148,15 @@ export function validateRecordTransferSnapshot(snapshot: RecordTransferSnapshot)
 }
 
 export function normalizeRequired(value: string, message: string): string {
-  const normalized = value.trim().replace(/\s+/g, " ");
-
-  if (!normalized) {
-    throw new DomainError(message);
-  }
-
-  return normalized;
+  return normalizeRequiredText(value, message);
 }
 
 export function normalizeOptional(value: string | undefined): string | undefined {
-  const normalized = value?.trim().replace(/\s+/g, " ");
-  return normalized || undefined;
+  return normalizeOptionalText(value);
 }
 
 export function parseDate(value: string, message: string): Date {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    throw new DomainError(message);
-  }
-
-  return date;
+  return parseRequiredDate(value, message);
 }
 
 export function normalizeStatus(value: RecordTransferStatus): RecordTransferStatus {

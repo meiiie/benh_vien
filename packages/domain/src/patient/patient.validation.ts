@@ -1,5 +1,10 @@
 import { DomainError } from "../shared/domain-error.js";
 import {
+  normalizeOptionalText,
+  normalizeRequiredText,
+  parseRequiredDate as parseDate
+} from "../shared/normalization.js";
+import {
   administrativeGenders,
   patientIdentifierTypes,
   patientRecordStatuses
@@ -12,6 +17,12 @@ import type {
 } from "./patient.types.js";
 
 const fhirDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+
+export {
+  normalizeOptionalText,
+  normalizeRequiredText,
+  parseRequiredDate as parseDate
+} from "../shared/normalization.js";
 
 export function normalizeIdentifier(identifier: PatientIdentifier): PatientIdentifier {
   const system = identifier.system.trim();
@@ -135,12 +146,6 @@ export function normalizeBirthDate(value: string): string {
   return normalized;
 }
 
-export function parseDate(value: string, message: string): Date {
-  const date = new Date(value);
-  assertValidDate(date, message);
-  return date;
-}
-
 export function assertValidDate(value: Date, message: string): void {
   if (Number.isNaN(value.getTime())) {
     throw new DomainError(message);
@@ -149,19 +154,4 @@ export function assertValidDate(value: Date, message: string): void {
 
 export function normalizeText(value: string): string {
   return value.trim().replace(/\s+/g, " ");
-}
-
-export function normalizeRequiredText(value: string, message: string): string {
-  const normalized = normalizeText(value);
-
-  if (!normalized) {
-    throw new DomainError(message);
-  }
-
-  return normalized;
-}
-
-export function normalizeOptionalText(value: string | undefined): string | undefined {
-  const normalized = value?.trim().replace(/\s+/g, " ");
-  return normalized || undefined;
 }

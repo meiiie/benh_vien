@@ -1,5 +1,10 @@
 import { DomainError } from "../shared/domain-error.js";
 import {
+  normalizeOptionalText as normalizeOptional,
+  normalizeRequiredText as normalizeRequired,
+  parseRequiredDate as parseDate
+} from "../shared/normalization.js";
+import {
   deliveryAttemptBundleTypes,
   deliveryAttemptStatuses
 } from "./record-transfer-delivery-attempt.types.js";
@@ -10,20 +15,11 @@ import type {
 
 const maxResponseBodyPreviewLength = 2_000;
 
-export function normalizeRequired(value: string, message: string): string {
-  const normalized = value.trim().replace(/\s+/g, " ");
-
-  if (!normalized) {
-    throw new DomainError(message);
-  }
-
-  return normalized;
-}
-
-export function normalizeOptional(value: string | undefined): string | undefined {
-  const normalized = value?.trim().replace(/\s+/g, " ");
-  return normalized || undefined;
-}
+export {
+  normalizeOptionalText as normalizeOptional,
+  normalizeRequiredText as normalizeRequired,
+  parseRequiredDate as parseDate
+} from "../shared/normalization.js";
 
 export function normalizeResponseBodyPreview(value: string | undefined): string | undefined {
   const normalized = value?.trim();
@@ -144,16 +140,6 @@ export function validatePersistenceTimeline(input: {
   if (input.updatedAt < input.queuedAt) {
     throw new DomainError("Thời điểm cập nhật lần gửi không được trước thời điểm xếp hàng.");
   }
-}
-
-export function parseDate(value: string, message: string): Date {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    throw new DomainError(message);
-  }
-
-  return date;
 }
 
 export function assertCompletedAtIsNotBeforeQueuedAt(completedAt: Date, queuedAt: string | Date): void {
