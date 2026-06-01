@@ -106,6 +106,31 @@ const postgresBudgets = [
     path: "apps/api/src/infrastructure/postgres/postgres-procedure.types.ts",
     maxLines: 50,
     role: "Procedure PostgreSQL row types"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-audit-event.repository.ts",
+    maxLines: 110,
+    role: "AuditEvent PostgreSQL repository integrity orchestration"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-audit-event.sql.ts",
+    maxLines: 90,
+    role: "AuditEvent PostgreSQL SQL statements"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-audit-event.mapper.ts",
+    maxLines: 80,
+    role: "AuditEvent PostgreSQL row and parameter mapper"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-audit-event.persistence.ts",
+    maxLines: 70,
+    role: "AuditEvent PostgreSQL persistence commands"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-audit-event.types.ts",
+    maxLines: 40,
+    role: "AuditEvent PostgreSQL queryable and row types"
   }
 ];
 
@@ -170,6 +195,21 @@ const procedurePersistencePath = resolve(
 const procedureTypesPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-procedure.types.ts"
 );
+const auditEventRepositoryPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-audit-event.repository.ts"
+);
+const auditEventSqlPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-audit-event.sql.ts"
+);
+const auditEventMapperPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-audit-event.mapper.ts"
+);
+const auditEventPersistencePath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-audit-event.persistence.ts"
+);
+const auditEventTypesPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-audit-event.types.ts"
+);
 
 const postgresReports = [];
 
@@ -226,6 +266,11 @@ const procedureSqlSource = await readFile(procedureSqlPath, "utf8");
 const procedureMapperSource = await readFile(procedureMapperPath, "utf8");
 const procedurePersistenceSource = await readFile(procedurePersistencePath, "utf8");
 const procedureTypesSource = await readFile(procedureTypesPath, "utf8");
+const auditEventRepositorySource = await readFile(auditEventRepositoryPath, "utf8");
+const auditEventSqlSource = await readFile(auditEventSqlPath, "utf8");
+const auditEventMapperSource = await readFile(auditEventMapperPath, "utf8");
+const auditEventPersistenceSource = await readFile(auditEventPersistencePath, "utf8");
+const auditEventTypesSource = await readFile(auditEventTypesPath, "utf8");
 
 const requiredRepositoryImports = [
   "rowToRecordTransfer",
@@ -278,6 +323,22 @@ const requiredProcedureRepositoryImports = [
 for (const importedName of requiredProcedureRepositoryImports) {
   if (!procedureRepositorySource.includes(importedName)) {
     throw new Error(`Procedure PostgreSQL repository must compose ${importedName}.`);
+  }
+}
+
+const requiredAuditEventRepositoryImports = [
+  "rowToAuditEvent",
+  "insertAuditEvent",
+  "lockAuditIntegrityScope",
+  "findLatestAuditIntegrityHash",
+  "updateAuditEventIntegrity",
+  "selectAuditEventSql",
+  "AuditEventRow"
+];
+
+for (const importedName of requiredAuditEventRepositoryImports) {
+  if (!auditEventRepositorySource.includes(importedName)) {
+    throw new Error(`AuditEvent PostgreSQL repository must compose ${importedName}.`);
   }
 }
 
@@ -444,6 +505,46 @@ assertForbidden(procedureTypesSource, [
   {
     pattern: /\bProcedure\.rehydrate\b|\bquery\s*\(|\bINSERT INTO procedures\b/,
     message: "Procedure PostgreSQL type module must only describe row contracts."
+  }
+]);
+
+assertForbidden(auditEventRepositorySource, [
+  {
+    pattern: /\bINSERT INTO audit_events\b|\bUPDATE audit_events\b|\bpg_advisory_xact_lock\b|\bAuditEvent\.rehydrate\b|\bAuditEventSnapshot\b|\bJSON\.parse\b|\bJSON\.stringify\b/,
+    message:
+      "AuditEvent PostgreSQL repository must orchestrate integrity sealing without owning SQL or JSON mapping."
+  }
+]);
+
+assertForbidden(auditEventSqlSource, [
+  {
+    pattern: /@benh-vien-so\/domain|\bpg\b/,
+    message:
+      "AuditEvent PostgreSQL SQL module must stay a pure SQL statement module without domain or pg dependencies."
+  }
+]);
+
+assertForbidden(auditEventMapperSource, [
+  {
+    pattern: /\bfrom "pg"\b|\bquery\s*\(|\bINSERT INTO audit_events\b|\bUPDATE audit_events\b|\bSELECT\b/,
+    message:
+      "AuditEvent PostgreSQL mapper must stay pure row/value mapping without pg I/O or SQL ownership."
+  }
+]);
+
+assertForbidden(auditEventPersistenceSource, [
+  {
+    pattern: /\bsealAuditEvent\b|\bbuildAuditIntegrityReport\b|\bAuditEvent\.rehydrate\b|\bJSON\.parse\b/,
+    message:
+      "AuditEvent PostgreSQL persistence commands must not own domain sealing, integrity reporting or row hydration internals."
+  }
+]);
+
+assertForbidden(auditEventTypesSource, [
+  {
+    pattern: /\bAuditEvent\.rehydrate\b|\bquery\s*\(|\bINSERT INTO audit_events\b|\bUPDATE audit_events\b/,
+    message:
+      "AuditEvent PostgreSQL type module must only describe queryable and row contracts."
   }
 ]);
 
