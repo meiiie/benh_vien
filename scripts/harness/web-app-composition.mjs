@@ -82,7 +82,11 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/careWorkflowApi.ts",
   "apps/web/src/features/clinical-records/clinicalEntryApi.ts",
   "apps/web/src/features/clinical-records/clinicalRecordApi.ts",
+  "apps/web/src/features/clinical-records/clinicalRecordCollectionState.ts",
+  "apps/web/src/features/clinical-records/clinicalRecordFormState.ts",
   "apps/web/src/features/clinical-records/clinicalRecordHttp.ts",
+  "apps/web/src/features/clinical-records/clinicalRecordState.ts",
+  "apps/web/src/features/clinical-records/clinicalRecordStatusState.ts",
   "apps/web/src/features/clinical-records/diagnosticResultApi.ts",
   "apps/web/src/features/clinical-records/encounterApi.ts",
   "apps/web/src/features/clinical-records/medicationApi.ts",
@@ -203,6 +207,26 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/clinical-records/clinicalRecordPanelRendererTypes.ts",
     maxLines: 210,
     role: "Clinical record panel renderer type contracts"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/clinicalRecordState.ts",
+    maxLines: 20,
+    role: "Clinical record state compatibility facade"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/clinicalRecordCollectionState.ts",
+    maxLines: 140,
+    role: "Clinical record collection and selected-id state"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/clinicalRecordFormState.ts",
+    maxLines: 110,
+    role: "Clinical record command form state"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/clinicalRecordStatusState.ts",
+    maxLines: 130,
+    role: "Clinical record loading and submitting state"
   },
   {
     path: "apps/web/src/features/clinical-records/clinicalRecordApi.ts",
