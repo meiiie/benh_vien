@@ -189,8 +189,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/record-transfer-delivery-attempt/record-transfer-delivery-attempt.ts",
-    maxLines: 230,
-    role: "RecordTransferDeliveryAttempt queue and terminal update behavior"
+    maxLines: 150,
+    role: "RecordTransferDeliveryAttempt terminal update behavior"
+  },
+  {
+    path: "packages/domain/src/record-transfer-delivery-attempt/record-transfer-delivery-attempt.factory.ts",
+    maxLines: 130,
+    role: "RecordTransferDeliveryAttempt queue and rehydrate snapshot factory"
   },
   {
     path: "packages/domain/src/record-transfer-delivery-attempt/record-transfer-delivery-attempt.validation.ts",
@@ -658,6 +663,9 @@ const procedureTypesPath = resolve("packages/domain/src/procedure/procedure.type
 const deliveryAttemptAggregatePath = resolve(
   "packages/domain/src/record-transfer-delivery-attempt/record-transfer-delivery-attempt.ts"
 );
+const deliveryAttemptFactoryPath = resolve(
+  "packages/domain/src/record-transfer-delivery-attempt/record-transfer-delivery-attempt.factory.ts"
+);
 const deliveryAttemptValidationPath = resolve(
   "packages/domain/src/record-transfer-delivery-attempt/record-transfer-delivery-attempt.validation.ts"
 );
@@ -898,6 +906,7 @@ const procedureCodeSetGuardsSource = await readFile(
 );
 const procedureTypesSource = await readFile(procedureTypesPath, "utf8");
 const deliveryAttemptAggregateSource = await readFile(deliveryAttemptAggregatePath, "utf8");
+const deliveryAttemptFactorySource = await readFile(deliveryAttemptFactoryPath, "utf8");
 const deliveryAttemptValidationSource = await readFile(deliveryAttemptValidationPath, "utf8");
 const deliveryAttemptTypesSource = await readFile(deliveryAttemptTypesPath, "utf8");
 const medicationRequestAggregateSource = await readFile(medicationRequestAggregatePath, "utf8");
@@ -1980,11 +1989,18 @@ for (const forbidden of [
   /export type RecordTransferDeliveryAttemptSnapshot/,
   /const deliveryAttemptStatuses/,
   /function normalizeRequired/,
-  /function validateTerminalState/
+  /function validateTerminalState/,
+  /normalizeEndpointAddress/,
+  /normalizeAttemptNumber/,
+  /normalizeBundleType/,
+  /normalizeStatus/,
+  /normalizeOptional/,
+  /validatePersistenceTimeline/,
+  /validateTerminalState/
 ]) {
   if (forbidden.test(deliveryAttemptAggregateSource)) {
     throw new Error(
-      "RecordTransferDeliveryAttempt aggregate must keep queue/terminal behavior only; types stay in record-transfer-delivery-attempt.types.ts and delivery validation guards stay in record-transfer-delivery-attempt.validation.ts."
+      "RecordTransferDeliveryAttempt aggregate must keep terminal behavior only; queue/rehydrate normalization stays in record-transfer-delivery-attempt.factory.ts, types stay in record-transfer-delivery-attempt.types.ts and guards stay in record-transfer-delivery-attempt.validation.ts."
     );
   }
 }
@@ -2015,8 +2031,48 @@ if (!/from "\.\/record-transfer-delivery-attempt\.validation\.js"/.test(
   deliveryAttemptAggregateSource
 )) {
   throw new Error(
-    "RecordTransferDeliveryAttempt aggregate must depend on record-transfer-delivery-attempt.validation.ts for delivery normalization and terminal-state guards."
+    "RecordTransferDeliveryAttempt aggregate must depend on record-transfer-delivery-attempt.validation.ts for terminal update guards."
   );
+}
+
+if (!/from "\.\/record-transfer-delivery-attempt\.factory\.js"/.test(
+  deliveryAttemptAggregateSource
+)) {
+  throw new Error(
+    "RecordTransferDeliveryAttempt aggregate must delegate queue and rehydrate normalization to record-transfer-delivery-attempt.factory.ts."
+  );
+}
+
+for (const required of [
+  /export function buildQueuedDeliveryAttemptSnapshot/,
+  /export function buildRehydratedDeliveryAttemptSnapshot/,
+  /normalizeEndpointAddress/,
+  /normalizeAttemptNumber/,
+  /normalizeBundleType/,
+  /normalizeStatus/,
+  /validatePersistenceTimeline/,
+  /validateTerminalState/,
+  /from "\.\/record-transfer-delivery-attempt\.validation\.js"/,
+  /from "\.\/record-transfer-delivery-attempt\.types\.js"/
+]) {
+  if (!required.test(deliveryAttemptFactorySource)) {
+    throw new Error(
+      "record-transfer-delivery-attempt.factory.ts must keep delivery attempt queue and rehydrate snapshot normalization."
+    );
+  }
+}
+
+for (const forbidden of [
+  /export class RecordTransferDeliveryAttempt/,
+  /markSucceeded\(/,
+  /markFailed\(/,
+  /toSnapshot\(/
+]) {
+  if (forbidden.test(deliveryAttemptFactorySource)) {
+    throw new Error(
+      "RecordTransferDeliveryAttempt factory must not own terminal aggregate behavior."
+    );
+  }
 }
 
 for (const required of [
