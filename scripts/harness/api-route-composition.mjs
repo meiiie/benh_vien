@@ -376,6 +376,31 @@ const routeBudgets = [
     path: "apps/api/src/modules/diagnostic-reports/diagnostic-report-route-helpers.ts",
     maxLines: 150,
     role: "DiagnosticReport response, access, reference and domain error helpers"
+  },
+  {
+    path: "apps/api/src/modules/imaging-studies/imaging-study-routes.ts",
+    maxLines: 70,
+    role: "ImagingStudy route composition root"
+  },
+  {
+    path: "apps/api/src/modules/imaging-studies/imaging-study-query-routes.ts",
+    maxLines: 130,
+    role: "ImagingStudy list and read route adapter"
+  },
+  {
+    path: "apps/api/src/modules/imaging-studies/imaging-study-creation-routes.ts",
+    maxLines: 140,
+    role: "ImagingStudy creation and reference validation route adapter"
+  },
+  {
+    path: "apps/api/src/modules/imaging-studies/imaging-study-fhir-routes.ts",
+    maxLines: 90,
+    role: "ImagingStudy FHIR export route adapter"
+  },
+  {
+    path: "apps/api/src/modules/imaging-studies/imaging-study-route-helpers.ts",
+    maxLines: 150,
+    role: "ImagingStudy response, access, reference and domain error helpers"
   }
 ];
 
@@ -734,6 +759,34 @@ const requiredDiagnosticReportRegistrations = [
   "registerDiagnosticReportFhirRoutes"
 ];
 
+const imagingStudyRoutesPath = resolve(
+  "apps/api/src/modules/imaging-studies/imaging-study-routes.ts"
+);
+const forbiddenImagingStudyRoutePatterns = [
+  {
+    pattern:
+      /\bCreateImagingStudyRequestSchema\b|\bPatientImagingStudiesParamsSchema\b|\bImagingStudyIdParamsSchema\b/,
+    message:
+      "ImagingStudy request handling belongs in imaging-study-query-routes.ts, imaging-study-creation-routes.ts or imaging-study-fhir-routes.ts."
+  },
+  {
+    pattern:
+      /\bImagingStudy\.record\b|\bDomainError\b|\brequirePatientRecordAccessByPatientId\b|\bvalidateImagingStudyReferences\b/,
+    message:
+      "ImagingStudy creation, access and reference validation policy belongs outside the root route."
+  },
+  {
+    pattern: /\bmapImagingStudyToFhir\b|\btoImagingStudyResponse\b/,
+    message:
+      "ImagingStudy response and FHIR export details belong in helper or FHIR route modules."
+  }
+];
+const requiredImagingStudyRegistrations = [
+  "registerImagingStudyQueryRoutes",
+  "registerImagingStudyCreationRoutes",
+  "registerImagingStudyFhirRoutes"
+];
+
 const routeReports = [];
 
 for (const budget of routeBudgets) {
@@ -785,6 +838,7 @@ const medicationRequestRoutesSource = await readFile(
 );
 const procedureRoutesSource = await readFile(procedureRoutesPath, "utf8");
 const diagnosticReportRoutesSource = await readFile(diagnosticReportRoutesPath, "utf8");
+const imagingStudyRoutesSource = await readFile(imagingStudyRoutesPath, "utf8");
 
 for (const forbidden of forbiddenApiRoutesPatterns) {
   if (forbidden.pattern.test(apiRoutesSource)) {
@@ -964,6 +1018,20 @@ for (const registration of requiredDiagnosticReportRegistrations) {
   if (!diagnosticReportRoutesSource.includes(registration)) {
     throw new Error(
       `DiagnosticReport root routes must register ${registration} so query, creation and FHIR modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenImagingStudyRoutePatterns) {
+  if (forbidden.pattern.test(imagingStudyRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredImagingStudyRegistrations) {
+  if (!imagingStudyRoutesSource.includes(registration)) {
+    throw new Error(
+      `ImagingStudy root routes must register ${registration} so query, creation and FHIR modules remain wired.`
     );
   }
 }
