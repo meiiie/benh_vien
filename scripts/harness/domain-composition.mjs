@@ -79,8 +79,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/access-control/access-control.organization-scope.ts",
-    maxLines: 160,
-    role: "AccessControl practitioner organization scope traversal"
+    maxLines: 90,
+    role: "AccessControl practitioner role scope policy"
+  },
+  {
+    path: "packages/domain/src/access-control/access-control.organization-tree.ts",
+    maxLines: 130,
+    role: "AccessControl active organization hierarchy traversal"
   },
   {
     path: "packages/domain/src/access-control/access-control.policy.ts",
@@ -540,6 +545,9 @@ const accessControlBehaviorPath = resolve(
 const accessControlOrganizationScopePath = resolve(
   "packages/domain/src/access-control/access-control.organization-scope.ts"
 );
+const accessControlOrganizationTreePath = resolve(
+  "packages/domain/src/access-control/access-control.organization-tree.ts"
+);
 const accessControlPolicyPath = resolve(
   "packages/domain/src/access-control/access-control.policy.ts"
 );
@@ -751,6 +759,10 @@ const auditEventTypesSource = await readFile(auditEventTypesPath, "utf8");
 const accessControlBehaviorSource = await readFile(accessControlBehaviorPath, "utf8");
 const accessControlOrganizationScopeSource = await readFile(
   accessControlOrganizationScopePath,
+  "utf8"
+);
+const accessControlOrganizationTreeSource = await readFile(
+  accessControlOrganizationTreePath,
   "utf8"
 );
 const accessControlPolicySource = await readFile(accessControlPolicyPath, "utf8");
@@ -1137,6 +1149,7 @@ for (const forbidden of [
   /const rolePermissions/,
   /clinician: \[/,
   /\bfunction getActivePractitionerOrganizationIds\b/,
+  /\bgetActiveOrganizationScopeIds\b/,
   /\bfunction findAncestorOrganizationIds\b/,
   /\bfunction findDescendantOrganizationIds\b/,
   /\bfunction isPractitionerRoleEffective\b/
@@ -1192,14 +1205,13 @@ if (!/from "\.\/access-control\.organization-scope\.js"/.test(accessControlBehav
 
 for (const required of [
   /export function getActivePractitionerOrganizationIds/,
-  /\bfunction findAncestorOrganizationIds\b/,
-  /\bfunction findDescendantOrganizationIds\b/,
   /\bfunction isPractitionerRoleEffective\b/,
-  /from "\.\.\/provider-directory\/provider-directory\.js"/
+  /from "\.\.\/provider-directory\/provider-directory\.js"/,
+  /from "\.\/access-control\.organization-tree\.js"/
 ]) {
   if (!required.test(accessControlOrganizationScopeSource)) {
     throw new Error(
-      "access-control.organization-scope.ts must keep active practitioner role period and organization hierarchy traversal."
+      "access-control.organization-scope.ts must keep active practitioner role period policy and delegate active organization hierarchy traversal."
     );
   }
 }
@@ -1209,11 +1221,44 @@ for (const forbidden of [
   /actorRoles/,
   /purposesOfUse/,
   /\bcanAccess\b/,
-  /\bcanAccessPatientRecord\b/
+  /\bcanAccessPatientRecord\b/,
+  /\bfunction findAncestorOrganizationIds\b/,
+  /\bfunction findDescendantOrganizationIds\b/,
+  /\bfunction isActiveOrganization\b/
 ]) {
   if (forbidden.test(accessControlOrganizationScopeSource)) {
     throw new Error(
-      "AccessControl organization scope module must not own RBAC permission or public patient access decisions."
+      "AccessControl organization scope module must not own RBAC permission, public patient access decisions or organization tree traversal."
+    );
+  }
+}
+
+for (const required of [
+  /export function getActiveOrganizationScopeIds/,
+  /\bfunction findAncestorOrganizationIds\b/,
+  /\bfunction findDescendantOrganizationIds\b/,
+  /\bfunction isActiveOrganization\b/,
+  /from "\.\.\/provider-directory\/provider-directory\.js"/
+]) {
+  if (!required.test(accessControlOrganizationTreeSource)) {
+    throw new Error(
+      "access-control.organization-tree.ts must keep active organization hierarchy traversal."
+    );
+  }
+}
+
+for (const forbidden of [
+  /rolePermissions/,
+  /actorRoles/,
+  /purposesOfUse/,
+  /\bcanAccess\b/,
+  /\bcanAccessPatientRecord\b/,
+  /\bgetActivePractitionerOrganizationIds\b/,
+  /\bisPractitionerRoleEffective\b/
+]) {
+  if (forbidden.test(accessControlOrganizationTreeSource)) {
+    throw new Error(
+      "AccessControl organization tree module must not own RBAC permission, patient access decisions or practitioner role policy."
     );
   }
 }

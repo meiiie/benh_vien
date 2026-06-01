@@ -64,6 +64,19 @@ const providerDirectory: Pick<ProviderDirectorySnapshot, "organizations" | "prac
       },
       createdAt: "2026-05-28T00:00:00.000Z",
       updatedAt: "2026-05-28T00:00:00.000Z"
+    },
+    {
+      id: "role-practitioner-hospital",
+      practitionerId: "practitioner-hospital",
+      organizationId: "hospital-a",
+      active: true,
+      code: {
+        system: "urn:test",
+        code: "doctor",
+        display: "Doctor"
+      },
+      createdAt: "2026-05-28T00:00:00.000Z",
+      updatedAt: "2026-05-28T00:00:00.000Z"
     }
   ]
 };
@@ -85,6 +98,18 @@ describe("patient record access control", () => {
     expect(
       canAccessPatientRecord(actor, { managingOrganizationId: "hospital-b" }, providerDirectory)
     ).toBe(false);
+  });
+
+  it("includes active child organizations when a practitioner is scoped to the parent hospital", () => {
+    const actor: ActorContext = {
+      actorId: "practitioner-hospital",
+      role: "clinician",
+      purposeOfUse: "TREATMENT"
+    };
+
+    expect(
+      canAccessPatientRecord(actor, { managingOrganizationId: "department-a" }, providerDirectory)
+    ).toBe(true);
   });
 
   it("keeps audit and admin access explicit", () => {
