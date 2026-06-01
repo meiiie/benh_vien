@@ -14,6 +14,7 @@
 - Với tài liệu bệnh án, `ClinicalDocumentPanel.tsx` giữ danh sách, tóm tắt và thao tác ký; form tạo `DocumentReference` nằm trong `ClinicalDocumentForm.tsx` để metadata tệp đính kèm không trộn vào panel hiển thị.
 - Với feature hồ sơ lâm sàng, `clinicalRecordPanelRenderers.tsx` chỉ lắp JSX cho các panel; hợp đồng type của collections/forms/handlers/selections nằm trong `clinicalRecordPanelRendererTypes.ts` để không biến renderer thành God module.
 - Với AllergyIntolerance, `AllergyIntolerancePanel.tsx` giữ danh sách, tóm tắt cảnh báo an toàn và composition; form ghi nhận dị ứng/không dung nạp nằm trong `AllergyIntoleranceForm.tsx` để dữ liệu safety-critical không trộn vào panel hiển thị.
+- Với Condition, `ConditionPanel.tsx` giữ danh sách, tóm tắt chẩn đoán/vấn đề sức khỏe và composition; form ghi nhận chẩn đoán nằm trong `ConditionForm.tsx` để chẩn đoán làm căn cứ y lệnh/chuyển hồ sơ có boundary riêng.
 - Với MedicationDispense, `MedicationDispensePanel.tsx` giữ danh sách, tóm tắt và composition; form cấp phát nhiều trường nằm trong `MedicationDispenseForm.tsx` để không trộn form command vào panel hiển thị.
 - Với MedicationAdministration, `MedicationAdministrationPanel.tsx` giữ danh sách, tóm tắt và composition; form dùng thuốc thực tế nằm trong `MedicationAdministrationForm.tsx` để giữ ranh giới kê đơn/cấp phát/dùng thuốc rõ ràng.
 - Với MedicationRequest, `MedicationRequestPanel.tsx` giữ danh sách, tóm tắt và composition; form chỉ định/kê đơn nằm trong `MedicationRequestForm.tsx` để medication workflow giữ rõ ba bước kê đơn, cấp phát và dùng thuốc.

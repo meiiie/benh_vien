@@ -52,6 +52,7 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/clinicalEntryCommandBuilders.ts",
   "apps/web/src/features/clinical-records/clinicalRecordPanelRenderers.tsx",
   "apps/web/src/features/clinical-records/clinicalRecordPanelRendererTypes.ts",
+  "apps/web/src/features/clinical-records/ConditionForm.tsx",
   "apps/web/src/features/clinical-records/ConditionPanel.tsx",
   "apps/web/src/features/clinical-records/conditionFormatters.ts",
   "apps/web/src/features/clinical-records/diagnosticResultFormatters.ts",
@@ -205,6 +206,16 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/clinical-records/AllergyIntoleranceForm.tsx",
     maxLines: 230,
     role: "AllergyIntolerance safety command form"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/ConditionPanel.tsx",
+    maxLines: 170,
+    role: "Condition list, summary and form composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/ConditionForm.tsx",
+    maxLines: 190,
+    role: "Condition diagnosis/problem command form"
   },
   {
     path: "apps/web/src/features/clinical-records/MedicationDispensePanel.tsx",
