@@ -519,8 +519,23 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/patients/patient-record-bundle-routes.ts",
-    maxLines: 200,
-    role: "Patient FHIR Bundle and document Bundle export routes"
+    maxLines: 90,
+    role: "Patient FHIR Bundle route composition root"
+  },
+  {
+    path: "apps/api/src/modules/patients/patient-record-bundle-route-dependencies.ts",
+    maxLines: 70,
+    role: "Patient FHIR Bundle route dependency type contract"
+  },
+  {
+    path: "apps/api/src/modules/patients/patient-record-bundle-collection-routes.ts",
+    maxLines: 100,
+    role: "Patient FHIR collection Bundle export route"
+  },
+  {
+    path: "apps/api/src/modules/patients/patient-record-document-bundle-routes.ts",
+    maxLines: 100,
+    role: "Patient FHIR document Bundle export route"
   },
   {
     path: "apps/api/src/modules/patients/patient-record-bundle-route-helpers.ts",
@@ -1220,6 +1235,28 @@ const requiredPatientFhirRegistrations = [
   "registerPatientRecordBundleRoutes"
 ];
 
+const patientRecordBundleRoutesPath = resolve(
+  "apps/api/src/modules/patients/patient-record-bundle-routes.ts"
+);
+const forbiddenPatientRecordBundleRoutePatterns = [
+  {
+    pattern:
+      /\bPatientIdParamsSchema\b|\brequirePermission\b|\brecordAuditEvent\b|\bpreparePatientRecordBundleContext\b/,
+    message:
+      "Patient record Bundle request handling belongs in collection or document Bundle route modules."
+  },
+  {
+    pattern:
+      /\bmapPatientRecordToFhirBundle\b|\bmapPatientRecordToFhirDocumentBundle\b|\bbuildPatientRecordBundleAuditMetadata\b/,
+    message:
+      "Patient record Bundle mapping and audit metadata details belong outside the Bundle route composition root."
+  }
+];
+const requiredPatientRecordBundleRegistrations = [
+  "registerPatientFhirBundleCollectionRoutes",
+  "registerPatientFhirDocumentBundleRoutes"
+];
+
 const patientRecordBundleRouteHelpersPath = resolve(
   "apps/api/src/modules/patients/patient-record-bundle-route-helpers.ts"
 );
@@ -1552,6 +1589,10 @@ const recordTransferAcknowledgementRoutesSource = await readFile(
 const encounterRoutesSource = await readFile(encounterRoutesPath, "utf8");
 const patientRoutesSource = await readFile(patientRoutesPath, "utf8");
 const patientFhirRoutesSource = await readFile(patientFhirRoutesPath, "utf8");
+const patientRecordBundleRoutesSource = await readFile(
+  patientRecordBundleRoutesPath,
+  "utf8"
+);
 const patientRecordBundleRouteHelpersSource = await readFile(
   patientRecordBundleRouteHelpersPath,
   "utf8"
@@ -1808,6 +1849,20 @@ for (const registration of requiredPatientFhirRegistrations) {
   if (!patientFhirRoutesSource.includes(registration)) {
     throw new Error(
       `Patient FHIR root routes must register ${registration} so resource and Bundle export modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenPatientRecordBundleRoutePatterns) {
+  if (forbidden.pattern.test(patientRecordBundleRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const registration of requiredPatientRecordBundleRegistrations) {
+  if (!patientRecordBundleRoutesSource.includes(registration)) {
+    throw new Error(
+      `Patient record Bundle root routes must register ${registration} so collection and document Bundle exports remain wired.`
     );
   }
 }

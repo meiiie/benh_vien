@@ -1,9 +1,4 @@
 import type { FastifyInstance } from "fastify";
-import { PatientIdParamsSchema } from "@benh-vien-so/contracts";
-import {
-  mapPatientRecordToFhirDocumentBundle,
-  mapPatientRecordToFhirBundle
-} from "@benh-vien-so/domain";
 import type {
   AllergyIntoleranceRepository,
   AuditEventRepository,
@@ -23,12 +18,9 @@ import type {
   ServiceRequestRepository,
   WorkflowTaskRepository
 } from "@benh-vien-so/domain";
-import { requirePermission } from "../access-control/access-context.js";
-import { recordAuditEvent } from "../audit-events/audit-context.js";
-import { preparePatientRecordBundleContext } from "./patient-record-bundle-route-helpers.js";
-import {
-  buildPatientRecordBundleAuditMetadata
-} from "./patient-record-bundle-collections.js";
+import { registerPatientFhirBundleCollectionRoutes } from "./patient-record-bundle-collection-routes.js";
+import { registerPatientFhirDocumentBundleRoutes } from "./patient-record-document-bundle-routes.js";
+import type { PatientRecordBundleRouteDependencies } from "./patient-record-bundle-route-dependencies.js";
 
 export async function registerPatientRecordBundleRoutes(
   app: FastifyInstance,
@@ -50,119 +42,26 @@ export async function registerPatientRecordBundleRoutes(
   consentRepository: ConsentRepository,
   auditRepository: AuditEventRepository
 ): Promise<void> {
-  app.get("/patients/:id/fhir-bundle", async (request, reply) => {
-    const actor = requirePermission(request, reply, "patient:fhir-export");
+  const dependencies: PatientRecordBundleRouteDependencies = {
+    patientRepository: repository,
+    encounterRepository,
+    allergyIntoleranceRepository,
+    documentRepository,
+    conditionRepository,
+    observationRepository,
+    medicationRequestRepository,
+    medicationDispenseRepository,
+    medicationAdministrationRepository,
+    serviceRequestRepository,
+    diagnosticReportRepository,
+    imagingStudyRepository,
+    providerDirectoryRepository,
+    workflowTaskRepository,
+    procedureRepository,
+    consentRepository,
+    auditRepository
+  };
 
-    if (!actor) {
-      return;
-    }
-
-    const params = PatientIdParamsSchema.parse(request.params);
-    const context = await preparePatientRecordBundleContext({
-      request,
-      reply,
-      actor,
-      patientId: params.id,
-      patientRepository: repository,
-      encounterRepository,
-      allergyIntoleranceRepository,
-      documentRepository,
-      conditionRepository,
-      observationRepository,
-      diagnosticReportRepository,
-      imagingStudyRepository,
-      medicationRequestRepository,
-      medicationDispenseRepository,
-      medicationAdministrationRepository,
-      serviceRequestRepository,
-      workflowTaskRepository,
-      procedureRepository,
-      providerDirectoryRepository,
-      consentRepository,
-      bundleType: "collection"
-    });
-
-    if (!context) {
-      return;
-    }
-
-    const { patient, transferContext, consent, collections } = context;
-
-    await recordAuditEvent(auditRepository, request, {
-      action: "patient.fhir-bundle-export",
-      resourceType: "Patient",
-      resourceId: patient.id,
-      patientId: patient.id,
-      metadata: buildPatientRecordBundleAuditMetadata({
-        bundleType: "collection",
-        transferContext,
-        collections
-      })
-    });
-
-    return mapPatientRecordToFhirBundle({
-      patient,
-      ...collections,
-      consents: [consent]
-    });
-  });
-
-  app.get("/patients/:id/fhir-document-bundle", async (request, reply) => {
-    const actor = requirePermission(request, reply, "patient:fhir-export");
-
-    if (!actor) {
-      return;
-    }
-
-    const params = PatientIdParamsSchema.parse(request.params);
-    const context = await preparePatientRecordBundleContext({
-      request,
-      reply,
-      actor,
-      patientId: params.id,
-      patientRepository: repository,
-      encounterRepository,
-      allergyIntoleranceRepository,
-      documentRepository,
-      conditionRepository,
-      observationRepository,
-      diagnosticReportRepository,
-      imagingStudyRepository,
-      medicationRequestRepository,
-      medicationDispenseRepository,
-      medicationAdministrationRepository,
-      serviceRequestRepository,
-      workflowTaskRepository,
-      procedureRepository,
-      providerDirectoryRepository,
-      consentRepository,
-      bundleType: "document"
-    });
-
-    if (!context) {
-      return;
-    }
-
-    const { patient, transferContext, consent, collections } = context;
-
-    await recordAuditEvent(auditRepository, request, {
-      action: "patient.fhir-document-bundle-export",
-      resourceType: "Patient",
-      resourceId: patient.id,
-      patientId: patient.id,
-      metadata: buildPatientRecordBundleAuditMetadata({
-        bundleType: "document",
-        compositionResourceType: "Composition",
-        transferContext,
-        collections
-      })
-    });
-
-    return mapPatientRecordToFhirDocumentBundle({
-      patient,
-      ...collections,
-      consents: [consent],
-      authorPractitionerId: actor.actorId
-    });
-  });
+  await registerPatientFhirBundleCollectionRoutes(app, dependencies);
+  await registerPatientFhirDocumentBundleRoutes(app, dependencies);
 }
