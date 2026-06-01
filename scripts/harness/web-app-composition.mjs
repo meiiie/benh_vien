@@ -72,6 +72,7 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/MedicationRequestPanel.tsx",
   "apps/web/src/features/clinical-records/medicationFormatters.ts",
   "apps/web/src/features/clinical-records/medicationCommandBuilders.ts",
+  "apps/web/src/features/clinical-records/ObservationForm.tsx",
   "apps/web/src/features/clinical-records/ObservationPanel.tsx",
   "apps/web/src/features/clinical-records/ProcedureForm.tsx",
   "apps/web/src/features/clinical-records/ProcedurePanel.tsx",
@@ -216,6 +217,16 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/clinical-records/ConditionForm.tsx",
     maxLines: 190,
     role: "Condition diagnosis/problem command form"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/ObservationPanel.tsx",
+    maxLines: 150,
+    role: "Observation list, summary and form composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/ObservationForm.tsx",
+    maxLines: 180,
+    role: "Observation value command form"
   },
   {
     path: "apps/web/src/features/clinical-records/MedicationDispensePanel.tsx",
