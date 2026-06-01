@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 const testBudgets = [
   {
     path: "apps/api/src/server.auth.test.ts",
-    maxLines: 2050,
+    maxLines: 1100,
     role: "API auth/RBAC integration scenarios outside login boundary"
   },
   {
@@ -43,6 +43,11 @@ const testBudgets = [
     role: "API FHIR export, document reference and OperationOutcome scenarios"
   },
   {
+    path: "apps/api/src/server.clinical-resources.test.ts",
+    maxLines: 1030,
+    role: "API provider directory and clinical resource scenarios"
+  },
+  {
     path: "apps/api/src/server.auth.test-support.ts",
     maxLines: 320,
     role: "Shared API auth boundary test support"
@@ -57,6 +62,7 @@ const patientRegistryBoundaryPath = resolve("apps/api/src/server.patient-registr
 const patientAccessBoundaryPath = resolve("apps/api/src/server.patient-access.test.ts");
 const auditBoundaryPath = resolve("apps/api/src/server.audit-boundary.test.ts");
 const fhirBoundaryPath = resolve("apps/api/src/server.fhir-boundary.test.ts");
+const clinicalResourcesBoundaryPath = resolve("apps/api/src/server.clinical-resources.test.ts");
 
 const forbiddenAuthBoundaryPatterns = [
   {
@@ -98,6 +104,11 @@ const forbiddenAuthBoundaryPatterns = [
     pattern: /denies nurse FHIR export|returns a patient-record FHIR Bundle|FHIR OperationOutcome|rejects malformed DICOM UIDs/,
     message:
       "FHIR export, document reference and OperationOutcome scenarios belong in server.fhir-boundary.test.ts."
+  },
+  {
+    pattern: /returns provider directory|lists workflow tasks|lists imaging studies|creates a medication administration/,
+    message:
+      "Provider directory and clinical resource scenarios belong in server.clinical-resources.test.ts."
   }
 ];
 
@@ -143,6 +154,12 @@ const requiredFhirBoundaryPatterns = [
   /negotiates validation errors as FHIR OperationOutcome/,
   /rejects malformed DICOM UIDs/
 ];
+const requiredClinicalResourcesBoundaryPatterns = [
+  /returns provider directory and FHIR Endpoint resources/,
+  /lists workflow tasks and exports them as FHIR Task/,
+  /lists medication administrations and exports them as FHIR MedicationAdministration/,
+  /lists imaging studies and exports them as FHIR ImagingStudy/
+];
 
 const testReports = [];
 
@@ -174,6 +191,10 @@ const patientRegistryBoundarySource = await readFile(patientRegistryBoundaryPath
 const patientAccessBoundarySource = await readFile(patientAccessBoundaryPath, "utf8");
 const auditBoundarySource = await readFile(auditBoundaryPath, "utf8");
 const fhirBoundarySource = await readFile(fhirBoundaryPath, "utf8");
+const clinicalResourcesBoundarySource = await readFile(
+  clinicalResourcesBoundaryPath,
+  "utf8"
+);
 
 for (const forbidden of forbiddenAuthBoundaryPatterns) {
   if (forbidden.pattern.test(authBoundarySource)) {
@@ -233,6 +254,14 @@ for (const required of requiredFhirBoundaryPatterns) {
   if (!required.test(fhirBoundarySource)) {
     throw new Error(
       "server.fhir-boundary.test.ts must keep FHIR Bundle, DocumentReference, OperationOutcome and FHIR validation scenarios."
+    );
+  }
+}
+
+for (const required of requiredClinicalResourcesBoundaryPatterns) {
+  if (!required.test(clinicalResourcesBoundarySource)) {
+    throw new Error(
+      "server.clinical-resources.test.ts must keep provider directory, workflow, medication and imaging resource scenarios."
     );
   }
 }
