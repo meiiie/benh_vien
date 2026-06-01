@@ -219,8 +219,18 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-routes.ts",
-    maxLines: 220,
+    maxLines: 140,
     role: "RecordTransfer acknowledgement callback adapter"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-policy.ts",
+    maxLines: 130,
+    role: "RecordTransfer acknowledgement callback access and error policy"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-audit.ts",
+    maxLines: 100,
+    role: "RecordTransfer acknowledgement callback audit metadata"
   },
   {
     path: "apps/api/src/modules/record-transfers/record-transfer-query-routes.ts",
@@ -852,6 +862,28 @@ const requiredRecordTransferCommandRegistrations = [
   "registerRecordTransferFailureRoutes"
 ];
 
+const recordTransferAcknowledgementRoutesPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-routes.ts"
+);
+const forbiddenRecordTransferAcknowledgementRoutePatterns = [
+  {
+    pattern: /\bcanAcknowledgeForRecipient\b|\bfindDirectory\b/,
+    message:
+      "RecordTransfer acknowledgement access policy belongs in record-transfer-acknowledgement-policy.ts."
+  },
+  {
+    pattern: /\brecordAuditEvent\b|\btoCallbackSignatureAuditMetadata\b/,
+    message:
+      "RecordTransfer acknowledgement audit metadata belongs in record-transfer-acknowledgement-audit.ts."
+  }
+];
+const requiredRecordTransferAcknowledgementHelpers = [
+  "ensureAcknowledgementCallbackAccess",
+  "sendAcknowledgementSignatureFailure",
+  "recordAcceptedAcknowledgementCallbackAudit",
+  "recordDuplicateAcknowledgementCallbackAudit"
+];
+
 const encounterRoutesPath = resolve("apps/api/src/modules/encounters/encounter-routes.ts");
 const forbiddenEncounterRoutePatterns = [
   {
@@ -1292,6 +1324,10 @@ const recordTransferCommandRoutesSource = await readFile(
   recordTransferCommandRoutesPath,
   "utf8"
 );
+const recordTransferAcknowledgementRoutesSource = await readFile(
+  recordTransferAcknowledgementRoutesPath,
+  "utf8"
+);
 const encounterRoutesSource = await readFile(encounterRoutesPath, "utf8");
 const patientRoutesSource = await readFile(patientRoutesPath, "utf8");
 const patientFhirRoutesSource = await readFile(patientFhirRoutesPath, "utf8");
@@ -1431,6 +1467,20 @@ for (const registration of requiredRecordTransferCommandRegistrations) {
   if (!recordTransferCommandRoutesSource.includes(registration)) {
     throw new Error(
       `RecordTransfer command root routes must register ${registration} so send, receive and failure modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenRecordTransferAcknowledgementRoutePatterns) {
+  if (forbidden.pattern.test(recordTransferAcknowledgementRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const helper of requiredRecordTransferAcknowledgementHelpers) {
+  if (!recordTransferAcknowledgementRoutesSource.includes(helper)) {
+    throw new Error(
+      `RecordTransfer acknowledgement route must use ${helper} so callback access and audit policy remain split.`
     );
   }
 }
