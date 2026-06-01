@@ -498,6 +498,16 @@ const domainBudgets = [
     role: "FHIR Bundle entry and bundle resource types"
   },
   {
+    path: "packages/domain/src/fhir/map-provider-directory-to-fhir.ts",
+    maxLines: 200,
+    role: "FHIR ProviderDirectory public mapper and bundle orchestration"
+  },
+  {
+    path: "packages/domain/src/fhir/map-provider-directory-codings.ts",
+    maxLines: 110,
+    role: "FHIR ProviderDirectory coding and identifier mapping"
+  },
+  {
     path: "packages/domain/src/fhir/map-audit-event-to-fhir.ts",
     maxLines: 130,
     role: "FHIR AuditEvent public mapper and bundle orchestration"
@@ -696,6 +706,12 @@ const fhirProviderTypesPath = resolve("packages/domain/src/fhir/fhir-provider.ty
 const fhirDocumentTypesPath = resolve("packages/domain/src/fhir/fhir-document.types.ts");
 const fhirPrivacyTypesPath = resolve("packages/domain/src/fhir/fhir-privacy.types.ts");
 const fhirAuditTypesPath = resolve("packages/domain/src/fhir/fhir-audit.types.ts");
+const mapProviderDirectoryToFhirPath = resolve(
+  "packages/domain/src/fhir/map-provider-directory-to-fhir.ts"
+);
+const mapProviderDirectoryCodingsPath = resolve(
+  "packages/domain/src/fhir/map-provider-directory-codings.ts"
+);
 const mapAuditEventToFhirPath = resolve("packages/domain/src/fhir/map-audit-event-to-fhir.ts");
 const mapAuditEventLabelsPath = resolve("packages/domain/src/fhir/map-audit-event-labels.ts");
 const mapAuditEventDetailsPath = resolve("packages/domain/src/fhir/map-audit-event-details.ts");
@@ -897,6 +913,14 @@ const fhirProviderTypesSource = await readFile(fhirProviderTypesPath, "utf8");
 const fhirDocumentTypesSource = await readFile(fhirDocumentTypesPath, "utf8");
 const fhirPrivacyTypesSource = await readFile(fhirPrivacyTypesPath, "utf8");
 const fhirAuditTypesSource = await readFile(fhirAuditTypesPath, "utf8");
+const mapProviderDirectoryToFhirSource = await readFile(
+  mapProviderDirectoryToFhirPath,
+  "utf8"
+);
+const mapProviderDirectoryCodingsSource = await readFile(
+  mapProviderDirectoryCodingsPath,
+  "utf8"
+);
 const mapAuditEventToFhirSource = await readFile(mapAuditEventToFhirPath, "utf8");
 const mapAuditEventLabelsSource = await readFile(mapAuditEventLabelsPath, "utf8");
 const mapAuditEventDetailsSource = await readFile(mapAuditEventDetailsPath, "utf8");
@@ -1142,6 +1166,69 @@ for (const required of [
   if (!required.test(providerDirectorySnapshotsSource)) {
     throw new Error(
       "provider-directory.snapshots.ts must keep ProviderDirectory defensive snapshot cloning."
+    );
+  }
+}
+
+for (const required of [
+  /export function mapProviderDirectoryToFhirResources/,
+  /export function mapProviderDirectoryToFhirBundle/,
+  /export function mapProviderOrganizationToFhir/,
+  /export function mapProviderPractitionerToFhir/,
+  /export function mapProviderEndpointToFhir/,
+  /export function mapProviderPractitionerRoleToFhir/,
+  /from "\.\/map-provider-directory-codings\.js"/
+]) {
+  if (!required.test(mapProviderDirectoryToFhirSource)) {
+    throw new Error(
+      "map-provider-directory-to-fhir.ts must keep public ProviderDirectory resource mapping and delegate coding helpers to map-provider-directory-codings.ts."
+    );
+  }
+}
+
+for (const forbidden of [
+  /function toFhirIdentifiers/,
+  /function toCodeableConcept/,
+  /function mapOrganizationType/,
+  /function formatOrganizationType/,
+  /function mapEndpointConnectionType/,
+  /Record<ProviderOrganizationType, string>/,
+  /Record<ProviderEndpointConnectionType, string>/
+]) {
+  if (forbidden.test(mapProviderDirectoryToFhirSource)) {
+    throw new Error(
+      "ProviderDirectory FHIR coding helpers belong in map-provider-directory-codings.ts, not in the public mapper."
+    );
+  }
+}
+
+for (const required of [
+  /export function toFhirIdentifiers/,
+  /export function toCodeableConcept/,
+  /export function mapOrganizationType/,
+  /export function formatOrganizationType/,
+  /export function mapEndpointConnectionType/,
+  /ProviderOrganizationType/,
+  /ProviderEndpointConnectionType/
+]) {
+  if (!required.test(mapProviderDirectoryCodingsSource)) {
+    throw new Error(
+      "map-provider-directory-codings.ts must keep ProviderDirectory FHIR identifier, CodeableConcept and code-system mapping."
+    );
+  }
+}
+
+for (const forbidden of [
+  /FhirOrganization/,
+  /FhirPractitioner/,
+  /FhirPractitionerRole/,
+  /FhirEndpoint/,
+  /FhirBundle/,
+  /mapProviderDirectoryToFhirBundle/
+]) {
+  if (forbidden.test(mapProviderDirectoryCodingsSource)) {
+    throw new Error(
+      "map-provider-directory-codings.ts must stay a coding helper and must not own ProviderDirectory resource mapping."
     );
   }
 }
