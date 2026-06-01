@@ -56,6 +56,31 @@ const postgresBudgets = [
     path: "apps/api/src/infrastructure/postgres/postgres-patient.types.ts",
     maxLines: 40,
     role: "Patient PostgreSQL queryable and row types"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-workflow-task.repository.ts",
+    maxLines: 90,
+    role: "WorkflowTask PostgreSQL repository orchestration"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-workflow-task.sql.ts",
+    maxLines: 90,
+    role: "WorkflowTask PostgreSQL SQL statements"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-workflow-task.mapper.ts",
+    maxLines: 100,
+    role: "WorkflowTask PostgreSQL row and parameter mapper"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-workflow-task.persistence.ts",
+    maxLines: 30,
+    role: "WorkflowTask PostgreSQL persistence command"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-workflow-task.types.ts",
+    maxLines: 50,
+    role: "WorkflowTask PostgreSQL row types"
   }
 ];
 
@@ -89,6 +114,21 @@ const patientConflictPath = resolve(
 );
 const patientTypesPath = resolve(
   "apps/api/src/infrastructure/postgres/postgres-patient.types.ts"
+);
+const workflowTaskRepositoryPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-workflow-task.repository.ts"
+);
+const workflowTaskSqlPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-workflow-task.sql.ts"
+);
+const workflowTaskMapperPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-workflow-task.mapper.ts"
+);
+const workflowTaskPersistencePath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-workflow-task.persistence.ts"
+);
+const workflowTaskTypesPath = resolve(
+  "apps/api/src/infrastructure/postgres/postgres-workflow-task.types.ts"
 );
 
 const postgresReports = [];
@@ -133,6 +173,14 @@ const patientMapperSource = await readFile(patientMapperPath, "utf8");
 const patientPersistenceSource = await readFile(patientPersistencePath, "utf8");
 const patientConflictSource = await readFile(patientConflictPath, "utf8");
 const patientTypesSource = await readFile(patientTypesPath, "utf8");
+const workflowTaskRepositorySource = await readFile(workflowTaskRepositoryPath, "utf8");
+const workflowTaskSqlSource = await readFile(workflowTaskSqlPath, "utf8");
+const workflowTaskMapperSource = await readFile(workflowTaskMapperPath, "utf8");
+const workflowTaskPersistenceSource = await readFile(
+  workflowTaskPersistencePath,
+  "utf8"
+);
+const workflowTaskTypesSource = await readFile(workflowTaskTypesPath, "utf8");
 
 const requiredRepositoryImports = [
   "rowToRecordTransfer",
@@ -159,6 +207,19 @@ const requiredPatientRepositoryImports = [
 for (const importedName of requiredPatientRepositoryImports) {
   if (!patientRepositorySource.includes(importedName)) {
     throw new Error(`Patient PostgreSQL repository must compose ${importedName}.`);
+  }
+}
+
+const requiredWorkflowTaskRepositoryImports = [
+  "rowToWorkflowTask",
+  "upsertWorkflowTask",
+  "selectWorkflowTaskSql",
+  "WorkflowTaskRow"
+];
+
+for (const importedName of requiredWorkflowTaskRepositoryImports) {
+  if (!workflowTaskRepositorySource.includes(importedName)) {
+    throw new Error(`WorkflowTask PostgreSQL repository must compose ${importedName}.`);
   }
 }
 
@@ -246,6 +307,46 @@ assertForbidden(patientTypesSource, [
   {
     pattern: /\bPatient\.rehydrate\b|\bquery\s*\(|\bINSERT INTO patients\b/,
     message: "Patient PostgreSQL type module must only describe queryable and row contracts."
+  }
+]);
+
+assertForbidden(workflowTaskRepositorySource, [
+  {
+    pattern: /\bINSERT INTO workflow_tasks\b|\bON CONFLICT \(id\)\b|\bWorkflowTask\.rehydrate\b|\bWorkflowTaskSnapshot\b|\bJSON\.parse\b|\bJSON\.stringify\b/,
+    message:
+      "WorkflowTask PostgreSQL repository must delegate upsert SQL and JSON row mapping to focused modules."
+  }
+]);
+
+assertForbidden(workflowTaskSqlSource, [
+  {
+    pattern: /@benh-vien-so\/domain|\bWorkflowTask\b|\bpg\b/,
+    message:
+      "WorkflowTask PostgreSQL SQL module must stay a pure SQL statement module without domain or pg dependencies."
+  }
+]);
+
+assertForbidden(workflowTaskMapperSource, [
+  {
+    pattern: /\bfrom "pg"\b|\bquery\s*\(|\bINSERT INTO workflow_tasks\b|\bON CONFLICT \(id\)\b/,
+    message:
+      "WorkflowTask PostgreSQL mapper must stay pure row/value mapping without pg I/O or SQL ownership."
+  }
+]);
+
+assertForbidden(workflowTaskPersistenceSource, [
+  {
+    pattern: /\bWorkflowTask\.rehydrate\b|\bWorkflowTaskSnapshot\b|\bSELECT\b|\bJSON\.parse\b/,
+    message:
+      "WorkflowTask PostgreSQL persistence command must compose SQL and mapper without owning reads or domain hydration."
+  }
+]);
+
+assertForbidden(workflowTaskTypesSource, [
+  {
+    pattern: /\bWorkflowTask\.rehydrate\b|\bquery\s*\(|\bINSERT INTO workflow_tasks\b/,
+    message:
+      "WorkflowTask PostgreSQL type module must only describe row contracts."
   }
 ]);
 
