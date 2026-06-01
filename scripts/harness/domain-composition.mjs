@@ -59,8 +59,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/patient/patient.ts",
-    maxLines: 470,
+    maxLines: 310,
     role: "Patient aggregate registration, demographic update and merge behavior"
+  },
+  {
+    path: "packages/domain/src/patient/patient.validation.ts",
+    maxLines: 190,
+    role: "Patient identifier, FHIR birth date, merge state and timeline guards"
   },
   {
     path: "packages/domain/src/patient/patient.types.ts",
@@ -324,6 +329,7 @@ const accessControlPolicyPath = resolve(
   "packages/domain/src/access-control/access-control.policy.ts"
 );
 const patientAggregatePath = resolve("packages/domain/src/patient/patient.ts");
+const patientValidationPath = resolve("packages/domain/src/patient/patient.validation.ts");
 const patientTypesPath = resolve("packages/domain/src/patient/patient.types.ts");
 const workflowTaskAggregatePath = resolve(
   "packages/domain/src/workflow-task/workflow-task.ts"
@@ -453,6 +459,7 @@ const auditEventTypesSource = await readFile(auditEventTypesPath, "utf8");
 const accessControlBehaviorSource = await readFile(accessControlBehaviorPath, "utf8");
 const accessControlPolicySource = await readFile(accessControlPolicyPath, "utf8");
 const patientAggregateSource = await readFile(patientAggregatePath, "utf8");
+const patientValidationSource = await readFile(patientValidationPath, "utf8");
 const patientTypesSource = await readFile(patientTypesPath, "utf8");
 const workflowTaskAggregateSource = await readFile(workflowTaskAggregatePath, "utf8");
 const workflowTaskTypesSource = await readFile(workflowTaskTypesPath, "utf8");
@@ -704,11 +711,12 @@ if (!/from "\.\/access-control\.policy\.js"/.test(accessControlBehaviorSource)) 
 for (const forbidden of [
   /export type AdministrativeGender/,
   /export type PatientSnapshot/,
-  /const administrativeGenders/
+  /const administrativeGenders/,
+  /function normalizeIdentifier/
 ]) {
   if (forbidden.test(patientAggregateSource)) {
     throw new Error(
-      "Patient type declarations and code sets belong in patient.types.ts, not the aggregate file."
+      "Patient aggregate must keep registration, demographic update and merge behavior only; types stay in patient.types.ts and identifier/date/merge guards stay in patient.validation.ts."
     );
   }
 }
@@ -729,6 +737,26 @@ for (const required of [
 
 if (!/from "\.\/patient\.types\.js"/.test(patientAggregateSource)) {
   throw new Error("Patient aggregate must depend on patient.types.ts for shared types.");
+}
+
+if (!/from "\.\/patient\.validation\.js"/.test(patientAggregateSource)) {
+  throw new Error(
+    "Patient aggregate must depend on patient.validation.ts for identifier, FHIR birth date, merge state and timeline guards."
+  );
+}
+
+for (const required of [
+  /export function normalizeIdentifier/,
+  /export function assertUniqueIdentifiers/,
+  /export function assertMergeState/,
+  /export function normalizeBirthDate/,
+  /from "\.\/patient\.types\.js"/
+]) {
+  if (!required.test(patientValidationSource)) {
+    throw new Error(
+      "patient.validation.ts must keep Patient identifier, FHIR birth date, merge state and timeline guards."
+    );
+  }
 }
 
 for (const forbidden of [
