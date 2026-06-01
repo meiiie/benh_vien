@@ -404,8 +404,18 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/fhir/fhir-diagnostics.types.ts",
-    maxLines: 150,
-    role: "FHIR diagnostic report and imaging study resource types"
+    maxLines: 20,
+    role: "FHIR diagnostics compatibility barrel exports"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-diagnostic-report.types.ts",
+    maxLines: 80,
+    role: "FHIR DiagnosticReport resource type"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-imaging-study.types.ts",
+    maxLines: 80,
+    role: "FHIR ImagingStudy resource type"
   },
   {
     path: "packages/domain/src/fhir/fhir-patient.types.ts",
@@ -602,6 +612,10 @@ const fhirServiceRequestTypesPath = resolve(
 const fhirTaskTypesPath = resolve("packages/domain/src/fhir/fhir-task.types.ts");
 const fhirProcedureTypesPath = resolve("packages/domain/src/fhir/fhir-procedure.types.ts");
 const fhirDiagnosticsTypesPath = resolve("packages/domain/src/fhir/fhir-diagnostics.types.ts");
+const fhirDiagnosticReportTypesPath = resolve(
+  "packages/domain/src/fhir/fhir-diagnostic-report.types.ts"
+);
+const fhirImagingStudyTypesPath = resolve("packages/domain/src/fhir/fhir-imaging-study.types.ts");
 const fhirPatientTypesPath = resolve("packages/domain/src/fhir/fhir-patient.types.ts");
 const fhirOperationOutcomeTypesPath = resolve(
   "packages/domain/src/fhir/fhir-operation-outcome.types.ts"
@@ -765,6 +779,11 @@ const fhirServiceRequestTypesSource = await readFile(fhirServiceRequestTypesPath
 const fhirTaskTypesSource = await readFile(fhirTaskTypesPath, "utf8");
 const fhirProcedureTypesSource = await readFile(fhirProcedureTypesPath, "utf8");
 const fhirDiagnosticsTypesSource = await readFile(fhirDiagnosticsTypesPath, "utf8");
+const fhirDiagnosticReportTypesSource = await readFile(
+  fhirDiagnosticReportTypesPath,
+  "utf8"
+);
+const fhirImagingStudyTypesSource = await readFile(fhirImagingStudyTypesPath, "utf8");
 const fhirPatientTypesSource = await readFile(fhirPatientTypesPath, "utf8");
 const fhirOperationOutcomeTypesSource = await readFile(
   fhirOperationOutcomeTypesPath,
@@ -2060,6 +2079,26 @@ for (const required of [
   }
 }
 
+for (const forbidden of [
+  /export type FhirDiagnosticReport/,
+  /export type FhirImagingStudy/
+]) {
+  if (forbidden.test(fhirDiagnosticsTypesSource)) {
+    throw new Error(
+      "fhir-diagnostics.types.ts must remain a compatibility barrel; concrete diagnostics resource types belong in focused diagnostics submodules."
+    );
+  }
+}
+
+for (const required of [
+  /export \* from "\.\/fhir-diagnostic-report\.types\.js"/,
+  /export \* from "\.\/fhir-imaging-study\.types\.js"/
+]) {
+  if (!required.test(fhirDiagnosticsTypesSource)) {
+    throw new Error("fhir-diagnostics.types.ts must re-export all focused FHIR diagnostics type modules.");
+  }
+}
+
 for (const required of [
   /export type FhirIdentifier/,
   /export type FhirContactPoint/
@@ -2084,8 +2123,8 @@ for (const required of [
   [fhirServiceRequestTypesSource, /export type FhirServiceRequest/, "fhir-service-request.types.ts"],
   [fhirTaskTypesSource, /export type FhirTask/, "fhir-task.types.ts"],
   [fhirProcedureTypesSource, /export type FhirProcedure/, "fhir-procedure.types.ts"],
-  [fhirDiagnosticsTypesSource, /export type FhirDiagnosticReport/, "fhir-diagnostics.types.ts"],
-  [fhirDiagnosticsTypesSource, /export type FhirImagingStudy/, "fhir-diagnostics.types.ts"],
+  [fhirDiagnosticReportTypesSource, /export type FhirDiagnosticReport/, "fhir-diagnostic-report.types.ts"],
+  [fhirImagingStudyTypesSource, /export type FhirImagingStudy/, "fhir-imaging-study.types.ts"],
   [fhirPatientTypesSource, /export type FhirPatient/, "fhir-patient.types.ts"],
   [fhirOperationOutcomeTypesSource, /export type FhirOperationOutcome/, "fhir-operation-outcome.types.ts"],
   [fhirCapabilityStatementTypesSource, /export type FhirCapabilityStatement/, "fhir-capability-statement.types.ts"],
