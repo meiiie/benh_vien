@@ -121,6 +121,36 @@ const securityBudgets = [
     path: "apps/api/src/modules/auth/login-rate-limit-factory.ts",
     maxLines: 40,
     role: "Login rate limiter environment factory"
+  },
+  {
+    path: "apps/api/src/modules/audit-events/denied-access-audit.ts",
+    maxLines: 70,
+    role: "Denied access audit orchestration"
+  },
+  {
+    path: "apps/api/src/modules/audit-events/denied-access-audit.types.ts",
+    maxLines: 40,
+    role: "Denied access audit payload type contract"
+  },
+  {
+    path: "apps/api/src/modules/audit-events/denied-access-audit-policy.ts",
+    maxLines: 80,
+    role: "Denied access audit resource policy"
+  },
+  {
+    path: "apps/api/src/modules/audit-events/denied-access-invalid-purpose-audit.ts",
+    maxLines: 70,
+    role: "Denied access invalid purpose-of-use audit writer"
+  },
+  {
+    path: "apps/api/src/modules/audit-events/denied-access-payload-reader.ts",
+    maxLines: 50,
+    role: "Denied access response payload reader"
+  },
+  {
+    path: "apps/api/src/modules/audit-events/denied-access-payload-parser.ts",
+    maxLines: 110,
+    role: "Denied access JSON and FHIR OperationOutcome parser"
   }
 ];
 
@@ -153,6 +183,21 @@ const loginRateLimitMemoryPath = resolve("apps/api/src/modules/auth/login-rate-l
 const loginRateLimitValkeyPath = resolve("apps/api/src/modules/auth/login-rate-limit-valkey.ts");
 const loginRateLimitFactoryPath = resolve(
   "apps/api/src/modules/auth/login-rate-limit-factory.ts"
+);
+const deniedAccessAuditRootPath = resolve(
+  "apps/api/src/modules/audit-events/denied-access-audit.ts"
+);
+const deniedAccessAuditPolicyPath = resolve(
+  "apps/api/src/modules/audit-events/denied-access-audit-policy.ts"
+);
+const deniedAccessInvalidPurposeAuditPath = resolve(
+  "apps/api/src/modules/audit-events/denied-access-invalid-purpose-audit.ts"
+);
+const deniedAccessPayloadReaderPath = resolve(
+  "apps/api/src/modules/audit-events/denied-access-payload-reader.ts"
+);
+const deniedAccessPayloadParserPath = resolve(
+  "apps/api/src/modules/audit-events/denied-access-payload-parser.ts"
 );
 
 const securityReports = [];
@@ -197,6 +242,20 @@ const loginRateLimitKeySource = await readFile(loginRateLimitKeyPath, "utf8");
 const loginRateLimitMemorySource = await readFile(loginRateLimitMemoryPath, "utf8");
 const loginRateLimitValkeySource = await readFile(loginRateLimitValkeyPath, "utf8");
 const loginRateLimitFactorySource = await readFile(loginRateLimitFactoryPath, "utf8");
+const deniedAccessAuditRootSource = await readFile(deniedAccessAuditRootPath, "utf8");
+const deniedAccessAuditPolicySource = await readFile(deniedAccessAuditPolicyPath, "utf8");
+const deniedAccessInvalidPurposeAuditSource = await readFile(
+  deniedAccessInvalidPurposeAuditPath,
+  "utf8"
+);
+const deniedAccessPayloadReaderSource = await readFile(
+  deniedAccessPayloadReaderPath,
+  "utf8"
+);
+const deniedAccessPayloadParserSource = await readFile(
+  deniedAccessPayloadParserPath,
+  "utf8"
+);
 
 const requiredSignatureRootExports = [
   "recordTransferCallbackTimestampHeader",
@@ -242,6 +301,18 @@ const requiredLoginRateLimitExports = [
 for (const exportedName of requiredLoginRateLimitExports) {
   if (!loginRateLimitRootSource.includes(exportedName)) {
     throw new Error(`Login rate limiter public API must re-export ${exportedName}.`);
+  }
+}
+
+const requiredDeniedAccessAuditExports = [
+  "DeniedAccessPayload",
+  "rememberDeniedAccessForAudit",
+  "recordDeniedAccessAuditEvent"
+];
+
+for (const exportedName of requiredDeniedAccessAuditExports) {
+  if (!deniedAccessAuditRootSource.includes(exportedName)) {
+    throw new Error(`Denied access audit public API must re-export ${exportedName}.`);
   }
 }
 
@@ -360,6 +431,46 @@ assertForbidden(loginRateLimitFactorySource, [
     pattern: /\bcreateClient\b|\bcreateHash\b|\beval\b|\bredis\.call\b/,
     message:
       "Login rate-limit factory must compose config and stores without owning store internals."
+  }
+]);
+
+assertForbidden(deniedAccessAuditRootSource, [
+  {
+    pattern: /\bJSON\.parse\b|\breadPayloadText\b|\bparseOperationOutcome\b|\bAuditEvent\.record\b|\breadAuthenticatedActorIdentity\b/,
+    message:
+      "Denied access audit root must orchestrate audit writes without owning parsing or invalid-purpose audit internals."
+  }
+]);
+
+assertForbidden(deniedAccessAuditPolicySource, [
+  {
+    pattern: /\bFastifyRequest\b|\bJSON\.parse\b|\bAuditEvent\.record\b|\bAuditEventRepository\b|\brecordAuditEvent\b/,
+    message:
+      "Denied access audit policy must only classify denied payloads and resource identity."
+  }
+]);
+
+assertForbidden(deniedAccessInvalidPurposeAuditSource, [
+  {
+    pattern: /\bJSON\.parse\b|\bparseDeniedAccess\b|\binferDeniedAuditResourceType\b|\brecordAuditEvent\b/,
+    message:
+      "Invalid purpose-of-use audit writer must not parse payloads or infer generic denied resources."
+  }
+]);
+
+assertForbidden(deniedAccessPayloadReaderSource, [
+  {
+    pattern: /\bAuditEvent\b|\bAuditEventRepository\b|\brecordAuditEvent\b|\breadAuthenticatedActorIdentity\b/,
+    message:
+      "Denied access payload reader must only remember parsed response payloads for later audit."
+  }
+]);
+
+assertForbidden(deniedAccessPayloadParserSource, [
+  {
+    pattern: /\bFastifyRequest\b|\bAuditEvent\b|\bAuditEventRepository\b|\brecordAuditEvent\b|\breadAuthenticatedActorIdentity\b/,
+    message:
+      "Denied access payload parser must stay pure JSON/FHIR parsing without request or audit persistence."
   }
 ]);
 
