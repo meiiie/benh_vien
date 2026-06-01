@@ -141,6 +141,16 @@ const domainBudgets = [
     path: "packages/domain/src/clinical-document/clinical-document.types.ts",
     maxLines: 90,
     role: "ClinicalDocument document type, status, snapshot and command input types"
+  },
+  {
+    path: "packages/domain/src/diagnostic-report/diagnostic-report.ts",
+    maxLines: 230,
+    role: "DiagnosticReport issuing, content and timeline validation behavior"
+  },
+  {
+    path: "packages/domain/src/diagnostic-report/diagnostic-report.types.ts",
+    maxLines: 100,
+    role: "DiagnosticReport status, category, code, snapshot and command input types"
   }
 ];
 
@@ -212,6 +222,12 @@ const clinicalDocumentAggregatePath = resolve(
 const clinicalDocumentTypesPath = resolve(
   "packages/domain/src/clinical-document/clinical-document.types.ts"
 );
+const diagnosticReportAggregatePath = resolve(
+  "packages/domain/src/diagnostic-report/diagnostic-report.ts"
+);
+const diagnosticReportTypesPath = resolve(
+  "packages/domain/src/diagnostic-report/diagnostic-report.types.ts"
+);
 
 const domainReports = [];
 
@@ -272,6 +288,8 @@ const imagingStudyAggregateSource = await readFile(imagingStudyAggregatePath, "u
 const imagingStudyTypesSource = await readFile(imagingStudyTypesPath, "utf8");
 const clinicalDocumentAggregateSource = await readFile(clinicalDocumentAggregatePath, "utf8");
 const clinicalDocumentTypesSource = await readFile(clinicalDocumentTypesPath, "utf8");
+const diagnosticReportAggregateSource = await readFile(diagnosticReportAggregatePath, "utf8");
+const diagnosticReportTypesSource = await readFile(diagnosticReportTypesPath, "utf8");
 
 for (const forbidden of [
   /export type RecordTransferStatus/,
@@ -712,6 +730,39 @@ for (const required of [
 if (!/from "\.\/clinical-document\.types\.js"/.test(clinicalDocumentAggregateSource)) {
   throw new Error(
     "ClinicalDocument aggregate must depend on clinical-document.types.ts for shared types."
+  );
+}
+
+for (const forbidden of [
+  /export type DiagnosticReportStatus/,
+  /export type DiagnosticReportSnapshot/,
+  /const diagnosticReportStatuses/
+]) {
+  if (forbidden.test(diagnosticReportAggregateSource)) {
+    throw new Error(
+      "DiagnosticReport type declarations and code sets belong in diagnostic-report.types.ts, not the aggregate file."
+    );
+  }
+}
+
+for (const required of [
+  /export type DiagnosticReportStatus/,
+  /export type DiagnosticReportCategory/,
+  /export type DiagnosticReportSnapshot/,
+  /export type CreateDiagnosticReportInput/,
+  /export const diagnosticReportStatuses/,
+  /export const diagnosticReportCategories/
+]) {
+  if (!required.test(diagnosticReportTypesSource)) {
+    throw new Error(
+      "diagnostic-report.types.ts must keep DiagnosticReport status, category, snapshot, command input and code-set definitions."
+    );
+  }
+}
+
+if (!/from "\.\/diagnostic-report\.types\.js"/.test(diagnosticReportAggregateSource)) {
+  throw new Error(
+    "DiagnosticReport aggregate must depend on diagnostic-report.types.ts for shared types."
   );
 }
 
