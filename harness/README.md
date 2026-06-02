@@ -47,6 +47,14 @@ pnpm run harness:backup-restore
 
 Harness này kiểm tra [docs/runbooks/BACKUP_RESTORE.md](../docs/runbooks/BACKUP_RESTORE.md) vẫn có đủ lệnh backup PostgreSQL bằng `pg_dump`, restore bằng `pg_restore`, đối chiếu `schema_migrations`, backup object storage bằng `mc mirror`, RPO/RTO mẫu, retention, mã hóa offsite, bằng chứng diễn tập phục hồi và phần giới hạn chưa đạt production thật.
 
+## Secret hygiene
+
+```bash
+pnpm run harness:secret-hygiene
+```
+
+Harness này kiểm tra chỉ các file `.env*.example` được track, `.gitignore` vẫn chặn `.env` thật và repo không chứa các private key/token phổ biến trong file text tracked. Đây là guard tối thiểu để giảm rủi ro commit nhầm secret; nếu triển khai thật vẫn cần bật secret scanning chuyên dụng ở GitHub hoặc nền tảng bảo mật của tổ chức.
+
 ## Smoke test FHIR
 
 ```bash
