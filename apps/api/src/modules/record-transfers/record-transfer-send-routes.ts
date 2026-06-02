@@ -13,6 +13,7 @@ import type {
 } from "@benh-vien-so/domain";
 import { requirePermission } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
+import { sendValidationErrorResponse } from "../http/http-validation-error-response.js";
 import { validateRecordTransferEndpointForDelivery } from "./record-transfer-endpoint-policy.js";
 import {
   sendRecordTransferDomainError,
@@ -65,7 +66,7 @@ export async function registerRecordTransferSendRoutes(
     );
 
     if (!targetEndpoint) {
-      return reply.status(422).send({
+      return sendValidationErrorResponse(reply, {
         error: "RECORD_TRANSFER_ENDPOINT_NOT_FOUND",
         message:
           "Không thể gửi gói hồ sơ vì đơn vị nhận chưa có endpoint FHIR REST đang hoạt động và hỗ trợ Bundle."
@@ -77,7 +78,7 @@ export async function registerRecordTransferSendRoutes(
     });
 
     if (!endpointPolicy.allowed) {
-      return reply.status(422).send({
+      return sendValidationErrorResponse(reply, {
         error: endpointPolicy.error,
         message: endpointPolicy.message
       });

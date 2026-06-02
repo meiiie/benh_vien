@@ -17,6 +17,7 @@ import {
   requirePermission
 } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
+import { sendValidationErrorResponse } from "../http/http-validation-error-response.js";
 import { sendRecordTransferDomainError } from "./record-transfer-command-route-helpers.js";
 import { resolveRecordTransferFhirEndpoint } from "./record-transfer-fhir-endpoint-resolver.js";
 import { validateRecordTransferEndpointForDelivery } from "./record-transfer-endpoint-policy.js";
@@ -81,7 +82,7 @@ export async function registerRecordTransferCreationRoutes(
     );
 
     if (!targetEndpoint) {
-      return reply.status(422).send({
+      return sendValidationErrorResponse(reply, {
         error: "RECORD_TRANSFER_ENDPOINT_NOT_FOUND",
         message:
           "Đơn vị nhận chưa có endpoint FHIR REST đang hoạt động và hỗ trợ Bundle trong Provider Directory."
@@ -93,7 +94,7 @@ export async function registerRecordTransferCreationRoutes(
     });
 
     if (!endpointPolicy.allowed) {
-      return reply.status(422).send({
+      return sendValidationErrorResponse(reply, {
         error: endpointPolicy.error,
         message: endpointPolicy.message
       });

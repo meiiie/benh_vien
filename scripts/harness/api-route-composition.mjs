@@ -1149,6 +1149,16 @@ const standardizedValidationErrorRoutePaths = [
   {
     path: resolve("apps/api/src/modules/observations/observation-creation-routes.ts"),
     label: "Observation creation route"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/record-transfers/record-transfer-creation-routes.ts"
+    ),
+    label: "RecordTransfer creation route"
+  },
+  {
+    path: resolve("apps/api/src/modules/record-transfers/record-transfer-send-routes.ts"),
+    label: "RecordTransfer send route"
   }
 ];
 const standardizedNotFoundErrorRoutePaths = [
