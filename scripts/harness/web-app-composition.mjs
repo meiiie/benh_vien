@@ -301,9 +301,14 @@ const requiredModules = [
   "apps/web/src/features/patient-registry/patientRegistryApi.ts",
   "apps/web/src/features/patient-registry/patientRegistryFormatters.ts",
   "apps/web/src/features/patient-registry/patientRegistrySelectors.ts",
+  "apps/web/src/features/patient-workspace/patientWorkspaceCareWorkflowCollectionLoaders.ts",
   "apps/web/src/features/patient-workspace/patientWorkspaceCollectionLoaderFactory.ts",
+  "apps/web/src/features/patient-workspace/patientWorkspaceCollectionLoaderTypes.ts",
   "apps/web/src/features/patient-workspace/patientWorkspaceCollectionLoaders.ts",
+  "apps/web/src/features/patient-workspace/patientWorkspaceCoreCollectionLoaders.ts",
+  "apps/web/src/features/patient-workspace/patientWorkspaceDocumentCollectionLoaders.ts",
   "apps/web/src/features/patient-workspace/patientWorkspaceLifecycle.ts",
+  "apps/web/src/features/patient-workspace/patientWorkspaceMedicationCollectionLoaders.ts",
   "apps/web/src/features/patient-workspace/patientWorkspaceReset.ts",
   "apps/web/src/features/platform/platformApi.ts",
   "apps/web/src/features/provider-directory/ProviderDirectoryPanel.tsx",
@@ -428,8 +433,33 @@ const featureModuleBudgets = [
   },
   {
     path: "apps/web/src/features/patient-workspace/patientWorkspaceCollectionLoaders.ts",
-    maxLines: 220,
+    maxLines: 30,
     role: "Patient-scoped EMR collection loader composition"
+  },
+  {
+    path: "apps/web/src/features/patient-workspace/patientWorkspaceCollectionLoaderTypes.ts",
+    maxLines: 85,
+    role: "Patient-scoped collection loader state contracts"
+  },
+  {
+    path: "apps/web/src/features/patient-workspace/patientWorkspaceCoreCollectionLoaders.ts",
+    maxLines: 70,
+    role: "Patient workspace core EMR collection loaders"
+  },
+  {
+    path: "apps/web/src/features/patient-workspace/patientWorkspaceMedicationCollectionLoaders.ts",
+    maxLines: 60,
+    role: "Patient workspace medication collection loaders"
+  },
+  {
+    path: "apps/web/src/features/patient-workspace/patientWorkspaceCareWorkflowCollectionLoaders.ts",
+    maxLines: 80,
+    role: "Patient workspace care workflow and diagnostic collection loaders"
+  },
+  {
+    path: "apps/web/src/features/patient-workspace/patientWorkspaceDocumentCollectionLoaders.ts",
+    maxLines: 35,
+    role: "Patient workspace clinical document collection loaders"
   },
   {
     path: "apps/web/src/features/fhir-preview/fhirPreviewLoaderFactory.ts",
