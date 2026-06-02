@@ -156,8 +156,13 @@ export function PatientAuditPanel({
       <article className="panel audit-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Security trace</p>
+            <p className="eyebrow">Dấu vết theo bệnh nhân</p>
             <h2>Nhật ký kiểm toán</h2>
+            <p className="panel-note">
+              Theo dõi các sự kiện gắn trực tiếp với hồ sơ đang chọn: ai truy
+              cập, vì mục đích gì, tác động lên tài nguyên nào và log đã được
+              niêm phong hay chưa.
+            </p>
           </div>
           <div className="panel-actions">
             <button
@@ -169,7 +174,7 @@ export function PatientAuditPanel({
               {isLoadingAuditEvents
                 ? "Đang tải..."
                 : canReadAudit
-                  ? "Tải audit"
+                  ? "Tải nhật ký"
                   : "Cần quyền kiểm toán"}
             </button>
             <button
@@ -190,7 +195,7 @@ export function PatientAuditPanel({
               disabled={!hasSelectedPatient || isExportingAuditFhir || !canReadAudit}
               onClick={onExportAuditFhir}
             >
-              {isExportingAuditFhir ? "Đang xuất..." : "Xuất FHIR AuditEvent"}
+              {isExportingAuditFhir ? "Đang xuất..." : "Xuất FHIR AuditEvent Bundle"}
             </button>
           </div>
         </div>
@@ -239,7 +244,7 @@ export function PatientAuditPanel({
                 <strong>{formatAuditAction(event.action)}</strong>
               </div>
               <div>
-                <span>Actor</span>
+                <span>Tác nhân (actor)</span>
                 <strong>{event.actorId}</strong>
               </div>
               <div>
@@ -269,14 +274,14 @@ export function PatientAuditPanel({
           {auditEvents.length === 0 ? (
             <p className="empty-state">
               {canReadAudit
-                ? "Chưa có audit event cho bệnh nhân đang chọn. Hãy xem FHIR, mở lượt khám hoặc ký tài liệu để phát sinh log."
+                ? "Chưa có bản ghi kiểm toán cho bệnh nhân đang chọn. Hãy xem FHIR, mở lượt khám hoặc ký tài liệu để phát sinh log."
                 : "Nhật ký kiểm toán chỉ hiển thị với kiểm toán viên hoặc quản trị viên."}
             </p>
           ) : null}
         </div>
       </article>
       <FhirPanel
-        title="FHIR AuditEvent Bundle JSON"
+        title="Gói nhật ký kiểm toán dưới dạng FHIR AuditEvent Bundle"
         badge="AuditEvent"
         value={auditFhirBundlePreview}
       />

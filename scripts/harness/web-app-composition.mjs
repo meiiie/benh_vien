@@ -3,6 +3,8 @@ import { relative, resolve } from "node:path";
 
 const appPath = resolve("apps/web/src/App.tsx");
 const appRouteRendererPath = resolve("apps/web/src/pages/AppRouteRenderer.tsx");
+const auditLogPagePath = resolve("apps/web/src/pages/AuditLogPage.tsx");
+const auditPanelsPath = resolve("apps/web/src/features/audit/AuditPanels.tsx");
 const dashboardPagePath = resolve("apps/web/src/pages/DashboardPage.tsx");
 const documentsPagePath = resolve("apps/web/src/pages/DocumentsPage.tsx");
 const interopPagePath = resolve("apps/web/src/pages/InteropPage.tsx");
@@ -640,6 +642,8 @@ const featureModuleBudgets = [
 
 const appSource = await readFile(appPath, "utf8");
 const appRouteRendererSource = await readFile(appRouteRendererPath, "utf8");
+const auditLogPageSource = await readFile(auditLogPagePath, "utf8");
+const auditPanelsSource = await readFile(auditPanelsPath, "utf8");
 const dashboardPageSource = await readFile(dashboardPagePath, "utf8");
 const documentsPageSource = await readFile(documentsPagePath, "utf8");
 const clinicalApiSource = await readFile(allowedFetchModulePath, "utf8");
@@ -1074,6 +1078,27 @@ if (/Patient chart|Master Patient Index/.test(patientDetailPanelSource)) {
 
 if (/Encounter timeline/.test(encounterPanelSource)) {
   throw new Error("Encounter panel must use a Vietnamese timeline label in demo-facing UI.");
+}
+
+if (/eyebrow="Audit"/.test(auditLogPageSource) || /Security trace/.test(auditPanelsSource)) {
+  throw new Error("Audit page and panels must use professional Vietnamese labels.");
+}
+
+if (
+  !/className="audit-brief"/.test(auditLogPageSource) ||
+  !/Ai truy cập\?/.test(auditLogPageSource) ||
+  !/Truy cập tài nguyên nào\?/.test(auditLogPageSource) ||
+  !/Log có toàn vẹn không\?/.test(auditLogPageSource)
+) {
+  throw new Error("Audit page must explain actor, resource and integrity questions before the audit panels.");
+}
+
+if (/FHIR AuditEvent Bundle JSON/.test(auditPanelsSource)) {
+  throw new Error("Audit FHIR panel must use a workflow-first Vietnamese title instead of a raw JSON-first label.");
+}
+
+if (!/Tác nhân \(actor\)/.test(auditPanelsSource) || !/Xuất FHIR AuditEvent Bundle/.test(auditPanelsSource)) {
+  throw new Error("Audit panels must explain actor terminology and FHIR AuditEvent Bundle export clearly.");
 }
 
 const webSourceFiles = await collectSourceFiles(webSrcPath);
