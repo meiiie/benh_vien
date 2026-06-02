@@ -5,9 +5,11 @@ const appPath = resolve("apps/web/src/App.tsx");
 const appRouteRendererPath = resolve("apps/web/src/pages/AppRouteRenderer.tsx");
 const interopPagePath = resolve("apps/web/src/pages/InteropPage.tsx");
 const landingPagePath = resolve("apps/web/src/pages/LandingPage.tsx");
+const loginPagePath = resolve("apps/web/src/pages/LoginPage.tsx");
 const mainPath = resolve("apps/web/src/main.tsx");
 const stylesPath = resolve("apps/web/src/styles.css");
 const landingStylesPath = resolve("apps/web/src/styles/landing.css");
+const demoLoginPath = resolve("apps/web/src/auth/demoLogin.ts");
 const webSrcPath = resolve("apps/web/src");
 const allowedFetchModulePath = resolve("apps/web/src/api/clinicalApi.ts");
 const fhirTransferContextSummaryPath = resolve(
@@ -633,9 +635,11 @@ const fhirTransferContextSummarySource = await readFile(
 );
 const interopPageSource = await readFile(interopPagePath, "utf8");
 const landingPageSource = await readFile(landingPagePath, "utf8");
+const loginPageSource = await readFile(loginPagePath, "utf8");
 const mainSource = await readFile(mainPath, "utf8");
 const stylesSource = await readFile(stylesPath, "utf8");
 const landingStylesSource = await readFile(landingStylesPath, "utf8");
+const demoLoginSource = await readFile(demoLoginPath, "utf8");
 const clinicalDocumentApiSource = await readFile(clinicalDocumentApiPath, "utf8");
 const patientRegistryApiSource = await readFile(patientRegistryApiPath, "utf8");
 const providerDirectoryFormattersSource = await readFile(
@@ -950,6 +954,23 @@ for (const check of responsiveLandingChecks) {
   if (!check.pattern.test(landingStylesSource)) {
     throw new Error(check.message);
   }
+}
+
+if (/Secure access/.test(loginPageSource)) {
+  throw new Error("Login page must use professional Vietnamese copy, not the raw English 'Secure access' eyebrow.");
+}
+
+if (!/\bdemoRoleOptions\b/.test(demoLoginSource) || !/\bgetDemoRoleOption\b/.test(demoLoginSource)) {
+  throw new Error("Demo login roles must expose centralized option metadata and lookup helpers.");
+}
+
+if (
+  !/\bdemoRoleOptions\.map\b/.test(loginPageSource) ||
+  !/\bgetDemoRoleOption\(form\.role\)/.test(loginPageSource) ||
+  !/className="role-help"/.test(loginPageSource) ||
+  !/Giải thích vai trò demo:/.test(loginPageSource)
+) {
+  throw new Error("Login page must render role choices and role explanation from centralized demo role metadata.");
 }
 
 const webSourceFiles = await collectSourceFiles(webSrcPath);

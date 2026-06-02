@@ -27,6 +27,49 @@
   gap: 14px;
 }
 
+.role-help {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(0, 86, 210, 0.14);
+  border-radius: 14px;
+  padding: 14px;
+  background: rgba(219, 234, 254, 0.38);
+}
+
+.role-help div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.role-help span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.role-help strong {
+  color: var(--harbor-ink);
+  font-size: 0.95rem;
+}
+
+.role-help p {
+  margin: 0;
+  color: var(--slate);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.role-help small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
 .form-error {
   margin: 0;
   border: 1px solid #fecaca;

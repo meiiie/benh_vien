@@ -1,5 +1,7 @@
 import type { FormEvent } from "react";
 import {
+  demoRoleOptions,
+  getDemoRoleOption,
   loginPresets,
   type DemoRole,
   type LoginForm
@@ -20,18 +22,21 @@ export function LoginPage({
   onChange,
   onSubmit
 }: LoginPageProps) {
+  const selectedRole = getDemoRoleOption(form.role);
+
   return (
     <main className="login-shell">
       <section className="login-panel">
         <button className="ghost-button" type="button" onClick={onBack}>
-          Quay lại landing
+          Quay lại trang giới thiệu
         </button>
         <div>
-          <p className="eyebrow">Secure access</p>
+          <p className="eyebrow">Truy cập demo có kiểm soát</p>
           <h1>Đăng nhập WiiiCare Nexus</h1>
           <p className="lede">
             Đây là đăng nhập demo để trình bày luồng sản phẩm. Khi lên sản phẩm thật, lớp
-            này cần thay bằng IAM/SSO, MFA, quản lý phiên và chính sách bảo mật đầy đủ.
+            này cần thay bằng IAM/SSO (quản lý danh tính/đăng nhập một lần), MFA (xác thực đa yếu tố),
+            quản lý phiên và chính sách bảo mật đầy đủ.
           </p>
         </div>
 
@@ -57,13 +62,25 @@ export function LoginPage({
               value={form.role}
               onChange={(event) => onChange(loginPresets[event.target.value as DemoRole])}
             >
-              <option value="clinician">Bác sĩ / điều trị</option>
-              <option value="nurse">Điều dưỡng / tiếp nhận</option>
-              <option value="integration">Gateway liên thông</option>
-              <option value="auditor">Kiểm toán</option>
-              <option value="admin">Quản trị</option>
+              {demoRoleOptions.map((option) => (
+                <option key={option.role} value={option.role}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </label>
+          <section
+            className="role-help"
+            aria-live="polite"
+            aria-label={`Giải thích vai trò demo: ${selectedRole.label}. ${selectedRole.mission} ${selectedRole.boundary}`}
+          >
+            <div>
+              <span>Vai trò đang chọn: </span>
+              <strong>{selectedRole.label}</strong>
+            </div>
+            <p>{selectedRole.mission}</p>
+            <small>{selectedRole.boundary}</small>
+          </section>
           {error ? <p className="form-error">{error}</p> : null}
           <button className="primary-button" type="submit">
             Đăng nhập demo
