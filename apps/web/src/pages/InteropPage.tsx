@@ -8,6 +8,7 @@ import {
   type FhirTransferContext
 } from "../features/interoperability/FhirTransferContextSummary.js";
 import type { Patient } from "../types/patientRegistry.js";
+import type { ProviderDirectory } from "../types/providerDirectory.js";
 
 type ReferenceSignal = {
   readonly name: string;
@@ -33,6 +34,7 @@ type InteropPageProps = {
   readonly patientFhirDocumentBundlePreview: unknown;
   readonly patientFhirPreview: unknown;
   readonly procedureFhirPreview: unknown;
+  readonly providerDirectory?: ProviderDirectory;
   readonly providerDirectoryFhirPreview: unknown;
   readonly providerDirectoryPanel: ReactNode;
   readonly recordTransferFhirTaskPreview: unknown;
@@ -64,6 +66,7 @@ export function InteropPage({
   patientFhirDocumentBundlePreview,
   patientFhirPreview,
   procedureFhirPreview,
+  providerDirectory,
   providerDirectoryFhirPreview,
   providerDirectoryPanel,
   recordTransferFhirTaskPreview,
@@ -96,6 +99,7 @@ export function InteropPage({
         <FhirTransferContextSummary
           context={transferContext}
           patient={selectedPatient}
+          providerDirectory={providerDirectory}
         />
         {providerDirectoryPanel}
         <FhirPanel title="FHIR CapabilityStatement JSON" badge="CapabilityStatement" value={capabilityStatementPreview} />

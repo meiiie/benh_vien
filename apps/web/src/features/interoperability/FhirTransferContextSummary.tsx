@@ -1,5 +1,6 @@
 import { Info } from "../../components/AppShell.js";
 import type { Patient } from "../../types/patientRegistry.js";
+import type { ProviderDirectory } from "../../types/providerDirectory.js";
 import type { RecordTransferBundleType } from "../../types/recordTransfers.js";
 
 export type FhirTransferContext = {
@@ -13,11 +14,13 @@ export type FhirTransferContext = {
 type FhirTransferContextSummaryProps = {
   readonly context: FhirTransferContext;
   readonly patient?: Patient;
+  readonly providerDirectory?: ProviderDirectory;
 };
 
 export function FhirTransferContextSummary({
   context,
-  patient
+  patient,
+  providerDirectory
 }: FhirTransferContextSummaryProps) {
   const patientIdentifier = patient?.identifiers[0]?.value ?? patient?.id;
   const patientLabel = patient
@@ -27,6 +30,14 @@ export function FhirTransferContextSummary({
     context.bundleType === "document"
       ? "FHIR document Bundle"
       : "FHIR collection Bundle";
+  const sourceOrganizationLabel = resolveOrganizationLabel(
+    providerDirectory,
+    context.sourceOrganizationId
+  );
+  const recipientOrganizationLabel = resolveOrganizationLabel(
+    providerDirectory,
+    context.recipientOrganizationId
+  );
 
   return (
     <article className="panel transfer-context-panel">
@@ -40,8 +51,8 @@ export function FhirTransferContextSummary({
 
       <div className="detail-grid compact transfer-context-grid">
         <Info label="Bệnh nhân" value={patientLabel} />
-        <Info label="Cơ sở gửi" value={context.sourceOrganizationId} />
-        <Info label="Cơ sở nhận" value={context.recipientOrganizationId} />
+        <Info label="Cơ sở gửi" value={sourceOrganizationLabel} />
+        <Info label="Cơ sở nhận" value={recipientOrganizationLabel} />
         <Info label="Consent dùng để xuất" value={context.consentReference} />
         <Info label="Kiểu gói FHIR" value={bundleLabel} />
       </div>
@@ -80,4 +91,15 @@ export function FhirTransferContextSummary({
       <p className="transfer-context-reason">{context.reason}</p>
     </article>
   );
+}
+
+function resolveOrganizationLabel(
+  providerDirectory: ProviderDirectory | undefined,
+  organizationId: string
+): string {
+  const organization = providerDirectory?.organizations.find(
+    (item) => item.id === organizationId
+  );
+
+  return organization ? `${organization.name} (${organization.id})` : organizationId;
 }

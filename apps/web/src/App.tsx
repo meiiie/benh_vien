@@ -529,6 +529,7 @@ export function App() {
         latestEncounterServiceType={latestEncounterServiceType}
         loginForm={loginForm}
         panels={routePanels}
+        providerDirectory={platformState.providerDirectory}
         referenceSignals={referenceSignals}
         selectedPatient={selectedPatient}
         workflowSteps={workflowSteps}

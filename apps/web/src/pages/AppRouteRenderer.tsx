@@ -17,6 +17,7 @@ import { defaultRecordTransferForm } from "../config/demoTransferDefaults.js";
 import { DocumentsPage } from "./DocumentsPage.js";
 import { GatewayAcknowledgementPage } from "./GatewayAcknowledgementPage.js";
 import { InteropPage } from "./InteropPage.js";
+import type { ProviderDirectory } from "../types/providerDirectory.js";
 import { SettingsPage } from "./SettingsPage.js";
 import { WorkspacePage } from "./WorkspacePage.js";
 
@@ -91,6 +92,7 @@ type AppRouteRendererProps = {
   readonly latestEncounterServiceType?: string;
   readonly loginForm: LoginForm;
   readonly panels: AppRoutePanels;
+  readonly providerDirectory?: ProviderDirectory;
   readonly referenceSignals: readonly ReferenceSignal[];
   readonly selectedPatient?: Patient;
   readonly workflowSteps: readonly string[];
@@ -121,6 +123,7 @@ export function AppRouteRenderer({
   latestEncounterServiceType,
   loginForm,
   panels,
+  providerDirectory,
   referenceSignals,
   selectedPatient,
   workflowSteps,
@@ -207,6 +210,7 @@ export function AppRouteRenderer({
         patientFhirDocumentBundlePreview={fhirPreviews.patientDocumentBundle}
         patientFhirPreview={fhirPreviews.patient}
         procedureFhirPreview={fhirPreviews.procedure}
+        providerDirectory={providerDirectory}
         providerDirectoryFhirPreview={fhirPreviews.providerDirectory}
         providerDirectoryPanel={panels.providerDirectory()}
         recordTransferFhirTaskPreview={fhirPreviews.recordTransferTask}

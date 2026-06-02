@@ -795,6 +795,12 @@ const fhirTransferContextUiChecks = [
   },
   {
     source: fhirTransferContextSummarySource,
+    pattern: /\bproviderDirectory\?\.organizations\.find\b/,
+    message:
+      "FHIR transfer context summary must resolve organization names from Provider Directory when it is loaded."
+  },
+  {
+    source: fhirTransferContextSummarySource,
     pattern: /\bbundleType\b/,
     message:
       "FHIR transfer context summary must explain whether the package is a document or collection Bundle."
