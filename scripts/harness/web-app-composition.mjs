@@ -23,6 +23,9 @@ const fhirTransferContextSummaryPath = resolve(
 const fhirDocumentBundleSummaryPath = resolve(
   "apps/web/src/features/interoperability/FhirDocumentBundleSummary.tsx"
 );
+const gatewayAcknowledgementPagePath = resolve(
+  "apps/web/src/pages/GatewayAcknowledgementPage.tsx"
+);
 const consentInteropPanelPath = resolve(
   "apps/web/src/features/consents/ConsentInteropPanel.tsx"
 );
@@ -658,6 +661,10 @@ const fhirTransferContextSummarySource = await readFile(
   fhirTransferContextSummaryPath,
   "utf8"
 );
+const gatewayAcknowledgementPageSource = await readFile(
+  gatewayAcknowledgementPagePath,
+  "utf8"
+);
 const interopPageSource = await readFile(interopPagePath, "utf8");
 const landingPageSource = await readFile(landingPagePath, "utf8");
 const loginPageSource = await readFile(loginPagePath, "utf8");
@@ -921,6 +928,30 @@ if (/Document Bundle readiness/.test(fhirDocumentBundleSummarySource)) {
 
 if (!/Có quyền xem hồ sơ không đồng nghĩa được phép xuất liên viện/.test(fhirTransferContextSummarySource)) {
   throw new Error("FHIR transfer context summary must separate chart-view permission from inter-hospital export permission.");
+}
+
+if (
+  !/className="gateway-brief"/.test(gatewayAcknowledgementPageSource) ||
+  !/Gateway nhận/.test(gatewayAcknowledgementPageSource) ||
+  !/HMAC và idempotency/.test(gatewayAcknowledgementPageSource) ||
+  !/Audit vận hành/.test(gatewayAcknowledgementPageSource)
+) {
+  throw new Error("Gateway acknowledgement page must explain gateway scope, HMAC/idempotency and audit operations before the callback form.");
+}
+
+if (
+  !/Tác nhân \(actor\)/.test(gatewayAcknowledgementPageSource) ||
+  !/Mục đích sử dụng \(PurposeOfUse\)/.test(gatewayAcknowledgementPageSource)
+) {
+  throw new Error("Gateway acknowledgement page must annotate actor and PurposeOfUse labels for demo reviewers.");
+}
+
+if (
+  /label="Actor"|Actor xác nhận|label="PurposeOfUse"/.test(
+    gatewayAcknowledgementPageSource
+  )
+) {
+  throw new Error("Gateway acknowledgement page must avoid unannotated raw actor and PurposeOfUse labels.");
 }
 
 const clinicalApiOperationOutcomeChecks = [

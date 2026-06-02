@@ -272,6 +272,7 @@
 .audit-brief,
 .dashboard-brief,
 .document-brief,
+.gateway-brief,
 .interop-brief,
 .workspace-brief {
   display: grid;
@@ -282,6 +283,7 @@
 .audit-brief article,
 .dashboard-brief article,
 .document-brief article,
+.gateway-brief article,
 .interop-brief article,
 .workspace-brief article {
   border: 1px solid rgba(148, 163, 184, 0.2);
@@ -293,6 +295,7 @@
 .audit-brief span,
 .dashboard-brief span,
 .document-brief span,
+.gateway-brief span,
 .interop-brief span,
 .workspace-brief span {
   color: var(--primary);
@@ -305,6 +308,7 @@
 .audit-brief p,
 .dashboard-brief p,
 .document-brief p,
+.gateway-brief p,
 .interop-brief p,
 .workspace-brief p {
   margin: 6px 0 0;
@@ -1328,6 +1332,7 @@ pre {
   .audit-brief,
   .dashboard-brief,
   .document-brief,
+  .gateway-brief,
   .interop-brief,
   .workspace-brief,
   .dashboard-grid,

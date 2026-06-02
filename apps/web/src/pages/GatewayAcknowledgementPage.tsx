@@ -19,6 +19,21 @@ type GatewayAcknowledgementPageProps = {
   readonly result?: RecordTransfer;
 };
 
+const gatewayBriefItems = [
+  {
+    label: "Gateway nhận",
+    note: "Tài khoản tích hợp chỉ xác nhận biên nhận kỹ thuật; không chỉnh sửa hồ sơ lâm sàng hoặc dữ liệu điều trị."
+  },
+  {
+    label: "HMAC và idempotency",
+    note: "Chữ ký HMAC phải tạo ở máy chủ gateway; idempotency key giúp chống ghi nhận trùng callback."
+  },
+  {
+    label: "Audit vận hành",
+    note: "Callback hợp lệ ghi nhật ký kiểm toán, lưu mã biên nhận và đóng trạng thái gói chuyển hồ sơ."
+  }
+] as const;
+
 export function GatewayAcknowledgementPage({
   apiBaseUrl,
   authSession,
@@ -43,21 +58,30 @@ export function GatewayAcknowledgementPage({
       <PageHeader
         eyebrow="Cổng liên thông"
         title="Xác nhận tiếp nhận hồ sơ liên viện"
-        description="Trang này mô phỏng callback từ gateway của bệnh viện nhận. Trong triển khai production, chữ ký HMAC phải được tạo ở gateway server; giao diện này chỉ dùng cho demo vận hành có kiểm soát."
+        description="Trang này mô phỏng callback tiếp nhận từ gateway của bệnh viện nhận. Trong triển khai thật, chữ ký HMAC phải được tạo ở máy chủ gateway; giao diện này chỉ dùng cho demo vận hành có kiểm soát."
       />
+
+      <section className="gateway-brief" aria-label="Phạm vi vận hành của gateway liên thông">
+        {gatewayBriefItems.map((item) => (
+          <article key={item.label}>
+            <span>{item.label}</span>
+            <p>{item.note}</p>
+          </article>
+        ))}
+      </section>
 
       <section className="settings-grid">
         <article className="panel">
           <p className="eyebrow">Ngữ cảnh gateway</p>
           <h2>Phiên xác thực vận hành</h2>
           <div className="detail-grid compact">
-            <Info label="Actor" value={authSession?.actor.actorId ?? "Chưa xác thực"} />
+            <Info label="Tác nhân (actor)" value={authSession?.actor.actorId ?? "Chưa xác thực"} />
             <Info label="Vai trò" value={formatDemoRole(authSession?.actor.role ?? "integration")} />
-            <Info label="PurposeOfUse" value="OPERATIONS" />
+            <Info label="Mục đích sử dụng (PurposeOfUse)" value="OPERATIONS" />
             <Info label="API" value={apiBaseUrl} />
           </div>
           <p className="empty-state">
-            Luồng demo chuẩn: bác sĩ gửi gói hồ sơ trước, sau đó tài khoản gateway của bệnh viện nhận xác nhận đã tiếp nhận. Callback hợp lệ sẽ ghi audit `record-transfer.acknowledgement-callback` và chuyển gói sang trạng thái `completed`.
+            Luồng demo chuẩn: bác sĩ gửi gói hồ sơ trước, sau đó tài khoản gateway của bệnh viện nhận xác nhận đã tiếp nhận. Callback hợp lệ sẽ ghi audit <code>record-transfer.acknowledgement-callback</code> và chuyển gói sang trạng thái <code>completed</code>.
           </p>
         </article>
 
@@ -101,7 +125,7 @@ export function GatewayAcknowledgementPage({
               />
             </label>
             <label>
-              Actor xác nhận
+              Tác nhân xác nhận (actor)
               <input
                 value={form.receivedByActorId}
                 onChange={(event) => updateField("receivedByActorId", event.target.value)}
@@ -115,28 +139,28 @@ export function GatewayAcknowledgementPage({
               />
             </label>
             <label className="wide-field">
-              Idempotency key lần gửi
+              Khóa chống gửi trùng (idempotency key)
               <input
                 value={form.deliveryIdempotencyKey}
                 onChange={(event) => updateField("deliveryIdempotencyKey", event.target.value)}
               />
             </label>
             <label className="wide-field">
-              Ghi chú callback
+              Ghi chú callback tiếp nhận
               <textarea
                 value={form.note}
                 onChange={(event) => updateField("note", event.target.value)}
               />
             </label>
             <button className="primary-button" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Đang gửi callback..." : "Gửi callback tiếp nhận"}
+              {isSubmitting ? "Đang gửi xác nhận..." : "Gửi callback tiếp nhận"}
             </button>
           </form>
         </article>
 
         {result ? (
           <article className="panel">
-            <p className="eyebrow">Kết quả callback</p>
+            <p className="eyebrow">Kết quả tiếp nhận</p>
             <h2>Gói đã được xác nhận</h2>
             <div className="detail-grid compact">
               <Info label="Mã gói" value={result.id} />
