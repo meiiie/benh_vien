@@ -1,9 +1,9 @@
 import type { Consent } from "../consent/consent.js";
 import type { FhirConsent } from "./fhir-types.js";
+import { buildConsentProvision } from "./map-consent-provision-codings.js";
 import {
   buildConsentCategory,
   buildConsentIdentifier,
-  buildConsentProvision,
   buildConsentScope,
   consentFhirProfile,
   mapConsentStatus
