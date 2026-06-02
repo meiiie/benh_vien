@@ -3,9 +3,9 @@ import {
   buildPatientRecordBundleResources,
   toPatientRecordBundleEntry
 } from "./patient-record-bundle-resources.js";
-import type { PatientRecordBundleInput } from "./patient-record-bundle-resources.js";
+import type { PatientRecordBundleInput } from "./patient-record-bundle.types.js";
 
-export type { PatientRecordBundleInput } from "./patient-record-bundle-resources.js";
+export type { PatientRecordBundleInput } from "./patient-record-bundle.types.js";
 
 export function mapPatientRecordToFhirBundle(input: PatientRecordBundleInput): FhirBundle {
   const generatedAt = input.generatedAt ?? new Date();

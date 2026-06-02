@@ -739,8 +739,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/fhir/patient-record-bundle-resources.ts",
-    maxLines: 150,
+    maxLines: 95,
     role: "FHIR patient-record Bundle resource collection and entry mapping"
+  },
+  {
+    path: "packages/domain/src/fhir/patient-record-bundle.types.ts",
+    maxLines: 95,
+    role: "FHIR patient-record Bundle input and resource union types"
   },
   {
     path: "packages/domain/src/fhir/map-patient-record-to-fhir-document-bundle.ts",
@@ -1205,6 +1210,9 @@ const mapPatientRecordToFhirBundlePath = resolve(
 const patientRecordBundleResourcesPath = resolve(
   "packages/domain/src/fhir/patient-record-bundle-resources.ts"
 );
+const patientRecordBundleTypesPath = resolve(
+  "packages/domain/src/fhir/patient-record-bundle.types.ts"
+);
 const mapPatientRecordToFhirDocumentBundlePath = resolve(
   "packages/domain/src/fhir/map-patient-record-to-fhir-document-bundle.ts"
 );
@@ -1582,6 +1590,7 @@ const patientRecordBundleResourcesSource = await readFile(
   patientRecordBundleResourcesPath,
   "utf8"
 );
+const patientRecordBundleTypesSource = await readFile(patientRecordBundleTypesPath, "utf8");
 const mapPatientRecordToFhirDocumentBundleSource = await readFile(
   mapPatientRecordToFhirDocumentBundlePath,
   "utf8"
@@ -4116,7 +4125,7 @@ for (const forbidden of [
 
 for (const required of [
   /export function mapPatientRecordToFhirBundle/,
-  /export type \{ PatientRecordBundleInput \} from "\.\/patient-record-bundle-resources\.js"/,
+  /export type \{ PatientRecordBundleInput \} from "\.\/patient-record-bundle\.types\.js"/,
   /buildPatientRecordBundleResources/,
   /toPatientRecordBundleEntry/,
   /resourceType:\s*"Bundle"/
@@ -4143,8 +4152,8 @@ for (const forbidden of [
 }
 
 for (const required of [
-  /export type PatientRecordBundleInput/,
-  /export type PatientRecordBundleResource/,
+  /export type \{[\s\S]*PatientRecordBundleInput[\s\S]*PatientRecordBundleResource[\s\S]*\} from "\.\/patient-record-bundle\.types\.js"/,
+  /from "\.\/patient-record-bundle\.types\.js"/,
   /export function buildPatientRecordBundleResources/,
   /export function toPatientRecordBundleEntry/,
   /mapProviderDirectoryToFhirResources/,
@@ -4153,19 +4162,54 @@ for (const required of [
 ]) {
   if (!required.test(patientRecordBundleResourcesSource)) {
     throw new Error(
-      "patient-record-bundle-resources.ts must keep PatientRecord Bundle input, resource collection and FHIR entry mapping."
+      "patient-record-bundle-resources.ts must keep PatientRecord Bundle resource collection and FHIR entry mapping while delegating input/resource union types to patient-record-bundle.types.ts."
     );
   }
 }
 
 for (const forbidden of [
+  /export type PatientRecordBundleInput\s*=/,
+  /export type PatientRecordBundleResource\s*=/,
   /resourceType:\s*"Bundle"/,
-  /patient-record-/,
+  /id:\s*`patient-record-/,
+  /value:\s*`patient-record:/,
   /mapPatientRecordToFhirBundle/
 ]) {
   if (forbidden.test(patientRecordBundleResourcesSource)) {
     throw new Error(
       "patient-record-bundle-resources.ts must stay a resource/entry helper and must not build patient-record Bundle envelopes."
+    );
+  }
+}
+
+for (const required of [
+  /export type PatientRecordBundleInput/,
+  /export type PatientRecordBundleResource/,
+  /readonly patient: Patient/,
+  /readonly providerDirectory\?: ProviderDirectory/,
+  /FhirPatient/,
+  /FhirEncounter/,
+  /FhirDocumentReference/
+]) {
+  if (!required.test(patientRecordBundleTypesSource)) {
+    throw new Error(
+      "patient-record-bundle.types.ts must keep PatientRecord Bundle input contract and FHIR resource union."
+    );
+  }
+}
+
+for (const forbidden of [
+  /mapPatientRecordToFhirBundle/,
+  /buildPatientRecordBundleResources/,
+  /toPatientRecordBundleEntry/,
+  /mapProviderDirectoryToFhirResources/,
+  /mapClinicalDocumentToFhir/,
+  /resourceType:\s*"Bundle"/,
+  /fullUrl:/
+]) {
+  if (forbidden.test(patientRecordBundleTypesSource)) {
+    throw new Error(
+      "patient-record-bundle.types.ts must stay a type contract and must not own Bundle envelope or resource mapping behavior."
     );
   }
 }
