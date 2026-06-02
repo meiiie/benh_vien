@@ -769,8 +769,28 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/fhir/map-provider-directory-resources.ts",
-    maxLines: 160,
-    role: "FHIR ProviderDirectory Organization, Practitioner, PractitionerRole and Endpoint projection"
+    maxLines: 35,
+    role: "FHIR ProviderDirectory resource union and mapper compatibility exports"
+  },
+  {
+    path: "packages/domain/src/fhir/map-provider-organization-to-fhir.ts",
+    maxLines: 55,
+    role: "FHIR ProviderDirectory Organization projection"
+  },
+  {
+    path: "packages/domain/src/fhir/map-provider-practitioner-to-fhir.ts",
+    maxLines: 45,
+    role: "FHIR ProviderDirectory Practitioner projection"
+  },
+  {
+    path: "packages/domain/src/fhir/map-provider-practitioner-role-to-fhir.ts",
+    maxLines: 60,
+    role: "FHIR ProviderDirectory PractitionerRole projection"
+  },
+  {
+    path: "packages/domain/src/fhir/map-provider-endpoint-to-fhir.ts",
+    maxLines: 45,
+    role: "FHIR ProviderDirectory Endpoint projection"
   },
   {
     path: "packages/domain/src/fhir/map-provider-directory-codings.ts",
@@ -1053,6 +1073,18 @@ const mapProviderDirectoryToFhirPath = resolve(
 );
 const mapProviderDirectoryResourcesPath = resolve(
   "packages/domain/src/fhir/map-provider-directory-resources.ts"
+);
+const mapProviderOrganizationToFhirPath = resolve(
+  "packages/domain/src/fhir/map-provider-organization-to-fhir.ts"
+);
+const mapProviderPractitionerToFhirPath = resolve(
+  "packages/domain/src/fhir/map-provider-practitioner-to-fhir.ts"
+);
+const mapProviderPractitionerRoleToFhirPath = resolve(
+  "packages/domain/src/fhir/map-provider-practitioner-role-to-fhir.ts"
+);
+const mapProviderEndpointToFhirPath = resolve(
+  "packages/domain/src/fhir/map-provider-endpoint-to-fhir.ts"
 );
 const mapProviderDirectoryCodingsPath = resolve(
   "packages/domain/src/fhir/map-provider-directory-codings.ts"
@@ -1402,6 +1434,22 @@ const mapProviderDirectoryToFhirSource = await readFile(
 );
 const mapProviderDirectoryResourcesSource = await readFile(
   mapProviderDirectoryResourcesPath,
+  "utf8"
+);
+const mapProviderOrganizationToFhirSource = await readFile(
+  mapProviderOrganizationToFhirPath,
+  "utf8"
+);
+const mapProviderPractitionerToFhirSource = await readFile(
+  mapProviderPractitionerToFhirPath,
+  "utf8"
+);
+const mapProviderPractitionerRoleToFhirSource = await readFile(
+  mapProviderPractitionerRoleToFhirPath,
+  "utf8"
+);
+const mapProviderEndpointToFhirSource = await readFile(
+  mapProviderEndpointToFhirPath,
   "utf8"
 );
 const mapProviderDirectoryCodingsSource = await readFile(
@@ -1876,15 +1924,55 @@ for (const forbidden of [
 
 for (const required of [
   /export type ProviderDirectoryFhirResource/,
-  /export function mapProviderOrganizationToFhir/,
-  /export function mapProviderPractitionerToFhir/,
-  /export function mapProviderEndpointToFhir/,
-  /export function mapProviderPractitionerRoleToFhir/,
-  /from "\.\/map-provider-directory-codings\.js"/
+  /export \{ mapProviderOrganizationToFhir \} from "\.\/map-provider-organization-to-fhir\.js"/,
+  /export \{ mapProviderPractitionerToFhir \} from "\.\/map-provider-practitioner-to-fhir\.js"/,
+  /export \{ mapProviderPractitionerRoleToFhir \} from "\.\/map-provider-practitioner-role-to-fhir\.js"/,
+  /export \{ mapProviderEndpointToFhir \} from "\.\/map-provider-endpoint-to-fhir\.js"/
 ]) {
   if (!required.test(mapProviderDirectoryResourcesSource)) {
     throw new Error(
-      "map-provider-directory-resources.ts must keep ProviderDirectory Organization, Practitioner, Endpoint and PractitionerRole FHIR projection while delegating coding helpers to map-provider-directory-codings.ts."
+      "map-provider-directory-resources.ts must keep only the ProviderDirectory FHIR resource union and compatibility mapper exports."
+    );
+  }
+}
+
+for (const forbidden of [
+  /ProviderDirectory,/,
+  /ProviderOrganizationSnapshot/,
+  /ProviderPractitionerSnapshot/,
+  /ProviderPractitionerRoleSnapshot/,
+  /ProviderEndpointSnapshot/,
+  /mapProviderDirectoryToFhirResources/,
+  /mapProviderDirectoryToFhirBundle/,
+  /from "\.\/map-provider-directory-codings\.js"/,
+  /resourceType:\s*"Bundle"/,
+  /resourceType:\s*"Organization"/,
+  /resourceType:\s*"Practitioner"/,
+  /resourceType:\s*"PractitionerRole"/,
+  /resourceType:\s*"Endpoint"/,
+  /directory\.toSnapshot/
+]) {
+  if (forbidden.test(mapProviderDirectoryResourcesSource)) {
+    throw new Error(
+      "map-provider-directory-resources.ts must stay a compatibility barrel and must not own ProviderDirectory aggregate orchestration, Bundle mapping, coding helpers or individual resource projection."
+    );
+  }
+}
+
+for (const required of [
+  /export function mapProviderOrganizationToFhir/,
+  /ProviderOrganizationSnapshot/,
+  /FhirOrganization/,
+  /from "\.\/map-provider-directory-codings\.js"/,
+  /mapOrganizationType/,
+  /formatOrganizationType/,
+  /toFhirIdentifiers/,
+  /resourceType:\s*"Organization"/,
+  /partOfOrganizationId/
+]) {
+  if (!required.test(mapProviderOrganizationToFhirSource)) {
+    throw new Error(
+      "map-provider-organization-to-fhir.ts must keep Organization projection, identifiers, type coding and parent Organization references."
     );
   }
 }
@@ -1894,12 +1982,115 @@ for (const forbidden of [
   /mapProviderDirectoryToFhirResources/,
   /mapProviderDirectoryToFhirBundle/,
   /resourceType:\s*"Bundle"/,
-  /directory\.toSnapshot/
+  /resourceType:\s*"Practitioner"/,
+  /resourceType:\s*"PractitionerRole"/,
+  /resourceType:\s*"Endpoint"/,
+  /mapEndpointConnectionType/
 ]) {
-  if (forbidden.test(mapProviderDirectoryResourcesSource)) {
+  if (forbidden.test(mapProviderOrganizationToFhirSource)) {
     throw new Error(
-      "map-provider-directory-resources.ts must stay an individual resource projection helper and must not own ProviderDirectory aggregate orchestration or Bundle mapping."
+      "map-provider-organization-to-fhir.ts must stay focused on Organization projection only."
     );
+  }
+}
+
+for (const required of [
+  /export function mapProviderPractitionerToFhir/,
+  /ProviderPractitionerSnapshot/,
+  /FhirPractitioner/,
+  /toFhirIdentifiers/,
+  /resourceType:\s*"Practitioner"/,
+  /qualification/
+]) {
+  if (!required.test(mapProviderPractitionerToFhirSource)) {
+    throw new Error(
+      "map-provider-practitioner-to-fhir.ts must keep Practitioner projection, identifiers and qualification mapping."
+    );
+  }
+}
+
+for (const forbidden of [
+  /ProviderDirectory,/,
+  /mapProviderDirectoryToFhirResources/,
+  /mapProviderDirectoryToFhirBundle/,
+  /resourceType:\s*"Bundle"/,
+  /resourceType:\s*"Organization"/,
+  /resourceType:\s*"PractitionerRole"/,
+  /resourceType:\s*"Endpoint"/,
+  /mapEndpointConnectionType/,
+  /mapOrganizationType/
+]) {
+  if (forbidden.test(mapProviderPractitionerToFhirSource)) {
+    throw new Error(
+      "map-provider-practitioner-to-fhir.ts must stay focused on Practitioner projection only."
+    );
+  }
+}
+
+for (const required of [
+  /export function mapProviderPractitionerRoleToFhir/,
+  /ProviderPractitionerRoleSnapshot/,
+  /FhirPractitionerRole/,
+  /toCodeableConcept/,
+  /resourceType:\s*"PractitionerRole"/,
+  /Practitioner\/\$\{role\.practitionerId\}/,
+  /Organization\/\$\{role\.organizationId\}/,
+  /Endpoint\/\$\{endpointId\}/
+]) {
+  if (!required.test(mapProviderPractitionerRoleToFhirSource)) {
+    throw new Error(
+      "map-provider-practitioner-role-to-fhir.ts must keep PractitionerRole projection, practitioner, organization and endpoint references."
+    );
+  }
+}
+
+for (const forbidden of [
+  /ProviderDirectory,/,
+  /mapProviderDirectoryToFhirResources/,
+  /mapProviderDirectoryToFhirBundle/,
+  /resourceType:\s*"Bundle"/,
+  /resourceType:\s*"Organization"/,
+  /resourceType:\s*"Practitioner"/,
+  /resourceType:\s*"Endpoint"/,
+  /mapEndpointConnectionType/,
+  /mapOrganizationType/
+]) {
+  if (forbidden.test(mapProviderPractitionerRoleToFhirSource)) {
+    throw new Error(
+      "map-provider-practitioner-role-to-fhir.ts must stay focused on PractitionerRole projection only."
+    );
+  }
+}
+
+for (const required of [
+  /export function mapProviderEndpointToFhir/,
+  /ProviderEndpointSnapshot/,
+  /FhirEndpoint/,
+  /mapEndpointConnectionType/,
+  /toCodeableConcept/,
+  /resourceType:\s*"Endpoint"/,
+  /Organization\/\$\{endpoint\.managingOrganizationId\}/,
+  /payloadTypes\.map\(toCodeableConcept\)/
+]) {
+  if (!required.test(mapProviderEndpointToFhirSource)) {
+    throw new Error(
+      "map-provider-endpoint-to-fhir.ts must keep Endpoint projection, connection type, managing Organization and payloadType mapping."
+    );
+  }
+}
+
+for (const forbidden of [
+  /ProviderDirectory,/,
+  /mapProviderDirectoryToFhirResources/,
+  /mapProviderDirectoryToFhirBundle/,
+  /resourceType:\s*"Bundle"/,
+  /resourceType:\s*"Organization"/,
+  /resourceType:\s*"Practitioner"/,
+  /resourceType:\s*"PractitionerRole"/,
+  /mapOrganizationType/
+]) {
+  if (forbidden.test(mapProviderEndpointToFhirSource)) {
+    throw new Error("map-provider-endpoint-to-fhir.ts must stay focused on Endpoint projection only.");
   }
 }
 
