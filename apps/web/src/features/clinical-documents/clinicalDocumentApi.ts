@@ -38,7 +38,7 @@ export function exportClinicalDocumentProvenanceFhir(
   api: ClinicalApiClient,
   documentId: string
 ): Promise<unknown> {
-  return api.requestJson<unknown>(`/clinical-documents/${documentId}/provenance/fhir`, {
+  return api.requestJson<unknown>(`/clinical-documents/${documentId}/fhir-provenance`, {
     purposeOfUse: "TREATMENT"
   });
 }

@@ -5,6 +5,9 @@ const appPath = resolve("apps/web/src/App.tsx");
 const mainPath = resolve("apps/web/src/main.tsx");
 const webSrcPath = resolve("apps/web/src");
 const allowedFetchModulePath = resolve("apps/web/src/api/clinicalApi.ts");
+const clinicalDocumentApiPath = resolve(
+  "apps/web/src/features/clinical-documents/clinicalDocumentApi.ts"
+);
 const sharedClinicalFormatterPath = resolve("apps/web/src/lib/clinicalFormatters.ts");
 const clinicalTypeBarrelImportPattern =
   /(?:from|import\s*\()\s*["'][^"']*types\/clinical\.js["']/;
@@ -581,6 +584,7 @@ const featureModuleBudgets = [
 
 const appSource = await readFile(appPath, "utf8");
 const mainSource = await readFile(mainPath, "utf8");
+const clinicalDocumentApiSource = await readFile(clinicalDocumentApiPath, "utf8");
 const sharedClinicalFormatterSource = await readFile(sharedClinicalFormatterPath, "utf8");
 const appLineCount = appSource.split(/\r?\n/).length;
 const directFetchPattern = /\bfetch\s*\(/;
@@ -691,6 +695,18 @@ for (const pattern of forbiddenSharedClinicalFormatterPatterns) {
   }
 }
 
+if (/\/clinical-documents\/\$\{documentId\}\/provenance\/fhir/.test(clinicalDocumentApiSource)) {
+  throw new Error(
+    "Clinical document web adapter must not call the retired Provenance path /provenance/fhir; use /fhir-provenance to match the API contract."
+  );
+}
+
+if (!/\/clinical-documents\/\$\{documentId\}\/fhir-provenance/.test(clinicalDocumentApiSource)) {
+  throw new Error(
+    "Clinical document web adapter must call /clinical-documents/${documentId}/fhir-provenance for FHIR Provenance export."
+  );
+}
+
 const webSourceFiles = await collectSourceFiles(webSrcPath);
 const forbiddenFetchFiles = [];
 const forbiddenClinicalTypeBarrelImportFiles = [];
@@ -760,6 +776,7 @@ console.log(
       appPath,
       appLineCount,
       maxAppLines,
+      clinicalDocumentApiPath,
       featureBudgetCount: featureModuleBudgets.length,
       moduleCount: requiredModules.length
     },
