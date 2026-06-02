@@ -865,7 +865,7 @@ const routeBudgets = [
   {
     path: "apps/api/src/modules/service-requests/service-request-creation-routes.ts",
     maxLines: 140,
-    role: "ServiceRequest creation and reference validation route adapter"
+    role: "ServiceRequest creation command route adapter"
   },
   {
     path: "apps/api/src/modules/service-requests/service-request-fhir-routes.ts",
@@ -874,8 +874,13 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/service-requests/service-request-route-helpers.ts",
-    maxLines: 150,
-    role: "ServiceRequest response, access, reference and domain error helpers"
+    maxLines: 90,
+    role: "ServiceRequest response, access and domain error helpers"
+  },
+  {
+    path: "apps/api/src/modules/service-requests/service-request-reference-validation.ts",
+    maxLines: 90,
+    role: "ServiceRequest clinical reference validation helper"
   },
   {
     path: "apps/api/src/modules/workflow-tasks/workflow-task-routes.ts",
@@ -890,7 +895,7 @@ const routeBudgets = [
   {
     path: "apps/api/src/modules/workflow-tasks/workflow-task-creation-routes.ts",
     maxLines: 140,
-    role: "WorkflowTask creation and reference validation route adapter"
+    role: "WorkflowTask creation command route adapter"
   },
   {
     path: "apps/api/src/modules/workflow-tasks/workflow-task-fhir-routes.ts",
@@ -899,8 +904,13 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/workflow-tasks/workflow-task-route-helpers.ts",
-    maxLines: 150,
-    role: "WorkflowTask response, access, reference and domain error helpers"
+    maxLines: 90,
+    role: "WorkflowTask response, access and domain error helpers"
+  },
+  {
+    path: "apps/api/src/modules/workflow-tasks/workflow-task-reference-validation.ts",
+    maxLines: 90,
+    role: "WorkflowTask clinical reference validation helper"
   }
 ];
 
@@ -1814,6 +1824,12 @@ const requiredImagingStudyReferenceValidationHelpers = [
 const serviceRequestRoutesPath = resolve(
   "apps/api/src/modules/service-requests/service-request-routes.ts"
 );
+const serviceRequestRouteHelpersPath = resolve(
+  "apps/api/src/modules/service-requests/service-request-route-helpers.ts"
+);
+const serviceRequestReferenceValidationPath = resolve(
+  "apps/api/src/modules/service-requests/service-request-reference-validation.ts"
+);
 const forbiddenServiceRequestRoutePatterns = [
   {
     pattern:
@@ -1838,9 +1854,28 @@ const requiredServiceRequestRegistrations = [
   "registerServiceRequestCreationRoutes",
   "registerServiceRequestFhirRoutes"
 ];
+const forbiddenServiceRequestRouteHelperPatterns = [
+  {
+    pattern:
+      /\bvalidateServiceRequestReferences\b|\bConditionRepository\b|\bEncounterRepository\b/,
+    message:
+      "ServiceRequest clinical reference validation belongs in service-request-reference-validation.ts."
+  }
+];
+const requiredServiceRequestReferenceValidationHelpers = [
+  "validateServiceRequestReferences",
+  "ENCOUNTER_MISMATCH",
+  "CONDITION_MISMATCH"
+];
 
 const workflowTaskRoutesPath = resolve(
   "apps/api/src/modules/workflow-tasks/workflow-task-routes.ts"
+);
+const workflowTaskRouteHelpersPath = resolve(
+  "apps/api/src/modules/workflow-tasks/workflow-task-route-helpers.ts"
+);
+const workflowTaskReferenceValidationPath = resolve(
+  "apps/api/src/modules/workflow-tasks/workflow-task-reference-validation.ts"
 );
 const forbiddenWorkflowTaskRoutePatterns = [
   {
@@ -1865,6 +1900,19 @@ const requiredWorkflowTaskRegistrations = [
   "registerWorkflowTaskQueryRoutes",
   "registerWorkflowTaskCreationRoutes",
   "registerWorkflowTaskFhirRoutes"
+];
+const forbiddenWorkflowTaskRouteHelperPatterns = [
+  {
+    pattern:
+      /\bvalidateWorkflowTaskReferences\b|\bEncounterRepository\b|\bServiceRequestRepository\b/,
+    message:
+      "WorkflowTask clinical reference validation belongs in workflow-task-reference-validation.ts."
+  }
+];
+const requiredWorkflowTaskReferenceValidationHelpers = [
+  "validateWorkflowTaskReferences",
+  "ENCOUNTER_MISMATCH",
+  "SERVICE_REQUEST_MISMATCH"
 ];
 
 const routeReports = [];
@@ -2023,7 +2071,23 @@ const imagingStudyReferenceValidationSource = await readFile(
   "utf8"
 );
 const serviceRequestRoutesSource = await readFile(serviceRequestRoutesPath, "utf8");
+const serviceRequestRouteHelpersSource = await readFile(
+  serviceRequestRouteHelpersPath,
+  "utf8"
+);
+const serviceRequestReferenceValidationSource = await readFile(
+  serviceRequestReferenceValidationPath,
+  "utf8"
+);
 const workflowTaskRoutesSource = await readFile(workflowTaskRoutesPath, "utf8");
+const workflowTaskRouteHelpersSource = await readFile(
+  workflowTaskRouteHelpersPath,
+  "utf8"
+);
+const workflowTaskReferenceValidationSource = await readFile(
+  workflowTaskReferenceValidationPath,
+  "utf8"
+);
 
 for (const forbidden of forbiddenApiRoutesPatterns) {
   if (forbidden.pattern.test(apiRoutesSource)) {
@@ -2573,6 +2637,20 @@ for (const registration of requiredServiceRequestRegistrations) {
   }
 }
 
+for (const forbidden of forbiddenServiceRequestRouteHelperPatterns) {
+  if (forbidden.pattern.test(serviceRequestRouteHelpersSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const helper of requiredServiceRequestReferenceValidationHelpers) {
+  if (!serviceRequestReferenceValidationSource.includes(helper)) {
+    throw new Error(
+      `ServiceRequest reference validation module must keep ${helper} so care-order links stay patient-scoped.`
+    );
+  }
+}
+
 for (const forbidden of forbiddenWorkflowTaskRoutePatterns) {
   if (forbidden.pattern.test(workflowTaskRoutesSource)) {
     throw new Error(forbidden.message);
@@ -2583,6 +2661,20 @@ for (const registration of requiredWorkflowTaskRegistrations) {
   if (!workflowTaskRoutesSource.includes(registration)) {
     throw new Error(
       `WorkflowTask root routes must register ${registration} so query, creation and FHIR modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenWorkflowTaskRouteHelperPatterns) {
+  if (forbidden.pattern.test(workflowTaskRouteHelpersSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const helper of requiredWorkflowTaskReferenceValidationHelpers) {
+  if (!workflowTaskReferenceValidationSource.includes(helper)) {
+    throw new Error(
+      `WorkflowTask reference validation module must keep ${helper} so task execution links stay patient-scoped.`
     );
   }
 }

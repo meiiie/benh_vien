@@ -20,9 +20,9 @@ import {
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 import {
   sendServiceRequestDomainError,
-  toServiceRequestResponse,
-  validateServiceRequestReferences
+  toServiceRequestResponse
 } from "./service-request-route-helpers.js";
+import { validateServiceRequestReferences } from "./service-request-reference-validation.js";
 
 export async function registerServiceRequestCreationRoutes(
   app: FastifyInstance,

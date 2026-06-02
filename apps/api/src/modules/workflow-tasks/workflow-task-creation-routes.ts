@@ -20,9 +20,9 @@ import {
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 import {
   sendWorkflowTaskDomainError,
-  toWorkflowTaskResponse,
-  validateWorkflowTaskReferences
+  toWorkflowTaskResponse
 } from "./workflow-task-route-helpers.js";
+import { validateWorkflowTaskReferences } from "./workflow-task-reference-validation.js";
 
 export async function registerWorkflowTaskCreationRoutes(
   app: FastifyInstance,
