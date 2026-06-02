@@ -76,7 +76,7 @@ Nếu cần bật thêm FHIR server và PACS:
 docker compose --env-file .env.dev.example -f docker-compose.yml -f docker-compose.dev.yml --profile interop --profile imaging up -d --build
 ```
 
-Chi tiết xem [docs/runbooks/DOCKER.md](docs/runbooks/DOCKER.md).
+Chi tiết xem [docs/runbooks/DOCKER.md](docs/runbooks/DOCKER.md). Quy trình backup/restore tối thiểu xem [docs/runbooks/BACKUP_RESTORE.md](docs/runbooks/BACKUP_RESTORE.md).
 
 Ở cấu hình prod-like, chỉ web edge được publish ra host; API nằm trên mạng nội bộ compose và được truy cập qua reverse proxy `/api/v1` hoặc health/readiness nội bộ của container.
 

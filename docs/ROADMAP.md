@@ -39,7 +39,7 @@
 - Tích hợp IAM/SSO, mở rộng RBAC/ABAC từ lát cắt Patient Registry hiện có sang toàn bộ tài nguyên lâm sàng, bao gồm vai trò, khoa phòng, ca trực, quan hệ điều trị và mục đích truy cập.
 - Hoàn thiện audit trail, FHIR `AuditEvent`, kiểm tra toàn vẹn chuỗi băm, báo cáo tuân thủ, retention policy và cảnh báo khi phát hiện sai lệch.
 - Bổ sung kiểm thử bảo mật API theo OWASP.
-- Chuẩn hóa backup, restore, retention và disaster recovery.
+- Đã có runbook nền cho backup, restore, retention và disaster recovery ở mức prototype; bước tiếp theo là tự động hóa job backup, mã hóa/ký manifest, lưu offsite và diễn tập phục hồi định kỳ.
 
 ## Giai đoạn 5: Mở rộng kiến trúc
 

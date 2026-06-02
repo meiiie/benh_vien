@@ -175,6 +175,8 @@ docker compose --env-file .env.prod.local -f docker-compose.yml -f docker-compos
 
 Migration lưu `checksum_sha256` trong `schema_migrations`. Nếu một migration đã áp dụng bị sửa nội dung, service `migrate` sẽ dừng thay vì âm thầm chạy tiếp với lịch sử schema không còn đáng tin cậy.
 
+Quy trình backup/restore tối thiểu nằm trong [BACKUP_RESTORE.md](BACKUP_RESTORE.md). Trước khi coi một môi trường là đủ an toàn cho dữ liệu bệnh án thật, đội vận hành phải có backup mã hóa, lưu offsite, retention rõ ràng và diễn tập phục hồi thành công vào môi trường sạch.
+
 Web runtime Nginx chạy bằng image unprivileged và listen cổng `8080`, đồng thời gắn CSP chặt cho SPA tại `/`, gồm `default-src 'self'`, `script-src 'self'`, `style-src 'self'`, `object-src 'none'` và `frame-ancestors 'none'`. CSP không áp cho `/docs` để Swagger UI không bị chặn inline script/style của chính nó khi docs được bật. Web edge cũng tắt `server_tokens`, gửi thêm `Cross-Origin-Opener-Policy`, `Strict-Transport-Security` và chuyển tiếp `X-Request-Id` xuống API để giữ trace correlation. Trong production, API mặc định không đăng ký `/docs`; chỉ đặt `BVS_API_DOCS_ENABLED=true` cho môi trường nội bộ hoặc phiên demo có kiểm soát.
 
 ## Validate compose

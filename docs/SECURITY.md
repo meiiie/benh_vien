@@ -45,6 +45,7 @@ Hồ sơ bệnh án là dữ liệu đặc biệt nhạy cảm. Dự án chưa t
 - Dockerfile base images của API và web được pin bằng digest `sha256`; khi nâng Node/Nginx phải cập nhật digest có chủ đích và chạy lại build/smoke thay vì phụ thuộc vào tag mutable.
 - Dependabot được cấu hình cho npm workspace, GitHub Actions và Dockerfile API/web; CI có harness kiểm coverage này để tránh mất cơ chế cập nhật dependency/base image có kiểm soát.
 - CI chạy `pnpm audit --audit-level high` để chặn dependency có lỗ hổng đã biết ở mức cao hoặc nghiêm trọng; đây là lớp SCA tối thiểu, chưa thay thế rà soát bảo mật chuyên sâu hoặc đánh giá container/image định kỳ.
+- Backup/restore có runbook tối thiểu cho PostgreSQL, object storage, RPO/RTO, retention, mã hóa offsite và diễn tập phục hồi; CI có harness kiểm tài liệu này không bị mất các mốc bắt buộc. Đây vẫn là quy trình vận hành nền, chưa thay thế job backup tự động, lưu trữ WORM/append-only hoặc phê duyệt pháp lý cho bệnh viện thật.
 - Release workflow chạy full CI gate trước khi đăng nhập GHCR và chỉ publish image theo semantic version, không publish tag `latest`, để môi trường triển khai không vô tình nhận artifact mutable ngoài kế hoạch kiểm thử.
 - Image release bật provenance attestation mức `mode=max`, SBOM attestation và OCI labels `source`/`revision`/`version` cho cả API lẫn web, giúp truy vết nguồn build, commit và thành phần phần mềm khi kiểm tra chuỗi cung ứng.
 - Ở production, `BVS_CORS_ORIGINS` chỉ chấp nhận Origin HTTPS canonical thật sự public, không chấp nhận wildcard, HTTP, URL có path, `localhost`, loopback, private IP hoặc link-local IP để tránh mở rộng nhầm phạm vi truy cập từ trình duyệt.
@@ -84,5 +85,6 @@ Hồ sơ bệnh án là dữ liệu đặc biệt nhạy cảm. Dự án chưa t
 - Thiết kế RBAC kết hợp ABAC: vai trò, khoa phòng, ca trực, quan hệ điều trị và mục đích truy cập.
 - Bổ sung workflow ký/xác nhận consent, consent cho người giám hộ/đại diện hợp pháp, phạm vi dữ liệu được chia sẻ theo từng loại hồ sơ và trạng thái gửi/nhận thực tế của `RecordTransfer`.
 - Nâng audit từ chuỗi băm prototype lên lưu trữ append-only/WORM, retention policy, cảnh báo khi chuỗi hash lỗi và quy trình điều tra.
+- Tự động hóa backup theo lịch, mã hóa/ký manifest, đẩy offsite và diễn tập phục hồi định kỳ có bằng chứng.
 - Tách secret khỏi mã nguồn.
 - Bổ sung kiểm thử phân quyền và kiểm thử API contract.

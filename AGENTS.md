@@ -41,6 +41,7 @@ URL mặc định:
 - Thuật ngữ: `docs/GLOSSARY.md`
 - Roadmap: `docs/ROADMAP.md`
 - Docker: `docs/runbooks/DOCKER.md`
+- Backup/restore: `docs/runbooks/BACKUP_RESTORE.md`
 - Testing/harness: `harness/README.md`
 - Versioning: `VERSIONING.md`
 

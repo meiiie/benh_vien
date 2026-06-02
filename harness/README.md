@@ -39,6 +39,14 @@ Lệnh này chạy:
 - Kiểm tra biên kiến trúc frontend: `App.tsx` không phình to, HTTP đi qua API client, cấu hình demo tách theo miền thay vì God defaults file, formatter không bị gom lẫn miền, type lâm sàng phải import từ module nghiệp vụ chuyên biệt thay vì barrel tương thích `types/clinical.ts`, UI chuyển hồ sơ tách list/metadata/actions/form/delivery-attempt/tóm tắt vận hành thay vì gom vào panel chính, renderer hồ sơ lâm sàng tách hợp đồng type khỏi phần lắp JSX, API adapter hồ sơ lâm sàng tách theo encounter/clinical entry/thuốc/care workflow/diagnostics thay vì God module, state hồ sơ lâm sàng tách collection/form/status thay vì God hook, command builder thuốc tách theo kê đơn/cấp phát/dùng thuốc, command builder care workflow/diagnostics tách theo từng resource, form cấp phát thuốc tách context/supply/dosage, form ghi nhận dùng thuốc tách context/performer/dosage, và panel tài liệu bệnh án/dị ứng an toàn/chẩn đoán/chỉ số/y lệnh dịch vụ/thuốc/care workflow/LIS/RIS/PACS không gom form command nhiều trường vào panel hiển thị.
 - Kiểm tra Docker Compose dev/prod parse hợp lệ.
 
+## Backup/restore runbook
+
+```bash
+pnpm run harness:backup-restore
+```
+
+Harness này kiểm tra [docs/runbooks/BACKUP_RESTORE.md](../docs/runbooks/BACKUP_RESTORE.md) vẫn có đủ lệnh backup PostgreSQL bằng `pg_dump`, restore bằng `pg_restore`, đối chiếu `schema_migrations`, backup object storage bằng `mc mirror`, RPO/RTO mẫu, retention, mã hóa offsite, bằng chứng diễn tập phục hồi và phần giới hạn chưa đạt production thật.
+
 ## Smoke test FHIR
 
 ```bash
