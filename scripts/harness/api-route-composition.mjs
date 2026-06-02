@@ -1074,6 +1074,12 @@ const standardizedJsonErrorRoutePaths = [
       "apps/api/src/modules/access-control/patient-record-access-responses.ts"
     ),
     label: "Patient record access responses"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/record-transfers/record-transfer-creation-routes.ts"
+    ),
+    label: "RecordTransfer creation route"
   }
 ];
 const standardizedRequestIdNotFoundRoutePaths = [

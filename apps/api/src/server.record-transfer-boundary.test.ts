@@ -676,7 +676,8 @@ describe("API record-transfer boundary", () => {
 
     expect(response.statusCode).toBe(403);
     expect(response.json()).toMatchObject({
-      error: "CONSENT_DOES_NOT_ALLOW_RECORD_TRANSFER"
+      error: "CONSENT_DOES_NOT_ALLOW_RECORD_TRANSFER",
+      requestId: expect.any(String)
     });
   });
 

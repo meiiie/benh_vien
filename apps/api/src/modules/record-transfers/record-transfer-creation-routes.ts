@@ -17,6 +17,7 @@ import {
   requirePermission
 } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
+import { sendJsonErrorResponse } from "../http/http-json-error-response.js";
 import { sendValidationErrorResponse } from "../http/http-validation-error-response.js";
 import { sendRecordTransferDomainError } from "./record-transfer-command-route-helpers.js";
 import { resolveRecordTransferFhirEndpoint } from "./record-transfer-fhir-endpoint-resolver.js";
@@ -69,7 +70,7 @@ export async function registerRecordTransferCreationRoutes(
         granteeOrganizationId: parsed.data.recipientOrganizationId
       })
     ) {
-      return reply.status(403).send({
+      return sendJsonErrorResponse(reply, 403, request.id, {
         error: "CONSENT_DOES_NOT_ALLOW_RECORD_TRANSFER",
         message:
           "Không thể tạo yêu cầu chuyển hồ sơ nếu consent không tồn tại, hết hiệu lực hoặc không khớp đơn vị nhận."
