@@ -618,6 +618,16 @@ const domainBudgets = [
     role: "FHIR DiagnosticReport resource type"
   },
   {
+    path: "packages/domain/src/fhir/map-diagnostic-report-to-fhir.ts",
+    maxLines: 85,
+    role: "FHIR DiagnosticReport public mapper and workflow references"
+  },
+  {
+    path: "packages/domain/src/fhir/map-diagnostic-report-codings.ts",
+    maxLines: 75,
+    role: "FHIR DiagnosticReport profile, category and code mapping"
+  },
+  {
     path: "packages/domain/src/fhir/fhir-imaging-study.types.ts",
     maxLines: 80,
     role: "FHIR ImagingStudy resource type"
@@ -1002,6 +1012,12 @@ const fhirDiagnosticsTypesPath = resolve("packages/domain/src/fhir/fhir-diagnost
 const fhirDiagnosticReportTypesPath = resolve(
   "packages/domain/src/fhir/fhir-diagnostic-report.types.ts"
 );
+const mapDiagnosticReportToFhirPath = resolve(
+  "packages/domain/src/fhir/map-diagnostic-report-to-fhir.ts"
+);
+const mapDiagnosticReportCodingsPath = resolve(
+  "packages/domain/src/fhir/map-diagnostic-report-codings.ts"
+);
 const fhirImagingStudyTypesPath = resolve("packages/domain/src/fhir/fhir-imaging-study.types.ts");
 const fhirPatientTypesPath = resolve("packages/domain/src/fhir/fhir-patient.types.ts");
 const fhirOperationOutcomeTypesPath = resolve(
@@ -1301,6 +1317,14 @@ const mapProcedureCodingsSource = await readFile(mapProcedureCodingsPath, "utf8"
 const fhirDiagnosticsTypesSource = await readFile(fhirDiagnosticsTypesPath, "utf8");
 const fhirDiagnosticReportTypesSource = await readFile(
   fhirDiagnosticReportTypesPath,
+  "utf8"
+);
+const mapDiagnosticReportToFhirSource = await readFile(
+  mapDiagnosticReportToFhirPath,
+  "utf8"
+);
+const mapDiagnosticReportCodingsSource = await readFile(
+  mapDiagnosticReportCodingsPath,
   "utf8"
 );
 const fhirImagingStudyTypesSource = await readFile(fhirImagingStudyTypesPath, "utf8");
@@ -3991,6 +4015,76 @@ for (const forbidden of [
   if (forbidden.test(mapProcedureCodingsSource)) {
     throw new Error(
       "map-procedure-codings.ts must stay a coding/performer helper and must not own Procedure resource orchestration or clinical references."
+    );
+  }
+}
+
+for (const required of [
+  /export function mapDiagnosticReportToFhir/,
+  /from "\.\/map-diagnostic-report-codings\.js"/,
+  /diagnosticReportFhirProfile/,
+  /toDiagnosticReportCategory/,
+  /toDiagnosticReportCodeableConcept/,
+  /resourceType:\s*"DiagnosticReport"/,
+  /basedOnServiceRequestId/,
+  /resultObservationIds/,
+  /presentedFormUrl/
+]) {
+  if (!required.test(mapDiagnosticReportToFhirSource)) {
+    throw new Error(
+      "map-diagnostic-report-to-fhir.ts must keep the public DiagnosticReport mapper, workflow references, result references and presented form while delegating profile, category and CodeableConcept helpers to map-diagnostic-report-codings.ts."
+    );
+  }
+}
+
+for (const forbidden of [
+  /const categoryCodings/,
+  /\bDiagnosticReportCategory\b/,
+  /\bDiagnosticReportCode\b/,
+  /categoryCoding/,
+  /"http:\/\/terminology\.hl7\.org\/CodeSystem\/v2-0074"/
+]) {
+  if (forbidden.test(mapDiagnosticReportToFhirSource)) {
+    throw new Error(
+      "DiagnosticReport FHIR profile, diagnostic service category and CodeableConcept mapping belong in map-diagnostic-report-codings.ts, not in the public mapper."
+    );
+  }
+}
+
+for (const required of [
+  /export const diagnosticReportFhirProfile/,
+  /export function toDiagnosticReportCategory/,
+  /export function toDiagnosticReportCodeableConcept/,
+  /DiagnosticReportCategory/,
+  /DiagnosticReportCode/,
+  /v2-0074/,
+  /\bLAB\b/,
+  /\bRAD\b/,
+  /\bPAT\b/
+]) {
+  if (!required.test(mapDiagnosticReportCodingsSource)) {
+    throw new Error(
+      "map-diagnostic-report-codings.ts must keep DiagnosticReport FHIR profile, diagnostic service category catalog and CodeableConcept mapping."
+    );
+  }
+}
+
+for (const forbidden of [
+  /mapDiagnosticReportToFhir/,
+  /resourceType:\s*"DiagnosticReport"/,
+  /patientId/,
+  /encounterId/,
+  /basedOnServiceRequestId/,
+  /resultObservationIds/,
+  /presentedFormUrl/,
+  /performerOrganizationId/,
+  /resultsInterpreterPractitionerId/,
+  /effectiveAt/,
+  /issuedAt/
+]) {
+  if (forbidden.test(mapDiagnosticReportCodingsSource)) {
+    throw new Error(
+      "map-diagnostic-report-codings.ts must stay a coding helper and must not own DiagnosticReport resource orchestration, workflow references or presented form mapping."
     );
   }
 }
