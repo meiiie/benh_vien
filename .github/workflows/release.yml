@@ -58,6 +58,12 @@ jobs:
           push: true
           provenance: mode=max
           sbom: true
+          labels: |
+            org.opencontainers.image.title=WiiiCare API
+            org.opencontainers.image.description=WiiiCare clinical interoperability API
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.version.outputs.value }}
           tags: |
             ghcr.io/${{ github.repository }}/api:${{ steps.version.outputs.value }}
 
@@ -69,5 +75,11 @@ jobs:
           push: true
           provenance: mode=max
           sbom: true
+          labels: |
+            org.opencontainers.image.title=WiiiCare Web
+            org.opencontainers.image.description=WiiiCare clinical interoperability web app
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.version.outputs.value }}
           tags: |
             ghcr.io/${{ github.repository }}/web:${{ steps.version.outputs.value }}

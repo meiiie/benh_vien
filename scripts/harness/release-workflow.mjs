@@ -41,11 +41,37 @@ for (const { pattern, message } of requiredPatterns) {
 
 const provenanceAttestationCount = countMatches(releaseWorkflow, /provenance:\s*mode=max/g);
 const sbomAttestationCount = countMatches(releaseWorkflow, /sbom:\s*true/g);
+const requiredOciLabelCounts = [
+  {
+    label: "org.opencontainers.image.source",
+    pattern:
+      /org\.opencontainers\.image\.source=https:\/\/github\.com\/\$\{\{\s*github\.repository\s*\}\}/g
+  },
+  {
+    label: "org.opencontainers.image.revision",
+    pattern: /org\.opencontainers\.image\.revision=\$\{\{\s*github\.sha\s*\}\}/g
+  },
+  {
+    label: "org.opencontainers.image.version",
+    pattern:
+      /org\.opencontainers\.image\.version=\$\{\{\s*steps\.version\.outputs\.value\s*\}\}/g
+  }
+];
 
 if (provenanceAttestationCount !== 2 || sbomAttestationCount !== 2) {
   throw new Error(
     "Release workflow must publish both API and web images with provenance: mode=max and sbom: true."
   );
+}
+
+for (const { label, pattern } of requiredOciLabelCounts) {
+  const count = countMatches(releaseWorkflow, pattern);
+
+  if (count !== 2) {
+    throw new Error(
+      `Release workflow must set ${label} on both API and web images; found ${count}.`
+    );
+  }
 }
 
 if (/:\s*latest\b|:latest\b/.test(releaseWorkflow)) {
@@ -62,6 +88,7 @@ console.log(
       releaseWorkflowPath,
       provenanceAttestationCount,
       sbomAttestationCount,
+      requiredOciLabels: requiredOciLabelCounts.map(({ label }) => label),
       mutableLatestTagsAllowed: false
     },
     null,
