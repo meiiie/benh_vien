@@ -1064,6 +1064,16 @@ const standardizedJsonErrorRoutePaths = [
   {
     path: resolve("apps/api/src/modules/auth/auth-session-routes.ts"),
     label: "Auth session route"
+  },
+  {
+    path: resolve("apps/api/src/modules/access-control/access-permission-responses.ts"),
+    label: "Access permission responses"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/access-control/patient-record-access-responses.ts"
+    ),
+    label: "Patient record access responses"
   }
 ];
 const standardizedRequestIdNotFoundRoutePaths = [
@@ -2861,7 +2871,7 @@ for (const route of standardizedDomainErrorRouteSources) {
 }
 
 for (const route of standardizedJsonErrorRouteSources) {
-  if (/\breply\.status\((?:401|403|429)\)\.send\(\{/.test(route.source)) {
+  if (/\breply\.status\((?:400|401|403|409|429)\)\.send\(\{/.test(route.source)) {
     throw new Error(
       `${route.label} must use sendJsonErrorResponse instead of inline request-id JSON error response handling.`
     );

@@ -44,10 +44,9 @@ export function sendPatientAccessDeniedResponse(
     return;
   }
 
-  reply.status(403).send({
+  sendJsonErrorResponse(reply, 403, request.id, {
     error: "PATIENT_ACCESS_DENIED",
     message: patientAccessDeniedMessage,
-    requestId: request.id,
     patientId: patient.id,
     actor: {
       id: actor.actorId,
@@ -86,10 +85,9 @@ export function sendMergedPatientRecordConflict(
     return;
   }
 
-  reply.status(409).send({
+  sendJsonErrorResponse(reply, 409, request.id, {
     error: "PATIENT_RECORD_MERGED",
     message,
-    requestId: request.id,
     patientId: patient.id,
     mergedIntoPatientId: snapshot.mergedIntoPatientId,
     mergedAt: snapshot.mergedAt

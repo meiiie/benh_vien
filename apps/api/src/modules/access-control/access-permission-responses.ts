@@ -1,6 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { ActorContext, Permission } from "@benh-vien-so/domain";
 import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
+import { sendJsonErrorResponse } from "../http/http-json-error-response.js";
 import { acceptsFhirJson } from "./access-context-http.js";
 
 const unauthenticatedMessage =
@@ -29,10 +30,9 @@ export function sendInvalidPurposeOfUseResponse(
     return;
   }
 
-  reply.status(400).send({
+  sendJsonErrorResponse(reply, 400, request.id, {
     error: "INVALID_PURPOSE_OF_USE",
     message,
-    requestId: request.id,
     allowedPurposeOfUse: ["TREATMENT", "AUDIT", "OPERATIONS"]
   });
 }
@@ -59,10 +59,9 @@ export function sendUnauthenticatedResponse(
     return;
   }
 
-  reply.status(401).send({
+  sendJsonErrorResponse(reply, 401, request.id, {
     error: "UNAUTHENTICATED",
-    message: unauthenticatedMessage,
-    requestId: request.id
+    message: unauthenticatedMessage
   });
 }
 
@@ -96,10 +95,9 @@ export function sendForbiddenPermissionResponse(
     return;
   }
 
-  reply.status(403).send({
+  sendJsonErrorResponse(reply, 403, request.id, {
     error: "FORBIDDEN",
     message,
-    requestId: request.id,
     permission,
     actor: {
       id: actor.actorId,
