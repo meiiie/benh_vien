@@ -257,7 +257,11 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/MedicationRequestDosageTimingFields.tsx",
   "apps/web/src/features/clinical-records/MedicationRequestPrescriptionFields.tsx",
   "apps/web/src/features/clinical-records/MedicationRequestPanel.tsx",
+  "apps/web/src/features/clinical-records/medicationAdministrationFormatters.ts",
+  "apps/web/src/features/clinical-records/medicationDispenseFormatters.ts",
+  "apps/web/src/features/clinical-records/medicationFormatterPrimitives.ts",
   "apps/web/src/features/clinical-records/medicationFormatters.ts",
+  "apps/web/src/features/clinical-records/medicationRequestFormatters.ts",
   "apps/web/src/features/clinical-records/medicationAdministrationCommandBuilders.ts",
   "apps/web/src/features/clinical-records/medicationCommandBuilders.ts",
   "apps/web/src/features/clinical-records/medicationDispenseCommandBuilders.ts",
@@ -713,6 +717,31 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/clinical-records/medicationAdministrationCommandBuilders.ts",
     maxLines: 120,
     role: "MedicationAdministration actual-use command builder"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/medicationFormatters.ts",
+    maxLines: 30,
+    role: "Medication formatter compatibility barrel"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/medicationFormatterPrimitives.ts",
+    maxLines: 40,
+    role: "Shared medication label and quantity formatter primitives"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/medicationRequestFormatters.ts",
+    maxLines: 100,
+    role: "MedicationRequest presentation formatters"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/medicationDispenseFormatters.ts",
+    maxLines: 90,
+    role: "MedicationDispense presentation formatters"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/medicationAdministrationFormatters.ts",
+    maxLines: 120,
+    role: "MedicationAdministration presentation formatters"
   },
   {
     path: "apps/web/src/features/clinical-records/carePlanCommandBuilders.ts",
