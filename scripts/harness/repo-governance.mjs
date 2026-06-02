@@ -3,10 +3,17 @@ import { resolve } from "node:path";
 
 const codeownersPath = resolve(".github/CODEOWNERS");
 const pullRequestTemplatePath = resolve(".github/pull_request_template.md");
+const bugReportTemplatePath = resolve(".github/ISSUE_TEMPLATE/bug_report.md");
+const featureRequestTemplatePath = resolve(".github/ISSUE_TEMPLATE/feature_request.md");
 
 const codeowners = await readFile(codeownersPath, "utf8");
 const pullRequestTemplate = await readFile(pullRequestTemplatePath, "utf8");
+const bugReportTemplate = await readFile(bugReportTemplatePath, "utf8");
+const featureRequestTemplate = await readFile(featureRequestTemplatePath, "utf8");
 const normalizedPullRequestTemplate = stripVietnameseMarks(pullRequestTemplate).toLowerCase();
+const normalizedBugReportTemplate = stripVietnameseMarks(bugReportTemplate).toLowerCase();
+const normalizedFeatureRequestTemplate =
+  stripVietnameseMarks(featureRequestTemplate).toLowerCase();
 
 const requiredCodeownerPatterns = [
   "*",
@@ -78,6 +85,38 @@ if (missingPullRequestTemplatePhrases.length > 0) {
   );
 }
 
+const requiredIssueTemplatePhrases = [
+  {
+    label: "no real patient data warning",
+    phrase: "khong dua du lieu benh nhan that"
+  },
+  {
+    label: "de-identification reminder",
+    phrase: "an danh"
+  },
+  {
+    label: "secret warning",
+    phrase: "secret"
+  }
+];
+
+for (const { name, content } of [
+  { name: "bug report", content: normalizedBugReportTemplate },
+  { name: "feature request", content: normalizedFeatureRequestTemplate }
+]) {
+  const missingIssueTemplatePhrases = requiredIssueTemplatePhrases.filter(
+    ({ phrase }) => !content.includes(phrase)
+  );
+
+  if (missingIssueTemplatePhrases.length > 0) {
+    throw new Error(
+      `${name} issue template is missing healthcare data hygiene prompts: ${missingIssueTemplatePhrases
+        .map(({ label }) => label)
+        .join(", ")}`
+    );
+  }
+}
+
 console.log(
   JSON.stringify(
     {
@@ -85,10 +124,12 @@ console.log(
       check: "Repository governance coverage",
       codeownersPath,
       pullRequestTemplatePath,
+      issueTemplatePaths: [bugReportTemplatePath, featureRequestTemplatePath],
       requiredCodeownerPatterns,
       requiredPullRequestTemplatePhrases: requiredPullRequestTemplatePhrases.map(
         ({ label }) => label
-      )
+      ),
+      requiredIssueTemplatePhrases: requiredIssueTemplatePhrases.map(({ label }) => label)
     },
     null,
     2

@@ -61,7 +61,7 @@ Harness này kiểm tra chỉ các file `.env*.example` được track, `.gitign
 pnpm run harness:repo-governance
 ```
 
-Harness này kiểm tra CODEOWNERS vẫn bao phủ domain, contracts, API, web, migrations, GitHub workflows, harness, compose, infra và tài liệu compliance/runbook; đồng thời kiểm PR template vẫn yêu cầu `pnpm run ci`, tác động API/domain/Docker, bảo mật dữ liệu và ghi chú y tế/tuân thủ cho FHIR, DICOM, audit, phân quyền và rủi ro còn lại.
+Harness này kiểm tra CODEOWNERS vẫn bao phủ domain, contracts, API, web, migrations, GitHub workflows, harness, compose, infra và tài liệu compliance/runbook; đồng thời kiểm PR template vẫn yêu cầu `pnpm run ci`, tác động API/domain/Docker, bảo mật dữ liệu và ghi chú y tế/tuân thủ cho FHIR, DICOM, audit, phân quyền, rủi ro còn lại. Issue templates cũng phải nhắc không đưa dữ liệu bệnh nhân thật, secret hoặc dữ liệu chưa ẩn danh lên GitHub.
 
 ## Smoke test FHIR
 
