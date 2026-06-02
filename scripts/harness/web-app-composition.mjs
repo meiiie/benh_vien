@@ -2,6 +2,7 @@ import { readdir, stat, readFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 
 const appPath = resolve("apps/web/src/App.tsx");
+const mainPath = resolve("apps/web/src/main.tsx");
 const webSrcPath = resolve("apps/web/src");
 const allowedFetchModulePath = resolve("apps/web/src/api/clinicalApi.ts");
 const sharedClinicalFormatterPath = resolve("apps/web/src/lib/clinicalFormatters.ts");
@@ -579,6 +580,7 @@ const featureModuleBudgets = [
 ];
 
 const appSource = await readFile(appPath, "utf8");
+const mainSource = await readFile(mainPath, "utf8");
 const sharedClinicalFormatterSource = await readFile(sharedClinicalFormatterPath, "utf8");
 const appLineCount = appSource.split(/\r?\n/).length;
 const directFetchPattern = /\bfetch\s*\(/;
@@ -649,6 +651,12 @@ const forbiddenAppApiPathPatterns = [
 if (appLineCount > maxAppLines) {
   throw new Error(
     `apps/web/src/App.tsx has ${appLineCount} lines; keep it at or below ${maxAppLines} by extracting pages, shell components, types, config, and pure helpers.`
+  );
+}
+
+if (/getElementById\("root"\)!/.test(mainSource)) {
+  throw new Error(
+    "apps/web/src/main.tsx must guard the root element explicitly instead of using a non-null assertion."
   );
 }
 
