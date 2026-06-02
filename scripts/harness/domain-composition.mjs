@@ -483,6 +483,16 @@ const domainBudgets = [
     role: "FHIR Observation resource type"
   },
   {
+    path: "packages/domain/src/fhir/map-observation-to-fhir.ts",
+    maxLines: 65,
+    role: "FHIR Observation public mapper, value and clinical references"
+  },
+  {
+    path: "packages/domain/src/fhir/map-observation-codings.ts",
+    maxLines: 70,
+    role: "FHIR Observation profile, category and code mapping"
+  },
+  {
     path: "packages/domain/src/fhir/fhir-allergy-intolerance.types.ts",
     maxLines: 80,
     role: "FHIR AllergyIntolerance resource type"
@@ -929,6 +939,8 @@ const fhirConditionTypesPath = resolve("packages/domain/src/fhir/fhir-condition.
 const mapConditionToFhirPath = resolve("packages/domain/src/fhir/map-condition-to-fhir.ts");
 const mapConditionCodingsPath = resolve("packages/domain/src/fhir/map-condition-codings.ts");
 const fhirObservationTypesPath = resolve("packages/domain/src/fhir/fhir-observation.types.ts");
+const mapObservationToFhirPath = resolve("packages/domain/src/fhir/map-observation-to-fhir.ts");
+const mapObservationCodingsPath = resolve("packages/domain/src/fhir/map-observation-codings.ts");
 const fhirAllergyIntoleranceTypesPath = resolve(
   "packages/domain/src/fhir/fhir-allergy-intolerance.types.ts"
 );
@@ -1225,6 +1237,8 @@ const fhirConditionTypesSource = await readFile(fhirConditionTypesPath, "utf8");
 const mapConditionToFhirSource = await readFile(mapConditionToFhirPath, "utf8");
 const mapConditionCodingsSource = await readFile(mapConditionCodingsPath, "utf8");
 const fhirObservationTypesSource = await readFile(fhirObservationTypesPath, "utf8");
+const mapObservationToFhirSource = await readFile(mapObservationToFhirPath, "utf8");
+const mapObservationCodingsSource = await readFile(mapObservationCodingsPath, "utf8");
 const fhirAllergyIntoleranceTypesSource = await readFile(
   fhirAllergyIntoleranceTypesPath,
   "utf8"
@@ -3000,6 +3014,72 @@ for (const required of [
   if (!required.test(observationValidationSource)) {
     throw new Error(
       "observation.validation.ts must keep Observation quantity, value, status and timeline guards."
+    );
+  }
+}
+
+for (const required of [
+  /export function mapObservationToFhir/,
+  /from "\.\/map-observation-codings\.js"/,
+  /observationFhirProfile/,
+  /toObservationCategory/,
+  /toObservationCodeableConcept/,
+  /resourceType:\s*"Observation"/,
+  /valueQuantity/,
+  /valueString/
+]) {
+  if (!required.test(mapObservationToFhirSource)) {
+    throw new Error(
+      "map-observation-to-fhir.ts must keep the public Observation mapper, value mapping and clinical references while delegating profile, category and CodeableConcept helpers to map-observation-codings.ts."
+    );
+  }
+}
+
+for (const forbidden of [
+  /const categoryLabels/,
+  /const categoryCodes/,
+  /categoryCodings/,
+  /\bObservationCategory\b/,
+  /\bObservationCode\b/,
+  /"http:\/\/terminology\.hl7\.org\/CodeSystem\/observation-category"/
+]) {
+  if (forbidden.test(mapObservationToFhirSource)) {
+    throw new Error(
+      "Observation FHIR profile, category coding and CodeableConcept mapping belong in map-observation-codings.ts, not in the public mapper."
+    );
+  }
+}
+
+for (const required of [
+  /export const observationFhirProfile/,
+  /export function toObservationCategory/,
+  /export function toObservationCodeableConcept/,
+  /ObservationCategory/,
+  /ObservationCode/,
+  /observation-category/,
+  /\blaboratory:/,
+  /"vital-signs"/
+]) {
+  if (!required.test(mapObservationCodingsSource)) {
+    throw new Error(
+      "map-observation-codings.ts must keep Observation FHIR profile, observation-category catalog and CodeableConcept mapping."
+    );
+  }
+}
+
+for (const forbidden of [
+  /mapObservationToFhir/,
+  /resourceType:\s*"Observation"/,
+  /patientId/,
+  /encounterId/,
+  /effectiveAt/,
+  /valueQuantity/,
+  /valueString/,
+  /performerPractitionerId/
+]) {
+  if (forbidden.test(mapObservationCodingsSource)) {
+    throw new Error(
+      "map-observation-codings.ts must stay a coding helper and must not own Observation resource orchestration, values or clinical references."
     );
   }
 }
