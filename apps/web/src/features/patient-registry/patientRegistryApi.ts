@@ -1,4 +1,5 @@
 import type { ClinicalApiClient } from "../../api/clinicalApi.js";
+import { defaultTransferContext } from "../../config/demoClinicalDefaults.js";
 import type { PurposeOfUse } from "../../types/appRuntime.js";
 import type {
   Patient,
@@ -77,6 +78,10 @@ export function exportPatientFhirDocumentBundle(
   patientId: string
 ): Promise<unknown> {
   return api.requestJson<unknown>(`/patients/${patientId}/fhir-document-bundle`, {
+    headers: {
+      "x-consent-reference": defaultTransferContext.consentReference,
+      "x-recipient-organization-id": defaultTransferContext.recipientOrganizationId
+    },
     purposeOfUse: "TREATMENT"
   });
 }

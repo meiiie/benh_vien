@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
 import { FhirPanel, PageHeader } from "../components/AppShell.js";
+import {
+  FhirDocumentBundleSummary
+} from "../features/interoperability/FhirDocumentBundleSummary.js";
 
 type ReferenceSignal = {
   readonly name: string;
@@ -86,6 +89,7 @@ export function InteropPage({
         <FhirPanel title="FHIR Provider Directory Bundle JSON" badge="Organization/Endpoint" value={providerDirectoryFhirPreview} />
         <FhirPanel title="FHIR Patient JSON" badge="Patient" value={patientFhirPreview} />
         <FhirPanel title="FHIR Patient Record Bundle JSON" badge="Bundle" value={patientFhirBundlePreview} />
+        <FhirDocumentBundleSummary value={patientFhirDocumentBundlePreview} />
         <FhirPanel title="FHIR Clinical Document Bundle JSON" badge="Composition" value={patientFhirDocumentBundlePreview} />
         <FhirPanel title="FHIR Encounter JSON" badge="Encounter" value={encounterFhirPreview} />
         <FhirPanel title="FHIR AllergyIntolerance JSON" badge="AllergyIntolerance" value={allergyIntoleranceFhirPreview} />

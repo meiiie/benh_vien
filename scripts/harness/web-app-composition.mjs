@@ -8,6 +8,9 @@ const allowedFetchModulePath = resolve("apps/web/src/api/clinicalApi.ts");
 const clinicalDocumentApiPath = resolve(
   "apps/web/src/features/clinical-documents/clinicalDocumentApi.ts"
 );
+const patientRegistryApiPath = resolve(
+  "apps/web/src/features/patient-registry/patientRegistryApi.ts"
+);
 const sharedClinicalFormatterPath = resolve("apps/web/src/lib/clinicalFormatters.ts");
 const clinicalTypeBarrelImportPattern =
   /(?:from|import\s*\()\s*["'][^"']*types\/clinical\.js["']/;
@@ -128,6 +131,8 @@ const requiredModules = [
   "apps/web/src/features/consents/consentCommandBuilders.ts",
   "apps/web/src/features/consents/consentFormatters.ts",
   "apps/web/src/features/fhir-preview/fhirPreviewLoaders.ts",
+  "apps/web/src/features/interoperability/FhirDocumentBundleSummary.tsx",
+  "apps/web/src/features/interoperability/fhirDocumentBundleSummaryModel.ts",
   "apps/web/src/features/interoperability/interopPanelRenderers.tsx",
   "apps/web/src/features/patient-registry/CreatePatientPanel.tsx",
   "apps/web/src/features/patient-registry/PatientDetailPanel.tsx",
@@ -259,6 +264,16 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/record-transfers/RecordTransferInteropPanel.tsx",
     maxLines: 160,
     role: "Record transfer panel composition"
+  },
+  {
+    path: "apps/web/src/features/interoperability/FhirDocumentBundleSummary.tsx",
+    maxLines: 160,
+    role: "FHIR document Bundle readiness summary"
+  },
+  {
+    path: "apps/web/src/features/interoperability/fhirDocumentBundleSummaryModel.ts",
+    maxLines: 120,
+    role: "FHIR document Bundle summary parser"
   },
   {
     path: "apps/web/src/features/record-transfers/RecordTransferList.tsx",
@@ -585,6 +600,7 @@ const featureModuleBudgets = [
 const appSource = await readFile(appPath, "utf8");
 const mainSource = await readFile(mainPath, "utf8");
 const clinicalDocumentApiSource = await readFile(clinicalDocumentApiPath, "utf8");
+const patientRegistryApiSource = await readFile(patientRegistryApiPath, "utf8");
 const sharedClinicalFormatterSource = await readFile(sharedClinicalFormatterPath, "utf8");
 const appLineCount = appSource.split(/\r?\n/).length;
 const directFetchPattern = /\bfetch\s*\(/;
@@ -707,6 +723,31 @@ if (!/\/clinical-documents\/\$\{documentId\}\/fhir-provenance/.test(clinicalDocu
   );
 }
 
+const documentBundleTransferContextChecks = [
+  {
+    pattern: /defaultTransferContext/,
+    message:
+      "Patient registry web adapter must reuse the demo transfer context when exporting the FHIR document Bundle."
+  },
+  {
+    pattern: /"x-consent-reference":\s*defaultTransferContext\.consentReference/,
+    message:
+      "FHIR document Bundle export must send x-consent-reference so the API can validate transfer consent."
+  },
+  {
+    pattern:
+      /"x-recipient-organization-id":\s*defaultTransferContext\.recipientOrganizationId/,
+    message:
+      "FHIR document Bundle export must send x-recipient-organization-id so the API can validate the receiving hospital."
+  }
+];
+
+for (const check of documentBundleTransferContextChecks) {
+  if (!check.pattern.test(patientRegistryApiSource)) {
+    throw new Error(check.message);
+  }
+}
+
 const webSourceFiles = await collectSourceFiles(webSrcPath);
 const forbiddenFetchFiles = [];
 const forbiddenClinicalTypeBarrelImportFiles = [];
@@ -777,6 +818,7 @@ console.log(
       appLineCount,
       maxAppLines,
       clinicalDocumentApiPath,
+      patientRegistryApiPath,
       featureBudgetCount: featureModuleBudgets.length,
       moduleCount: requiredModules.length
     },
