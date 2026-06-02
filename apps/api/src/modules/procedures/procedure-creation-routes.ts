@@ -22,6 +22,7 @@ import {
 } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
+import { sendValidationErrorResponse } from "../http/http-validation-error-response.js";
 import {
   toProcedureResponse,
   validateProcedureReferences
@@ -78,7 +79,7 @@ export async function registerProcedureCreationRoutes(
     });
 
     if (validationError) {
-      return reply.status(422).send(validationError);
+      return sendValidationErrorResponse(reply, validationError);
     }
 
     try {

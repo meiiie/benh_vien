@@ -20,6 +20,7 @@ import {
 } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
+import { sendValidationErrorResponse } from "../http/http-validation-error-response.js";
 import { toMedicationAdministrationResponse } from "./medication-administration-route-helpers.js";
 import { validateMedicationAdministrationReferences } from "./medication-administration-reference-validation.js";
 
@@ -69,7 +70,7 @@ export async function registerMedicationAdministrationCreationRoutes(
     });
 
     if (validationError) {
-      return reply.status(422).send(validationError);
+      return sendValidationErrorResponse(reply, validationError);
     }
 
     try {

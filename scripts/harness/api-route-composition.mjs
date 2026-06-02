@@ -168,6 +168,11 @@ const routeBudgets = [
     role: "HTTP DomainError to 422 response mapper"
   },
   {
+    path: "apps/api/src/modules/http/http-validation-error-response.ts",
+    maxLines: 30,
+    role: "HTTP validation error to 422 response mapper"
+  },
+  {
     path: "apps/api/src/modules/http/http-content-negotiation.ts",
     maxLines: 50,
     role: "HTTP FHIR content negotiation helpers"
@@ -1017,6 +1022,14 @@ const requiredHttpDomainErrorResponseHelpers = [
   "DomainError",
   "status(422)"
 ];
+const httpValidationErrorResponsePath = resolve(
+  "apps/api/src/modules/http/http-validation-error-response.ts"
+);
+const requiredHttpValidationErrorResponseHelpers = [
+  "sendValidationErrorResponse",
+  "HttpValidationErrorResponse",
+  "status(422)"
+];
 const standardizedDomainErrorRoutePaths = [
   {
     path: resolve(
@@ -1059,6 +1072,70 @@ const standardizedDomainErrorRoutePaths = [
   {
     path: resolve("apps/api/src/modules/patients/patient-merge-routes.ts"),
     label: "Patient merge route"
+  }
+];
+const standardizedValidationErrorRoutePaths = [
+  {
+    path: resolve(
+      "apps/api/src/modules/clinical-documents/clinical-document-creation-routes.ts"
+    ),
+    label: "ClinicalDocument creation route"
+  },
+  {
+    path: resolve("apps/api/src/modules/conditions/condition-creation-routes.ts"),
+    label: "Condition creation route"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/allergy-intolerances/allergy-intolerance-creation-routes.ts"
+    ),
+    label: "AllergyIntolerance creation route"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/diagnostic-reports/diagnostic-report-creation-routes.ts"
+    ),
+    label: "DiagnosticReport creation route"
+  },
+  {
+    path: resolve("apps/api/src/modules/workflow-tasks/workflow-task-creation-routes.ts"),
+    label: "WorkflowTask creation route"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/medication-requests/medication-request-creation-routes.ts"
+    ),
+    label: "MedicationRequest creation route"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/medication-administrations/medication-administration-creation-routes.ts"
+    ),
+    label: "MedicationAdministration creation route"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/service-requests/service-request-creation-routes.ts"
+    ),
+    label: "ServiceRequest creation route"
+  },
+  {
+    path: resolve("apps/api/src/modules/imaging-studies/imaging-study-creation-routes.ts"),
+    label: "ImagingStudy creation route"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/medication-dispenses/medication-dispense-creation-routes.ts"
+    ),
+    label: "MedicationDispense creation route"
+  },
+  {
+    path: resolve("apps/api/src/modules/procedures/procedure-creation-routes.ts"),
+    label: "Procedure creation route"
+  },
+  {
+    path: resolve("apps/api/src/modules/observations/observation-creation-routes.ts"),
+    label: "Observation creation route"
   }
 ];
 const standardizedDomainErrorHelperPaths = [
@@ -2237,8 +2314,18 @@ const httpDomainErrorResponseSource = await readFile(
   httpDomainErrorResponsePath,
   "utf8"
 );
+const httpValidationErrorResponseSource = await readFile(
+  httpValidationErrorResponsePath,
+  "utf8"
+);
 const standardizedDomainErrorRouteSources = await Promise.all(
   standardizedDomainErrorRoutePaths.map(async (route) => ({
+    ...route,
+    source: await readFile(route.path, "utf8")
+  }))
+);
+const standardizedValidationErrorRouteSources = await Promise.all(
+  standardizedValidationErrorRoutePaths.map(async (route) => ({
     ...route,
     source: await readFile(route.path, "utf8")
   }))
@@ -2547,6 +2634,14 @@ for (const helper of requiredHttpDomainErrorResponseHelpers) {
   }
 }
 
+for (const helper of requiredHttpValidationErrorResponseHelpers) {
+  if (!httpValidationErrorResponseSource.includes(helper)) {
+    throw new Error(
+      `HTTP validation error response helper must keep ${helper} so route adapters share the same validation-error to 422 mapping.`
+    );
+  }
+}
+
 for (const route of standardizedDomainErrorRouteSources) {
   if (/\bDomainError\b/.test(route.source)) {
     throw new Error(
@@ -2557,6 +2652,20 @@ for (const route of standardizedDomainErrorRouteSources) {
   if (!route.source.includes("sendDomainErrorResponse")) {
     throw new Error(
       `${route.label} must use sendDomainErrorResponse so DomainError payloads stay centralized.`
+    );
+  }
+}
+
+for (const route of standardizedValidationErrorRouteSources) {
+  if (route.source.includes("reply.status(422).send(validationError)")) {
+    throw new Error(
+      `${route.label} must use sendValidationErrorResponse instead of inline validation-error response handling.`
+    );
+  }
+
+  if (!route.source.includes("sendValidationErrorResponse")) {
+    throw new Error(
+      `${route.label} must use sendValidationErrorResponse so validation-error payloads stay centralized.`
     );
   }
 }

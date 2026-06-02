@@ -17,6 +17,7 @@ import {
   requirePermission
 } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
+import { sendValidationErrorResponse } from "../http/http-validation-error-response.js";
 import {
   sendObservationDomainError,
   toObservationResponse
@@ -65,7 +66,7 @@ export async function registerObservationCreationRoutes(
     );
 
     if (validationError) {
-      return reply.status(422).send(validationError);
+      return sendValidationErrorResponse(reply, validationError);
     }
 
     try {
