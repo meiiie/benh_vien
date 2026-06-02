@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { LoginRequestSchema } from "@benh-vien-so/contracts";
 import type { AuditEventRepository } from "@benh-vien-so/domain";
+import { sendJsonErrorResponse } from "../http/http-json-error-response.js";
 import { dummyPasswordHash, verifyPassword } from "./auth-password.js";
 import { demoAccounts } from "./auth-demo-accounts.js";
 import {
@@ -31,11 +32,10 @@ export async function registerAuthLoginRoutes(
         }
       });
 
-      return reply.status(403).send({
+      return sendJsonErrorResponse(reply, 403, request.id, {
         error: "DEMO_AUTH_DISABLED",
         message:
-          "Đăng nhập demo đã bị tắt trong môi trường production. Hãy tích hợp IAM/SSO hoặc bật BVS_DEMO_AUTH_ENABLED=true cho phiên demo có kiểm soát.",
-        requestId: request.id
+          "Đăng nhập demo đã bị tắt trong môi trường production. Hãy tích hợp IAM/SSO hoặc bật BVS_DEMO_AUTH_ENABLED=true cho phiên demo có kiểm soát."
       });
     }
 
@@ -72,10 +72,9 @@ export async function registerAuthLoginRoutes(
         }
       });
 
-      return reply.status(429).send({
+      return sendJsonErrorResponse(reply, 429, request.id, {
         error: "AUTH_RATE_LIMITED",
         message: "Quá nhiều lần đăng nhập. Vui lòng thử lại sau.",
-        requestId: request.id,
         retryAfterSeconds: rateLimitDecision.retryAfterSeconds
       });
     }
@@ -97,10 +96,9 @@ export async function registerAuthLoginRoutes(
         }
       });
 
-      return reply.status(401).send({
+      return sendJsonErrorResponse(reply, 401, request.id, {
         error: "INVALID_CREDENTIALS",
-        message: "Tài khoản hoặc mật khẩu không hợp lệ.",
-        requestId: request.id
+        message: "Tài khoản hoặc mật khẩu không hợp lệ."
       });
     }
 
@@ -116,10 +114,9 @@ export async function registerAuthLoginRoutes(
         }
       });
 
-      return reply.status(403).send({
+      return sendJsonErrorResponse(reply, 403, request.id, {
         error: "ROLE_MISMATCH",
         message: "Vai trò yêu cầu không khớp với tài khoản đăng nhập.",
-        requestId: request.id,
         expectedRole: account.role
       });
     }

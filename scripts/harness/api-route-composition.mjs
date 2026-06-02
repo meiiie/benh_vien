@@ -178,6 +178,11 @@ const routeBudgets = [
     role: "HTTP JSON not-found error response mapper"
   },
   {
+    path: "apps/api/src/modules/http/http-json-error-response.ts",
+    maxLines: 40,
+    role: "HTTP JSON error response mapper with request-id injection"
+  },
+  {
     path: "apps/api/src/modules/http/http-content-negotiation.ts",
     maxLines: 50,
     role: "HTTP FHIR content negotiation helpers"
@@ -1042,6 +1047,24 @@ const requiredHttpNotFoundErrorResponseHelpers = [
   "sendNotFoundErrorResponse",
   "status(404)",
   "message"
+];
+const httpJsonErrorResponsePath = resolve(
+  "apps/api/src/modules/http/http-json-error-response.ts"
+);
+const requiredHttpJsonErrorResponseHelpers = [
+  "sendJsonErrorResponse",
+  "HttpJsonErrorPayload",
+  "requestId"
+];
+const standardizedJsonErrorRoutePaths = [
+  {
+    path: resolve("apps/api/src/modules/auth/auth-login-routes.ts"),
+    label: "Auth login route"
+  },
+  {
+    path: resolve("apps/api/src/modules/auth/auth-session-routes.ts"),
+    label: "Auth session route"
+  }
 ];
 const standardizedDomainErrorRoutePaths = [
   {
@@ -2449,8 +2472,18 @@ const httpNotFoundErrorResponseSource = await readFile(
   httpNotFoundErrorResponsePath,
   "utf8"
 );
+const httpJsonErrorResponseSource = await readFile(
+  httpJsonErrorResponsePath,
+  "utf8"
+);
 const standardizedDomainErrorRouteSources = await Promise.all(
   standardizedDomainErrorRoutePaths.map(async (route) => ({
+    ...route,
+    source: await readFile(route.path, "utf8")
+  }))
+);
+const standardizedJsonErrorRouteSources = await Promise.all(
+  standardizedJsonErrorRoutePaths.map(async (route) => ({
     ...route,
     source: await readFile(route.path, "utf8")
   }))
@@ -2787,6 +2820,14 @@ for (const helper of requiredHttpNotFoundErrorResponseHelpers) {
   }
 }
 
+for (const helper of requiredHttpJsonErrorResponseHelpers) {
+  if (!httpJsonErrorResponseSource.includes(helper)) {
+    throw new Error(
+      `HTTP JSON error response helper must keep ${helper} so request-id JSON envelopes stay centralized.`
+    );
+  }
+}
+
 for (const route of standardizedDomainErrorRouteSources) {
   if (/\bDomainError\b/.test(route.source)) {
     throw new Error(
@@ -2797,6 +2838,20 @@ for (const route of standardizedDomainErrorRouteSources) {
   if (!route.source.includes("sendDomainErrorResponse")) {
     throw new Error(
       `${route.label} must use sendDomainErrorResponse so DomainError payloads stay centralized.`
+    );
+  }
+}
+
+for (const route of standardizedJsonErrorRouteSources) {
+  if (/\breply\.status\((?:401|403|429)\)\.send\(\{/.test(route.source)) {
+    throw new Error(
+      `${route.label} must use sendJsonErrorResponse instead of inline request-id JSON error response handling.`
+    );
+  }
+
+  if (!route.source.includes("sendJsonErrorResponse")) {
+    throw new Error(
+      `${route.label} must use sendJsonErrorResponse so request-id JSON error payloads stay centralized.`
     );
   }
 }
