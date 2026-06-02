@@ -18,6 +18,10 @@ const requiredPatterns = [
     message: "Release workflow checkout must not persist git credentials."
   },
   {
+    pattern: /Validate semantic version tag[\s\S]*\^v\[0-9\]\+\\\.\[0-9\]\+\\\.\[0-9\]\+\$/,
+    message: "Release workflow must validate tags against vMAJOR.MINOR.PATCH before publishing images."
+  },
+  {
     pattern:
       /ghcr\.io\/\$\{\{\s*github\.repository\s*\}\}\/api:\$\{\{\s*steps\.version\.outputs\.value\s*\}\}/,
     message: "Release workflow must publish the API image with the exact semantic version tag."

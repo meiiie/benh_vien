@@ -37,6 +37,8 @@ git tag v0.2.0
 git push origin v0.2.0
 ```
 
+Tag release phải đúng dạng `vMAJOR.MINOR.PATCH`. Workflow sẽ dừng nếu tag không khớp dạng này.
+
 Workflow `Release Images` sẽ build và push:
 
 - `ghcr.io/meiiie/benh_vien/api:<version>`
