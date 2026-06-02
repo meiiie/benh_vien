@@ -3,12 +3,12 @@ import type { FhirTask } from "./fhir-types.js";
 import {
   buildRecordTransferBusinessStatus,
   buildRecordTransferCode,
-  buildRecordTransferNotes,
   formatRecordTransferBundleOutput,
   mapRecordTransferStatus,
   recordTransferIdentifierSystem,
   recordTransferTaskProfile
 } from "./map-record-transfer-task-codings.js";
+import { buildRecordTransferNotes } from "./map-record-transfer-task-notes.js";
 
 export function mapRecordTransferToFhirTask(recordTransfer: RecordTransfer): FhirTask {
   const snapshot = recordTransfer.toSnapshot();

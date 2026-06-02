@@ -809,8 +809,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/fhir/map-record-transfer-task-codings.ts",
-    maxLines: 130,
-    role: "FHIR RecordTransfer Task status, code, businessStatus and note mapping"
+    maxLines: 90,
+    role: "FHIR RecordTransfer Task status, code and businessStatus mapping"
+  },
+  {
+    path: "packages/domain/src/fhir/map-record-transfer-task-notes.ts",
+    maxLines: 45,
+    role: "FHIR RecordTransfer Task operational note mapping"
   },
   {
     path: "packages/domain/src/fhir/map-audit-event-to-fhir.ts",
@@ -1099,6 +1104,9 @@ const mapRecordTransferToFhirTaskPath = resolve(
 );
 const mapRecordTransferTaskCodingsPath = resolve(
   "packages/domain/src/fhir/map-record-transfer-task-codings.ts"
+);
+const mapRecordTransferTaskNotesPath = resolve(
+  "packages/domain/src/fhir/map-record-transfer-task-notes.ts"
 );
 const mapAuditEventToFhirPath = resolve("packages/domain/src/fhir/map-audit-event-to-fhir.ts");
 const mapAuditEventCodingsPath = resolve("packages/domain/src/fhir/map-audit-event-codings.ts");
@@ -1470,6 +1478,10 @@ const mapRecordTransferToFhirTaskSource = await readFile(
 );
 const mapRecordTransferTaskCodingsSource = await readFile(
   mapRecordTransferTaskCodingsPath,
+  "utf8"
+);
+const mapRecordTransferTaskNotesSource = await readFile(
+  mapRecordTransferTaskNotesPath,
   "utf8"
 );
 const mapAuditEventToFhirSource = await readFile(mapAuditEventToFhirPath, "utf8");
@@ -2154,6 +2166,7 @@ for (const required of [
   /export function mapRecordTransferToFhirTask/,
   /resourceType:\s*"Task"/,
   /from "\.\/map-record-transfer-task-codings\.js"/,
+  /from "\.\/map-record-transfer-task-notes\.js"/,
   /buildRecordTransferBusinessStatus/,
   /buildRecordTransferCode/,
   /buildRecordTransferNotes/,
@@ -2162,7 +2175,7 @@ for (const required of [
 ]) {
   if (!required.test(mapRecordTransferToFhirTaskSource)) {
     throw new Error(
-      "map-record-transfer-to-fhir-task.ts must keep public RecordTransfer Task orchestration and delegate Task coding helpers to map-record-transfer-task-codings.ts."
+      "map-record-transfer-to-fhir-task.ts must keep public RecordTransfer Task orchestration and delegate Task coding/status helpers to map-record-transfer-task-codings.ts and note mapping to map-record-transfer-task-notes.ts."
     );
   }
 }
@@ -2187,28 +2200,67 @@ for (const required of [
   /export function mapRecordTransferStatus/,
   /export function buildRecordTransferBusinessStatus/,
   /export function buildRecordTransferCode/,
-  /export function buildRecordTransferNotes/,
   /export function formatRecordTransferBundleOutput/,
   /export function formatRecordTransferStatus/,
-  /RecordTransferSnapshot/,
-  /receivedByActorId/,
   /from "\.\.\/record-transfer\/record-transfer\.types\.js"/,
   /from "\.\/fhir-types\.js"/
 ]) {
   if (!required.test(mapRecordTransferTaskCodingsSource)) {
     throw new Error(
-      "map-record-transfer-task-codings.ts must keep RecordTransfer Task profile, identifier, status, businessStatus, code, bundle-output and note mapping."
+      "map-record-transfer-task-codings.ts must keep RecordTransfer Task profile, identifier, status, businessStatus, code and bundle-output mapping."
     );
   }
 }
 
 for (const forbidden of [
+  /RecordTransferSnapshot/,
+  /buildRecordTransferNotes/,
+  /receivedByActorId/,
+  /acknowledgementReference/,
+  /failureReason/,
   /resourceType:\s*"Task"/,
   /mapRecordTransferToFhirTask/
 ]) {
   if (forbidden.test(mapRecordTransferTaskCodingsSource)) {
     throw new Error(
-      "map-record-transfer-task-codings.ts must stay a Task coding helper and must not own RecordTransfer resource orchestration."
+      "map-record-transfer-task-codings.ts must stay a Task coding/status helper and must not own RecordTransfer resource orchestration or operational note mapping."
+    );
+  }
+}
+
+for (const required of [
+  /export function buildRecordTransferNotes/,
+  /RecordTransferSnapshot/,
+  /FhirTask/,
+  /receivedByActorId/,
+  /acknowledgementReference/,
+  /failureReason/,
+  /failedAt/,
+  /nextRetryAt/,
+  /retryCount/,
+  /deadLetteredAt/
+]) {
+  if (!required.test(mapRecordTransferTaskNotesSource)) {
+    throw new Error(
+      "map-record-transfer-task-notes.ts must keep RecordTransfer Task operational note mapping for acknowledgement, failure, retry and dead-letter states."
+    );
+  }
+}
+
+for (const forbidden of [
+  /recordTransferTaskProfile/,
+  /recordTransferIdentifierSystem/,
+  /mapRecordTransferStatus/,
+  /buildRecordTransferBusinessStatus/,
+  /buildRecordTransferCode/,
+  /formatRecordTransferBundleOutput/,
+  /formatRecordTransferStatus/,
+  /resourceType:\s*"Task"/,
+  /mapRecordTransferToFhirTask/
+]) {
+  if (forbidden.test(mapRecordTransferTaskNotesSource)) {
+    throw new Error(
+      "map-record-transfer-task-notes.ts must stay an operational note helper and must not own Task coding/status or resource orchestration."
     );
   }
 }
