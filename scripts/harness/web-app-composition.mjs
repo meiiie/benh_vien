@@ -216,6 +216,9 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/carePlanCommandBuilders.ts",
   "apps/web/src/features/clinical-records/careWorkflowFormatters.ts",
   "apps/web/src/features/clinical-records/clinicalEntryCommandBuilders.ts",
+  "apps/web/src/features/clinical-records/clinicalRecordCorePanelRenderers.tsx",
+  "apps/web/src/features/clinical-records/clinicalRecordDiagnosticPanelRenderers.tsx",
+  "apps/web/src/features/clinical-records/clinicalRecordMedicationPanelRenderers.tsx",
   "apps/web/src/features/clinical-records/clinicalRecordPanelRenderers.tsx",
   "apps/web/src/features/clinical-records/clinicalRecordPanelRendererTypes.ts",
   "apps/web/src/features/clinical-records/clinicalRecordPanelRendererDataTypes.ts",
@@ -515,8 +518,23 @@ const featureModuleBudgets = [
   },
   {
     path: "apps/web/src/features/clinical-records/clinicalRecordPanelRenderers.tsx",
-    maxLines: 270,
+    maxLines: 40,
     role: "Clinical record panel renderer composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/clinicalRecordCorePanelRenderers.tsx",
+    maxLines: 110,
+    role: "Clinical record encounter, problem and observation panel renderers"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/clinicalRecordDiagnosticPanelRenderers.tsx",
+    maxLines: 130,
+    role: "Clinical record diagnostic, procedure and workflow panel renderers"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/clinicalRecordMedicationPanelRenderers.tsx",
+    maxLines: 95,
+    role: "Clinical record medication panel renderers"
   },
   {
     path: "apps/web/src/features/clinical-records/clinicalRecordPanelRendererTypes.ts",
