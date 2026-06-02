@@ -19,11 +19,11 @@ export function FhirDocumentBundleSummary({ value }: { readonly value: unknown }
     <article className="panel bundle-summary-panel">
       <div className="panel-heading">
         <div>
-          <p className="eyebrow">Document Bundle readiness</p>
-          <h2>Gói bệnh án chuyển viện đang đóng những gì?</h2>
+          <p className="eyebrow">Sẵn sàng document Bundle</p>
+          <h2>Gói bệnh án chuyển viện đang gồm những thành phần nào?</h2>
         </div>
         <span className={isReady ? "pill cyan" : "pill gold"}>
-          {isReady ? "sẵn sàng demo" : "cần kiểm tra"}
+          {isReady ? "đủ điều kiện demo" : "cần kiểm tra"}
         </span>
       </div>
 

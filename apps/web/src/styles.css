@@ -271,6 +271,7 @@
 
 .dashboard-brief,
 .document-brief,
+.interop-brief,
 .workspace-brief {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -279,6 +280,7 @@
 
 .dashboard-brief article,
 .document-brief article,
+.interop-brief article,
 .workspace-brief article {
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 16px;
@@ -288,6 +290,7 @@
 
 .dashboard-brief span,
 .document-brief span,
+.interop-brief span,
 .workspace-brief span {
   color: var(--primary);
   font-size: 0.72rem;
@@ -298,6 +301,7 @@
 
 .dashboard-brief p,
 .document-brief p,
+.interop-brief p,
 .workspace-brief p {
   margin: 6px 0 0;
   color: var(--slate);
@@ -1319,6 +1323,7 @@ pre {
   .app-layout,
   .dashboard-brief,
   .document-brief,
+  .interop-brief,
   .workspace-brief,
   .dashboard-grid,
   .settings-grid,

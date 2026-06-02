@@ -18,6 +18,9 @@ const allowedFetchModulePath = resolve("apps/web/src/api/clinicalApi.ts");
 const fhirTransferContextSummaryPath = resolve(
   "apps/web/src/features/interoperability/FhirTransferContextSummary.tsx"
 );
+const fhirDocumentBundleSummaryPath = resolve(
+  "apps/web/src/features/interoperability/FhirDocumentBundleSummary.tsx"
+);
 const consentInteropPanelPath = resolve(
   "apps/web/src/features/consents/ConsentInteropPanel.tsx"
 );
@@ -643,6 +646,10 @@ const clinicalApiSource = await readFile(allowedFetchModulePath, "utf8");
 const clinicalDocumentPanelSource = await readFile(clinicalDocumentPanelPath, "utf8");
 const encounterPanelSource = await readFile(encounterPanelPath, "utf8");
 const consentInteropPanelSource = await readFile(consentInteropPanelPath, "utf8");
+const fhirDocumentBundleSummarySource = await readFile(
+  fhirDocumentBundleSummaryPath,
+  "utf8"
+);
 const fhirTransferContextSummarySource = await readFile(
   fhirTransferContextSummaryPath,
   "utf8"
@@ -881,6 +888,35 @@ for (const check of fhirTransferContextUiChecks) {
   if (!check.pattern.test(check.source)) {
     throw new Error(check.message);
   }
+}
+
+if (/eyebrow="Interop"/.test(interopPageSource)) {
+  throw new Error("Interop page must use a professional Vietnamese EMR interoperability header.");
+}
+
+if (
+  !/className="interop-brief"/.test(interopPageSource) ||
+  !/Định danh CCCD\/VNeID/.test(interopPageSource) ||
+  !/Consent, ký số và audit/.test(interopPageSource) ||
+  !/Composition và Bundle/.test(interopPageSource)
+) {
+  throw new Error("Interop page must explain identity, consent/audit and Composition/Bundle scope before FHIR previews.");
+}
+
+if (
+  /FHIR (?:Patient|Clinical Document Bundle|Consent|Record Transfer Task) JSON/.test(
+    interopPageSource
+  )
+) {
+  throw new Error("Interop FHIR panels must use workflow-first Vietnamese titles instead of raw JSON-first labels.");
+}
+
+if (/Document Bundle readiness/.test(fhirDocumentBundleSummarySource)) {
+  throw new Error("FHIR document Bundle summary must use a Vietnamese readiness label.");
+}
+
+if (!/Có quyền xem hồ sơ không đồng nghĩa được phép xuất liên viện/.test(fhirTransferContextSummarySource)) {
+  throw new Error("FHIR transfer context summary must separate chart-view permission from inter-hospital export permission.");
 }
 
 const clinicalApiOperationOutcomeChecks = [

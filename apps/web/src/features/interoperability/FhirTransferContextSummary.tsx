@@ -29,8 +29,8 @@ export function FhirTransferContextSummary({
     : "Chưa chọn bệnh nhân";
   const bundleLabel =
     context.bundleType === "document"
-      ? "FHIR document Bundle"
-      : "FHIR collection Bundle";
+      ? "FHIR document Bundle (gói tài liệu tự chứa)"
+      : "FHIR collection Bundle (gói tài nguyên rời)";
   const sourceOrganizationLabel = resolveProviderOrganizationLabel(
     providerDirectory,
     context.sourceOrganizationId
@@ -47,14 +47,14 @@ export function FhirTransferContextSummary({
           <p className="eyebrow">Ngữ cảnh liên thông</p>
           <h2>Bệnh án điện tử sẽ được đóng gói và chuyển như thế nào?</h2>
         </div>
-        <span className="pill cyan">kiểm consent</span>
+        <span className="pill cyan">kiểm tra Consent</span>
       </div>
 
       <div className="detail-grid compact transfer-context-grid">
         <Info label="Bệnh nhân" value={patientLabel} />
         <Info label="Cơ sở gửi" value={sourceOrganizationLabel} />
         <Info label="Cơ sở nhận" value={recipientOrganizationLabel} />
-        <Info label="Consent dùng để xuất" value={context.consentReference} />
+        <Info label="Căn cứ chia sẻ (Consent)" value={context.consentReference} />
         <Info label="Kiểu gói FHIR" value={bundleLabel} />
       </div>
 
@@ -84,8 +84,8 @@ export function FhirTransferContextSummary({
       </ol>
 
       <p className="transfer-context-note">
-        API không xuất Bundle chỉ vì người dùng có quyền xem hồ sơ. Mỗi lần xuất
-        gói liên viện phải có consent còn hiệu lực và đơn vị nhận khớp với ngữ
+        Có quyền xem hồ sơ không đồng nghĩa được phép xuất liên viện. Mỗi lần xuất
+        gói liên viện phải có Consent còn hiệu lực và đơn vị nhận khớp với ngữ
         cảnh chuyển hồ sơ.
       </p>
 

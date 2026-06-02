@@ -47,6 +47,21 @@ type InteropPageProps = {
   readonly workflowTaskFhirPreview: unknown;
 };
 
+const interopBriefItems = [
+  {
+    label: "Định danh CCCD/VNeID",
+    note: "Hồ sơ lâm sàng giữ CCCD/MRN ở Patient.identifier; VNeID thuộc lớp xác thực, tích hợp và cần được ghi audit riêng."
+  },
+  {
+    label: "Consent, ký số và audit",
+    note: "Mỗi lần xuất hồ sơ phải có căn cứ chia sẻ, dấu vết nguồn gốc, trạng thái ký/xác nhận và nhật ký truy cập."
+  },
+  {
+    label: "Composition và Bundle",
+    note: "Gói chuyển viện dùng Composition làm mục lục và Bundle type=document để bên nhận đọc được trọn bối cảnh."
+  }
+] as const;
+
 export function InteropPage({
   allergyIntoleranceFhirPreview,
   capabilityStatementPreview,
@@ -81,12 +96,21 @@ export function InteropPage({
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="Interop"
-        title="FHIR và hướng liên thông bệnh viện"
-        description="Màn này gom các biểu diễn FHIR hiện có để chuẩn bị cho luồng gửi sang HAPI FHIR hoặc hệ thống bệnh viện khác."
+        eyebrow="Liên thông bệnh án điện tử"
+        title="Chuẩn hóa gói FHIR để chuyển hồ sơ giữa bệnh viện"
+        description="Màn này trình bày luồng chuyển bệnh án theo hướng EMR: xác định bệnh nhân, cơ sở gửi/nhận, quyền chia sẻ, gói tài liệu FHIR và dấu vết phục vụ kiểm toán."
       />
 
-      <section className="workflow-strip" aria-label="Luồng liên thông">
+      <section className="interop-brief" aria-label="Trục chuẩn hóa liên thông bệnh án điện tử">
+        {interopBriefItems.map((item) => (
+          <article key={item.label}>
+            <span>{item.label}</span>
+            <p>{item.note}</p>
+          </article>
+        ))}
+      </section>
+
+      <section className="workflow-strip" aria-label="Các bước vận hành liên thông">
         {workflowSteps.map((item, index) => (
           <div className="workflow-step" key={item}>
             <span>{String(index + 1).padStart(2, "0")}</span>
@@ -102,33 +126,33 @@ export function InteropPage({
           providerDirectory={providerDirectory}
         />
         {providerDirectoryPanel}
-        <FhirPanel title="FHIR CapabilityStatement JSON" badge="CapabilityStatement" value={capabilityStatementPreview} />
-        <FhirPanel title="FHIR Provider Directory Bundle JSON" badge="Organization/Endpoint" value={providerDirectoryFhirPreview} />
-        <FhirPanel title="FHIR Patient JSON" badge="Patient" value={patientFhirPreview} />
-        <FhirPanel title="FHIR Patient Record Bundle JSON" badge="Bundle" value={patientFhirBundlePreview} />
+        <FhirPanel title="Năng lực FHIR của cổng liên thông" badge="CapabilityStatement" value={capabilityStatementPreview} />
+        <FhirPanel title="Danh bạ cơ sở y tế và endpoint FHIR" badge="Organization/Endpoint" value={providerDirectoryFhirPreview} />
+        <FhirPanel title="Định danh bệnh nhân dưới dạng FHIR Patient" badge="Patient" value={patientFhirPreview} />
+        <FhirPanel title="Gói dữ liệu hồ sơ bệnh nhân dạng collection Bundle" badge="Bundle" value={patientFhirBundlePreview} />
         <FhirDocumentBundleSummary value={patientFhirDocumentBundlePreview} />
-        <FhirPanel title="FHIR Clinical Document Bundle JSON" badge="Composition" value={patientFhirDocumentBundlePreview} />
-        <FhirPanel title="FHIR Encounter JSON" badge="Encounter" value={encounterFhirPreview} />
-        <FhirPanel title="FHIR AllergyIntolerance JSON" badge="AllergyIntolerance" value={allergyIntoleranceFhirPreview} />
-        <FhirPanel title="FHIR Condition JSON" badge="Condition" value={conditionFhirPreview} />
-        <FhirPanel title="FHIR ServiceRequest JSON" badge="ServiceRequest" value={serviceRequestFhirPreview} />
-        <FhirPanel title="FHIR Task JSON" badge="Task" value={workflowTaskFhirPreview} />
-        <FhirPanel title="FHIR Procedure JSON" badge="Procedure" value={procedureFhirPreview} />
-        <FhirPanel title="FHIR Observation JSON" badge="Observation" value={observationFhirPreview} />
-        <FhirPanel title="FHIR DiagnosticReport JSON" badge="DiagnosticReport" value={diagnosticReportFhirPreview} />
-        <FhirPanel title="FHIR ImagingStudy JSON" badge="ImagingStudy" value={imagingStudyFhirPreview} />
-        <FhirPanel title="FHIR MedicationRequest JSON" badge="MedicationRequest" value={medicationRequestFhirPreview} />
-        <FhirPanel title="FHIR MedicationDispense JSON" badge="MedicationDispense" value={medicationDispenseFhirPreview} />
-        <FhirPanel title="FHIR MedicationAdministration JSON" badge="MedicationAdministration" value={medicationAdministrationFhirPreview} />
-        <FhirPanel title="FHIR DocumentReference JSON" badge="DocumentReference" value={documentFhirPreview} />
-        <FhirPanel title="FHIR Document Provenance JSON" badge="Provenance" value={documentProvenanceFhirPreview} />
+        <FhirPanel title="Gói bệnh án điện tử dạng document Bundle" badge="Composition" value={patientFhirDocumentBundlePreview} />
+        <FhirPanel title="Lượt khám dưới dạng FHIR Encounter" badge="Encounter" value={encounterFhirPreview} />
+        <FhirPanel title="Dị ứng dưới dạng FHIR AllergyIntolerance" badge="AllergyIntolerance" value={allergyIntoleranceFhirPreview} />
+        <FhirPanel title="Chẩn đoán dưới dạng FHIR Condition" badge="Condition" value={conditionFhirPreview} />
+        <FhirPanel title="Chỉ định dịch vụ dưới dạng FHIR ServiceRequest" badge="ServiceRequest" value={serviceRequestFhirPreview} />
+        <FhirPanel title="Công việc điều phối dưới dạng FHIR Task" badge="Task" value={workflowTaskFhirPreview} />
+        <FhirPanel title="Thủ thuật dưới dạng FHIR Procedure" badge="Procedure" value={procedureFhirPreview} />
+        <FhirPanel title="Dấu hiệu sinh tồn/kết quả rời rạc dưới dạng FHIR Observation" badge="Observation" value={observationFhirPreview} />
+        <FhirPanel title="Báo cáo cận lâm sàng dưới dạng FHIR DiagnosticReport" badge="DiagnosticReport" value={diagnosticReportFhirPreview} />
+        <FhirPanel title="Nghiên cứu hình ảnh dưới dạng FHIR ImagingStudy" badge="ImagingStudy" value={imagingStudyFhirPreview} />
+        <FhirPanel title="Chỉ định thuốc dưới dạng FHIR MedicationRequest" badge="MedicationRequest" value={medicationRequestFhirPreview} />
+        <FhirPanel title="Cấp phát thuốc dưới dạng FHIR MedicationDispense" badge="MedicationDispense" value={medicationDispenseFhirPreview} />
+        <FhirPanel title="Ghi nhận dùng thuốc dưới dạng FHIR MedicationAdministration" badge="MedicationAdministration" value={medicationAdministrationFhirPreview} />
+        <FhirPanel title="Tài liệu bệnh án dưới dạng FHIR DocumentReference" badge="DocumentReference" value={documentFhirPreview} />
+        <FhirPanel title="Nguồn gốc tài liệu dưới dạng FHIR Provenance" badge="Provenance" value={documentProvenanceFhirPreview} />
         {consentInteropPanel}
-        <FhirPanel title="FHIR Consent JSON" badge="Consent" value={consentFhirPreview} />
+        <FhirPanel title="Đồng ý chia sẻ dưới dạng FHIR Consent" badge="Consent" value={consentFhirPreview} />
         {recordTransferInteropPanel}
-        <FhirPanel title="FHIR Record Transfer Task JSON" badge="Task" value={recordTransferFhirTaskPreview} />
+        <FhirPanel title="Lệnh chuyển hồ sơ dưới dạng FHIR Task" badge="Task" value={recordTransferFhirTaskPreview} />
         <article className="panel dark-panel">
-          <p className="eyebrow">Reference map</p>
-          <h2>Chuẩn đang bám theo</h2>
+          <p className="eyebrow">Bản đồ chuẩn tham chiếu</p>
+          <h2>Các chuẩn đang bám theo</h2>
           <div className="reference-list">
             {referenceSignals.map((reference) => (
               <div key={reference.name}>
