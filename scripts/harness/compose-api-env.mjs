@@ -1,5 +1,7 @@
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
+const apiDockerfilePath = "apps/api/Dockerfile";
 const composeFiles = ["docker-compose.yml", "docker-compose.prod.yml"];
 const labComposeFiles = ["infra/docker-compose.yml"];
 const composeProfiles = ["interop", "imaging"];
@@ -33,6 +35,7 @@ const apiPorts = composeConfig.services?.api?.ports ?? [];
 const webPorts = composeConfig.services?.web?.ports ?? [];
 const runtimeImages = collectRuntimeImages(composeConfig);
 const labRuntimeImages = collectRuntimeImages(labComposeConfig);
+const apiDockerfile = readFileSync(apiDockerfilePath, "utf8");
 
 if (!apiEnvironment || typeof apiEnvironment !== "object") {
   throw new Error("Expected docker compose service api to expose an environment map.");
@@ -69,17 +72,25 @@ if (mutableImages.length > 0) {
   );
 }
 
+if (!apiDockerfileRunsAsNodeUser(apiDockerfile)) {
+  throw new Error(
+    "API Docker runtime stage must drop privileges with USER node before starting the Node process."
+  );
+}
+
 console.log(
   JSON.stringify(
     {
       status: "ok",
-      check: "Docker compose API runtime environment, production exposure and image pinning",
+      check: "Docker compose API runtime environment, production exposure, image pinning and API container user",
       composeFiles,
       labComposeFiles,
       composeProfiles,
+      apiDockerfilePath,
       requiredApiEnvironmentKeys,
       apiPublishedPorts: apiPorts.length,
       webPublishedPorts: webPorts.length,
+      apiRuntimeUser: "node",
       pinnedRuntimeImages: runtimeImages,
       pinnedLabRuntimeImages: labRuntimeImages
     },
@@ -111,6 +122,12 @@ function findMutableImages(images, sourceFiles) {
     const reason = getMutableImageReason(image);
     return reason ? [{ serviceName, image, reason, sourceFiles }] : [];
   });
+}
+
+function apiDockerfileRunsAsNodeUser(dockerfile) {
+  return /\nFROM node:22-alpine AS runtime\b[\s\S]*\nUSER node\s*\n(?:EXPOSE 7310\s*\n)?CMD \["node", "apps\/api\/dist\/main\.js"\]/.test(
+    dockerfile
+  );
 }
 
 function getMutableImageReason(image) {

@@ -34,5 +34,6 @@ COPY --from=build /app/packages/contracts/package.json ./packages/contracts/pack
 COPY --from=build /app/packages/contracts/node_modules ./packages/contracts/node_modules
 COPY --from=build /app/packages/contracts/dist ./packages/contracts/dist
 
+USER node
 EXPOSE 7310
 CMD ["node", "apps/api/dist/main.js"]

@@ -185,6 +185,7 @@ pnpm compose:config
 
 - Không dùng `.env.prod.example` cho production thật; file này cố ý chứa placeholder để buộc người vận hành thay secret/mật khẩu trước khi boot production.
 - Network `backend` là internal, chỉ web và API được đưa ra ngoài qua network `frontend`.
+- API/migrate runtime image chạy bằng `USER node` thay vì root; nếu thêm logic cần ghi file trong container, phải dùng thư mục/volume có quyền phù hợp và chạy `pnpm run harness:compose-env`.
 - CI kiểm tra cấu hình web security header bằng `pnpm run harness:web-security` và kiểm tra header thật khi boot prod-like stack.
 - CI kiểm tra compose không dùng image runtime dạng `latest` hoặc thiếu tag bằng `pnpm run harness:compose-env`.
 - HAPI FHIR và Orthanc đang ở profile riêng để tránh vô tình bật dịch vụ nặng hoặc chưa có xác thực.
