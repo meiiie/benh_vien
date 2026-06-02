@@ -1,3 +1,5 @@
+import type { ProviderDirectory } from "../../types/providerDirectory.js";
+
 type LabeledValue = string;
 
 function labelOf<T extends string>(
@@ -19,4 +21,15 @@ export function formatProviderEndpointConnectionType(type: string): string {
     },
     type
   );
+}
+
+export function resolveProviderOrganizationLabel(
+  providerDirectory: ProviderDirectory | undefined,
+  organizationId: string
+): string {
+  const organization = providerDirectory?.organizations.find(
+    (item) => item.id === organizationId
+  );
+
+  return organization ? `${organization.name} (${organization.id})` : organizationId;
 }

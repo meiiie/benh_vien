@@ -1,4 +1,5 @@
 import type { FormEvent } from "react";
+import type { ProviderDirectory } from "../../types/providerDirectory.js";
 import type {
   NewRecordTransferForm,
   RecordTransfer,
@@ -20,6 +21,7 @@ type RecordTransferInteropPanelProps = {
   readonly isPatientMerged: boolean;
   readonly isSubmitting: boolean;
   readonly isWriteDisabled: boolean;
+  readonly providerDirectory?: ProviderDirectory;
   readonly recordTransfers: readonly RecordTransfer[];
   readonly selectedRecordTransfer?: RecordTransfer;
   readonly selectedRecordTransferId?: string;
@@ -52,6 +54,7 @@ export function RecordTransferInteropPanel({
   isPatientMerged,
   isSubmitting,
   isWriteDisabled,
+  providerDirectory,
   recordTransfers,
   selectedRecordTransfer,
   selectedRecordTransferId,
@@ -78,6 +81,7 @@ export function RecordTransferInteropPanel({
 
       <div className="document-layout">
         <RecordTransferList
+          providerDirectory={providerDirectory}
           recordTransfers={recordTransfers}
           selectedRecordTransferId={selectedRecordTransferId}
           onSelectRecordTransfer={onSelectRecordTransfer}
@@ -90,7 +94,10 @@ export function RecordTransferInteropPanel({
                 attempts={deliveryAttempts}
                 recordTransfer={selectedRecordTransfer}
               />
-              <RecordTransferMetadata recordTransfer={selectedRecordTransfer} />
+              <RecordTransferMetadata
+                providerDirectory={providerDirectory}
+                recordTransfer={selectedRecordTransfer}
+              />
               <RecordTransferActions
                 isPatientMerged={isPatientMerged}
                 recordTransfer={selectedRecordTransfer}

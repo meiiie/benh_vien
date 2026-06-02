@@ -7,12 +7,15 @@ import {
   formatDateTime
 } from "../../lib/clinicalFormatters.js";
 import type { Consent } from "../../types/consents.js";
+import type { ProviderDirectory } from "../../types/providerDirectory.js";
+import { resolveProviderOrganizationLabel } from "../provider-directory/providerDirectoryFormatters.js";
 
 type ConsentInteropPanelProps = {
   readonly consents: readonly Consent[];
   readonly consentReference: string;
   readonly isLoading: boolean;
   readonly isWriteDisabled: boolean;
+  readonly providerDirectory?: ProviderDirectory;
   readonly recipientOrganizationId: string;
   readonly revokingConsentId?: string;
   readonly onLoadFhirPreview: (consentId: string) => Promise<void> | void;
@@ -24,11 +27,17 @@ export function ConsentInteropPanel({
   consentReference,
   isLoading,
   isWriteDisabled,
+  providerDirectory,
   recipientOrganizationId,
   revokingConsentId,
   onLoadFhirPreview,
   onRevokeConsent
 }: ConsentInteropPanelProps) {
+  const recipientOrganizationLabel = resolveProviderOrganizationLabel(
+    providerDirectory,
+    recipientOrganizationId
+  );
+
   return (
     <article className="panel">
       <div className="panel-heading">
@@ -43,7 +52,7 @@ export function ConsentInteropPanel({
 
       <div className="detail-grid compact">
         <Info label="Mã đồng ý dùng để xuất Bundle" value={consentReference} />
-        <Info label="Đơn vị nhận" value={recipientOrganizationId} />
+        <Info label="Đơn vị nhận" value={recipientOrganizationLabel} />
       </div>
 
       <div className="reference-list">
@@ -76,7 +85,12 @@ export function ConsentInteropPanel({
               </div>
             </div>
             <span>
-              {formatConsentCategory(consent.category)} cho {consent.granteeOrganizationId},
+              {formatConsentCategory(consent.category)} cho{" "}
+              {resolveProviderOrganizationLabel(
+                providerDirectory,
+                consent.granteeOrganizationId
+              )}
+              ,
               hiệu lực từ {formatDateTime(consent.validFrom)}
               {consent.validUntil ? ` đến ${formatDateTime(consent.validUntil)}` : ""}
             </span>

@@ -1,4 +1,5 @@
 import { Info } from "../../components/AppShell.js";
+import { resolveProviderOrganizationLabel } from "../provider-directory/providerDirectoryFormatters.js";
 import type { Patient } from "../../types/patientRegistry.js";
 import type { ProviderDirectory } from "../../types/providerDirectory.js";
 import type { RecordTransferBundleType } from "../../types/recordTransfers.js";
@@ -30,11 +31,11 @@ export function FhirTransferContextSummary({
     context.bundleType === "document"
       ? "FHIR document Bundle"
       : "FHIR collection Bundle";
-  const sourceOrganizationLabel = resolveOrganizationLabel(
+  const sourceOrganizationLabel = resolveProviderOrganizationLabel(
     providerDirectory,
     context.sourceOrganizationId
   );
-  const recipientOrganizationLabel = resolveOrganizationLabel(
+  const recipientOrganizationLabel = resolveProviderOrganizationLabel(
     providerDirectory,
     context.recipientOrganizationId
   );
@@ -91,15 +92,4 @@ export function FhirTransferContextSummary({
       <p className="transfer-context-reason">{context.reason}</p>
     </article>
   );
-}
-
-function resolveOrganizationLabel(
-  providerDirectory: ProviderDirectory | undefined,
-  organizationId: string
-): string {
-  const organization = providerDirectory?.organizations.find(
-    (item) => item.id === organizationId
-  );
-
-  return organization ? `${organization.name} (${organization.id})` : organizationId;
 }

@@ -1,6 +1,8 @@
 import { Info } from "../../components/AppShell.js";
 import { formatDateTime } from "../../lib/clinicalFormatters.js";
+import type { ProviderDirectory } from "../../types/providerDirectory.js";
 import type { RecordTransfer } from "../../types/recordTransfers.js";
+import { resolveProviderOrganizationLabel } from "../provider-directory/providerDirectoryFormatters.js";
 import {
   formatRecordTransferBundleType,
   formatRecordTransferPriority,
@@ -9,10 +11,12 @@ import {
 } from "./recordTransferFormatters.js";
 
 type RecordTransferMetadataProps = {
+  readonly providerDirectory?: ProviderDirectory;
   readonly recordTransfer: RecordTransfer;
 };
 
 export function RecordTransferMetadata({
+  providerDirectory,
   recordTransfer
 }: RecordTransferMetadataProps) {
   return (
@@ -21,8 +25,20 @@ export function RecordTransferMetadata({
       <Info label="Độ ưu tiên" value={formatRecordTransferPriority(recordTransfer.priority)} />
       <Info label="Bundle" value={recordTransfer.bundleId} />
       <Info label="Loại gói" value={formatRecordTransferBundleType(recordTransfer.bundleType)} />
-      <Info label="Cơ sở gửi" value={recordTransfer.sourceOrganizationId} />
-      <Info label="Cơ sở nhận" value={recordTransfer.recipientOrganizationId} />
+      <Info
+        label="Cơ sở gửi"
+        value={resolveProviderOrganizationLabel(
+          providerDirectory,
+          recordTransfer.sourceOrganizationId
+        )}
+      />
+      <Info
+        label="Cơ sở nhận"
+        value={resolveProviderOrganizationLabel(
+          providerDirectory,
+          recordTransfer.recipientOrganizationId
+        )}
+      />
       <Info label="Consent" value={recordTransfer.consentReference} />
       <Info label="Người tạo" value={recordTransfer.requestedByActorId} />
       <Info

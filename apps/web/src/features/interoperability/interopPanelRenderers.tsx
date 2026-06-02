@@ -89,6 +89,7 @@ export function buildInteropPanelRenderers({
         consentReference={consentReference}
         isLoading={isLoadingConsents}
         isWriteDisabled={isWriteDisabled}
+        providerDirectory={providerDirectory}
         recipientOrganizationId={recipientOrganizationId}
         revokingConsentId={revokingConsentId}
         onLoadFhirPreview={onLoadConsentFhirPreview}
@@ -112,6 +113,7 @@ export function buildInteropPanelRenderers({
         isPatientMerged={isPatientMerged}
         isSubmitting={isSubmittingRecordTransfer}
         isWriteDisabled={isWriteDisabled}
+        providerDirectory={providerDirectory}
         recordTransfers={recordTransfers}
         selectedRecordTransfer={selectedRecordTransfer}
         selectedRecordTransferId={selectedRecordTransferId}

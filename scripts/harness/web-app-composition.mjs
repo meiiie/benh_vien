@@ -11,6 +11,18 @@ const allowedFetchModulePath = resolve("apps/web/src/api/clinicalApi.ts");
 const fhirTransferContextSummaryPath = resolve(
   "apps/web/src/features/interoperability/FhirTransferContextSummary.tsx"
 );
+const consentInteropPanelPath = resolve(
+  "apps/web/src/features/consents/ConsentInteropPanel.tsx"
+);
+const providerDirectoryFormattersPath = resolve(
+  "apps/web/src/features/provider-directory/providerDirectoryFormatters.ts"
+);
+const recordTransferListPath = resolve(
+  "apps/web/src/features/record-transfers/RecordTransferList.tsx"
+);
+const recordTransferMetadataPath = resolve(
+  "apps/web/src/features/record-transfers/RecordTransferMetadata.tsx"
+);
 const clinicalDocumentApiPath = resolve(
   "apps/web/src/features/clinical-documents/clinicalDocumentApi.ts"
 );
@@ -612,6 +624,7 @@ const featureModuleBudgets = [
 const appSource = await readFile(appPath, "utf8");
 const appRouteRendererSource = await readFile(appRouteRendererPath, "utf8");
 const clinicalApiSource = await readFile(allowedFetchModulePath, "utf8");
+const consentInteropPanelSource = await readFile(consentInteropPanelPath, "utf8");
 const fhirTransferContextSummarySource = await readFile(
   fhirTransferContextSummaryPath,
   "utf8"
@@ -621,6 +634,15 @@ const landingPageSource = await readFile(landingPagePath, "utf8");
 const mainSource = await readFile(mainPath, "utf8");
 const clinicalDocumentApiSource = await readFile(clinicalDocumentApiPath, "utf8");
 const patientRegistryApiSource = await readFile(patientRegistryApiPath, "utf8");
+const providerDirectoryFormattersSource = await readFile(
+  providerDirectoryFormattersPath,
+  "utf8"
+);
+const recordTransferListSource = await readFile(recordTransferListPath, "utf8");
+const recordTransferMetadataSource = await readFile(
+  recordTransferMetadataPath,
+  "utf8"
+);
 const sharedClinicalFormatterSource = await readFile(sharedClinicalFormatterPath, "utf8");
 const appLineCount = appSource.split(/\r?\n/).length;
 const directFetchPattern = /\bfetch\s*\(/;
@@ -794,10 +816,34 @@ const fhirTransferContextUiChecks = [
       "FHIR transfer context summary must display the receiving organization."
   },
   {
-    source: fhirTransferContextSummarySource,
-    pattern: /\bproviderDirectory\?\.organizations\.find\b/,
+    source: providerDirectoryFormattersSource,
+    pattern: /\bexport function resolveProviderOrganizationLabel\b/,
     message:
-      "FHIR transfer context summary must resolve organization names from Provider Directory when it is loaded."
+      "Provider Directory formatters must expose a shared organization label resolver."
+  },
+  {
+    source: fhirTransferContextSummarySource,
+    pattern: /\bresolveProviderOrganizationLabel\b/,
+    message:
+      "FHIR transfer context summary must use Provider Directory labels for source and receiving organizations."
+  },
+  {
+    source: consentInteropPanelSource,
+    pattern: /\bresolveProviderOrganizationLabel\b/,
+    message:
+      "Consent interop panel must use Provider Directory labels for the receiving organization."
+  },
+  {
+    source: recordTransferListSource,
+    pattern: /\bresolveProviderOrganizationLabel\b/,
+    message:
+      "Record transfer list must use Provider Directory labels for the receiving organization."
+  },
+  {
+    source: recordTransferMetadataSource,
+    pattern: /\bresolveProviderOrganizationLabel\b/,
+    message:
+      "Record transfer metadata must use Provider Directory labels for source and receiving organizations."
   },
   {
     source: fhirTransferContextSummarySource,

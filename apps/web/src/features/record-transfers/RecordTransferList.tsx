@@ -1,17 +1,21 @@
 import { formatDateTime } from "../../lib/clinicalFormatters.js";
+import type { ProviderDirectory } from "../../types/providerDirectory.js";
 import type { RecordTransfer } from "../../types/recordTransfers.js";
+import { resolveProviderOrganizationLabel } from "../provider-directory/providerDirectoryFormatters.js";
 import {
   formatRecordTransferBundleType,
   formatRecordTransferStatus
 } from "./recordTransferFormatters.js";
 
 type RecordTransferListProps = {
+  readonly providerDirectory?: ProviderDirectory;
   readonly recordTransfers: readonly RecordTransfer[];
   readonly selectedRecordTransferId?: string;
   readonly onSelectRecordTransfer: (recordTransferId: string) => void;
 };
 
 export function RecordTransferList({
+  providerDirectory,
   recordTransfers,
   selectedRecordTransferId,
   onSelectRecordTransfer
@@ -32,7 +36,11 @@ export function RecordTransferList({
           <span>{formatRecordTransferStatus(recordTransfer.status)}</span>
           <strong>{formatRecordTransferBundleType(recordTransfer.bundleType)}</strong>
           <small>
-            {recordTransfer.recipientOrganizationId} ·{" "}
+            {resolveProviderOrganizationLabel(
+              providerDirectory,
+              recordTransfer.recipientOrganizationId
+            )}{" "}
+            ·{" "}
             {formatDateTime(recordTransfer.requestedAt)}
           </small>
         </button>
