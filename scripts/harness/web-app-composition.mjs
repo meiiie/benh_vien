@@ -1,5 +1,5 @@
 import { readdir, stat, readFile } from "node:fs/promises";
-import { relative, resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 
 const appPath = resolve("apps/web/src/App.tsx");
 const appDerivedContextPath = resolve("apps/web/src/application/appDerivedContext.ts");
@@ -60,6 +60,107 @@ const patientDetailPanelPath = resolve(
 const sharedClinicalFormatterPath = resolve("apps/web/src/lib/clinicalFormatters.ts");
 const clinicalTypeBarrelImportPattern =
   /(?:from|import\s*\()\s*["'][^"']*types\/clinical\.js["']/;
+const webLayerImportRules = [
+  {
+    sourcePrefix: "apps/web/src/application/",
+    forbiddenTargetPrefixes: [
+      "apps/web/src/App",
+      "apps/web/src/main",
+      "apps/web/src/components/",
+      "apps/web/src/pages/"
+    ],
+    message:
+      "Application composition must depend on API/auth/config/features/types, not UI shell or page modules."
+  },
+  {
+    sourcePrefix: "apps/web/src/features/",
+    forbiddenTargetPrefixes: [
+      "apps/web/src/App",
+      "apps/web/src/main",
+      "apps/web/src/application/",
+      "apps/web/src/pages/"
+    ],
+    message:
+      "Feature modules must stay reusable below page/application orchestration."
+  },
+  {
+    sourcePrefix: "apps/web/src/components/",
+    forbiddenTargetPrefixes: [
+      "apps/web/src/App",
+      "apps/web/src/main",
+      "apps/web/src/application/",
+      "apps/web/src/features/",
+      "apps/web/src/pages/"
+    ],
+    message:
+      "Shared components must not depend on feature, application or page modules."
+  },
+  {
+    sourcePrefix: "apps/web/src/types/",
+    forbiddenTargetPrefixes: [
+      "apps/web/src/App",
+      "apps/web/src/main",
+      "apps/web/src/application/",
+      "apps/web/src/components/",
+      "apps/web/src/features/",
+      "apps/web/src/pages/"
+    ],
+    message:
+      "Type modules must remain a low-level contract surface."
+  },
+  {
+    sourcePrefix: "apps/web/src/lib/",
+    forbiddenTargetPrefixes: [
+      "apps/web/src/App",
+      "apps/web/src/main",
+      "apps/web/src/application/",
+      "apps/web/src/components/",
+      "apps/web/src/features/",
+      "apps/web/src/pages/"
+    ],
+    message:
+      "Shared lib modules must stay UI-layer independent."
+  },
+  {
+    sourcePrefix: "apps/web/src/api/",
+    forbiddenTargetPrefixes: [
+      "apps/web/src/App",
+      "apps/web/src/main",
+      "apps/web/src/application/",
+      "apps/web/src/components/",
+      "apps/web/src/features/",
+      "apps/web/src/pages/"
+    ],
+    message:
+      "API client modules must stay below feature and UI orchestration."
+  },
+  {
+    sourcePrefix: "apps/web/src/config/",
+    forbiddenTargetPrefixes: [
+      "apps/web/src/App",
+      "apps/web/src/main",
+      "apps/web/src/application/",
+      "apps/web/src/components/",
+      "apps/web/src/features/",
+      "apps/web/src/pages/"
+    ],
+    message:
+      "Configuration modules must not depend on runtime feature or UI layers."
+  },
+  {
+    sourcePrefix: "apps/web/src/auth/",
+    forbiddenTargetPrefixes: [
+      "apps/web/src/App",
+      "apps/web/src/main",
+      "apps/web/src/application/",
+      "apps/web/src/components/",
+      "apps/web/src/features/",
+      "apps/web/src/pages/"
+    ],
+    message:
+      "Auth modules must stay below feature and UI orchestration."
+  }
+];
 const requiredModules = [
   "apps/web/src/api/clinicalApi.ts",
   "apps/web/src/auth/authApi.ts",
@@ -1327,6 +1428,14 @@ if (!/Tác nhân \(actor\)/.test(auditPanelsSource) || !/Xuất FHIR AuditEvent 
 }
 
 const webSourceFiles = await collectSourceFiles(webSrcPath);
+const forbiddenLayerImports = await findForbiddenLayerImports(webSourceFiles);
+
+if (forbiddenLayerImports.length > 0) {
+  throw new Error(
+    `Web frontend layer dependency rules failed: ${forbiddenLayerImports.join("; ")}`
+  );
+}
+
 const forbiddenFetchFiles = [];
 const forbiddenClinicalTypeBarrelImportFiles = [];
 
@@ -1424,4 +1533,69 @@ async function collectSourceFiles(directoryPath) {
   }
 
   return files;
+}
+
+async function findForbiddenLayerImports(sourceFiles) {
+  const violations = [];
+
+  for (const filePath of sourceFiles) {
+    const sourcePath = toRepoPath(filePath);
+    const matchingRules = webLayerImportRules.filter((rule) =>
+      sourcePath.startsWith(rule.sourcePrefix)
+    );
+
+    if (matchingRules.length === 0) {
+      continue;
+    }
+
+    const source = await readFile(filePath, "utf8");
+
+    for (const specifier of extractModuleSpecifiers(source)) {
+      if (!specifier.startsWith(".")) {
+        continue;
+      }
+
+      const targetPath = toRepoPath(resolve(dirname(filePath), specifier));
+
+      for (const rule of matchingRules) {
+        if (
+          rule.forbiddenTargetPrefixes.some((prefix) =>
+            targetPath.startsWith(prefix)
+          )
+        ) {
+          violations.push(
+            `${sourcePath} imports ${specifier} -> ${targetPath}. ${rule.message}`
+          );
+        }
+      }
+    }
+  }
+
+  return violations;
+}
+
+function extractModuleSpecifiers(source) {
+  const specifiers = [];
+  const fromImportPattern =
+    /\b(?:import|export)\b[^;]*?\bfrom\s*["']([^"']+)["']/g;
+  const sideEffectImportPattern = /\bimport\s*["']([^"']+)["']/g;
+  const dynamicImportPattern = /\bimport\(\s*["']([^"']+)["']\s*\)/g;
+
+  for (const match of source.matchAll(fromImportPattern)) {
+    specifiers.push(match[1]);
+  }
+
+  for (const match of source.matchAll(sideEffectImportPattern)) {
+    specifiers.push(match[1]);
+  }
+
+  for (const match of source.matchAll(dynamicImportPattern)) {
+    specifiers.push(match[1]);
+  }
+
+  return specifiers;
+}
+
+function toRepoPath(filePath) {
+  return relative(process.cwd(), filePath).replaceAll("\\", "/");
 }
