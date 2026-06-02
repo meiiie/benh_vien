@@ -543,6 +543,16 @@ const domainBudgets = [
     role: "FHIR Task resource type"
   },
   {
+    path: "packages/domain/src/fhir/map-workflow-task-to-fhir.ts",
+    maxLines: 90,
+    role: "FHIR WorkflowTask public mapper and clinical references"
+  },
+  {
+    path: "packages/domain/src/fhir/map-workflow-task-codings.ts",
+    maxLines: 120,
+    role: "FHIR WorkflowTask profile, identifier, businessStatus, code, owner and IO item mapping"
+  },
+  {
     path: "packages/domain/src/fhir/fhir-procedure.types.ts",
     maxLines: 130,
     role: "FHIR Procedure resource type"
@@ -923,6 +933,12 @@ const fhirServiceRequestTypesPath = resolve(
   "packages/domain/src/fhir/fhir-service-request.types.ts"
 );
 const fhirTaskTypesPath = resolve("packages/domain/src/fhir/fhir-task.types.ts");
+const mapWorkflowTaskToFhirPath = resolve(
+  "packages/domain/src/fhir/map-workflow-task-to-fhir.ts"
+);
+const mapWorkflowTaskCodingsPath = resolve(
+  "packages/domain/src/fhir/map-workflow-task-codings.ts"
+);
 const fhirProcedureTypesPath = resolve("packages/domain/src/fhir/fhir-procedure.types.ts");
 const mapProcedureToFhirPath = resolve("packages/domain/src/fhir/map-procedure-to-fhir.ts");
 const mapProcedureCodingsPath = resolve("packages/domain/src/fhir/map-procedure-codings.ts");
@@ -1207,6 +1223,8 @@ const mapMedicationAdministrationCodingsSource = await readFile(
 const fhirCareflowTypesSource = await readFile(fhirCareflowTypesPath, "utf8");
 const fhirServiceRequestTypesSource = await readFile(fhirServiceRequestTypesPath, "utf8");
 const fhirTaskTypesSource = await readFile(fhirTaskTypesPath, "utf8");
+const mapWorkflowTaskToFhirSource = await readFile(mapWorkflowTaskToFhirPath, "utf8");
+const mapWorkflowTaskCodingsSource = await readFile(mapWorkflowTaskCodingsPath, "utf8");
 const fhirProcedureTypesSource = await readFile(fhirProcedureTypesPath, "utf8");
 const mapProcedureToFhirSource = await readFile(mapProcedureToFhirPath, "utf8");
 const mapProcedureCodingsSource = await readFile(mapProcedureCodingsPath, "utf8");
@@ -3492,6 +3510,81 @@ for (const forbidden of [
   if (forbidden.test(mapConsentCodingsSource)) {
     throw new Error(
       "map-consent-codings.ts must stay a coding/provision helper and must not own Consent resource orchestration or revocation extension mapping."
+    );
+  }
+}
+
+for (const required of [
+  /export function mapWorkflowTaskToFhir/,
+  /from "\.\/map-workflow-task-codings\.js"/,
+  /workflowTaskFhirProfile/,
+  /buildWorkflowTaskIdentifier/,
+  /buildWorkflowTaskBusinessStatus/,
+  /buildWorkflowTaskCode/,
+  /mapWorkflowTaskOwner/,
+  /toWorkflowTaskInput/,
+  /toWorkflowTaskOutput/,
+  /resourceType:\s*"Task"/
+]) {
+  if (!required.test(mapWorkflowTaskToFhirSource)) {
+    throw new Error(
+      "map-workflow-task-to-fhir.ts must keep the public WorkflowTask Task resource mapper and clinical references while delegating profile, identifier, businessStatus, code, owner and IO item helpers to map-workflow-task-codings.ts."
+    );
+  }
+}
+
+for (const forbidden of [
+  /const taskBusinessStatusSystem/,
+  /function mapOwner/,
+  /function toFhirReference/,
+  /WorkflowTaskReference/,
+  /"urn:wiiicare:nexus:task-business-status"/,
+  /"urn:wiiicare:nexus:workflow-task"/
+]) {
+  if (forbidden.test(mapWorkflowTaskToFhirSource)) {
+    throw new Error(
+      "WorkflowTask FHIR profile, identifier, businessStatus, code, owner and IO item mapping belong in map-workflow-task-codings.ts, not in the public mapper."
+    );
+  }
+}
+
+for (const required of [
+  /export const workflowTaskFhirProfile/,
+  /export const workflowTaskIdentifierSystem/,
+  /export function buildWorkflowTaskIdentifier/,
+  /export function buildWorkflowTaskBusinessStatus/,
+  /export function buildWorkflowTaskCode/,
+  /export function mapWorkflowTaskOwner/,
+  /export function toWorkflowTaskInput/,
+  /export function toWorkflowTaskOutput/,
+  /export function toWorkflowTaskReference/,
+  /WorkflowTaskBusinessStatus/,
+  /WorkflowTaskCode/,
+  /WorkflowTaskReference/,
+  /task-business-status/,
+  /workflow-task/
+]) {
+  if (!required.test(mapWorkflowTaskCodingsSource)) {
+    throw new Error(
+      "map-workflow-task-codings.ts must keep WorkflowTask FHIR profile, identifier, businessStatus, code, owner and IO item mapping."
+    );
+  }
+}
+
+for (const forbidden of [
+  /mapWorkflowTaskToFhir/,
+  /resourceType:\s*"Task"/,
+  /patientId/,
+  /encounterId/,
+  /basedOnServiceRequestId/,
+  /requesterPractitionerId/,
+  /authoredOn/,
+  /lastModified/,
+  /executionPeriod/
+]) {
+  if (forbidden.test(mapWorkflowTaskCodingsSource)) {
+    throw new Error(
+      "map-workflow-task-codings.ts must stay a coding/owner/IO helper and must not own WorkflowTask resource orchestration or clinical references."
     );
   }
 }

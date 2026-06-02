@@ -1,7 +1,14 @@
-import type { WorkflowTask, WorkflowTaskReference } from "../workflow-task/workflow-task.js";
+import type { WorkflowTask } from "../workflow-task/workflow-task.js";
 import type { FhirTask } from "./fhir-types.js";
-
-const taskBusinessStatusSystem = "urn:wiiicare:nexus:task-business-status";
+import {
+  buildWorkflowTaskBusinessStatus,
+  buildWorkflowTaskCode,
+  buildWorkflowTaskIdentifier,
+  mapWorkflowTaskOwner,
+  toWorkflowTaskInput,
+  toWorkflowTaskOutput,
+  workflowTaskFhirProfile
+} from "./map-workflow-task-codings.js";
 
 export function mapWorkflowTaskToFhir(task: WorkflowTask): FhirTask {
   const snapshot = task.toSnapshot();
@@ -10,14 +17,9 @@ export function mapWorkflowTaskToFhir(task: WorkflowTask): FhirTask {
     resourceType: "Task",
     id: snapshot.id,
     meta: {
-      profile: ["http://hl7.org/fhir/StructureDefinition/Task"]
+      profile: [workflowTaskFhirProfile]
     },
-    identifier: [
-      {
-        system: "urn:wiiicare:nexus:workflow-task",
-        value: snapshot.id
-      }
-    ],
+    identifier: [buildWorkflowTaskIdentifier(snapshot.id)],
     basedOn: snapshot.basedOnServiceRequestId
       ? [
           {
@@ -27,29 +29,11 @@ export function mapWorkflowTaskToFhir(task: WorkflowTask): FhirTask {
       : undefined,
     status: snapshot.status,
     businessStatus: snapshot.businessStatus
-      ? {
-          coding: [
-            {
-              system: taskBusinessStatusSystem,
-              code: snapshot.businessStatus.code,
-              display: snapshot.businessStatus.display
-            }
-          ],
-          text: snapshot.businessStatus.display
-        }
+      ? buildWorkflowTaskBusinessStatus(snapshot.businessStatus)
       : undefined,
     intent: snapshot.intent,
     priority: snapshot.priority,
-    code: {
-      coding: [
-        {
-          system: snapshot.code.system,
-          code: snapshot.code.code,
-          display: snapshot.code.display
-        }
-      ],
-      text: snapshot.code.display
-    },
+    code: buildWorkflowTaskCode(snapshot.code),
     description: snapshot.description,
     focus: snapshot.basedOnServiceRequestId
       ? {
@@ -72,48 +56,12 @@ export function mapWorkflowTaskToFhir(task: WorkflowTask): FhirTask {
           reference: `Practitioner/${snapshot.requesterPractitionerId}`
         }
       : undefined,
-    owner: mapOwner(snapshot.ownerOrganizationId, snapshot.ownerPractitionerId),
-    input: snapshot.inputReferences.map((reference) => ({
-      type: {
-        text: reference.label ?? `${reference.resourceType} input`
-      },
-      valueReference: toFhirReference(reference)
-    })),
-    output: snapshot.outputReferences.map((reference) => ({
-      type: {
-        text: reference.label ?? `${reference.resourceType} output`
-      },
-      valueReference: toFhirReference(reference)
-    })),
+    owner: mapWorkflowTaskOwner(
+      snapshot.ownerOrganizationId,
+      snapshot.ownerPractitionerId
+    ),
+    input: snapshot.inputReferences.map(toWorkflowTaskInput),
+    output: snapshot.outputReferences.map(toWorkflowTaskOutput),
     note: snapshot.note ? [{ text: snapshot.note }] : undefined
-  };
-}
-
-function mapOwner(
-  ownerOrganizationId: string | undefined,
-  ownerPractitionerId: string | undefined
-): FhirTask["owner"] {
-  if (ownerPractitionerId) {
-    return {
-      reference: `Practitioner/${ownerPractitionerId}`
-    };
-  }
-
-  if (ownerOrganizationId) {
-    return {
-      reference: `Organization/${ownerOrganizationId}`
-    };
-  }
-
-  return undefined;
-}
-
-function toFhirReference(reference: WorkflowTaskReference): {
-  readonly reference: string;
-  readonly display?: string;
-} {
-  return {
-    reference: `${reference.resourceType}/${reference.id}`,
-    display: reference.label
   };
 }
