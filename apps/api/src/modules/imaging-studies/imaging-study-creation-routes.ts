@@ -21,9 +21,9 @@ import {
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 import {
   sendImagingStudyDomainError,
-  toImagingStudyResponse,
-  validateImagingStudyReferences
+  toImagingStudyResponse
 } from "./imaging-study-route-helpers.js";
+import { validateImagingStudyReferences } from "./imaging-study-reference-validation.js";
 
 export async function registerImagingStudyCreationRoutes(
   app: FastifyInstance,

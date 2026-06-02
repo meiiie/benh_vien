@@ -805,7 +805,7 @@ const routeBudgets = [
   {
     path: "apps/api/src/modules/diagnostic-reports/diagnostic-report-creation-routes.ts",
     maxLines: 140,
-    role: "DiagnosticReport creation and reference validation route adapter"
+    role: "DiagnosticReport creation command route adapter"
   },
   {
     path: "apps/api/src/modules/diagnostic-reports/diagnostic-report-fhir-routes.ts",
@@ -814,8 +814,13 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/diagnostic-reports/diagnostic-report-route-helpers.ts",
-    maxLines: 150,
-    role: "DiagnosticReport response, access, reference and domain error helpers"
+    maxLines: 90,
+    role: "DiagnosticReport response, access and domain error helpers"
+  },
+  {
+    path: "apps/api/src/modules/diagnostic-reports/diagnostic-report-reference-validation.ts",
+    maxLines: 90,
+    role: "DiagnosticReport clinical reference validation helper"
   },
   {
     path: "apps/api/src/modules/imaging-studies/imaging-study-routes.ts",
@@ -830,7 +835,7 @@ const routeBudgets = [
   {
     path: "apps/api/src/modules/imaging-studies/imaging-study-creation-routes.ts",
     maxLines: 140,
-    role: "ImagingStudy creation and reference validation route adapter"
+    role: "ImagingStudy creation command route adapter"
   },
   {
     path: "apps/api/src/modules/imaging-studies/imaging-study-fhir-routes.ts",
@@ -839,8 +844,13 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/imaging-studies/imaging-study-route-helpers.ts",
-    maxLines: 150,
-    role: "ImagingStudy response, access, reference and domain error helpers"
+    maxLines: 90,
+    role: "ImagingStudy response, access and domain error helpers"
+  },
+  {
+    path: "apps/api/src/modules/imaging-studies/imaging-study-reference-validation.ts",
+    maxLines: 90,
+    role: "ImagingStudy clinical reference validation helper"
   },
   {
     path: "apps/api/src/modules/service-requests/service-request-routes.ts",
@@ -1708,6 +1718,12 @@ const requiredProcedureReportReferenceValidationHelpers = [
 const diagnosticReportRoutesPath = resolve(
   "apps/api/src/modules/diagnostic-reports/diagnostic-report-routes.ts"
 );
+const diagnosticReportRouteHelpersPath = resolve(
+  "apps/api/src/modules/diagnostic-reports/diagnostic-report-route-helpers.ts"
+);
+const diagnosticReportReferenceValidationPath = resolve(
+  "apps/api/src/modules/diagnostic-reports/diagnostic-report-reference-validation.ts"
+);
 const forbiddenDiagnosticReportRoutePatterns = [
   {
     pattern:
@@ -1732,9 +1748,29 @@ const requiredDiagnosticReportRegistrations = [
   "registerDiagnosticReportCreationRoutes",
   "registerDiagnosticReportFhirRoutes"
 ];
+const forbiddenDiagnosticReportRouteHelperPatterns = [
+  {
+    pattern:
+      /\bvalidateDiagnosticReportReferences\b|\bEncounterRepository\b|\bObservationRepository\b|\bServiceRequestRepository\b/,
+    message:
+      "DiagnosticReport clinical reference validation belongs in diagnostic-report-reference-validation.ts."
+  }
+];
+const requiredDiagnosticReportReferenceValidationHelpers = [
+  "validateDiagnosticReportReferences",
+  "ENCOUNTER_MISMATCH",
+  "SERVICE_REQUEST_MISMATCH",
+  "OBSERVATION_MISMATCH"
+];
 
 const imagingStudyRoutesPath = resolve(
   "apps/api/src/modules/imaging-studies/imaging-study-routes.ts"
+);
+const imagingStudyRouteHelpersPath = resolve(
+  "apps/api/src/modules/imaging-studies/imaging-study-route-helpers.ts"
+);
+const imagingStudyReferenceValidationPath = resolve(
+  "apps/api/src/modules/imaging-studies/imaging-study-reference-validation.ts"
 );
 const forbiddenImagingStudyRoutePatterns = [
   {
@@ -1759,6 +1795,20 @@ const requiredImagingStudyRegistrations = [
   "registerImagingStudyQueryRoutes",
   "registerImagingStudyCreationRoutes",
   "registerImagingStudyFhirRoutes"
+];
+const forbiddenImagingStudyRouteHelperPatterns = [
+  {
+    pattern:
+      /\bvalidateImagingStudyReferences\b|\bEncounterRepository\b|\bDiagnosticReportRepository\b|\bServiceRequestRepository\b/,
+    message:
+      "ImagingStudy clinical reference validation belongs in imaging-study-reference-validation.ts."
+  }
+];
+const requiredImagingStudyReferenceValidationHelpers = [
+  "validateImagingStudyReferences",
+  "ENCOUNTER_MISMATCH",
+  "SERVICE_REQUEST_MISMATCH",
+  "DIAGNOSTIC_REPORT_MISMATCH"
 ];
 
 const serviceRequestRoutesPath = resolve(
@@ -1955,7 +2005,23 @@ const allergyIntoleranceRoutesSource = await readFile(
   "utf8"
 );
 const diagnosticReportRoutesSource = await readFile(diagnosticReportRoutesPath, "utf8");
+const diagnosticReportRouteHelpersSource = await readFile(
+  diagnosticReportRouteHelpersPath,
+  "utf8"
+);
+const diagnosticReportReferenceValidationSource = await readFile(
+  diagnosticReportReferenceValidationPath,
+  "utf8"
+);
 const imagingStudyRoutesSource = await readFile(imagingStudyRoutesPath, "utf8");
+const imagingStudyRouteHelpersSource = await readFile(
+  imagingStudyRouteHelpersPath,
+  "utf8"
+);
+const imagingStudyReferenceValidationSource = await readFile(
+  imagingStudyReferenceValidationPath,
+  "utf8"
+);
 const serviceRequestRoutesSource = await readFile(serviceRequestRoutesPath, "utf8");
 const workflowTaskRoutesSource = await readFile(workflowTaskRoutesPath, "utf8");
 
@@ -2451,6 +2517,20 @@ for (const registration of requiredDiagnosticReportRegistrations) {
   }
 }
 
+for (const forbidden of forbiddenDiagnosticReportRouteHelperPatterns) {
+  if (forbidden.pattern.test(diagnosticReportRouteHelpersSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const helper of requiredDiagnosticReportReferenceValidationHelpers) {
+  if (!diagnosticReportReferenceValidationSource.includes(helper)) {
+    throw new Error(
+      `DiagnosticReport reference validation module must keep ${helper} so LIS/RIS result links stay patient-scoped.`
+    );
+  }
+}
+
 for (const forbidden of forbiddenImagingStudyRoutePatterns) {
   if (forbidden.pattern.test(imagingStudyRoutesSource)) {
     throw new Error(forbidden.message);
@@ -2461,6 +2541,20 @@ for (const registration of requiredImagingStudyRegistrations) {
   if (!imagingStudyRoutesSource.includes(registration)) {
     throw new Error(
       `ImagingStudy root routes must register ${registration} so query, creation and FHIR modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenImagingStudyRouteHelperPatterns) {
+  if (forbidden.pattern.test(imagingStudyRouteHelpersSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const helper of requiredImagingStudyReferenceValidationHelpers) {
+  if (!imagingStudyReferenceValidationSource.includes(helper)) {
+    throw new Error(
+      `ImagingStudy reference validation module must keep ${helper} so PACS/RIS image links stay patient-scoped.`
     );
   }
 }

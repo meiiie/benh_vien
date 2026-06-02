@@ -21,9 +21,9 @@ import {
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 import {
   sendDiagnosticReportDomainError,
-  toDiagnosticReportResponse,
-  validateDiagnosticReportReferences
+  toDiagnosticReportResponse
 } from "./diagnostic-report-route-helpers.js";
+import { validateDiagnosticReportReferences } from "./diagnostic-report-reference-validation.js";
 
 export async function registerDiagnosticReportCreationRoutes(
   app: FastifyInstance,
