@@ -1,4 +1,3 @@
-import { createClient } from "redis";
 import { loginRateLimitKeyPrefix } from "./login-rate-limit-config.js";
 import type {
   LoginRateLimitConfig,
@@ -7,6 +6,7 @@ import type {
   LoginRateLimiter,
   ValkeyLoginRateLimitClient
 } from "./login-rate-limit.types.js";
+import { createRedisLoginRateLimitClient } from "./login-rate-limit-valkey-client.js";
 
 const consumeAttemptScript = `
 local attempts = redis.call("INCR", KEYS[1])
@@ -27,9 +27,7 @@ export function createValkeyLoginRateLimiter(
 ): LoginRateLimiter {
   const client =
     options.client ??
-    (createClient({
-      url: options.url
-    }) as unknown as ValkeyLoginRateLimitClient);
+    createRedisLoginRateLimitClient(options.url);
   const keyPrefix = options.keyPrefix ?? loginRateLimitKeyPrefix;
   let connectPromise: Promise<unknown> | undefined;
   client.on?.("error", () => undefined);

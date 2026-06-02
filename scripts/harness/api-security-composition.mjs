@@ -183,6 +183,11 @@ const securityBudgets = [
     role: "Login rate limiter Valkey store"
   },
   {
+    path: "apps/api/src/modules/auth/login-rate-limit-valkey-client.ts",
+    maxLines: 70,
+    role: "Login rate limiter Redis client adapter"
+  },
+  {
     path: "apps/api/src/modules/auth/login-rate-limit-factory.ts",
     maxLines: 40,
     role: "Login rate limiter environment factory"
@@ -264,6 +269,9 @@ const loginRateLimitConfigPath = resolve(
 const loginRateLimitKeyPath = resolve("apps/api/src/modules/auth/login-rate-limit-key.ts");
 const loginRateLimitMemoryPath = resolve("apps/api/src/modules/auth/login-rate-limit-memory.ts");
 const loginRateLimitValkeyPath = resolve("apps/api/src/modules/auth/login-rate-limit-valkey.ts");
+const loginRateLimitValkeyClientPath = resolve(
+  "apps/api/src/modules/auth/login-rate-limit-valkey-client.ts"
+);
 const loginRateLimitFactoryPath = resolve(
   "apps/api/src/modules/auth/login-rate-limit-factory.ts"
 );
@@ -330,6 +338,10 @@ const loginRateLimitConfigSource = await readFile(loginRateLimitConfigPath, "utf
 const loginRateLimitKeySource = await readFile(loginRateLimitKeyPath, "utf8");
 const loginRateLimitMemorySource = await readFile(loginRateLimitMemoryPath, "utf8");
 const loginRateLimitValkeySource = await readFile(loginRateLimitValkeyPath, "utf8");
+const loginRateLimitValkeyClientSource = await readFile(
+  loginRateLimitValkeyClientPath,
+  "utf8"
+);
 const loginRateLimitFactorySource = await readFile(loginRateLimitFactoryPath, "utf8");
 const deniedAccessAuditRootSource = await readFile(deniedAccessAuditRootPath, "utf8");
 const deniedAccessAuditPolicySource = await readFile(deniedAccessAuditPolicyPath, "utf8");
@@ -563,9 +575,18 @@ assertForbidden(loginRateLimitMemorySource, [
 
 assertForbidden(loginRateLimitValkeySource, [
   {
-    pattern: /\bprocess\.env\b|\bcreateHash\b|\breadLoginRateLimitStore\b|\breadValkeyUrl\b/,
+    pattern:
+      /\bprocess\.env\b|\bcreateClient\b|\bcreateHash\b|\breadLoginRateLimitStore\b|\breadValkeyUrl\b|\bas unknown as\b|\bunknown as\b/,
     message:
-      "Valkey login rate limiter must not read environment or hash raw identity material directly."
+      "Valkey login rate limiter must not read environment, create Redis clients, hash raw identity material or use double casts directly."
+  }
+]);
+
+assertForbidden(loginRateLimitValkeyClientSource, [
+  {
+    pattern: /\bas unknown as\b|\bunknown as\b|\bprocess\.env\b|\bcreateHash\b/,
+    message:
+      "Valkey client adapter must bridge the Redis client without double casts, env reads or raw identity hashing."
   }
 ]);
 
