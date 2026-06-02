@@ -19,11 +19,9 @@ import {
   toSendAuditMetadata
 } from "./record-transfer-command-route-helpers.js";
 import { queueRecordTransferDeliveryAttempt } from "./record-transfer-delivery-attempt-route-helpers.js";
+import { resolveRecordTransferFhirEndpoint } from "./record-transfer-fhir-endpoint-resolver.js";
 import { loadRecordTransferForPatientAccess } from "./record-transfer-route-access.js";
-import {
-  resolveRecordTransferFhirEndpoint,
-  toRecordTransferResponse
-} from "./record-transfer-route-helpers.js";
+import { toRecordTransferResponse } from "./record-transfer-route-helpers.js";
 
 export async function registerRecordTransferSendRoutes(
   app: FastifyInstance,

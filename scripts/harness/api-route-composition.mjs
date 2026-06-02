@@ -418,14 +418,19 @@ const routeBudgets = [
     role: "RecordTransfer FHIR Task export route"
   },
   {
+    path: "apps/api/src/modules/record-transfers/record-transfer-fhir-endpoint-resolver.ts",
+    maxLines: 50,
+    role: "RecordTransfer provider-directory FHIR Bundle endpoint resolver"
+  },
+  {
     path: "apps/api/src/modules/record-transfers/record-transfer-route-access.ts",
     maxLines: 80,
     role: "RecordTransfer patient access helper"
   },
   {
     path: "apps/api/src/modules/record-transfers/record-transfer-route-helpers.ts",
-    maxLines: 180,
-    role: "RecordTransfer route helper functions"
+    maxLines: 80,
+    role: "RecordTransfer bundle id and response DTO helpers"
   },
   {
     path: "apps/api/src/modules/record-transfers/record-transfer-delivery-attempt-route-helpers.ts",
@@ -1150,6 +1155,12 @@ const forbiddenRecordTransferRouteHelperPatterns = [
     pattern: /\btoCallbackSignatureAuditMetadata\b/,
     message:
       "RecordTransfer callback signature audit metadata belongs in record-transfer-acknowledgement-audit.ts."
+  },
+  {
+    pattern:
+      /\bresolveRecordTransferFhirEndpoint\b|\bfindRecordTransferFhirEndpoint\b/,
+    message:
+      "RecordTransfer FHIR endpoint lookup belongs in record-transfer-fhir-endpoint-resolver.ts."
   }
 ];
 

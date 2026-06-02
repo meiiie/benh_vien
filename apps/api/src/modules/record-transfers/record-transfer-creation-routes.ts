@@ -17,10 +17,10 @@ import {
   requirePermission
 } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
+import { resolveRecordTransferFhirEndpoint } from "./record-transfer-fhir-endpoint-resolver.js";
 import { validateRecordTransferEndpointForDelivery } from "./record-transfer-endpoint-policy.js";
 import {
   buildBundleId,
-  resolveRecordTransferFhirEndpoint,
   toRecordTransferResponse
 } from "./record-transfer-route-helpers.js";
 
