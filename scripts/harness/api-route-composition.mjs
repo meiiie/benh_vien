@@ -2486,6 +2486,14 @@ const requiredWorkflowTaskReferenceValidationHelpers = [
 ];
 
 const routeReports = [];
+const routeSources = [];
+const inlineHttpErrorEnvelopeAllowedPaths = new Set([
+  "apps/api/src/modules/http/http-domain-error-response.ts",
+  "apps/api/src/modules/http/http-error-handler.ts",
+  "apps/api/src/modules/http/http-json-error-response.ts",
+  "apps/api/src/modules/http/http-not-found-error-response.ts",
+  "apps/api/src/modules/http/http-validation-error-response.ts"
+]);
 
 for (const budget of routeBudgets) {
   const absolutePath = resolve(budget.path);
@@ -2504,6 +2512,10 @@ for (const budget of routeBudgets) {
     lineCount,
     maxLines: budget.maxLines,
     role: budget.role
+  });
+  routeSources.push({
+    path: budget.path,
+    source
   });
 }
 
@@ -2880,6 +2892,18 @@ for (const helper of requiredHttpJsonErrorResponseHelpers) {
   if (!httpJsonErrorResponseSource.includes(helper)) {
     throw new Error(
       `HTTP JSON error response helper must keep ${helper} so request-id JSON envelopes stay centralized.`
+    );
+  }
+}
+
+for (const route of routeSources) {
+  if (inlineHttpErrorEnvelopeAllowedPaths.has(route.path)) {
+    continue;
+  }
+
+  if (/\breply\.status\([^)]*\)\.send\(\{\s*error:/m.test(route.source)) {
+    throw new Error(
+      `${route.path} must not build inline JSON error envelopes; use sendJsonErrorResponse, sendNotFoundErrorResponse, sendValidationErrorResponse or a domain-specific response helper.`
     );
   }
 }
