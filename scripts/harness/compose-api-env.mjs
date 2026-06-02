@@ -38,6 +38,10 @@ const runtimeImages = collectRuntimeImages(composeConfig);
 const labRuntimeImages = collectRuntimeImages(labComposeConfig);
 const apiDockerfile = readFileSync(apiDockerfilePath, "utf8");
 const webDockerfile = readFileSync(webDockerfilePath, "utf8");
+const dockerfileBaseImages = [
+  ...collectExternalBaseImages(apiDockerfile, apiDockerfilePath),
+  ...collectExternalBaseImages(webDockerfile, webDockerfilePath)
+];
 
 if (!apiEnvironment || typeof apiEnvironment !== "object") {
   throw new Error("Expected docker compose service api to expose an environment map.");
@@ -74,6 +78,18 @@ if (mutableImages.length > 0) {
   );
 }
 
+const unpinnedDockerfileBaseImages = dockerfileBaseImages.filter(
+  ({ image }) => !image.includes("@sha256:")
+);
+
+if (unpinnedDockerfileBaseImages.length > 0) {
+  throw new Error(
+    `Dockerfile external base images must be pinned by digest; found ${unpinnedDockerfileBaseImages
+      .map(({ dockerfilePath, lineNumber, image }) => `${dockerfilePath}:${lineNumber} ${image}`)
+      .join(", ")}`
+  );
+}
+
 if (!apiDockerfileRunsAsNodeUser(apiDockerfile)) {
   throw new Error(
     "API Docker runtime stage must drop privileges with USER node before starting the Node process."
@@ -106,6 +122,7 @@ console.log(
       apiRuntimeUser: "node",
       webRuntimeImage: "nginxinc/nginx-unprivileged:1.27-alpine",
       webContainerPort: 8080,
+      pinnedDockerfileBaseImages: dockerfileBaseImages,
       pinnedRuntimeImages: runtimeImages,
       pinnedLabRuntimeImages: labRuntimeImages
     },
@@ -132,6 +149,35 @@ function collectRuntimeImages(composeConfig) {
     .sort((left, right) => left.serviceName.localeCompare(right.serviceName));
 }
 
+function collectExternalBaseImages(dockerfile, dockerfilePath) {
+  const stageAliases = new Set();
+
+  return dockerfile.split(/\r?\n/).flatMap((line, index) => {
+    const match = line.match(/^FROM\s+(?:--platform=\S+\s+)?([^\s]+)(?:\s+AS\s+([^\s]+))?/i);
+
+    if (!match) {
+      return [];
+    }
+
+    const [, image, alias] = match;
+    const isInternalStage = stageAliases.has(image.toLowerCase());
+
+    if (alias) {
+      stageAliases.add(alias.toLowerCase());
+    }
+
+    return isInternalStage
+      ? []
+      : [
+          {
+            dockerfilePath,
+            lineNumber: index + 1,
+            image
+          }
+        ];
+  });
+}
+
 function findMutableImages(images, sourceFiles) {
   return images.flatMap(({ serviceName, image }) => {
     const reason = getMutableImageReason(image);
@@ -140,13 +186,13 @@ function findMutableImages(images, sourceFiles) {
 }
 
 function apiDockerfileRunsAsNodeUser(dockerfile) {
-  return /\nFROM node:22-alpine AS runtime\b[\s\S]*\nUSER node\s*\n(?:EXPOSE 7310\s*\n)?CMD \["node", "apps\/api\/dist\/main\.js"\]/.test(
+  return /\nFROM node:22-alpine@sha256:[a-f0-9]{64} AS runtime\b[\s\S]*\nUSER node\s*\n(?:EXPOSE 7310\s*\n)?CMD \["node", "apps\/api\/dist\/main\.js"\]/.test(
     dockerfile
   );
 }
 
 function webDockerfileUsesUnprivilegedNginx(dockerfile) {
-  return /\nFROM nginxinc\/nginx-unprivileged:1\.27-alpine AS runtime\b[\s\S]*\nEXPOSE 8080\s*\n/.test(
+  return /\nFROM nginxinc\/nginx-unprivileged:1\.27-alpine@sha256:[a-f0-9]{64} AS runtime\b[\s\S]*\nEXPOSE 8080\s*\n/.test(
     dockerfile
   );
 }

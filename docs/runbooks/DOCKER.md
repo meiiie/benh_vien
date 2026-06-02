@@ -18,6 +18,8 @@ Compose sẽ chạy service `migrate` trước API để áp dụng SQL migratio
 
 Các image runtime của MinIO, HAPI FHIR và Orthanc được pin bằng tag cố định qua `MINIO_IMAGE`, `HAPI_FHIR_IMAGE` và `ORTHANC_IMAGE`; không dùng `latest` để tránh môi trường tự thay đổi ngoài quy trình kiểm thử. Khi cần nâng phiên bản, cập nhật biến trong `.env.*.example`, chạy `pnpm run harness:compose-env`, `pnpm run compose:config` và smoke test liên quan trước khi merge.
 
+Dockerfile base images của API và web được pin thêm bằng digest `sha256`. Khi nâng Node hoặc Nginx runtime, dùng `docker buildx imagetools inspect <image>:<tag>` để lấy manifest digest mới, cập nhật Dockerfile, chạy `pnpm run harness:compose-env`, build image liên quan và smoke test trước khi merge.
+
 API giới hạn mỗi PostgreSQL repository pool bằng `BVS_POSTGRES_REPOSITORY_POOL_MAX`, mặc định `2`, và đóng các pool khi Fastify shutdown. Nếu chạy nhiều replica API, cần tính lại giá trị này theo `max_connections` của PostgreSQL.
 
 API giới hạn tần suất `POST /api/v1/auth/login` bằng `BVS_AUTH_LOGIN_RATE_LIMIT_MAX` trong cửa sổ `BVS_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS`, mặc định `20` lần trong `60` giây theo IP + username đã băm SHA-256. `BVS_RATE_LIMIT_STORE=valkey` và `BVS_VALKEY_URL=redis://valkey:6379` dùng chung bộ đếm giữa nhiều replica; `memory` chỉ phù hợp dev đơn lẻ và bị từ chối trong production.
@@ -187,5 +189,5 @@ pnpm compose:config
 - Network `backend` là internal, chỉ web và API được đưa ra ngoài qua network `frontend`.
 - API/migrate runtime image chạy bằng `USER node` thay vì root; web runtime dùng `nginxinc/nginx-unprivileged` thay vì Nginx root/port 80. Nếu thêm logic cần ghi file trong container, phải dùng thư mục/volume có quyền phù hợp và chạy `pnpm run harness:compose-env`.
 - CI kiểm tra cấu hình web security header bằng `pnpm run harness:web-security` và kiểm tra header thật khi boot prod-like stack.
-- CI kiểm tra compose không dùng image runtime dạng `latest` hoặc thiếu tag bằng `pnpm run harness:compose-env`.
+- CI kiểm tra compose không dùng image runtime dạng `latest` hoặc thiếu tag, đồng thời kiểm tra external Dockerfile base image có digest `sha256` bằng `pnpm run harness:compose-env`.
 - HAPI FHIR và Orthanc đang ở profile riêng để tránh vô tình bật dịch vụ nặng hoặc chưa có xác thực.
