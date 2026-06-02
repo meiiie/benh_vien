@@ -89,7 +89,7 @@ export function isApiHttpError(error: unknown): error is ApiHttpError {
 async function readResponsePayload(response: Response): Promise<unknown> {
   const contentType = response.headers.get("content-type") ?? "";
 
-  if (contentType.includes("application/json")) {
+  if (contentType.includes("json")) {
     return response.json().catch(() => undefined);
   }
 
@@ -113,9 +113,14 @@ function extractPayloadMessage(payload: unknown): string | undefined {
 
   const message = (payload as { readonly message?: unknown }).message;
   const error = (payload as { readonly error?: unknown }).error;
+  const operationOutcomeMessage = extractOperationOutcomeMessage(payload);
 
   if (typeof message === "string" && message.trim().length > 0) {
     return message;
+  }
+
+  if (operationOutcomeMessage) {
+    return operationOutcomeMessage;
   }
 
   if (typeof error === "string" && error.trim().length > 0) {
@@ -123,4 +128,41 @@ function extractPayloadMessage(payload: unknown): string | undefined {
   }
 
   return undefined;
+}
+
+function extractOperationOutcomeMessage(payload: unknown): string | undefined {
+  const outcome = asRecord(payload);
+
+  if (outcome?.resourceType !== "OperationOutcome") {
+    return undefined;
+  }
+
+  const firstIssue = Array.isArray(outcome.issue)
+    ? asRecord(outcome.issue[0])
+    : undefined;
+  const details = asRecord(firstIssue?.details);
+
+  return (
+    getString(details?.text) ??
+    getString(firstIssue?.diagnostics) ??
+    extractFirstCodingCode(details?.coding)
+  );
+}
+
+function extractFirstCodingCode(value: unknown): string | undefined {
+  const firstCoding = Array.isArray(value) ? asRecord(value[0]) : undefined;
+
+  return getString(firstCoding?.code);
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function getString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim().length > 0
+    ? value
+    : undefined;
 }

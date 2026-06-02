@@ -599,6 +599,7 @@ const featureModuleBudgets = [
 ];
 
 const appSource = await readFile(appPath, "utf8");
+const clinicalApiSource = await readFile(allowedFetchModulePath, "utf8");
 const landingPageSource = await readFile(landingPagePath, "utf8");
 const mainSource = await readFile(mainPath, "utf8");
 const clinicalDocumentApiSource = await readFile(clinicalDocumentApiPath, "utf8");
@@ -746,6 +747,30 @@ const documentBundleTransferContextChecks = [
 
 for (const check of documentBundleTransferContextChecks) {
   if (!check.pattern.test(patientRegistryApiSource)) {
+    throw new Error(check.message);
+  }
+}
+
+const clinicalApiOperationOutcomeChecks = [
+  {
+    pattern: /contentType\.includes\("json"\)/,
+    message:
+      "Clinical API client must parse application/fhir+json OperationOutcome responses, not only application/json."
+  },
+  {
+    pattern: /\bextractOperationOutcomeMessage\b/,
+    message:
+      "Clinical API client must extract user-facing messages from FHIR OperationOutcome payloads."
+  },
+  {
+    pattern: /\bdetails\?\.text\b|\bdiagnostics\b/,
+    message:
+      "Clinical API client must preserve OperationOutcome details.text or diagnostics in API errors."
+  }
+];
+
+for (const check of clinicalApiOperationOutcomeChecks) {
+  if (!check.pattern.test(clinicalApiSource)) {
     throw new Error(check.message);
   }
 }
