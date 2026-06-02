@@ -7,6 +7,7 @@ const interopPagePath = resolve("apps/web/src/pages/InteropPage.tsx");
 const landingPagePath = resolve("apps/web/src/pages/LandingPage.tsx");
 const mainPath = resolve("apps/web/src/main.tsx");
 const stylesPath = resolve("apps/web/src/styles.css");
+const landingStylesPath = resolve("apps/web/src/styles/landing.css");
 const webSrcPath = resolve("apps/web/src");
 const allowedFetchModulePath = resolve("apps/web/src/api/clinicalApi.ts");
 const fhirTransferContextSummaryPath = resolve(
@@ -634,6 +635,7 @@ const interopPageSource = await readFile(interopPagePath, "utf8");
 const landingPageSource = await readFile(landingPagePath, "utf8");
 const mainSource = await readFile(mainPath, "utf8");
 const stylesSource = await readFile(stylesPath, "utf8");
+const landingStylesSource = await readFile(landingStylesPath, "utf8");
 const clinicalDocumentApiSource = await readFile(clinicalDocumentApiPath, "utf8");
 const patientRegistryApiSource = await readFile(patientRegistryApiPath, "utf8");
 const providerDirectoryFormattersSource = await readFile(
@@ -903,6 +905,20 @@ if (!/Nguyễn Văn An/.test(landingPageSource) || /Nguyễn Minh An/.test(landi
   );
 }
 
+if (!/@import "\.\/styles\/landing\.css";/.test(stylesSource)) {
+  throw new Error("Global web stylesheet must import the focused landing stylesheet.");
+}
+
+if (
+  /\.(?:landing-|marketing-|brand-lockup|brand-mark|clinical-window|transfer-timeline|status-pill|feature-tags)/.test(
+    stylesSource
+  )
+) {
+  throw new Error(
+    "Landing and marketing selectors must live in apps/web/src/styles/landing.css, not the global app stylesheet."
+  );
+}
+
 const responsiveLandingChecks = [
   {
     pattern:
@@ -931,7 +947,7 @@ const responsiveLandingChecks = [
 ];
 
 for (const check of responsiveLandingChecks) {
-  if (!check.pattern.test(stylesSource)) {
+  if (!check.pattern.test(landingStylesSource)) {
     throw new Error(check.message);
   }
 }
