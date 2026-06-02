@@ -743,6 +743,11 @@ const domainBudgets = [
     role: "FHIR AuditEvent public mapper and bundle orchestration"
   },
   {
+    path: "packages/domain/src/fhir/map-audit-event-codings.ts",
+    maxLines: 70,
+    role: "FHIR AuditEvent profile, type, source and bundle identifier mapping"
+  },
+  {
     path: "packages/domain/src/fhir/map-audit-event-labels.ts",
     maxLines: 120,
     role: "FHIR AuditEvent action label catalog"
@@ -987,6 +992,7 @@ const mapRecordTransferTaskCodingsPath = resolve(
   "packages/domain/src/fhir/map-record-transfer-task-codings.ts"
 );
 const mapAuditEventToFhirPath = resolve("packages/domain/src/fhir/map-audit-event-to-fhir.ts");
+const mapAuditEventCodingsPath = resolve("packages/domain/src/fhir/map-audit-event-codings.ts");
 const mapAuditEventLabelsPath = resolve("packages/domain/src/fhir/map-audit-event-labels.ts");
 const mapAuditEventDetailsPath = resolve("packages/domain/src/fhir/map-audit-event-details.ts");
 const mapAuditEventOutcomePath = resolve("packages/domain/src/fhir/map-audit-event-outcome.ts");
@@ -1316,6 +1322,7 @@ const mapRecordTransferTaskCodingsSource = await readFile(
   "utf8"
 );
 const mapAuditEventToFhirSource = await readFile(mapAuditEventToFhirPath, "utf8");
+const mapAuditEventCodingsSource = await readFile(mapAuditEventCodingsPath, "utf8");
 const mapAuditEventLabelsSource = await readFile(mapAuditEventLabelsPath, "utf8");
 const mapAuditEventDetailsSource = await readFile(mapAuditEventDetailsPath, "utf8");
 const mapAuditEventOutcomeSource = await readFile(mapAuditEventOutcomePath, "utf8");
@@ -3648,6 +3655,13 @@ for (const required of [
 for (const required of [
   /export function mapAuditEventToFhir/,
   /export function mapAuditEventsToFhirBundle/,
+  /from "\.\/map-audit-event-codings\.js"/,
+  /auditEventFhirProfile/,
+  /auditEventBundleFhirProfile/,
+  /buildAuditEventType/,
+  /buildAuditEventSubtype/,
+  /buildAuditEventSource/,
+  /buildAuditEventBundleIdentifier/,
   /from "\.\/map-audit-event-labels\.js"/,
   /from "\.\/map-audit-event-details\.js"/,
   /from "\.\/map-audit-event-outcome\.js"/,
@@ -3655,7 +3669,7 @@ for (const required of [
 ]) {
   if (!required.test(mapAuditEventToFhirSource)) {
     throw new Error(
-      "map-audit-event-to-fhir.ts must keep only public AuditEvent mapper orchestration and delegate labels/details/outcome/references to dedicated modules."
+      "map-audit-event-to-fhir.ts must keep only public AuditEvent mapper orchestration and delegate codings/labels/details/outcome/references to dedicated modules."
     );
   }
 }
@@ -3663,11 +3677,53 @@ for (const required of [
 for (const forbidden of [
   /const auditActionLabels/,
   /"patient\.merge"/,
-  /"record-transfer\.acknowledgement-callback"/
+  /"record-transfer\.acknowledgement-callback"/,
+  /"http:\/\/hl7\.org\/fhir\/StructureDefinition\/AuditEvent"/,
+  /"http:\/\/terminology\.hl7\.org\/CodeSystem\/audit-event-type"/,
+  /"urn:wiiicare:nexus:audit-source-type"/,
+  /"urn:wiiicare:nexus:fhir-audit-bundle"/
 ]) {
   if (forbidden.test(mapAuditEventToFhirSource)) {
     throw new Error(
-      "AuditEvent action labels belong in map-audit-event-labels.ts, not in the public FHIR mapper."
+      "AuditEvent fixed profile, type, source, bundle identifier and action labels belong in dedicated helpers, not in the public FHIR mapper."
+    );
+  }
+}
+
+for (const required of [
+  /export const auditEventFhirProfile/,
+  /export const auditEventBundleFhirProfile/,
+  /export const auditEventBundleIdentifierSystem/,
+  /export function buildAuditEventType/,
+  /export function buildAuditEventSubtype/,
+  /export function buildAuditEventSource/,
+  /export function buildAuditEventBundleIdentifier/,
+  /AuditAction/,
+  /auditActionLabels/,
+  /audit-event-type/,
+  /audit-source-type/,
+  /fhir-audit-bundle/
+]) {
+  if (!required.test(mapAuditEventCodingsSource)) {
+    throw new Error(
+      "map-audit-event-codings.ts must keep AuditEvent profile, type, subtype, source and bundle identifier mapping."
+    );
+  }
+}
+
+for (const forbidden of [
+  /mapAuditEventToFhir/,
+  /mapAuditEventsToFhirBundle/,
+  /resourceType:\s*"AuditEvent"/,
+  /resourceType:\s*"Bundle"/,
+  /buildEntityDetails/,
+  /mapAuditOutcome/,
+  /buildAuditAgentReference/,
+  /buildAuditEntityReference/
+]) {
+  if (forbidden.test(mapAuditEventCodingsSource)) {
+    throw new Error(
+      "map-audit-event-codings.ts must stay a fixed coding/source helper and must not own AuditEvent resource or bundle orchestration."
     );
   }
 }

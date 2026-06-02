@@ -1,7 +1,15 @@
 import type { AuditEvent } from "../audit-event/audit-event.js";
 import type { FhirAuditEvent, FhirBundle } from "./fhir-types.js";
-import { auditActionLabels } from "./map-audit-event-labels.js";
+import {
+  auditEventBundleFhirProfile,
+  auditEventFhirProfile,
+  buildAuditEventBundleIdentifier,
+  buildAuditEventSource,
+  buildAuditEventSubtype,
+  buildAuditEventType
+} from "./map-audit-event-codings.js";
 import { buildEntityDetails } from "./map-audit-event-details.js";
+import { auditActionLabels } from "./map-audit-event-labels.js";
 import {
   mapAuditAction,
   mapAuditOutcome,
@@ -21,20 +29,10 @@ export function mapAuditEventToFhir(event: AuditEvent): FhirAuditEvent {
     resourceType: "AuditEvent",
     id: snapshot.id,
     meta: {
-      profile: ["http://hl7.org/fhir/StructureDefinition/AuditEvent"]
+      profile: [auditEventFhirProfile]
     },
-    type: {
-      system: "http://terminology.hl7.org/CodeSystem/audit-event-type",
-      code: "rest",
-      display: "RESTful Operation"
-    },
-    subtype: [
-      {
-        system: "urn:wiiicare:nexus:audit-action",
-        code: snapshot.action,
-        display: auditActionLabels[snapshot.action]
-      }
-    ],
+    type: buildAuditEventType(),
+    subtype: buildAuditEventSubtype(snapshot.action),
     action: mapAuditAction(snapshot.action),
     recorded: snapshot.occurredAt,
     outcome: mapAuditOutcome(snapshot.action),
@@ -54,19 +52,7 @@ export function mapAuditEventToFhir(event: AuditEvent): FhirAuditEvent {
           : undefined
       }
     ],
-    source: {
-      site: "WiiiCare Nexus",
-      observer: {
-        display: "WiiiCare Nexus API"
-      },
-      type: [
-        {
-          system: "urn:wiiicare:nexus:audit-source-type",
-          code: "application-server",
-          display: "Application server"
-        }
-      ]
-    },
+    source: buildAuditEventSource(),
     entity: [
       {
         what: buildAuditEntityReference(snapshot),
@@ -89,12 +75,9 @@ export function mapAuditEventsToFhirBundle(
     resourceType: "Bundle",
     id: `patient-audit-${patientId}`,
     meta: {
-      profile: ["http://hl7.org/fhir/StructureDefinition/Bundle"]
+      profile: [auditEventBundleFhirProfile]
     },
-    identifier: {
-      system: "urn:wiiicare:nexus:fhir-audit-bundle",
-      value: `audit-events:${patientId}:${timestampIso}`
-    },
+    identifier: buildAuditEventBundleIdentifier(patientId, timestampIso),
     type: "collection",
     timestamp: timestampIso,
     entry: events.map((event) => {
