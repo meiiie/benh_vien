@@ -19,10 +19,8 @@ import {
   requirePermission
 } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
-import {
-  toMedicationAdministrationResponse,
-  validateMedicationAdministrationReferences
-} from "./medication-administration-route-helpers.js";
+import { toMedicationAdministrationResponse } from "./medication-administration-route-helpers.js";
+import { validateMedicationAdministrationReferences } from "./medication-administration-reference-validation.js";
 
 export async function registerMedicationAdministrationCreationRoutes(
   app: FastifyInstance,

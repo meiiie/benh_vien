@@ -18,10 +18,8 @@ import {
   requirePermission
 } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
-import {
-  toMedicationRequestResponse,
-  validateMedicationRequestReferences
-} from "./medication-request-route-helpers.js";
+import { toMedicationRequestResponse } from "./medication-request-route-helpers.js";
+import { validateMedicationRequestReferences } from "./medication-request-reference-validation.js";
 
 export async function registerMedicationRequestCreationRoutes(
   app: FastifyInstance,

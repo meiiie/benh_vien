@@ -714,8 +714,13 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/medication-administrations/medication-administration-route-helpers.ts",
-    maxLines: 120,
-    role: "MedicationAdministration response and reference validation helpers"
+    maxLines: 30,
+    role: "MedicationAdministration response mapper"
+  },
+  {
+    path: "apps/api/src/modules/medication-administrations/medication-administration-reference-validation.ts",
+    maxLines: 90,
+    role: "MedicationAdministration clinical reference validation helper"
   },
   {
     path: "apps/api/src/modules/medication-dispenses/medication-dispense-routes.ts",
@@ -739,8 +744,13 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/medication-dispenses/medication-dispense-route-helpers.ts",
-    maxLines: 100,
-    role: "MedicationDispense response and reference validation helpers"
+    maxLines: 30,
+    role: "MedicationDispense response mapper"
+  },
+  {
+    path: "apps/api/src/modules/medication-dispenses/medication-dispense-reference-validation.ts",
+    maxLines: 80,
+    role: "MedicationDispense clinical reference validation helper"
   },
   {
     path: "apps/api/src/modules/medication-requests/medication-request-routes.ts",
@@ -764,8 +774,13 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/medication-requests/medication-request-route-helpers.ts",
-    maxLines: 100,
-    role: "MedicationRequest response and reference validation helpers"
+    maxLines: 30,
+    role: "MedicationRequest response mapper"
+  },
+  {
+    path: "apps/api/src/modules/medication-requests/medication-request-reference-validation.ts",
+    maxLines: 80,
+    role: "MedicationRequest clinical reference validation helper"
   },
   {
     path: "apps/api/src/modules/procedures/procedure-routes.ts",
@@ -1664,6 +1679,12 @@ const requiredClinicalDocumentFhirRegistrations = [
 const medicationAdministrationRoutesPath = resolve(
   "apps/api/src/modules/medication-administrations/medication-administration-routes.ts"
 );
+const medicationAdministrationRouteHelpersPath = resolve(
+  "apps/api/src/modules/medication-administrations/medication-administration-route-helpers.ts"
+);
+const medicationAdministrationReferenceValidationPath = resolve(
+  "apps/api/src/modules/medication-administrations/medication-administration-reference-validation.ts"
+);
 const forbiddenMedicationAdministrationRoutePatterns = [
   {
     pattern:
@@ -1688,9 +1709,29 @@ const requiredMedicationAdministrationRegistrations = [
   "registerMedicationAdministrationCreationRoutes",
   "registerMedicationAdministrationFhirRoutes"
 ];
+const forbiddenMedicationAdministrationRouteHelperPatterns = [
+  {
+    pattern:
+      /\bvalidateMedicationAdministrationReferences\b|\bEncounterRepository\b|\bMedicationRequestRepository\b|\bConditionRepository\b/,
+    message:
+      "MedicationAdministration clinical reference validation belongs in medication-administration-reference-validation.ts."
+  }
+];
+const requiredMedicationAdministrationReferenceValidationHelpers = [
+  "validateMedicationAdministrationReferences",
+  "ENCOUNTER_MISMATCH",
+  "MEDICATION_REQUEST_MISMATCH",
+  "CONDITION_MISMATCH"
+];
 
 const medicationDispenseRoutesPath = resolve(
   "apps/api/src/modules/medication-dispenses/medication-dispense-routes.ts"
+);
+const medicationDispenseRouteHelpersPath = resolve(
+  "apps/api/src/modules/medication-dispenses/medication-dispense-route-helpers.ts"
+);
+const medicationDispenseReferenceValidationPath = resolve(
+  "apps/api/src/modules/medication-dispenses/medication-dispense-reference-validation.ts"
 );
 const forbiddenMedicationDispenseRoutePatterns = [
   {
@@ -1715,9 +1756,28 @@ const requiredMedicationDispenseRegistrations = [
   "registerMedicationDispenseCreationRoutes",
   "registerMedicationDispenseFhirRoutes"
 ];
+const forbiddenMedicationDispenseRouteHelperPatterns = [
+  {
+    pattern:
+      /\bvalidateMedicationDispenseReferences\b|\bEncounterRepository\b|\bMedicationRequestRepository\b/,
+    message:
+      "MedicationDispense clinical reference validation belongs in medication-dispense-reference-validation.ts."
+  }
+];
+const requiredMedicationDispenseReferenceValidationHelpers = [
+  "validateMedicationDispenseReferences",
+  "ENCOUNTER_MISMATCH",
+  "MEDICATION_REQUEST_MISMATCH"
+];
 
 const medicationRequestRoutesPath = resolve(
   "apps/api/src/modules/medication-requests/medication-request-routes.ts"
+);
+const medicationRequestRouteHelpersPath = resolve(
+  "apps/api/src/modules/medication-requests/medication-request-route-helpers.ts"
+);
+const medicationRequestReferenceValidationPath = resolve(
+  "apps/api/src/modules/medication-requests/medication-request-reference-validation.ts"
 );
 const forbiddenMedicationRequestRoutePatterns = [
   {
@@ -1741,6 +1801,19 @@ const requiredMedicationRequestRegistrations = [
   "registerMedicationRequestQueryRoutes",
   "registerMedicationRequestCreationRoutes",
   "registerMedicationRequestFhirRoutes"
+];
+const forbiddenMedicationRequestRouteHelperPatterns = [
+  {
+    pattern:
+      /\bvalidateMedicationRequestReferences\b|\bEncounterRepository\b|\bConditionRepository\b/,
+    message:
+      "MedicationRequest clinical reference validation belongs in medication-request-reference-validation.ts."
+  }
+];
+const requiredMedicationRequestReferenceValidationHelpers = [
+  "validateMedicationRequestReferences",
+  "ENCOUNTER_MISMATCH",
+  "CONDITION_MISMATCH"
 ];
 
 const procedureRoutesPath = resolve("apps/api/src/modules/procedures/procedure-routes.ts");
@@ -2094,12 +2167,36 @@ const medicationAdministrationRoutesSource = await readFile(
   medicationAdministrationRoutesPath,
   "utf8"
 );
+const medicationAdministrationRouteHelpersSource = await readFile(
+  medicationAdministrationRouteHelpersPath,
+  "utf8"
+);
+const medicationAdministrationReferenceValidationSource = await readFile(
+  medicationAdministrationReferenceValidationPath,
+  "utf8"
+);
 const medicationDispenseRoutesSource = await readFile(
   medicationDispenseRoutesPath,
   "utf8"
 );
+const medicationDispenseRouteHelpersSource = await readFile(
+  medicationDispenseRouteHelpersPath,
+  "utf8"
+);
+const medicationDispenseReferenceValidationSource = await readFile(
+  medicationDispenseReferenceValidationPath,
+  "utf8"
+);
 const medicationRequestRoutesSource = await readFile(
   medicationRequestRoutesPath,
+  "utf8"
+);
+const medicationRequestRouteHelpersSource = await readFile(
+  medicationRequestRouteHelpersPath,
+  "utf8"
+);
+const medicationRequestReferenceValidationSource = await readFile(
+  medicationRequestReferenceValidationPath,
   "utf8"
 );
 const procedureRoutesSource = await readFile(procedureRoutesPath, "utf8");
@@ -2630,6 +2727,20 @@ for (const registration of requiredMedicationAdministrationRegistrations) {
   }
 }
 
+for (const forbidden of forbiddenMedicationAdministrationRouteHelperPatterns) {
+  if (forbidden.pattern.test(medicationAdministrationRouteHelpersSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const helper of requiredMedicationAdministrationReferenceValidationHelpers) {
+  if (!medicationAdministrationReferenceValidationSource.includes(helper)) {
+    throw new Error(
+      `MedicationAdministration reference validation module must keep ${helper} so medication administration links stay patient-scoped.`
+    );
+  }
+}
+
 for (const forbidden of forbiddenMedicationDispenseRoutePatterns) {
   if (forbidden.pattern.test(medicationDispenseRoutesSource)) {
     throw new Error(forbidden.message);
@@ -2644,6 +2755,20 @@ for (const registration of requiredMedicationDispenseRegistrations) {
   }
 }
 
+for (const forbidden of forbiddenMedicationDispenseRouteHelperPatterns) {
+  if (forbidden.pattern.test(medicationDispenseRouteHelpersSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const helper of requiredMedicationDispenseReferenceValidationHelpers) {
+  if (!medicationDispenseReferenceValidationSource.includes(helper)) {
+    throw new Error(
+      `MedicationDispense reference validation module must keep ${helper} so dispensing links stay patient-scoped.`
+    );
+  }
+}
+
 for (const forbidden of forbiddenMedicationRequestRoutePatterns) {
   if (forbidden.pattern.test(medicationRequestRoutesSource)) {
     throw new Error(forbidden.message);
@@ -2654,6 +2779,20 @@ for (const registration of requiredMedicationRequestRegistrations) {
   if (!medicationRequestRoutesSource.includes(registration)) {
     throw new Error(
       `MedicationRequest root routes must register ${registration} so query, command and FHIR modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenMedicationRequestRouteHelperPatterns) {
+  if (forbidden.pattern.test(medicationRequestRouteHelpersSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const helper of requiredMedicationRequestReferenceValidationHelpers) {
+  if (!medicationRequestReferenceValidationSource.includes(helper)) {
+    throw new Error(
+      `MedicationRequest reference validation module must keep ${helper} so prescription links stay patient-scoped.`
     );
   }
 }
