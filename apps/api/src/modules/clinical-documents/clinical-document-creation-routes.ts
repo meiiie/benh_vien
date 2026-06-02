@@ -17,10 +17,8 @@ import {
   requirePermission
 } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
-import {
-  toClinicalDocumentResponse,
-  validateClinicalDocumentReferences
-} from "./clinical-document-route-helpers.js";
+import { toClinicalDocumentResponse } from "./clinical-document-route-helpers.js";
+import { validateClinicalDocumentReferences } from "./clinical-document-reference-validation.js";
 
 export async function registerClinicalDocumentCreationRoutes(
   app: FastifyInstance,

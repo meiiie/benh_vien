@@ -689,8 +689,13 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/clinical-documents/clinical-document-route-helpers.ts",
-    maxLines: 80,
-    role: "ClinicalDocument response and reference validation helpers"
+    maxLines: 30,
+    role: "ClinicalDocument response mapper"
+  },
+  {
+    path: "apps/api/src/modules/clinical-documents/clinical-document-reference-validation.ts",
+    maxLines: 70,
+    role: "ClinicalDocument encounter reference validation helper"
   },
   {
     path: "apps/api/src/modules/medication-administrations/medication-administration-routes.ts",
@@ -1627,6 +1632,12 @@ const requiredPatientRecordBundleConsentContextHelpers = [
 const clinicalDocumentRoutesPath = resolve(
   "apps/api/src/modules/clinical-documents/clinical-document-routes.ts"
 );
+const clinicalDocumentRouteHelpersPath = resolve(
+  "apps/api/src/modules/clinical-documents/clinical-document-route-helpers.ts"
+);
+const clinicalDocumentReferenceValidationPath = resolve(
+  "apps/api/src/modules/clinical-documents/clinical-document-reference-validation.ts"
+);
 const forbiddenClinicalDocumentRoutePatterns = [
   {
     pattern:
@@ -1652,6 +1663,17 @@ const requiredClinicalDocumentRegistrations = [
   "registerClinicalDocumentCreationRoutes",
   "registerClinicalDocumentCommandRoutes",
   "registerClinicalDocumentFhirRoutes"
+];
+const forbiddenClinicalDocumentRouteHelperPatterns = [
+  {
+    pattern: /\bvalidateClinicalDocumentReferences\b|\bEncounterRepository\b/,
+    message:
+      "ClinicalDocument encounter reference validation belongs in clinical-document-reference-validation.ts."
+  }
+];
+const requiredClinicalDocumentReferenceValidationHelpers = [
+  "validateClinicalDocumentReferences",
+  "ENCOUNTER_MISMATCH"
 ];
 
 const clinicalDocumentFhirRoutesPath = resolve(
@@ -2157,6 +2179,14 @@ const patientRecordBundleConsentContextSource = await readFile(
 );
 const clinicalDocumentRoutesSource = await readFile(
   clinicalDocumentRoutesPath,
+  "utf8"
+);
+const clinicalDocumentRouteHelpersSource = await readFile(
+  clinicalDocumentRouteHelpersPath,
+  "utf8"
+);
+const clinicalDocumentReferenceValidationSource = await readFile(
+  clinicalDocumentReferenceValidationPath,
   "utf8"
 );
 const clinicalDocumentFhirRoutesSource = await readFile(
@@ -2695,6 +2725,20 @@ for (const registration of requiredClinicalDocumentRegistrations) {
   if (!clinicalDocumentRoutesSource.includes(registration)) {
     throw new Error(
       `ClinicalDocument root routes must register ${registration} so query, command and FHIR modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenClinicalDocumentRouteHelperPatterns) {
+  if (forbidden.pattern.test(clinicalDocumentRouteHelpersSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const helper of requiredClinicalDocumentReferenceValidationHelpers) {
+  if (!clinicalDocumentReferenceValidationSource.includes(helper)) {
+    throw new Error(
+      `ClinicalDocument reference validation module must keep ${helper} so document context stays patient-scoped.`
     );
   }
 }
