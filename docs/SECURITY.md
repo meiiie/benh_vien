@@ -44,6 +44,7 @@ Hồ sơ bệnh án là dữ liệu đặc biệt nhạy cảm. Dự án chưa t
 - Docker compose không dùng image runtime dạng `latest` cho MinIO, HAPI FHIR hoặc Orthanc; các tag được pin qua biến môi trường để nâng cấp có kiểm soát và CI có thể phát hiện cấu hình trôi phiên bản.
 - Dockerfile base images của API và web được pin bằng digest `sha256`; khi nâng Node/Nginx phải cập nhật digest có chủ đích và chạy lại build/smoke thay vì phụ thuộc vào tag mutable.
 - Dependabot được cấu hình cho npm workspace, GitHub Actions và Dockerfile API/web; CI có harness kiểm coverage này để tránh mất cơ chế cập nhật dependency/base image có kiểm soát.
+- CI chạy `pnpm audit --audit-level high` để chặn dependency có lỗ hổng đã biết ở mức cao hoặc nghiêm trọng; đây là lớp SCA tối thiểu, chưa thay thế rà soát bảo mật chuyên sâu hoặc đánh giá container/image định kỳ.
 - Release workflow chạy full CI gate trước khi đăng nhập GHCR và chỉ publish image theo semantic version, không publish tag `latest`, để môi trường triển khai không vô tình nhận artifact mutable ngoài kế hoạch kiểm thử.
 - Image release bật provenance attestation mức `mode=max`, SBOM attestation và OCI labels `source`/`revision`/`version` cho cả API lẫn web, giúp truy vết nguồn build, commit và thành phần phần mềm khi kiểm tra chuỗi cung ứng.
 - Ở production, `BVS_CORS_ORIGINS` chỉ chấp nhận Origin HTTPS canonical thật sự public, không chấp nhận wildcard, HTTP, URL có path, `localhost`, loopback, private IP hoặc link-local IP để tránh mở rộng nhầm phạm vi truy cập từ trình duyệt.
