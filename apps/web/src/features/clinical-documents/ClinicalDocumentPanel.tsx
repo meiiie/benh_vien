@@ -85,8 +85,8 @@ export function ClinicalDocumentPanel({
               <small>
                 {formatDocumentStatus(document.status)} ·{" "}
                 {document.encounterId
-                  ? `Encounter ${document.encounterId}`
-                  : "Chưa gắn encounter"}
+                  ? `Lượt khám ${document.encounterId}`
+                  : "Chưa gắn lượt khám"}
               </small>
             </button>
           ))}
@@ -110,7 +110,7 @@ export function ClinicalDocumentPanel({
                   value={formatDocumentStatus(selectedDocument.status)}
                 />
                 <Info
-                  label="Encounter"
+                  label="Lượt khám"
                   value={selectedDocument.encounterId ?? "Chưa gắn"}
                 />
                 <Info

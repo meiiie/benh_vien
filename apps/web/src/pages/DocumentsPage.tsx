@@ -17,10 +17,25 @@ export function DocumentsPage({
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="Document Center"
+        eyebrow="Trung tâm tài liệu"
         title="Trung tâm tài liệu bệnh án"
-        description="Tổ chức tài liệu theo danh mục gần với OpenEMR: CCR/CCDA, hồ sơ bệnh án, xét nghiệm, thông tin bệnh nhân và tài liệu FHIR export."
+        description="Quản lý tài liệu bệnh án theo hướng EMR: có siêu dữ liệu, trạng thái ký/xác thực, dấu vết tạo lập và bản xem trước FHIR để phục vụ liên thông."
       />
+
+      <section className="document-brief" aria-label="Phạm vi quản lý tài liệu bệnh án">
+        <article>
+          <span>Nguồn tài liệu: </span>
+          <p>Phân loại theo hồ sơ bệnh án, xét nghiệm, thông tin bệnh nhân và tài liệu trao đổi.</p>
+        </article>
+        <article>
+          <span>DocumentReference: </span>
+          <p>Mô tả loại tài liệu, định dạng tệp, dung lượng, mã băm và vị trí lưu trữ.</p>
+        </article>
+        <article>
+          <span>Provenance: </span>
+          <p>Ghi nhận người tạo, thời điểm, thao tác ký và nguồn gốc phục vụ kiểm toán.</p>
+        </article>
+      </section>
 
       <section className="workspace">
         {patientListPanel}

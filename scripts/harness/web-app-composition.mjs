@@ -4,6 +4,7 @@ import { relative, resolve } from "node:path";
 const appPath = resolve("apps/web/src/App.tsx");
 const appRouteRendererPath = resolve("apps/web/src/pages/AppRouteRenderer.tsx");
 const dashboardPagePath = resolve("apps/web/src/pages/DashboardPage.tsx");
+const documentsPagePath = resolve("apps/web/src/pages/DocumentsPage.tsx");
 const interopPagePath = resolve("apps/web/src/pages/InteropPage.tsx");
 const landingPagePath = resolve("apps/web/src/pages/LandingPage.tsx");
 const loginPagePath = resolve("apps/web/src/pages/LoginPage.tsx");
@@ -30,6 +31,9 @@ const recordTransferMetadataPath = resolve(
 );
 const clinicalDocumentApiPath = resolve(
   "apps/web/src/features/clinical-documents/clinicalDocumentApi.ts"
+);
+const clinicalDocumentPanelPath = resolve(
+  "apps/web/src/features/clinical-documents/ClinicalDocumentPanel.tsx"
 );
 const patientRegistryApiPath = resolve(
   "apps/web/src/features/patient-registry/patientRegistryApi.ts"
@@ -629,7 +633,9 @@ const featureModuleBudgets = [
 const appSource = await readFile(appPath, "utf8");
 const appRouteRendererSource = await readFile(appRouteRendererPath, "utf8");
 const dashboardPageSource = await readFile(dashboardPagePath, "utf8");
+const documentsPageSource = await readFile(documentsPagePath, "utf8");
 const clinicalApiSource = await readFile(allowedFetchModulePath, "utf8");
+const clinicalDocumentPanelSource = await readFile(clinicalDocumentPanelPath, "utf8");
 const consentInteropPanelSource = await readFile(consentInteropPanelPath, "utf8");
 const fhirTransferContextSummarySource = await readFile(
   fhirTransferContextSummaryPath,
@@ -986,6 +992,23 @@ if (
   !/Kiểm soát/.test(dashboardPageSource)
 ) {
   throw new Error("Dashboard page must explain its EMR, interoperability and control scope before the metric grid.");
+}
+
+if (/Document Center/.test(documentsPageSource)) {
+  throw new Error("Documents page must use professional Vietnamese demo-facing labels.");
+}
+
+if (
+  !/className="document-brief"/.test(documentsPageSource) ||
+  !/DocumentReference/.test(documentsPageSource) ||
+  !/Provenance/.test(documentsPageSource) ||
+  !/ký\/xác thực/.test(documentsPageSource)
+) {
+  throw new Error("Documents page must explain DocumentReference, Provenance and signing scope before the workspace.");
+}
+
+if (/Chưa gắn encounter|label="Encounter"|`Encounter \$\{document\.encounterId\}`/.test(clinicalDocumentPanelSource)) {
+  throw new Error("Clinical document panel must use Vietnamese encounter labels in demo-facing UI.");
 }
 
 const webSourceFiles = await collectSourceFiles(webSrcPath);

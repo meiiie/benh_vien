@@ -269,20 +269,23 @@
   max-width: 1040px;
 }
 
-.dashboard-brief {
+.dashboard-brief,
+.document-brief {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
-.dashboard-brief article {
+.dashboard-brief article,
+.document-brief article {
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 16px;
   padding: 14px;
   background: rgba(255, 255, 255, 0.8);
 }
 
-.dashboard-brief span {
+.dashboard-brief span,
+.document-brief span {
   color: var(--primary);
   font-size: 0.72rem;
   font-weight: 900;
@@ -290,7 +293,8 @@
   text-transform: uppercase;
 }
 
-.dashboard-brief p {
+.dashboard-brief p,
+.document-brief p {
   margin: 6px 0 0;
   color: var(--slate);
   font-size: 0.86rem;
@@ -1310,6 +1314,7 @@ pre {
 @media (max-width: 1100px) {
   .app-layout,
   .dashboard-brief,
+  .document-brief,
   .dashboard-grid,
   .settings-grid,
   .workspace,
