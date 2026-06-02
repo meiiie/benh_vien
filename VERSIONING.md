@@ -39,7 +39,7 @@ git push origin v0.2.0
 
 Tag release phải đúng dạng `vMAJOR.MINOR.PATCH`. Workflow sẽ dừng nếu tag không khớp dạng này.
 
-Workflow `Release Images` sẽ build và push:
+Workflow `Release Images` sẽ chạy full CI gate (`pnpm run ci`) ngay trong release job trước khi đăng nhập GHCR, sau đó build và push:
 
 - `ghcr.io/meiiie/benh_vien/api:<version>`
 - `ghcr.io/meiiie/benh_vien/web:<version>`
