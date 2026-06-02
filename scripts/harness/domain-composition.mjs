@@ -424,8 +424,23 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/fhir/fhir-document.types.ts",
-    maxLines: 150,
-    role: "FHIR document, provenance and composition types"
+    maxLines: 20,
+    role: "FHIR document compatibility barrel exports"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-document-reference.types.ts",
+    maxLines: 50,
+    role: "FHIR DocumentReference resource type"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-provenance.types.ts",
+    maxLines: 70,
+    role: "FHIR Provenance resource type"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-composition.types.ts",
+    maxLines: 60,
+    role: "FHIR Composition resource type"
   },
   {
     path: "packages/domain/src/fhir/map-clinical-document-to-fhir.ts",
@@ -975,6 +990,15 @@ const fhirClinicalBarrelPath = resolve("packages/domain/src/fhir/fhir-clinical.t
 const fhirSharedTypesPath = resolve("packages/domain/src/fhir/fhir-shared.types.ts");
 const fhirProviderTypesPath = resolve("packages/domain/src/fhir/fhir-provider.types.ts");
 const fhirDocumentTypesPath = resolve("packages/domain/src/fhir/fhir-document.types.ts");
+const fhirDocumentReferenceTypesPath = resolve(
+  "packages/domain/src/fhir/fhir-document-reference.types.ts"
+);
+const fhirProvenanceTypesPath = resolve(
+  "packages/domain/src/fhir/fhir-provenance.types.ts"
+);
+const fhirCompositionTypesPath = resolve(
+  "packages/domain/src/fhir/fhir-composition.types.ts"
+);
 const mapClinicalDocumentToFhirPath = resolve(
   "packages/domain/src/fhir/map-clinical-document-to-fhir.ts"
 );
@@ -1305,6 +1329,12 @@ const fhirClinicalBarrelSource = await readFile(fhirClinicalBarrelPath, "utf8");
 const fhirSharedTypesSource = await readFile(fhirSharedTypesPath, "utf8");
 const fhirProviderTypesSource = await readFile(fhirProviderTypesPath, "utf8");
 const fhirDocumentTypesSource = await readFile(fhirDocumentTypesPath, "utf8");
+const fhirDocumentReferenceTypesSource = await readFile(
+  fhirDocumentReferenceTypesPath,
+  "utf8"
+);
+const fhirProvenanceTypesSource = await readFile(fhirProvenanceTypesPath, "utf8");
+const fhirCompositionTypesSource = await readFile(fhirCompositionTypesPath, "utf8");
 const mapClinicalDocumentToFhirSource = await readFile(
   mapClinicalDocumentToFhirPath,
   "utf8"
@@ -4980,6 +5010,28 @@ for (const required of [
   }
 }
 
+for (const forbidden of [
+  /export type FhirDocumentReference/,
+  /export type FhirProvenance/,
+  /export type FhirComposition/
+]) {
+  if (forbidden.test(fhirDocumentTypesSource)) {
+    throw new Error(
+      "fhir-document.types.ts must remain a compatibility barrel; concrete document resource types belong in focused document submodules."
+    );
+  }
+}
+
+for (const required of [
+  /export \* from "\.\/fhir-document-reference\.types\.js"/,
+  /export \* from "\.\/fhir-provenance\.types\.js"/,
+  /export \* from "\.\/fhir-composition\.types\.js"/
+]) {
+  if (!required.test(fhirDocumentTypesSource)) {
+    throw new Error("fhir-document.types.ts must re-export all focused FHIR document type modules.");
+  }
+}
+
 for (const required of [
   /export type FhirIdentifier/,
   /export type FhirContactPoint/
@@ -4992,8 +5044,9 @@ for (const required of [
 for (const required of [
   [fhirProviderTypesSource, /export type FhirOrganization/, "fhir-provider.types.ts"],
   [fhirProviderTypesSource, /export type FhirPractitionerRole/, "fhir-provider.types.ts"],
-  [fhirDocumentTypesSource, /export type FhirDocumentReference/, "fhir-document.types.ts"],
-  [fhirDocumentTypesSource, /export type FhirComposition/, "fhir-document.types.ts"],
+  [fhirDocumentReferenceTypesSource, /export type FhirDocumentReference/, "fhir-document-reference.types.ts"],
+  [fhirProvenanceTypesSource, /export type FhirProvenance/, "fhir-provenance.types.ts"],
+  [fhirCompositionTypesSource, /export type FhirComposition/, "fhir-composition.types.ts"],
   [fhirPrivacyTypesSource, /export type FhirConsent/, "fhir-privacy.types.ts"],
   [fhirAuditTypesSource, /export type FhirAuditEvent/, "fhir-audit.types.ts"],
   [fhirEncounterTypesSource, /export type FhirEncounter/, "fhir-encounter.types.ts"],
