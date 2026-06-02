@@ -7,4 +7,4 @@ services:
 
   web:
     ports:
-      - "${APP_HTTP_PORT:-8080}:80"
+      - "${APP_HTTP_PORT:-8080}:8080"

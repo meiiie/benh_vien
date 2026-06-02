@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
 const apiDockerfilePath = "apps/api/Dockerfile";
+const webDockerfilePath = "apps/web/Dockerfile";
 const composeFiles = ["docker-compose.yml", "docker-compose.prod.yml"];
 const labComposeFiles = ["infra/docker-compose.yml"];
 const composeProfiles = ["interop", "imaging"];
@@ -36,6 +37,7 @@ const webPorts = composeConfig.services?.web?.ports ?? [];
 const runtimeImages = collectRuntimeImages(composeConfig);
 const labRuntimeImages = collectRuntimeImages(labComposeConfig);
 const apiDockerfile = readFileSync(apiDockerfilePath, "utf8");
+const webDockerfile = readFileSync(webDockerfilePath, "utf8");
 
 if (!apiEnvironment || typeof apiEnvironment !== "object") {
   throw new Error("Expected docker compose service api to expose an environment map.");
@@ -78,19 +80,32 @@ if (!apiDockerfileRunsAsNodeUser(apiDockerfile)) {
   );
 }
 
+if (!webDockerfileUsesUnprivilegedNginx(webDockerfile)) {
+  throw new Error(
+    "Web Docker runtime stage must use nginxinc/nginx-unprivileged and expose port 8080."
+  );
+}
+
+if (!webPorts.some((port) => port?.target === 8080)) {
+  throw new Error("Production compose must publish the web edge container port 8080.");
+}
+
 console.log(
   JSON.stringify(
     {
       status: "ok",
-      check: "Docker compose API runtime environment, production exposure, image pinning and API container user",
+      check: "Docker compose API/web runtime environment, production exposure, image pinning and container users",
       composeFiles,
       labComposeFiles,
       composeProfiles,
       apiDockerfilePath,
+      webDockerfilePath,
       requiredApiEnvironmentKeys,
       apiPublishedPorts: apiPorts.length,
       webPublishedPorts: webPorts.length,
       apiRuntimeUser: "node",
+      webRuntimeImage: "nginxinc/nginx-unprivileged:1.27-alpine",
+      webContainerPort: 8080,
       pinnedRuntimeImages: runtimeImages,
       pinnedLabRuntimeImages: labRuntimeImages
     },
@@ -126,6 +141,12 @@ function findMutableImages(images, sourceFiles) {
 
 function apiDockerfileRunsAsNodeUser(dockerfile) {
   return /\nFROM node:22-alpine AS runtime\b[\s\S]*\nUSER node\s*\n(?:EXPOSE 7310\s*\n)?CMD \["node", "apps\/api\/dist\/main\.js"\]/.test(
+    dockerfile
+  );
+}
+
+function webDockerfileUsesUnprivilegedNginx(dockerfile) {
+  return /\nFROM nginxinc\/nginx-unprivileged:1\.27-alpine AS runtime\b[\s\S]*\nEXPOSE 8080\s*\n/.test(
     dockerfile
   );
 }

@@ -59,7 +59,7 @@ Khi đó có thêm:
 
 ## Prod-like smoke
 
-Prod-like compose chỉ publish web edge (`APP_HTTP_PORT`, mặc định `8080`). API không publish trực tiếp ra host; health/readiness của API được kiểm tra từ bên trong container để giữ ranh giới backend nội bộ.
+Prod-like compose chỉ publish web edge (`APP_HTTP_PORT`, mặc định `8080`) vào cổng container `8080` của Nginx unprivileged. API không publish trực tiếp ra host; health/readiness của API được kiểm tra từ bên trong container để giữ ranh giới backend nội bộ.
 
 ```bash
 cp .env.prod.example .env.prod.local
@@ -173,7 +173,7 @@ docker compose --env-file .env.prod.local -f docker-compose.yml -f docker-compos
 
 Migration lưu `checksum_sha256` trong `schema_migrations`. Nếu một migration đã áp dụng bị sửa nội dung, service `migrate` sẽ dừng thay vì âm thầm chạy tiếp với lịch sử schema không còn đáng tin cậy.
 
-Web runtime Nginx gắn CSP chặt cho SPA tại `/`, gồm `default-src 'self'`, `script-src 'self'`, `style-src 'self'`, `object-src 'none'` và `frame-ancestors 'none'`. CSP không áp cho `/docs` để Swagger UI không bị chặn inline script/style của chính nó khi docs được bật. Web edge cũng tắt `server_tokens`, gửi thêm `Cross-Origin-Opener-Policy`, `Strict-Transport-Security` và chuyển tiếp `X-Request-Id` xuống API để giữ trace correlation. Trong production, API mặc định không đăng ký `/docs`; chỉ đặt `BVS_API_DOCS_ENABLED=true` cho môi trường nội bộ hoặc phiên demo có kiểm soát.
+Web runtime Nginx chạy bằng image unprivileged và listen cổng `8080`, đồng thời gắn CSP chặt cho SPA tại `/`, gồm `default-src 'self'`, `script-src 'self'`, `style-src 'self'`, `object-src 'none'` và `frame-ancestors 'none'`. CSP không áp cho `/docs` để Swagger UI không bị chặn inline script/style của chính nó khi docs được bật. Web edge cũng tắt `server_tokens`, gửi thêm `Cross-Origin-Opener-Policy`, `Strict-Transport-Security` và chuyển tiếp `X-Request-Id` xuống API để giữ trace correlation. Trong production, API mặc định không đăng ký `/docs`; chỉ đặt `BVS_API_DOCS_ENABLED=true` cho môi trường nội bộ hoặc phiên demo có kiểm soát.
 
 ## Validate compose
 
@@ -185,7 +185,7 @@ pnpm compose:config
 
 - Không dùng `.env.prod.example` cho production thật; file này cố ý chứa placeholder để buộc người vận hành thay secret/mật khẩu trước khi boot production.
 - Network `backend` là internal, chỉ web và API được đưa ra ngoài qua network `frontend`.
-- API/migrate runtime image chạy bằng `USER node` thay vì root; nếu thêm logic cần ghi file trong container, phải dùng thư mục/volume có quyền phù hợp và chạy `pnpm run harness:compose-env`.
+- API/migrate runtime image chạy bằng `USER node` thay vì root; web runtime dùng `nginxinc/nginx-unprivileged` thay vì Nginx root/port 80. Nếu thêm logic cần ghi file trong container, phải dùng thư mục/volume có quyền phù hợp và chạy `pnpm run harness:compose-env`.
 - CI kiểm tra cấu hình web security header bằng `pnpm run harness:web-security` và kiểm tra header thật khi boot prod-like stack.
 - CI kiểm tra compose không dùng image runtime dạng `latest` hoặc thiếu tag bằng `pnpm run harness:compose-env`.
 - HAPI FHIR và Orthanc đang ở profile riêng để tránh vô tình bật dịch vụ nặng hoặc chưa có xác thực.

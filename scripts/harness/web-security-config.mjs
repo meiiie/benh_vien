@@ -46,6 +46,11 @@ assertIncludes(
 );
 assertIncludes(
   nginxConfig,
+  "listen 8080;",
+  "Web runtime Nginx must listen on unprivileged port 8080."
+);
+assertIncludes(
+  nginxConfig,
   "server_tokens off;",
   "Web runtime must not expose the Nginx version in error pages."
 );
