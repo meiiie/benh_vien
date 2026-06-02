@@ -3,7 +3,7 @@ import type { ClinicalDocumentPanelRenderers } from "../features/clinical-docume
 import type { ClinicalRecordPanelRenderers } from "../features/clinical-records/clinicalRecordPanelRenderers.js";
 import type { InteropPanelRenderers } from "../features/interoperability/interopPanelRenderers.js";
 import type { PatientPanelRenderers } from "../features/patient-registry/patientPanelRenderers.js";
-import type { AppRoutePanels } from "../pages/AppRouteRenderer.js";
+import type { AppRoutePanels } from "./appRouteModels.js";
 
 type BuildAppRoutePanelsOptions = {
   readonly auditPanels: AuditPanelRenderers;

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { ReferenceSignal } from "../application/appRouteModels.js";
 import { FhirPanel, PageBrief, PageHeader } from "../components/AppShell.js";
 import {
   FhirDocumentBundleSummary
@@ -9,11 +10,6 @@ import {
 } from "../features/interoperability/FhirTransferContextSummary.js";
 import type { Patient } from "../types/patientRegistry.js";
 import type { ProviderDirectory } from "../types/providerDirectory.js";
-
-type ReferenceSignal = {
-  readonly name: string;
-  readonly value: string;
-};
 
 type InteropPageProps = {
   readonly allergyIntoleranceFhirPreview: unknown;

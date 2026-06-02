@@ -1,9 +1,9 @@
 import type { useClinicalRecordState } from "../features/clinical-records/clinicalRecordState.js";
 import type { useFhirPreviewState } from "../features/fhir-preview/fhirPreviewState.js";
 import type { usePlatformState } from "../features/platform/platformState.js";
+import type { AppRouteRuntimeContext } from "./appRouteModels.js";
 import { buildDashboardMetrics } from "./dashboardMetrics.js";
 import { buildWorkspaceSelection } from "./workspaceSelection.js";
-import type { AppRouteRenderer } from "../pages/AppRouteRenderer.js";
 import type { AuthSession } from "../types/appRuntime.js";
 import type { Patient } from "../types/patientRegistry.js";
 import type { ProviderDirectory } from "../types/providerDirectory.js";
@@ -12,7 +12,6 @@ import type { RecordTransfer } from "../types/recordTransfers.js";
 type ClinicalRecordState = ReturnType<typeof useClinicalRecordState>;
 type FhirPreviewState = ReturnType<typeof useFhirPreviewState>;
 type PlatformState = ReturnType<typeof usePlatformState>;
-type AppRouteRendererProps = Parameters<typeof AppRouteRenderer>[0];
 
 type BuildAppAccessContextInput = {
   readonly authSession: AuthSession | undefined;
@@ -105,7 +104,7 @@ export function buildAppRouteRuntimeContext({
   readonly clinicalRecordState: ClinicalRecordState;
   readonly fhirPreviewState: FhirPreviewState;
   readonly platformState: PlatformState;
-}): Pick<AppRouteRendererProps, "fhirPreviews" | "latestEncounterServiceType"> {
+}): AppRouteRuntimeContext {
   return {
     fhirPreviews: {
       allergyIntolerance: fhirPreviewState.allergyIntoleranceFhirPreview,

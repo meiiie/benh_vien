@@ -2,7 +2,10 @@ import { readdir, stat, readFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 
 const appPath = resolve("apps/web/src/App.tsx");
+const appDerivedContextPath = resolve("apps/web/src/application/appDerivedContext.ts");
 const appNavigationPath = resolve("apps/web/src/config/appNavigation.ts");
+const appRouteModelsPath = resolve("apps/web/src/application/appRouteModels.ts");
+const appRoutePanelsPath = resolve("apps/web/src/application/appRoutePanels.ts");
 const appRouteRendererPath = resolve("apps/web/src/pages/AppRouteRenderer.tsx");
 const appShellPath = resolve("apps/web/src/components/AppShell.tsx");
 const auditLogPagePath = resolve("apps/web/src/pages/AuditLogPage.tsx");
@@ -73,6 +76,7 @@ const requiredModules = [
   "apps/web/src/application/appPatientWorkspaceLoaders.ts",
   "apps/web/src/application/appPlatformLoaders.ts",
   "apps/web/src/application/appRecordTransferHandlers.ts",
+  "apps/web/src/application/appRouteModels.ts",
   "apps/web/src/application/appRoutePanels.ts",
   "apps/web/src/application/appRuntimeEffects.ts",
   "apps/web/src/application/appShellState.ts",
@@ -648,7 +652,10 @@ const featureModuleBudgets = [
 ];
 
 const appSource = await readFile(appPath, "utf8");
+const appDerivedContextSource = await readFile(appDerivedContextPath, "utf8");
 const appNavigationSource = await readFile(appNavigationPath, "utf8");
+const appRouteModelsSource = await readFile(appRouteModelsPath, "utf8");
+const appRoutePanelsSource = await readFile(appRoutePanelsPath, "utf8");
 const appRouteRendererSource = await readFile(appRouteRendererPath, "utf8");
 const appShellSource = await readFile(appShellPath, "utf8");
 const auditLogPageSource = await readFile(auditLogPagePath, "utf8");
@@ -1132,6 +1139,36 @@ if (
 ) {
   throw new Error(
     "Authenticated page rendering must use AuthenticatedAppRoute so dashboard navigation cannot point back to public routes."
+  );
+}
+
+if (
+  !/export type AppRoutePanels =/.test(appRouteModelsSource) ||
+  !/export type FhirPreviewValues =/.test(appRouteModelsSource) ||
+  !/export type ReferenceSignal =/.test(appRouteModelsSource) ||
+  !/export type AppRouteRuntimeContext =/.test(appRouteModelsSource)
+) {
+  throw new Error(
+    "Application route renderer models must live in apps/web/src/application/appRouteModels.ts instead of page component files."
+  );
+}
+
+if (
+  /from ["']\.\.\/pages\/AppRouteRenderer\.js["']/.test(appDerivedContextSource) ||
+  /Parameters<typeof AppRouteRenderer>/.test(appDerivedContextSource) ||
+  /from ["']\.\.\/pages\/AppRouteRenderer\.js["']/.test(appRoutePanelsSource)
+) {
+  throw new Error(
+    "Application composition modules must not import route model types from page components."
+  );
+}
+
+if (
+  !/from ["']\.\.\/application\/appRouteModels\.js["']/.test(appRouteRendererSource) ||
+  !/from ["']\.\.\/application\/appRouteModels\.js["']/.test(interopPageSource)
+) {
+  throw new Error(
+    "Route pages must consume shared route models from apps/web/src/application/appRouteModels.ts."
   );
 }
 

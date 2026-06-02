@@ -1,4 +1,4 @@
-import type { FormEvent, ReactNode } from "react";
+import type { FormEvent } from "react";
 import type { LoginForm } from "../auth/demoLogin.js";
 import type {
   ApiRuntimeInfo,
@@ -11,6 +11,11 @@ import type {
 } from "../types/recordTransfers.js";
 import { AuditLogPage } from "./AuditLogPage.js";
 import { DashboardPage } from "./DashboardPage.js";
+import type {
+  AppRoutePanels,
+  FhirPreviewValues,
+  ReferenceSignal
+} from "../application/appRouteModels.js";
 import type { AuthenticatedAppRoute } from "../config/appNavigation.js";
 import type { DashboardMetrics } from "../application/dashboardMetrics.js";
 import { defaultRecordTransferForm } from "../config/demoTransferDefaults.js";
@@ -20,60 +25,6 @@ import { InteropPage } from "./InteropPage.js";
 import type { ProviderDirectory } from "../types/providerDirectory.js";
 import { SettingsPage } from "./SettingsPage.js";
 import { WorkspacePage } from "./WorkspacePage.js";
-
-type ReferenceSignal = {
-  readonly name: string;
-  readonly value: string;
-};
-
-export type AppRoutePanels = {
-  readonly allergyIntolerance: () => ReactNode;
-  readonly audit: () => ReactNode;
-  readonly clinicalDocument: () => ReactNode;
-  readonly condition: () => ReactNode;
-  readonly consentInterop: () => ReactNode;
-  readonly createPatient: () => ReactNode;
-  readonly diagnosticReport: () => ReactNode;
-  readonly encounter: () => ReactNode;
-  readonly globalAudit: () => ReactNode;
-  readonly imagingStudy: () => ReactNode;
-  readonly medicationAdministration: () => ReactNode;
-  readonly medicationDispense: () => ReactNode;
-  readonly medicationRequest: () => ReactNode;
-  readonly observation: () => ReactNode;
-  readonly patientDetail: () => ReactNode;
-  readonly patientList: () => ReactNode;
-  readonly patientMerge: () => ReactNode;
-  readonly procedure: () => ReactNode;
-  readonly providerDirectory: () => ReactNode;
-  readonly recordTransferInterop: () => ReactNode;
-  readonly serviceRequest: () => ReactNode;
-  readonly workflowTask: () => ReactNode;
-};
-
-type FhirPreviewValues = {
-  readonly allergyIntolerance: unknown;
-  readonly capabilityStatement: unknown;
-  readonly condition: unknown;
-  readonly consent: unknown;
-  readonly diagnosticReport: unknown;
-  readonly document: unknown;
-  readonly documentProvenance: unknown;
-  readonly encounter: unknown;
-  readonly imagingStudy: unknown;
-  readonly medicationAdministration: unknown;
-  readonly medicationDispense: unknown;
-  readonly medicationRequest: unknown;
-  readonly observation: unknown;
-  readonly patient: unknown;
-  readonly patientBundle: unknown;
-  readonly patientDocumentBundle: unknown;
-  readonly procedure: unknown;
-  readonly providerDirectory: unknown;
-  readonly recordTransferTask: unknown;
-  readonly serviceRequest: unknown;
-  readonly workflowTask: unknown;
-};
 
 type AppRouteRendererProps = {
   readonly apiBaseUrl: string;
