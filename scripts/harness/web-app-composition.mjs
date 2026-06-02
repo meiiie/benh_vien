@@ -2,6 +2,7 @@ import { readdir, stat, readFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 
 const appPath = resolve("apps/web/src/App.tsx");
+const landingPagePath = resolve("apps/web/src/pages/LandingPage.tsx");
 const mainPath = resolve("apps/web/src/main.tsx");
 const webSrcPath = resolve("apps/web/src");
 const allowedFetchModulePath = resolve("apps/web/src/api/clinicalApi.ts");
@@ -598,6 +599,7 @@ const featureModuleBudgets = [
 ];
 
 const appSource = await readFile(appPath, "utf8");
+const landingPageSource = await readFile(landingPagePath, "utf8");
 const mainSource = await readFile(mainPath, "utf8");
 const clinicalDocumentApiSource = await readFile(clinicalDocumentApiPath, "utf8");
 const patientRegistryApiSource = await readFile(patientRegistryApiPath, "utf8");
@@ -748,6 +750,18 @@ for (const check of documentBundleTransferContextChecks) {
   }
 }
 
+if (/\b\d+\s+SQL migrations\b/.test(landingPageSource)) {
+  throw new Error(
+    "Landing page must not hard-code migration counts because they drift as schema migrations evolve."
+  );
+}
+
+if (!/Nguyễn Văn An/.test(landingPageSource) || /Nguyễn Minh An/.test(landingPageSource)) {
+  throw new Error(
+    "Landing page demo patient identity must match the in-memory patient registry fixture."
+  );
+}
+
 const webSourceFiles = await collectSourceFiles(webSrcPath);
 const forbiddenFetchFiles = [];
 const forbiddenClinicalTypeBarrelImportFiles = [];
@@ -815,6 +829,7 @@ console.log(
       status: "ok",
       check: "Web app composition budget",
       appPath,
+      landingPagePath,
       appLineCount,
       maxAppLines,
       clinicalDocumentApiPath,

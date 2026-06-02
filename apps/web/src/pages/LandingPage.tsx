@@ -6,28 +6,28 @@ type LandingPageProps = {
 const capabilityCards = [
   {
     label: "Hồ sơ lâm sàng",
-    title: "Patient Workspace",
+    title: "Không gian hồ sơ bệnh nhân",
     description:
       "Theo dõi bệnh nhân, lượt khám, dị ứng, chẩn đoán, chỉ định, kết quả và thuốc trong một bàn làm việc thống nhất.",
     tags: ["Patient", "Encounter", "Medication"]
   },
   {
     label: "Bệnh án điện tử",
-    title: "Document Center",
+    title: "Trung tâm tài liệu bệnh án",
     description:
       "Quản lý tài liệu bệnh án, metadata tệp, nguồn tạo, băm kiểm chứng và ánh xạ sang DocumentReference/Provenance.",
     tags: ["DocumentReference", "Provenance", "Hash"]
   },
   {
     label: "Liên thông",
-    title: "Record Transfer",
+    title: "Chuyển hồ sơ liên viện",
     description:
       "Mô phỏng chuyển hồ sơ theo đồng ý của người bệnh, tạo gói FHIR Bundle, hàng đợi gửi, retry và callback biên nhận.",
     tags: ["Consent", "FHIR Task", "Outbox"]
   },
   {
     label: "An toàn vận hành",
-    title: "Audit & Access",
+    title: "Kiểm soát truy cập và audit",
     description:
       "Phân quyền theo vai trò, mục đích sử dụng, phạm vi tổ chức và chuỗi audit để phục vụ kiểm toán truy cập dữ liệu nhạy cảm.",
     tags: ["RBAC", "ABAC", "Audit trail"]
@@ -69,7 +69,7 @@ export function LandingPage({ onDemo, onLogin }: LandingPageProps) {
 
       <section className="landing-hero">
         <div className="landing-hero-copy">
-          <p className="eyebrow">EMR interoperability prototype</p>
+          <p className="eyebrow">Nguyên mẫu EMR liên thông</p>
           <h1>Bệnh án điện tử liên thông cho bối cảnh bệnh viện Việt Nam</h1>
           <p className="lede">
             WiiiCare Nexus là mô hình EMR (Electronic Medical Record, bệnh án điện tử)
@@ -88,8 +88,9 @@ export function LandingPage({ onDemo, onLogin }: LandingPageProps) {
           </div>
           <div className="landing-proof-row" aria-label="Tín hiệu năng lực sản phẩm">
             <span>FHIR R4</span>
-            <span>26 SQL migrations</span>
-            <span>RBAC/ABAC</span>
+            <span>FHIR document Bundle</span>
+            <span>Schema migrations có kiểm soát</span>
+            <span>RBAC/ABAC + audit</span>
             <span>Hải Phòng referral flow</span>
           </div>
         </div>
@@ -102,7 +103,7 @@ export function LandingPage({ onDemo, onLogin }: LandingPageProps) {
             </div>
             <div className="patient-strip">
               <span>Bệnh nhân</span>
-              <strong>Nguyễn Minh An</strong>
+              <strong>Nguyễn Văn An</strong>
               <small>Consent hợp lệ · Endpoint FHIR sẵn sàng</small>
             </div>
             <ol className="transfer-timeline" aria-label="Luồng chuyển hồ sơ">
