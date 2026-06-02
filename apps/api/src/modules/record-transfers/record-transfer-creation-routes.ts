@@ -4,7 +4,7 @@ import {
   CreateRecordTransferRequestSchema,
   PatientRecordTransfersParamsSchema
 } from "@benh-vien-so/contracts";
-import { DomainError, RecordTransfer } from "@benh-vien-so/domain";
+import { RecordTransfer } from "@benh-vien-so/domain";
 import type {
   AuditEventRepository,
   ConsentRepository,
@@ -17,6 +17,7 @@ import {
   requirePermission
 } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
+import { sendRecordTransferDomainError } from "./record-transfer-command-route-helpers.js";
 import { resolveRecordTransferFhirEndpoint } from "./record-transfer-fhir-endpoint-resolver.js";
 import { validateRecordTransferEndpointForDelivery } from "./record-transfer-endpoint-policy.js";
 import {
@@ -127,11 +128,8 @@ export async function registerRecordTransferCreationRoutes(
 
       return reply.status(201).send(toRecordTransferResponse(recordTransfer));
     } catch (error) {
-      if (error instanceof DomainError) {
-        return reply.status(422).send({
-          error: "RECORD_TRANSFER_DOMAIN_ERROR",
-          message: error.message
-        });
+      if (sendRecordTransferDomainError(reply, error)) {
+        return;
       }
 
       throw error;

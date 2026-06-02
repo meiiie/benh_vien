@@ -1105,6 +1105,20 @@ const requiredRecordTransferRegistrations = [
   "registerRecordTransferFhirRoutes"
 ];
 
+const recordTransferCreationRoutesPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-creation-routes.ts"
+);
+const forbiddenRecordTransferCreationRoutePatterns = [
+  {
+    pattern: /\bDomainError\b|\bRECORD_TRANSFER_DOMAIN_ERROR\b/,
+    message:
+      "RecordTransfer creation route should use sendRecordTransferDomainError instead of owning a separate domain-error envelope."
+  }
+];
+const requiredRecordTransferCreationRouteHelpers = [
+  "sendRecordTransferDomainError"
+];
+
 const recordTransferCommandRoutesPath = resolve(
   "apps/api/src/modules/record-transfers/record-transfer-command-routes.ts"
 );
@@ -1837,6 +1851,10 @@ const authRoutesSource = await readFile(authRoutesPath, "utf8");
 const auditEventRoutesSource = await readFile(auditEventRoutesPath, "utf8");
 const consentRoutesSource = await readFile(consentRoutesPath, "utf8");
 const recordTransferRoutesSource = await readFile(recordTransferRoutesPath, "utf8");
+const recordTransferCreationRoutesSource = await readFile(
+  recordTransferCreationRoutesPath,
+  "utf8"
+);
 const recordTransferCommandRoutesSource = await readFile(
   recordTransferCommandRoutesPath,
   "utf8"
@@ -2049,6 +2067,20 @@ for (const registration of requiredRecordTransferRegistrations) {
   if (!recordTransferRoutesSource.includes(registration)) {
     throw new Error(
       `RecordTransfer root routes must register ${registration} so lifecycle-specific route modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenRecordTransferCreationRoutePatterns) {
+  if (forbidden.pattern.test(recordTransferCreationRoutesSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const helper of requiredRecordTransferCreationRouteHelpers) {
+  if (!recordTransferCreationRoutesSource.includes(helper)) {
+    throw new Error(
+      `RecordTransfer creation route must use ${helper} so domain-error envelopes stay centralized.`
     );
   }
 }
