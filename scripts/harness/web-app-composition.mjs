@@ -12,6 +12,7 @@ const interopPagePath = resolve("apps/web/src/pages/InteropPage.tsx");
 const landingPagePath = resolve("apps/web/src/pages/LandingPage.tsx");
 const loginPagePath = resolve("apps/web/src/pages/LoginPage.tsx");
 const mainPath = resolve("apps/web/src/main.tsx");
+const settingsPagePath = resolve("apps/web/src/pages/SettingsPage.tsx");
 const workspacePagePath = resolve("apps/web/src/pages/WorkspacePage.tsx");
 const stylesPath = resolve("apps/web/src/styles.css");
 const landingStylesPath = resolve("apps/web/src/styles/landing.css");
@@ -671,6 +672,7 @@ const interopPageSource = await readFile(interopPagePath, "utf8");
 const landingPageSource = await readFile(landingPagePath, "utf8");
 const loginPageSource = await readFile(loginPagePath, "utf8");
 const mainSource = await readFile(mainPath, "utf8");
+const settingsPageSource = await readFile(settingsPagePath, "utf8");
 const workspacePageSource = await readFile(workspacePagePath, "utf8");
 const stylesSource = await readFile(stylesPath, "utf8");
 const landingStylesSource = await readFile(landingStylesPath, "utf8");
@@ -1054,7 +1056,7 @@ if (
 
 if (
   !/\.page-brief\s*\{/.test(stylesSource) ||
-  /\.dashboard-brief article|\.document-brief article|\.workspace-brief article/.test(
+  /\.dashboard-brief article|\.document-brief article|\.settings-brief article|\.workspace-brief article/.test(
     stylesSource
   )
 ) {
@@ -1065,6 +1067,7 @@ const pageBriefConsumerChecks = [
   { source: dashboardPageSource, className: "dashboard-brief", page: "Dashboard page" },
   { source: documentsPageSource, className: "document-brief", page: "Documents page" },
   { source: workspacePageSource, className: "workspace-brief", page: "Workspace page" },
+  { source: settingsPageSource, className: "settings-brief", page: "Settings page" },
   { source: interopPageSource, className: "interop-brief", page: "Interop page" },
   { source: auditLogPageSource, className: "audit-brief", page: "Audit page" },
   {
@@ -1099,6 +1102,31 @@ if (
   !/Giải thích vai trò demo:/.test(loginPageSource)
 ) {
   throw new Error("Login page must render role choices and role explanation from centralized demo role metadata.");
+}
+
+if (
+  /eyebrow="Settings"|<p className="eyebrow">(?:Session|Runtime|Roadmap)<\/p>/.test(
+    settingsPageSource
+  )
+) {
+  throw new Error("Settings page must use professional Vietnamese labels instead of raw Settings/Session/Runtime/Roadmap copy.");
+}
+
+if (
+  !/settingsBriefItems/.test(settingsPageSource) ||
+  !/productionReadinessMilestones/.test(settingsPageSource) ||
+  !/className="settings-brief"/.test(settingsPageSource) ||
+  !/Bearer token \+ mục đích sử dụng \(PurposeOfUse\)/.test(settingsPageSource)
+) {
+  throw new Error("Settings page must explain demo session scope, backend runtime and production readiness with shared structured content.");
+}
+
+if (
+  /label="(?:Service|Diagnostics|Repository|Public API|API docs|Delivery attempts|Delivery worker|Retry worker)"/.test(
+    settingsPageSource
+  )
+) {
+  throw new Error("Settings page runtime labels must be Vietnamese and reviewer-friendly.");
 }
 
 if (/eyebrow="Dashboard"|Today queue|Selected chart|Mở patient workspace/.test(dashboardPageSource)) {
