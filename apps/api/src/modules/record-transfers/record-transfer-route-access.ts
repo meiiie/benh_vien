@@ -7,6 +7,7 @@ import type {
   RecordTransferRepository
 } from "@benh-vien-so/domain";
 import { requirePatientRecordAccessByPatientId } from "../access-control/access-context.js";
+import { sendNotFoundErrorResponse } from "../http/http-not-found-error-response.js";
 
 type LoadRecordTransferForPatientAccessInput = {
   readonly request: FastifyRequest;
@@ -32,10 +33,7 @@ export async function loadRecordTransferForPatientAccess({
   const recordTransfer = await recordTransferRepository.findById(recordTransferId);
 
   if (!recordTransfer) {
-    reply.status(404).send({
-      error: "RECORD_TRANSFER_NOT_FOUND",
-      ...(notFoundMessage ? { message: notFoundMessage } : {})
-    });
+    sendNotFoundErrorResponse(reply, "RECORD_TRANSFER_NOT_FOUND", notFoundMessage);
     return undefined;
   }
 

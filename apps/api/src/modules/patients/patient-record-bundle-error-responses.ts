@@ -1,4 +1,5 @@
 import type { FastifyReply } from "fastify";
+import { sendNotFoundErrorResponse } from "../http/http-not-found-error-response.js";
 import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
 
 export type PatientRecordBundleType = "collection" | "document";
@@ -9,9 +10,7 @@ export function sendMissingPatientResponse(
   bundleType: PatientRecordBundleType
 ) {
   if (bundleType === "collection") {
-    return reply.status(404).send({
-      error: "PATIENT_NOT_FOUND"
-    });
+    return sendNotFoundErrorResponse(reply, "PATIENT_NOT_FOUND");
   }
 
   return sendFhirOperationOutcome(reply, {

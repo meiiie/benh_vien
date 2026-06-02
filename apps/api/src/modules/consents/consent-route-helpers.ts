@@ -10,6 +10,7 @@ import type {
 import { requirePatientRecordAccessByPatientId } from "../access-control/access-context.js";
 import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
 import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
+import { sendNotFoundErrorResponse } from "../http/http-not-found-error-response.js";
 
 export function toConsentResponse(consent: Consent): ConsentSnapshot {
   return consent.toSnapshot();
@@ -24,9 +25,7 @@ export async function loadPatientConsentForRevoke(
   const consent = await consentRepository.findById(consentId);
 
   if (!consent || consent.patientId !== patientId) {
-    reply.status(404).send({
-      error: "CONSENT_NOT_FOUND"
-    });
+    sendNotFoundErrorResponse(reply, "CONSENT_NOT_FOUND");
 
     return undefined;
   }

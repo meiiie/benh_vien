@@ -9,6 +9,7 @@ import type {
 } from "@benh-vien-so/domain";
 import { requirePatientRecordAccessByPatientId } from "../access-control/access-context.js";
 import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
+import { sendNotFoundErrorResponse } from "../http/http-not-found-error-response.js";
 
 export function toEncounterResponse(encounter: Encounter): EncounterSnapshot {
   return encounter.toSnapshot();
@@ -26,9 +27,7 @@ export async function loadEncounterForPatientAccess(
   const encounter = await encounterRepository.findById(encounterId);
 
   if (!encounter) {
-    reply.status(404).send({
-      error: "ENCOUNTER_NOT_FOUND"
-    });
+    sendNotFoundErrorResponse(reply, "ENCOUNTER_NOT_FOUND");
 
     return undefined;
   }

@@ -9,6 +9,7 @@ import type {
 } from "@benh-vien-so/domain";
 import { requirePatientRecordAccessByPatientId } from "../access-control/access-context.js";
 import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
+import { sendNotFoundErrorResponse } from "../http/http-not-found-error-response.js";
 
 export function toConditionResponse(condition: Condition): ConditionSnapshot {
   return condition.toSnapshot();
@@ -26,9 +27,7 @@ export async function loadConditionForPatientAccess(
   const condition = await conditionRepository.findById(conditionId);
 
   if (!condition) {
-    reply.status(404).send({
-      error: "CONDITION_NOT_FOUND"
-    });
+    sendNotFoundErrorResponse(reply, "CONDITION_NOT_FOUND");
 
     return undefined;
   }

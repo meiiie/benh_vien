@@ -173,6 +173,11 @@ const routeBudgets = [
     role: "HTTP validation error to 422 response mapper"
   },
   {
+    path: "apps/api/src/modules/http/http-not-found-error-response.ts",
+    maxLines: 30,
+    role: "HTTP JSON not-found error response mapper"
+  },
+  {
     path: "apps/api/src/modules/http/http-content-negotiation.ts",
     maxLines: 50,
     role: "HTTP FHIR content negotiation helpers"
@@ -1030,6 +1035,14 @@ const requiredHttpValidationErrorResponseHelpers = [
   "HttpValidationErrorResponse",
   "status(422)"
 ];
+const httpNotFoundErrorResponsePath = resolve(
+  "apps/api/src/modules/http/http-not-found-error-response.ts"
+);
+const requiredHttpNotFoundErrorResponseHelpers = [
+  "sendNotFoundErrorResponse",
+  "status(404)",
+  "message"
+];
 const standardizedDomainErrorRoutePaths = [
   {
     path: resolve(
@@ -1136,6 +1149,110 @@ const standardizedValidationErrorRoutePaths = [
   {
     path: resolve("apps/api/src/modules/observations/observation-creation-routes.ts"),
     label: "Observation creation route"
+  }
+];
+const standardizedNotFoundErrorRoutePaths = [
+  {
+    path: resolve("apps/api/src/modules/encounters/encounter-route-helpers.ts"),
+    label: "Encounter route helper"
+  },
+  {
+    path: resolve("apps/api/src/modules/observations/observation-route-helpers.ts"),
+    label: "Observation route helper"
+  },
+  {
+    path: resolve("apps/api/src/modules/conditions/condition-route-helpers.ts"),
+    label: "Condition route helper"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/allergy-intolerances/allergy-intolerance-route-helpers.ts"
+    ),
+    label: "AllergyIntolerance route helper"
+  },
+  {
+    path: resolve("apps/api/src/modules/consents/consent-route-helpers.ts"),
+    label: "Consent route helper"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/diagnostic-reports/diagnostic-report-route-helpers.ts"
+    ),
+    label: "DiagnosticReport route helper"
+  },
+  {
+    path: resolve("apps/api/src/modules/imaging-studies/imaging-study-route-helpers.ts"),
+    label: "ImagingStudy route helper"
+  },
+  {
+    path: resolve("apps/api/src/modules/service-requests/service-request-route-helpers.ts"),
+    label: "ServiceRequest route helper"
+  },
+  {
+    path: resolve("apps/api/src/modules/workflow-tasks/workflow-task-route-helpers.ts"),
+    label: "WorkflowTask route helper"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/record-transfers/record-transfer-route-access.ts"
+    ),
+    label: "RecordTransfer patient access helper"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-handler.ts"
+    ),
+    label: "RecordTransfer acknowledgement handler"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/patients/patient-record-bundle-error-responses.ts"
+    ),
+    label: "Patient record Bundle error responses"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/medication-requests/medication-request-query-routes.ts"
+    ),
+    label: "MedicationRequest query route"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/medication-requests/medication-request-fhir-routes.ts"
+    ),
+    label: "MedicationRequest FHIR route"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/medication-dispenses/medication-dispense-query-routes.ts"
+    ),
+    label: "MedicationDispense query route"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/medication-dispenses/medication-dispense-fhir-routes.ts"
+    ),
+    label: "MedicationDispense FHIR route"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/medication-administrations/medication-administration-query-routes.ts"
+    ),
+    label: "MedicationAdministration query route"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/medication-administrations/medication-administration-fhir-routes.ts"
+    ),
+    label: "MedicationAdministration FHIR route"
+  },
+  {
+    path: resolve("apps/api/src/modules/procedures/procedure-query-routes.ts"),
+    label: "Procedure query route"
+  },
+  {
+    path: resolve("apps/api/src/modules/procedures/procedure-fhir-routes.ts"),
+    label: "Procedure FHIR route"
   }
 ];
 const standardizedDomainErrorHelperPaths = [
@@ -2318,6 +2435,10 @@ const httpValidationErrorResponseSource = await readFile(
   httpValidationErrorResponsePath,
   "utf8"
 );
+const httpNotFoundErrorResponseSource = await readFile(
+  httpNotFoundErrorResponsePath,
+  "utf8"
+);
 const standardizedDomainErrorRouteSources = await Promise.all(
   standardizedDomainErrorRoutePaths.map(async (route) => ({
     ...route,
@@ -2326,6 +2447,12 @@ const standardizedDomainErrorRouteSources = await Promise.all(
 );
 const standardizedValidationErrorRouteSources = await Promise.all(
   standardizedValidationErrorRoutePaths.map(async (route) => ({
+    ...route,
+    source: await readFile(route.path, "utf8")
+  }))
+);
+const standardizedNotFoundErrorRouteSources = await Promise.all(
+  standardizedNotFoundErrorRoutePaths.map(async (route) => ({
     ...route,
     source: await readFile(route.path, "utf8")
   }))
@@ -2642,6 +2769,14 @@ for (const helper of requiredHttpValidationErrorResponseHelpers) {
   }
 }
 
+for (const helper of requiredHttpNotFoundErrorResponseHelpers) {
+  if (!httpNotFoundErrorResponseSource.includes(helper)) {
+    throw new Error(
+      `HTTP not-found response helper must keep ${helper} so JSON 404 envelopes stay centralized.`
+    );
+  }
+}
+
 for (const route of standardizedDomainErrorRouteSources) {
   if (/\bDomainError\b/.test(route.source)) {
     throw new Error(
@@ -2666,6 +2801,20 @@ for (const route of standardizedValidationErrorRouteSources) {
   if (!route.source.includes("sendValidationErrorResponse")) {
     throw new Error(
       `${route.label} must use sendValidationErrorResponse so validation-error payloads stay centralized.`
+    );
+  }
+}
+
+for (const route of standardizedNotFoundErrorRouteSources) {
+  if (route.source.includes("reply.status(404).send({")) {
+    throw new Error(
+      `${route.label} must use sendNotFoundErrorResponse instead of inline JSON not-found response handling.`
+    );
+  }
+
+  if (!route.source.includes("sendNotFoundErrorResponse")) {
+    throw new Error(
+      `${route.label} must use sendNotFoundErrorResponse so JSON 404 envelopes stay centralized.`
     );
   }
 }

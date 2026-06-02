@@ -12,6 +12,7 @@ import {
   requirePermission
 } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
+import { sendNotFoundErrorResponse } from "../http/http-not-found-error-response.js";
 
 export async function registerProcedureFhirRoutes(
   app: FastifyInstance,
@@ -31,9 +32,7 @@ export async function registerProcedureFhirRoutes(
     const procedure = await procedureRepository.findById(params.id);
 
     if (!procedure) {
-      return reply.status(404).send({
-        error: "PROCEDURE_NOT_FOUND"
-      });
+      return sendNotFoundErrorResponse(reply, "PROCEDURE_NOT_FOUND");
     }
 
     if (

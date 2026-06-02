@@ -14,6 +14,7 @@ import {
   requirePermission
 } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
+import { sendNotFoundErrorResponse } from "../http/http-not-found-error-response.js";
 import { toMedicationAdministrationResponse } from "./medication-administration-route-helpers.js";
 
 export async function registerMedicationAdministrationQueryRoutes(
@@ -73,9 +74,10 @@ export async function registerMedicationAdministrationQueryRoutes(
       await medicationAdministrationRepository.findById(params.id);
 
     if (!medicationAdministration) {
-      return reply.status(404).send({
-        error: "MEDICATION_ADMINISTRATION_NOT_FOUND"
-      });
+      return sendNotFoundErrorResponse(
+        reply,
+        "MEDICATION_ADMINISTRATION_NOT_FOUND"
+      );
     }
 
     if (

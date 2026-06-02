@@ -9,6 +9,7 @@ import type {
 } from "@benh-vien-so/domain";
 import { requirePatientRecordAccessByPatientId } from "../access-control/access-context.js";
 import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
+import { sendNotFoundErrorResponse } from "../http/http-not-found-error-response.js";
 
 export function toImagingStudyResponse(imagingStudy: ImagingStudy): ImagingStudySnapshot {
   return imagingStudy.toSnapshot();
@@ -26,9 +27,7 @@ export async function loadImagingStudyForPatientAccess(
   const imagingStudy = await imagingStudyRepository.findById(imagingStudyId);
 
   if (!imagingStudy) {
-    reply.status(404).send({
-      error: "IMAGING_STUDY_NOT_FOUND"
-    });
+    sendNotFoundErrorResponse(reply, "IMAGING_STUDY_NOT_FOUND");
 
     return undefined;
   }

@@ -1,5 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { requirePermission } from "../access-control/access-context.js";
+import { sendNotFoundErrorResponse } from "../http/http-not-found-error-response.js";
 import { ensureAcknowledgementCallbackAccess } from "./record-transfer-acknowledgement-policy.js";
 import { sendAcknowledgementSignatureFailure } from "./record-transfer-acknowledgement-responses.js";
 import {
@@ -39,9 +40,7 @@ export async function handleRecordTransferAcknowledgementCallback(
     await dependencies.recordTransferRepository.findById(recordTransferId);
 
   if (!recordTransfer) {
-    return reply.status(404).send({
-      error: "RECORD_TRANSFER_NOT_FOUND"
-    });
+    return sendNotFoundErrorResponse(reply, "RECORD_TRANSFER_NOT_FOUND");
   }
 
   const snapshot = recordTransfer.toSnapshot();

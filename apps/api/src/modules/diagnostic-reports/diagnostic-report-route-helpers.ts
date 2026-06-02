@@ -9,6 +9,7 @@ import type {
 } from "@benh-vien-so/domain";
 import { requirePatientRecordAccessByPatientId } from "../access-control/access-context.js";
 import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
+import { sendNotFoundErrorResponse } from "../http/http-not-found-error-response.js";
 
 export function toDiagnosticReportResponse(
   diagnosticReport: DiagnosticReport
@@ -28,9 +29,7 @@ export async function loadDiagnosticReportForPatientAccess(
   const diagnosticReport = await diagnosticReportRepository.findById(diagnosticReportId);
 
   if (!diagnosticReport) {
-    reply.status(404).send({
-      error: "DIAGNOSTIC_REPORT_NOT_FOUND"
-    });
+    sendNotFoundErrorResponse(reply, "DIAGNOSTIC_REPORT_NOT_FOUND");
 
     return undefined;
   }

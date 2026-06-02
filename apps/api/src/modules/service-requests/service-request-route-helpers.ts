@@ -9,6 +9,7 @@ import type {
 } from "@benh-vien-so/domain";
 import { requirePatientRecordAccessByPatientId } from "../access-control/access-context.js";
 import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
+import { sendNotFoundErrorResponse } from "../http/http-not-found-error-response.js";
 
 export function toServiceRequestResponse(
   serviceRequest: ServiceRequest
@@ -28,9 +29,7 @@ export async function loadServiceRequestForPatientAccess(
   const serviceRequest = await serviceRequestRepository.findById(serviceRequestId);
 
   if (!serviceRequest) {
-    reply.status(404).send({
-      error: "SERVICE_REQUEST_NOT_FOUND"
-    });
+    sendNotFoundErrorResponse(reply, "SERVICE_REQUEST_NOT_FOUND");
 
     return undefined;
   }

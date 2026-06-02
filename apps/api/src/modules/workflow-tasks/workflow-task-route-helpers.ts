@@ -9,6 +9,7 @@ import type {
 } from "@benh-vien-so/domain";
 import { requirePatientRecordAccessByPatientId } from "../access-control/access-context.js";
 import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
+import { sendNotFoundErrorResponse } from "../http/http-not-found-error-response.js";
 
 export function toWorkflowTaskResponse(task: WorkflowTask): WorkflowTaskSnapshot {
   return task.toSnapshot();
@@ -26,9 +27,7 @@ export async function loadWorkflowTaskForPatientAccess(
   const task = await taskRepository.findById(taskId);
 
   if (!task) {
-    reply.status(404).send({
-      error: "WORKFLOW_TASK_NOT_FOUND"
-    });
+    sendNotFoundErrorResponse(reply, "WORKFLOW_TASK_NOT_FOUND");
 
     return undefined;
   }

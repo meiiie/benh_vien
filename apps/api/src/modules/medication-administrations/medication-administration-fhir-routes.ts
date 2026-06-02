@@ -12,6 +12,7 @@ import {
   requirePermission
 } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
+import { sendNotFoundErrorResponse } from "../http/http-not-found-error-response.js";
 
 export async function registerMedicationAdministrationFhirRoutes(
   app: FastifyInstance,
@@ -32,9 +33,10 @@ export async function registerMedicationAdministrationFhirRoutes(
       await medicationAdministrationRepository.findById(params.id);
 
     if (!medicationAdministration) {
-      return reply.status(404).send({
-        error: "MEDICATION_ADMINISTRATION_NOT_FOUND"
-      });
+      return sendNotFoundErrorResponse(
+        reply,
+        "MEDICATION_ADMINISTRATION_NOT_FOUND"
+      );
     }
 
     if (
