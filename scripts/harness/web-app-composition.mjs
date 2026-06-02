@@ -889,6 +889,12 @@ if (/\b\d+\s+SQL migrations\b/.test(landingPageSource)) {
   );
 }
 
+if (/Clinical command center|Hải Phòng referral flow/.test(landingPageSource)) {
+  throw new Error(
+    "Landing page must use professional Vietnamese labels for demo-facing workflow copy instead of raw English marketing phrases."
+  );
+}
+
 if (!/Nguyễn Văn An/.test(landingPageSource) || /Nguyễn Minh An/.test(landingPageSource)) {
   throw new Error(
     "Landing page demo patient identity must match the in-memory patient registry fixture."

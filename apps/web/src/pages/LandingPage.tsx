@@ -74,7 +74,7 @@ export function LandingPage({ onDemo, onLogin }: LandingPageProps) {
           <p className="lede">
             WiiiCare Nexus là mô hình EMR (Electronic Medical Record, bệnh án điện tử)
             tập trung vào hồ sơ bệnh nhân, tài liệu lâm sàng, đồng ý chia sẻ dữ liệu,
-            chuyển hồ sơ liên viện và audit trail. Mục tiêu không phải làm màn hình đẹp
+            chuyển hồ sơ liên viện và audit trail (nhật ký kiểm toán). Mục tiêu không phải làm màn hình đẹp
             đơn thuần, mà là trình bày một lát cắt sản phẩm đủ gần thực tế để phát triển
             thành hệ thống bệnh viện số.
           </p>
@@ -91,15 +91,15 @@ export function LandingPage({ onDemo, onLogin }: LandingPageProps) {
             <span>FHIR document Bundle</span>
             <span>Schema migrations có kiểm soát</span>
             <span>RBAC/ABAC + audit</span>
-            <span>Hải Phòng referral flow</span>
+            <span>Luồng chuyển viện Hải Phòng</span>
           </div>
         </div>
         <aside className="landing-card" aria-label="Tổng quan luồng sản phẩm">
           <span className="status-pill">Prototype an toàn, không dùng dữ liệu thật</span>
           <div className="clinical-window">
             <div className="clinical-window-header">
-              <span>Clinical command center</span>
-              <strong>RecordTransfer #demo-001</strong>
+              <span>Trung tâm điều phối lâm sàng</span>
+              <strong>Gói chuyển hồ sơ #demo-001</strong>
             </div>
             <div className="patient-strip">
               <span>Bệnh nhân</span>
@@ -136,8 +136,8 @@ export function LandingPage({ onDemo, onLogin }: LandingPageProps) {
           <p className="eyebrow">Cách tiếp cận</p>
           <h2>Đi từ EMR lõi trước, AI và tự động hóa để sau</h2>
           <p>
-            Nền tảng hiện bám vào hồ sơ bệnh nhân, tài liệu, Provider Directory, FHIR,
-            phân quyền và audit. Đây là phần xương sống cần chắc trước khi tích hợp
+            Nền tảng hiện bám vào hồ sơ bệnh nhân, tài liệu, Provider Directory
+            (danh bạ cơ sở, nhân sự và endpoint), FHIR, phân quyền và audit. Đây là phần xương sống cần chắc trước khi tích hợp
             HIS/LIS/PACS thật hoặc thêm AI.
           </p>
         </article>
@@ -163,8 +163,8 @@ export function LandingPage({ onDemo, onLogin }: LandingPageProps) {
         <span>Provider Directory</span>
         <span>DocumentReference</span>
         <span>AuditEvent</span>
-        <span>Orthanc/PACS profile</span>
-        <span>HAPI FHIR lab</span>
+        <span>Hồ sơ Orthanc/PACS</span>
+        <span>Lab HAPI FHIR</span>
       </section>
     </main>
   );
