@@ -11,12 +11,14 @@ export type BundleSummary = {
   readonly documentReferenceCount: number;
   readonly entryCount: number;
   readonly issueMessage?: string;
+  readonly isDocumentBundle: boolean;
   readonly provenanceCount: number;
   readonly taskCount: number;
 };
 
 export function buildBundleChecks(summary: BundleSummary): readonly BundleCheck[] {
   return [
+    check("Bundle đúng kiểu document", summary.isDocumentBundle, "FHIR document Bundle cần resourceType=Bundle và type=document."),
     check("Composition đứng ở entry đầu tiên", summary.compositionFirst, "FHIR document Bundle cần Composition làm mục lục lâm sàng."),
     check("Có consent đi kèm", summary.consentCount > 0, "Bên nhận cần thấy căn cứ đồng ý chia sẻ hồ sơ."),
     check("Có tài liệu lâm sàng", summary.documentReferenceCount > 0, "DocumentReference mô tả file, hash, thời điểm tạo và ngữ cảnh."),
@@ -39,6 +41,9 @@ export function summarizeDocumentBundle(value: unknown): BundleSummary {
     documentReferenceCount: countResource(resourceTypes, "DocumentReference"),
     entryCount: entries.length,
     issueMessage: extractBundleIssue(bundle),
+    isDocumentBundle:
+      getString(bundle?.resourceType) === "Bundle" &&
+      getString(bundle?.type) === "document",
     provenanceCount: countResource(resourceTypes, "Provenance"),
     taskCount: countResource(resourceTypes, "Task")
   };
