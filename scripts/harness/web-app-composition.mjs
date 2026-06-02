@@ -205,7 +205,7 @@ const forbiddenPageCompositionModules = [
   "apps/web/src/pages/patientPanelContext.ts",
   "apps/web/src/pages/workspaceSelection.ts"
 ];
-const maxAppLines = 2_647;
+const maxAppLines = 650;
 const featureModuleBudgets = [
   {
     path: "apps/web/src/config/demoClinicalDefaults.ts",
