@@ -19,9 +19,9 @@ import {
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 import {
   sendConditionDomainError,
-  toConditionResponse,
-  validateConditionReferences
+  toConditionResponse
 } from "./condition-route-helpers.js";
+import { validateConditionReferences } from "./condition-reference-validation.js";
 
 export async function registerConditionCreationRoutes(
   app: FastifyInstance,

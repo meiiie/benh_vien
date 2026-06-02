@@ -19,9 +19,9 @@ import {
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 import {
   sendObservationDomainError,
-  toObservationResponse,
-  validateObservationReferences
+  toObservationResponse
 } from "./observation-route-helpers.js";
+import { validateObservationReferences } from "./observation-reference-validation.js";
 
 export async function registerObservationCreationRoutes(
   app: FastifyInstance,

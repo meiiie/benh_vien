@@ -480,7 +480,7 @@ const routeBudgets = [
   {
     path: "apps/api/src/modules/observations/observation-creation-routes.ts",
     maxLines: 140,
-    role: "Observation creation and encounter validation route adapter"
+    role: "Observation creation command route adapter"
   },
   {
     path: "apps/api/src/modules/observations/observation-fhir-routes.ts",
@@ -489,8 +489,13 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/observations/observation-route-helpers.ts",
-    maxLines: 130,
-    role: "Observation response, access, reference and domain error helpers"
+    maxLines: 90,
+    role: "Observation response, access and domain error helpers"
+  },
+  {
+    path: "apps/api/src/modules/observations/observation-reference-validation.ts",
+    maxLines: 70,
+    role: "Observation encounter reference validation helper"
   },
   {
     path: "apps/api/src/modules/conditions/condition-routes.ts",
@@ -505,7 +510,7 @@ const routeBudgets = [
   {
     path: "apps/api/src/modules/conditions/condition-creation-routes.ts",
     maxLines: 140,
-    role: "Condition creation and encounter validation route adapter"
+    role: "Condition creation command route adapter"
   },
   {
     path: "apps/api/src/modules/conditions/condition-fhir-routes.ts",
@@ -514,8 +519,13 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/conditions/condition-route-helpers.ts",
-    maxLines: 130,
-    role: "Condition response, access, reference and domain error helpers"
+    maxLines: 90,
+    role: "Condition response, access and domain error helpers"
+  },
+  {
+    path: "apps/api/src/modules/conditions/condition-reference-validation.ts",
+    maxLines: 70,
+    role: "Condition encounter reference validation helper"
   },
   {
     path: "apps/api/src/modules/allergy-intolerances/allergy-intolerance-routes.ts",
@@ -530,7 +540,7 @@ const routeBudgets = [
   {
     path: "apps/api/src/modules/allergy-intolerances/allergy-intolerance-creation-routes.ts",
     maxLines: 150,
-    role: "AllergyIntolerance creation and encounter validation route adapter"
+    role: "AllergyIntolerance creation command route adapter"
   },
   {
     path: "apps/api/src/modules/allergy-intolerances/allergy-intolerance-fhir-routes.ts",
@@ -539,8 +549,13 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/allergy-intolerances/allergy-intolerance-route-helpers.ts",
-    maxLines: 150,
-    role: "AllergyIntolerance response, access, reference and domain error helpers"
+    maxLines: 100,
+    role: "AllergyIntolerance response, access and domain error helpers"
+  },
+  {
+    path: "apps/api/src/modules/allergy-intolerances/allergy-intolerance-reference-validation.ts",
+    maxLines: 70,
+    role: "AllergyIntolerance encounter reference validation helper"
   },
   {
     path: "apps/api/src/modules/patients/patient-routes.ts",
@@ -1363,6 +1378,12 @@ const requiredEncounterRegistrations = [
 const observationRoutesPath = resolve(
   "apps/api/src/modules/observations/observation-routes.ts"
 );
+const observationRouteHelpersPath = resolve(
+  "apps/api/src/modules/observations/observation-route-helpers.ts"
+);
+const observationReferenceValidationPath = resolve(
+  "apps/api/src/modules/observations/observation-reference-validation.ts"
+);
 const forbiddenObservationRoutePatterns = [
   {
     pattern:
@@ -1387,8 +1408,25 @@ const requiredObservationRegistrations = [
   "registerObservationCreationRoutes",
   "registerObservationFhirRoutes"
 ];
+const forbiddenObservationRouteHelperPatterns = [
+  {
+    pattern: /\bvalidateObservationReferences\b|\bEncounterRepository\b/,
+    message:
+      "Observation encounter reference validation belongs in observation-reference-validation.ts."
+  }
+];
+const requiredObservationReferenceValidationHelpers = [
+  "validateObservationReferences",
+  "ENCOUNTER_MISMATCH"
+];
 
 const conditionRoutesPath = resolve("apps/api/src/modules/conditions/condition-routes.ts");
+const conditionRouteHelpersPath = resolve(
+  "apps/api/src/modules/conditions/condition-route-helpers.ts"
+);
+const conditionReferenceValidationPath = resolve(
+  "apps/api/src/modules/conditions/condition-reference-validation.ts"
+);
 const forbiddenConditionRoutePatterns = [
   {
     pattern:
@@ -1413,9 +1451,26 @@ const requiredConditionRegistrations = [
   "registerConditionCreationRoutes",
   "registerConditionFhirRoutes"
 ];
+const forbiddenConditionRouteHelperPatterns = [
+  {
+    pattern: /\bvalidateConditionReferences\b|\bEncounterRepository\b/,
+    message:
+      "Condition encounter reference validation belongs in condition-reference-validation.ts."
+  }
+];
+const requiredConditionReferenceValidationHelpers = [
+  "validateConditionReferences",
+  "ENCOUNTER_MISMATCH"
+];
 
 const allergyIntoleranceRoutesPath = resolve(
   "apps/api/src/modules/allergy-intolerances/allergy-intolerance-routes.ts"
+);
+const allergyIntoleranceRouteHelpersPath = resolve(
+  "apps/api/src/modules/allergy-intolerances/allergy-intolerance-route-helpers.ts"
+);
+const allergyIntoleranceReferenceValidationPath = resolve(
+  "apps/api/src/modules/allergy-intolerances/allergy-intolerance-reference-validation.ts"
 );
 const forbiddenAllergyIntoleranceRoutePatterns = [
   {
@@ -1440,6 +1495,17 @@ const requiredAllergyIntoleranceRegistrations = [
   "registerAllergyIntoleranceQueryRoutes",
   "registerAllergyIntoleranceCreationRoutes",
   "registerAllergyIntoleranceFhirRoutes"
+];
+const forbiddenAllergyIntoleranceRouteHelperPatterns = [
+  {
+    pattern: /\bvalidateAllergyIntoleranceReferences\b|\bEncounterRepository\b/,
+    message:
+      "AllergyIntolerance encounter reference validation belongs in allergy-intolerance-reference-validation.ts."
+  }
+];
+const requiredAllergyIntoleranceReferenceValidationHelpers = [
+  "validateAllergyIntoleranceReferences",
+  "ENCOUNTER_MISMATCH"
 ];
 
 const patientRoutesPath = resolve("apps/api/src/modules/patients/patient-routes.ts");
@@ -2047,9 +2113,30 @@ const procedureReportReferenceValidationSource = await readFile(
   "utf8"
 );
 const observationRoutesSource = await readFile(observationRoutesPath, "utf8");
+const observationRouteHelpersSource = await readFile(
+  observationRouteHelpersPath,
+  "utf8"
+);
+const observationReferenceValidationSource = await readFile(
+  observationReferenceValidationPath,
+  "utf8"
+);
 const conditionRoutesSource = await readFile(conditionRoutesPath, "utf8");
+const conditionRouteHelpersSource = await readFile(conditionRouteHelpersPath, "utf8");
+const conditionReferenceValidationSource = await readFile(
+  conditionReferenceValidationPath,
+  "utf8"
+);
 const allergyIntoleranceRoutesSource = await readFile(
   allergyIntoleranceRoutesPath,
+  "utf8"
+);
+const allergyIntoleranceRouteHelpersSource = await readFile(
+  allergyIntoleranceRouteHelpersPath,
+  "utf8"
+);
+const allergyIntoleranceReferenceValidationSource = await readFile(
+  allergyIntoleranceReferenceValidationPath,
   "utf8"
 );
 const diagnosticReportRoutesSource = await readFile(diagnosticReportRoutesPath, "utf8");
@@ -2367,6 +2454,20 @@ for (const registration of requiredObservationRegistrations) {
   }
 }
 
+for (const forbidden of forbiddenObservationRouteHelperPatterns) {
+  if (forbidden.pattern.test(observationRouteHelpersSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const helper of requiredObservationReferenceValidationHelpers) {
+  if (!observationReferenceValidationSource.includes(helper)) {
+    throw new Error(
+      `Observation reference validation module must keep ${helper} so encounter-scoped results stay patient-scoped.`
+    );
+  }
+}
+
 for (const forbidden of forbiddenConditionRoutePatterns) {
   if (forbidden.pattern.test(conditionRoutesSource)) {
     throw new Error(forbidden.message);
@@ -2381,6 +2482,20 @@ for (const registration of requiredConditionRegistrations) {
   }
 }
 
+for (const forbidden of forbiddenConditionRouteHelperPatterns) {
+  if (forbidden.pattern.test(conditionRouteHelpersSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const helper of requiredConditionReferenceValidationHelpers) {
+  if (!conditionReferenceValidationSource.includes(helper)) {
+    throw new Error(
+      `Condition reference validation module must keep ${helper} so diagnosis context stays patient-scoped.`
+    );
+  }
+}
+
 for (const forbidden of forbiddenAllergyIntoleranceRoutePatterns) {
   if (forbidden.pattern.test(allergyIntoleranceRoutesSource)) {
     throw new Error(forbidden.message);
@@ -2391,6 +2506,20 @@ for (const registration of requiredAllergyIntoleranceRegistrations) {
   if (!allergyIntoleranceRoutesSource.includes(registration)) {
     throw new Error(
       `AllergyIntolerance root routes must register ${registration} so query, creation and FHIR modules remain wired.`
+    );
+  }
+}
+
+for (const forbidden of forbiddenAllergyIntoleranceRouteHelperPatterns) {
+  if (forbidden.pattern.test(allergyIntoleranceRouteHelpersSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
+for (const helper of requiredAllergyIntoleranceReferenceValidationHelpers) {
+  if (!allergyIntoleranceReferenceValidationSource.includes(helper)) {
+    throw new Error(
+      `AllergyIntolerance reference validation module must keep ${helper} so allergy context stays patient-scoped.`
     );
   }
 }

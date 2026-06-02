@@ -4,16 +4,11 @@ import type {
   Condition,
   ConditionRepository,
   ConditionSnapshot,
-  EncounterRepository,
   PatientRepository,
   ProviderDirectoryRepository
 } from "@benh-vien-so/domain";
 import { DomainError } from "@benh-vien-so/domain";
 import { requirePatientRecordAccessByPatientId } from "../access-control/access-context.js";
-
-export type ConditionReferenceInput = {
-  readonly encounterId?: string;
-};
 
 export function toConditionResponse(condition: Condition): ConditionSnapshot {
   return condition.toSnapshot();
@@ -52,32 +47,6 @@ export async function loadConditionForPatientAccess(
   }
 
   return condition;
-}
-
-export async function validateConditionReferences(
-  reply: FastifyReply,
-  patientId: string,
-  input: ConditionReferenceInput,
-  repositories: {
-    readonly encounterRepository: EncounterRepository;
-  }
-): Promise<boolean> {
-  if (!input.encounterId) {
-    return true;
-  }
-
-  const encounter = await repositories.encounterRepository.findById(input.encounterId);
-
-  if (!encounter || encounter.patientId !== patientId) {
-    reply.status(422).send({
-      error: "ENCOUNTER_MISMATCH",
-      message: "Chẩn đoán phải gắn với lượt khám thuộc cùng bệnh nhân."
-    });
-
-    return false;
-  }
-
-  return true;
 }
 
 export function sendConditionDomainError(reply: FastifyReply, error: unknown): boolean {

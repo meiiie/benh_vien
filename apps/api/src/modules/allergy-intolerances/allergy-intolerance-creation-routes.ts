@@ -19,9 +19,9 @@ import {
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 import {
   sendAllergyIntoleranceDomainError,
-  toAllergyIntoleranceResponse,
-  validateAllergyIntoleranceReferences
+  toAllergyIntoleranceResponse
 } from "./allergy-intolerance-route-helpers.js";
+import { validateAllergyIntoleranceReferences } from "./allergy-intolerance-reference-validation.js";
 
 export async function registerAllergyIntoleranceCreationRoutes(
   app: FastifyInstance,
