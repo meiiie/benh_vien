@@ -419,8 +419,28 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/fhir/fhir-provider.types.ts",
-    maxLines: 140,
-    role: "FHIR provider directory resource types"
+    maxLines: 20,
+    role: "FHIR provider compatibility barrel exports"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-organization.types.ts",
+    maxLines: 45,
+    role: "FHIR Organization resource type"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-practitioner.types.ts",
+    maxLines: 40,
+    role: "FHIR Practitioner resource type"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-practitioner-role.types.ts",
+    maxLines: 60,
+    role: "FHIR PractitionerRole resource type"
+  },
+  {
+    path: "packages/domain/src/fhir/fhir-endpoint.types.ts",
+    maxLines: 45,
+    role: "FHIR Endpoint resource type"
   },
   {
     path: "packages/domain/src/fhir/fhir-document.types.ts",
@@ -989,6 +1009,16 @@ const fhirTypesPath = resolve("packages/domain/src/fhir/fhir-types.ts");
 const fhirClinicalBarrelPath = resolve("packages/domain/src/fhir/fhir-clinical.types.ts");
 const fhirSharedTypesPath = resolve("packages/domain/src/fhir/fhir-shared.types.ts");
 const fhirProviderTypesPath = resolve("packages/domain/src/fhir/fhir-provider.types.ts");
+const fhirOrganizationTypesPath = resolve(
+  "packages/domain/src/fhir/fhir-organization.types.ts"
+);
+const fhirPractitionerTypesPath = resolve(
+  "packages/domain/src/fhir/fhir-practitioner.types.ts"
+);
+const fhirPractitionerRoleTypesPath = resolve(
+  "packages/domain/src/fhir/fhir-practitioner-role.types.ts"
+);
+const fhirEndpointTypesPath = resolve("packages/domain/src/fhir/fhir-endpoint.types.ts");
 const fhirDocumentTypesPath = resolve("packages/domain/src/fhir/fhir-document.types.ts");
 const fhirDocumentReferenceTypesPath = resolve(
   "packages/domain/src/fhir/fhir-document-reference.types.ts"
@@ -1328,6 +1358,13 @@ const fhirTypesSource = await readFile(fhirTypesPath, "utf8");
 const fhirClinicalBarrelSource = await readFile(fhirClinicalBarrelPath, "utf8");
 const fhirSharedTypesSource = await readFile(fhirSharedTypesPath, "utf8");
 const fhirProviderTypesSource = await readFile(fhirProviderTypesPath, "utf8");
+const fhirOrganizationTypesSource = await readFile(fhirOrganizationTypesPath, "utf8");
+const fhirPractitionerTypesSource = await readFile(fhirPractitionerTypesPath, "utf8");
+const fhirPractitionerRoleTypesSource = await readFile(
+  fhirPractitionerRoleTypesPath,
+  "utf8"
+);
+const fhirEndpointTypesSource = await readFile(fhirEndpointTypesPath, "utf8");
 const fhirDocumentTypesSource = await readFile(fhirDocumentTypesPath, "utf8");
 const fhirDocumentReferenceTypesSource = await readFile(
   fhirDocumentReferenceTypesPath,
@@ -5011,6 +5048,30 @@ for (const required of [
 }
 
 for (const forbidden of [
+  /export type FhirOrganization/,
+  /export type FhirPractitioner/,
+  /export type FhirPractitionerRole/,
+  /export type FhirEndpoint/
+]) {
+  if (forbidden.test(fhirProviderTypesSource)) {
+    throw new Error(
+      "fhir-provider.types.ts must remain a compatibility barrel; concrete provider resource types belong in focused provider submodules."
+    );
+  }
+}
+
+for (const required of [
+  /export \* from "\.\/fhir-organization\.types\.js"/,
+  /export \* from "\.\/fhir-practitioner\.types\.js"/,
+  /export \* from "\.\/fhir-practitioner-role\.types\.js"/,
+  /export \* from "\.\/fhir-endpoint\.types\.js"/
+]) {
+  if (!required.test(fhirProviderTypesSource)) {
+    throw new Error("fhir-provider.types.ts must re-export all focused FHIR provider type modules.");
+  }
+}
+
+for (const forbidden of [
   /export type FhirDocumentReference/,
   /export type FhirProvenance/,
   /export type FhirComposition/
@@ -5042,8 +5103,10 @@ for (const required of [
 }
 
 for (const required of [
-  [fhirProviderTypesSource, /export type FhirOrganization/, "fhir-provider.types.ts"],
-  [fhirProviderTypesSource, /export type FhirPractitionerRole/, "fhir-provider.types.ts"],
+  [fhirOrganizationTypesSource, /export type FhirOrganization/, "fhir-organization.types.ts"],
+  [fhirPractitionerTypesSource, /export type FhirPractitioner/, "fhir-practitioner.types.ts"],
+  [fhirPractitionerRoleTypesSource, /export type FhirPractitionerRole/, "fhir-practitioner-role.types.ts"],
+  [fhirEndpointTypesSource, /export type FhirEndpoint/, "fhir-endpoint.types.ts"],
   [fhirDocumentReferenceTypesSource, /export type FhirDocumentReference/, "fhir-document-reference.types.ts"],
   [fhirProvenanceTypesSource, /export type FhirProvenance/, "fhir-provenance.types.ts"],
   [fhirCompositionTypesSource, /export type FhirComposition/, "fhir-composition.types.ts"],
