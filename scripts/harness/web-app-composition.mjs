@@ -294,6 +294,8 @@ const requiredModules = [
   "apps/web/src/features/patient-registry/patientRegistryFormatters.ts",
   "apps/web/src/features/patient-registry/patientRegistrySelectors.ts",
   "apps/web/src/features/patient-workspace/patientWorkspaceCollectionLoaders.ts",
+  "apps/web/src/features/patient-workspace/patientWorkspaceLifecycle.ts",
+  "apps/web/src/features/patient-workspace/patientWorkspaceReset.ts",
   "apps/web/src/features/platform/platformApi.ts",
   "apps/web/src/features/provider-directory/ProviderDirectoryPanel.tsx",
   "apps/web/src/features/provider-directory/providerDirectoryApi.ts",
@@ -399,6 +401,21 @@ const featureModuleBudgets = [
     path: "apps/web/src/config/demoReferenceContent.ts",
     maxLines: 70,
     role: "Demo workflow and reference signal content"
+  },
+  {
+    path: "apps/web/src/features/patient-workspace/patientWorkspaceLifecycle.ts",
+    maxLines: 170,
+    role: "Patient workspace load orchestration"
+  },
+  {
+    path: "apps/web/src/features/patient-workspace/patientWorkspaceReset.ts",
+    maxLines: 180,
+    role: "Patient workspace reset state boundary"
+  },
+  {
+    path: "apps/web/src/features/patient-workspace/patientWorkspaceCollectionLoaders.ts",
+    maxLines: 260,
+    role: "Patient-scoped EMR collection loader composition"
   },
   {
     path: "apps/web/src/features/clinical-documents/ClinicalDocumentPanel.tsx",
