@@ -433,6 +433,16 @@ const domainBudgets = [
     role: "FHIR consent and privacy resource types"
   },
   {
+    path: "packages/domain/src/fhir/map-consent-to-fhir.ts",
+    maxLines: 90,
+    role: "FHIR Consent public mapper and revocation extension"
+  },
+  {
+    path: "packages/domain/src/fhir/map-consent-codings.ts",
+    maxLines: 130,
+    role: "FHIR Consent status, scope, category and provision mapping"
+  },
+  {
     path: "packages/domain/src/fhir/fhir-audit.types.ts",
     maxLines: 90,
     role: "FHIR audit event resource types"
@@ -811,6 +821,8 @@ const fhirSharedTypesPath = resolve("packages/domain/src/fhir/fhir-shared.types.
 const fhirProviderTypesPath = resolve("packages/domain/src/fhir/fhir-provider.types.ts");
 const fhirDocumentTypesPath = resolve("packages/domain/src/fhir/fhir-document.types.ts");
 const fhirPrivacyTypesPath = resolve("packages/domain/src/fhir/fhir-privacy.types.ts");
+const mapConsentToFhirPath = resolve("packages/domain/src/fhir/map-consent-to-fhir.ts");
+const mapConsentCodingsPath = resolve("packages/domain/src/fhir/map-consent-codings.ts");
 const fhirAuditTypesPath = resolve("packages/domain/src/fhir/fhir-audit.types.ts");
 const mapProviderDirectoryToFhirPath = resolve(
   "packages/domain/src/fhir/map-provider-directory-to-fhir.ts"
@@ -1060,6 +1072,8 @@ const fhirSharedTypesSource = await readFile(fhirSharedTypesPath, "utf8");
 const fhirProviderTypesSource = await readFile(fhirProviderTypesPath, "utf8");
 const fhirDocumentTypesSource = await readFile(fhirDocumentTypesPath, "utf8");
 const fhirPrivacyTypesSource = await readFile(fhirPrivacyTypesPath, "utf8");
+const mapConsentToFhirSource = await readFile(mapConsentToFhirPath, "utf8");
+const mapConsentCodingsSource = await readFile(mapConsentCodingsPath, "utf8");
 const fhirAuditTypesSource = await readFile(fhirAuditTypesPath, "utf8");
 const mapProviderDirectoryToFhirSource = await readFile(
   mapProviderDirectoryToFhirPath,
@@ -3323,6 +3337,75 @@ for (const forbidden of [
   if (forbidden.test(patientRecordDocumentSectionsSource)) {
     throw new Error(
       "patient-record-document-sections.ts must stay a Composition section helper and must not build Bundle or Composition envelopes."
+    );
+  }
+}
+
+for (const required of [
+  /export function mapConsentToFhir/,
+  /from "\.\/map-consent-codings\.js"/,
+  /buildConsentIdentifier/,
+  /buildConsentScope/,
+  /buildConsentCategory/,
+  /buildConsentProvision/,
+  /mapConsentStatus/,
+  /function buildRevocationExtension/,
+  /resourceType:\s*"Consent"/
+]) {
+  if (!required.test(mapConsentToFhirSource)) {
+    throw new Error(
+      "map-consent-to-fhir.ts must keep the public Consent resource mapper, references and revocation extension while delegating coding/provision helpers to map-consent-codings.ts."
+    );
+  }
+}
+
+for (const forbidden of [
+  /const consentCategoryLabels/,
+  /function mapConsentStatus/,
+  /"http:\/\/terminology\.hl7\.org\/CodeSystem\/consentscope"/,
+  /"urn:wiiicare:nexus:consent-category"/,
+  /"http:\/\/terminology\.hl7\.org\/CodeSystem\/consentaction"/,
+  /"TREAT"/
+]) {
+  if (forbidden.test(mapConsentToFhirSource)) {
+    throw new Error(
+      "Consent FHIR status, category, scope, action, purpose and provision coding belong in map-consent-codings.ts, not in the public mapper."
+    );
+  }
+}
+
+for (const required of [
+  /export const consentFhirProfile/,
+  /export const consentIdentifierSystem/,
+  /export function buildConsentIdentifier/,
+  /export function mapConsentStatus/,
+  /export function buildConsentScope/,
+  /export function buildConsentCategory/,
+  /export function buildConsentProvision/,
+  /ConsentSnapshot/,
+  /ConsentStatus/,
+  /ConsentCategory/,
+  /"patient-privacy"/,
+  /"disclose"/,
+  /"TREAT"/,
+  /"DocumentReference"/
+]) {
+  if (!required.test(mapConsentCodingsSource)) {
+    throw new Error(
+      "map-consent-codings.ts must keep Consent FHIR profile, identifier, status, scope, category, provision action, purpose and class mapping."
+    );
+  }
+}
+
+for (const forbidden of [
+  /mapConsentToFhir/,
+  /buildRevocationExtension/,
+  /resourceType:\s*"Consent"/,
+  /revokedByActorId/
+]) {
+  if (forbidden.test(mapConsentCodingsSource)) {
+    throw new Error(
+      "map-consent-codings.ts must stay a coding/provision helper and must not own Consent resource orchestration or revocation extension mapping."
     );
   }
 }

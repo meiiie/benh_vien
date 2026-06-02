@@ -1,9 +1,13 @@
-import type { Consent, ConsentCategory, ConsentStatus } from "../consent/consent.js";
+import type { Consent } from "../consent/consent.js";
 import type { FhirConsent } from "./fhir-types.js";
-
-const consentCategoryLabels: Record<ConsentCategory, string> = {
-  "record-sharing": "Đồng ý chia sẻ hồ sơ bệnh án"
-};
+import {
+  buildConsentCategory,
+  buildConsentIdentifier,
+  buildConsentProvision,
+  buildConsentScope,
+  consentFhirProfile,
+  mapConsentStatus
+} from "./map-consent-codings.js";
 
 export function mapConsentToFhir(consent: Consent): FhirConsent {
   const snapshot = consent.toSnapshot();
@@ -13,41 +17,13 @@ export function mapConsentToFhir(consent: Consent): FhirConsent {
     resourceType: "Consent",
     id: snapshot.id,
     meta: {
-      profile: ["http://hl7.org/fhir/StructureDefinition/Consent"]
+      profile: [consentFhirProfile]
     },
     extension: revocationExtension ? [revocationExtension] : undefined,
-    identifier: [
-      {
-        system: "urn:wiiicare:nexus:consent",
-        value: snapshot.id,
-        type: {
-          text: "Mã đồng ý chia sẻ hồ sơ"
-        }
-      }
-    ],
+    identifier: [buildConsentIdentifier(snapshot.id)],
     status: mapConsentStatus(snapshot.status),
-    scope: {
-      coding: [
-        {
-          system: "http://terminology.hl7.org/CodeSystem/consentscope",
-          code: "patient-privacy",
-          display: "Privacy Consent"
-        }
-      ],
-      text: "Đồng ý quyền riêng tư và chia sẻ dữ liệu bệnh án"
-    },
-    category: [
-      {
-        coding: [
-          {
-            system: "urn:wiiicare:nexus:consent-category",
-            code: snapshot.category,
-            display: consentCategoryLabels[snapshot.category]
-          }
-        ],
-        text: consentCategoryLabels[snapshot.category]
-      }
-    ],
+    scope: buildConsentScope(),
+    category: [buildConsentCategory(snapshot.category)],
     patient: {
       reference: `Patient/${snapshot.patientId}`
     },
@@ -62,63 +38,8 @@ export function mapConsentToFhir(consent: Consent): FhirConsent {
           reference: `DocumentReference/${snapshot.evidenceDocumentId}`
         }
       : undefined,
-    provision: {
-      type: "permit",
-      period: {
-        start: snapshot.validFrom,
-        end: snapshot.revokedAt ?? snapshot.validUntil
-      },
-      actor: [
-        {
-          role: {
-            text: "Đơn vị được nhận dữ liệu"
-          },
-          reference: {
-            reference: `Organization/${snapshot.granteeOrganizationId}`
-          }
-        }
-      ],
-      action: [
-        {
-          coding: [
-            {
-              system: "http://terminology.hl7.org/CodeSystem/consentaction",
-              code: "disclose",
-              display: "Disclose"
-            }
-          ],
-          text: "Chia sẻ hồ sơ bệnh án"
-        }
-      ],
-      purpose: [
-        {
-          system: "http://terminology.hl7.org/CodeSystem/v3-ActReason",
-          code: "TREAT",
-          display: "Treatment"
-        }
-      ],
-      class: [
-        {
-          system: "http://hl7.org/fhir/resource-types",
-          code: "Bundle",
-          display: "Bundle"
-        },
-        {
-          system: "http://hl7.org/fhir/resource-types",
-          code: "DocumentReference",
-          display: "DocumentReference"
-        }
-      ]
-    }
+    provision: buildConsentProvision(snapshot)
   };
-}
-
-function mapConsentStatus(status: ConsentStatus): FhirConsent["status"] {
-  if (status === "active") {
-    return "active";
-  }
-
-  return "inactive";
 }
 
 function buildRevocationExtension(
