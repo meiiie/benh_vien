@@ -714,8 +714,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/fhir/map-provider-directory-to-fhir.ts",
-    maxLines: 200,
-    role: "FHIR ProviderDirectory public mapper and bundle orchestration"
+    maxLines: 75,
+    role: "FHIR ProviderDirectory public resources API and bundle orchestration"
+  },
+  {
+    path: "packages/domain/src/fhir/map-provider-directory-resources.ts",
+    maxLines: 160,
+    role: "FHIR ProviderDirectory Organization, Practitioner, PractitionerRole and Endpoint projection"
   },
   {
     path: "packages/domain/src/fhir/map-provider-directory-codings.ts",
@@ -968,6 +973,9 @@ const mapConsentCodingsPath = resolve("packages/domain/src/fhir/map-consent-codi
 const fhirAuditTypesPath = resolve("packages/domain/src/fhir/fhir-audit.types.ts");
 const mapProviderDirectoryToFhirPath = resolve(
   "packages/domain/src/fhir/map-provider-directory-to-fhir.ts"
+);
+const mapProviderDirectoryResourcesPath = resolve(
+  "packages/domain/src/fhir/map-provider-directory-resources.ts"
 );
 const mapProviderDirectoryCodingsPath = resolve(
   "packages/domain/src/fhir/map-provider-directory-codings.ts"
@@ -1289,6 +1297,10 @@ const mapConsentCodingsSource = await readFile(mapConsentCodingsPath, "utf8");
 const fhirAuditTypesSource = await readFile(fhirAuditTypesPath, "utf8");
 const mapProviderDirectoryToFhirSource = await readFile(
   mapProviderDirectoryToFhirPath,
+  "utf8"
+);
+const mapProviderDirectoryResourcesSource = await readFile(
+  mapProviderDirectoryResourcesPath,
   "utf8"
 );
 const mapProviderDirectoryCodingsSource = await readFile(
@@ -1715,15 +1727,68 @@ for (const required of [
 for (const required of [
   /export function mapProviderDirectoryToFhirResources/,
   /export function mapProviderDirectoryToFhirBundle/,
+  /export \{[\s\S]*mapProviderOrganizationToFhir[\s\S]*\} from "\.\/map-provider-directory-resources\.js"/,
+  /from "\.\/map-provider-directory-resources\.js"/,
+  /type ProviderDirectoryFhirResource/,
+  /resourceType:\s*"Bundle"/,
+  /provider-directory/,
+  /directory\.toSnapshot/
+]) {
+  if (!required.test(mapProviderDirectoryToFhirSource)) {
+    throw new Error(
+      "map-provider-directory-to-fhir.ts must keep the public ProviderDirectory resources API and Bundle orchestration while delegating individual resource projection to map-provider-directory-resources.ts."
+    );
+  }
+}
+
+for (const forbidden of [
+  /export function mapProviderOrganizationToFhir/,
+  /export function mapProviderPractitionerToFhir/,
+  /export function mapProviderEndpointToFhir/,
+  /export function mapProviderPractitionerRoleToFhir/,
+  /from "\.\/map-provider-directory-codings\.js"/,
+  /resourceType:\s*"Organization"/,
+  /resourceType:\s*"Practitioner"/,
+  /resourceType:\s*"PractitionerRole"/,
+  /resourceType:\s*"Endpoint"/,
+  /function toFhirIdentifiers/,
+  /function toCodeableConcept/,
+  /function mapOrganizationType/,
+  /function formatOrganizationType/,
+  /function mapEndpointConnectionType/
+]) {
+  if (forbidden.test(mapProviderDirectoryToFhirSource)) {
+    throw new Error(
+      "ProviderDirectory individual resource projection and coding helpers belong in dedicated helpers, not in the public mapper."
+    );
+  }
+}
+
+for (const required of [
+  /export type ProviderDirectoryFhirResource/,
   /export function mapProviderOrganizationToFhir/,
   /export function mapProviderPractitionerToFhir/,
   /export function mapProviderEndpointToFhir/,
   /export function mapProviderPractitionerRoleToFhir/,
   /from "\.\/map-provider-directory-codings\.js"/
 ]) {
-  if (!required.test(mapProviderDirectoryToFhirSource)) {
+  if (!required.test(mapProviderDirectoryResourcesSource)) {
     throw new Error(
-      "map-provider-directory-to-fhir.ts must keep public ProviderDirectory resource mapping and delegate coding helpers to map-provider-directory-codings.ts."
+      "map-provider-directory-resources.ts must keep ProviderDirectory Organization, Practitioner, Endpoint and PractitionerRole FHIR projection while delegating coding helpers to map-provider-directory-codings.ts."
+    );
+  }
+}
+
+for (const forbidden of [
+  /ProviderDirectory,/,
+  /mapProviderDirectoryToFhirResources/,
+  /mapProviderDirectoryToFhirBundle/,
+  /resourceType:\s*"Bundle"/,
+  /directory\.toSnapshot/
+]) {
+  if (forbidden.test(mapProviderDirectoryResourcesSource)) {
+    throw new Error(
+      "map-provider-directory-resources.ts must stay an individual resource projection helper and must not own ProviderDirectory aggregate orchestration or Bundle mapping."
     );
   }
 }
