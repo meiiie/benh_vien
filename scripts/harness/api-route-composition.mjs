@@ -1080,6 +1080,12 @@ const standardizedJsonErrorRoutePaths = [
       "apps/api/src/modules/record-transfers/record-transfer-creation-routes.ts"
     ),
     label: "RecordTransfer creation route"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-responses.ts"
+    ),
+    label: "RecordTransfer acknowledgement responses"
   }
 ];
 const standardizedRequestIdNotFoundRoutePaths = [
@@ -1715,12 +1721,18 @@ const forbiddenRecordTransferAcknowledgementResponsePatterns = [
     pattern: /\bfindDirectory\b|\bcanAcknowledgeForRecipient\b|\bmarkReceived\b|\brecordAuditEvent\b/,
     message:
       "RecordTransfer acknowledgement responses must stay transport-only; access, lifecycle transitions and audit belong in their own modules."
+  },
+  {
+    pattern: /\breply\.status\b/,
+    message:
+      "RecordTransfer acknowledgement responses must use sendJsonErrorResponse so request-id JSON envelopes stay centralized."
   }
 ];
 const requiredRecordTransferAcknowledgementResponseHelpers = [
   "sendAcknowledgementForbidden",
   "sendAcknowledgementSignatureFailure",
   "sendAcknowledgementConflict",
+  "sendJsonErrorResponse",
   "toAcknowledgementActor"
 ];
 const requiredRecordTransferAcknowledgementHandlerHelpers = [

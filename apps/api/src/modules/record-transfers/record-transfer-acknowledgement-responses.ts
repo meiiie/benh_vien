@@ -1,5 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { ActorContext } from "@benh-vien-so/domain";
+import { sendJsonErrorResponse } from "../http/http-json-error-response.js";
 import type { CallbackSignatureVerification } from "./record-transfer-callback-signature.js";
 
 export function sendAcknowledgementForbidden(
@@ -8,10 +9,9 @@ export function sendAcknowledgementForbidden(
   actor: ActorContext,
   message: string
 ) {
-  return reply.status(403).send({
+  return sendJsonErrorResponse(reply, 403, request.id, {
     error: "FORBIDDEN",
     message,
-    requestId: request.id,
     permission: "record-transfer:acknowledge",
     actor: toAcknowledgementActor(actor)
   });
@@ -27,10 +27,9 @@ export function sendAcknowledgementSignatureFailure(
     return false;
   }
 
-  reply.status(signatureVerification.statusCode).send({
+  sendJsonErrorResponse(reply, signatureVerification.statusCode, request.id, {
     error: signatureVerification.error,
     message: signatureVerification.message,
-    requestId: request.id,
     permission: "record-transfer:acknowledge",
     actor: toAcknowledgementActor(actor)
   });
@@ -41,11 +40,10 @@ export function sendAcknowledgementConflict(
   reply: FastifyReply,
   requestId: string
 ) {
-  return reply.status(409).send({
+  return sendJsonErrorResponse(reply, 409, requestId, {
     error: "RECORD_TRANSFER_ALREADY_COMPLETED",
     message:
-      "Gói chuyển hồ sơ đã hoàn tất bằng một biên nhận khác, không thể ghi đè bằng callback mới.",
-    requestId
+      "Gói chuyển hồ sơ đã hoàn tất bằng một biên nhận khác, không thể ghi đè bằng callback mới."
   });
 }
 

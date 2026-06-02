@@ -361,7 +361,8 @@ describe("API record-transfer boundary", () => {
     expect(deniedCallbackResponse.statusCode).toBe(403);
     expect(deniedCallbackResponse.json()).toMatchObject({
       error: "FORBIDDEN",
-      permission: "record-transfer:acknowledge"
+      permission: "record-transfer:acknowledge",
+      requestId: expect.any(String)
     });
 
     const callbackPayload = {
@@ -479,7 +480,8 @@ describe("API record-transfer boundary", () => {
     expect(unsignedCallbackResponse.statusCode).toBe(403);
     expect(unsignedCallbackResponse.json()).toMatchObject({
       error: "RECORD_TRANSFER_CALLBACK_SIGNATURE_REQUIRED",
-      permission: "record-transfer:acknowledge"
+      permission: "record-transfer:acknowledge",
+      requestId: expect.any(String)
     });
 
     const invalidTimestamp = new Date().toISOString();
@@ -499,7 +501,8 @@ describe("API record-transfer boundary", () => {
     expect(invalidSignatureResponse.statusCode).toBe(403);
     expect(invalidSignatureResponse.json()).toMatchObject({
       error: "RECORD_TRANSFER_CALLBACK_SIGNATURE_INVALID",
-      permission: "record-transfer:acknowledge"
+      permission: "record-transfer:acknowledge",
+      requestId: expect.any(String)
     });
 
     const signedCallbackResponse = await app.inject({
