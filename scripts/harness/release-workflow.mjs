@@ -1,0 +1,55 @@
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+
+const releaseWorkflowPath = resolve(".github/workflows/release.yml");
+const releaseWorkflow = await readFile(releaseWorkflowPath, "utf8");
+
+const requiredPatterns = [
+  {
+    pattern: /tags:\s*\n\s*-\s*"v\*\.\*\.\*"/,
+    message: "Release workflow must only run from semantic version tags."
+  },
+  {
+    pattern: /permissions:\s*\n\s*contents:\s*read\s*\n\s*packages:\s*write/,
+    message: "Release workflow must keep minimal permissions for reading source and writing GHCR packages."
+  },
+  {
+    pattern: /persist-credentials:\s*false/,
+    message: "Release workflow checkout must not persist git credentials."
+  },
+  {
+    pattern:
+      /ghcr\.io\/\$\{\{\s*github\.repository\s*\}\}\/api:\$\{\{\s*steps\.version\.outputs\.value\s*\}\}/,
+    message: "Release workflow must publish the API image with the exact semantic version tag."
+  },
+  {
+    pattern:
+      /ghcr\.io\/\$\{\{\s*github\.repository\s*\}\}\/web:\$\{\{\s*steps\.version\.outputs\.value\s*\}\}/,
+    message: "Release workflow must publish the web image with the exact semantic version tag."
+  }
+];
+
+for (const { pattern, message } of requiredPatterns) {
+  if (!pattern.test(releaseWorkflow)) {
+    throw new Error(message);
+  }
+}
+
+if (/:\s*latest\b|:latest\b/.test(releaseWorkflow)) {
+  throw new Error(
+    "Release workflow must not publish mutable :latest image tags; deploy by explicit semantic version."
+  );
+}
+
+console.log(
+  JSON.stringify(
+    {
+      status: "ok",
+      check: "Release workflow immutable image tagging",
+      releaseWorkflowPath,
+      mutableLatestTagsAllowed: false
+    },
+    null,
+    2
+  )
+);

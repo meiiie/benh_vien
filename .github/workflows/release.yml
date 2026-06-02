@@ -50,7 +50,6 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ github.repository }}/api:${{ steps.version.outputs.value }}
-            ghcr.io/${{ github.repository }}/api:latest
 
       - name: Build and push Web image
         uses: docker/build-push-action@v6
@@ -60,4 +59,3 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ github.repository }}/web:${{ steps.version.outputs.value }}
-            ghcr.io/${{ github.repository }}/web:latest
