@@ -2,7 +2,9 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const dependabotConfigPath = resolve(".github/dependabot.yml");
+const packageJsonPath = resolve("package.json");
 const dependabotConfig = await readFile(dependabotConfigPath, "utf8");
+const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
 
 const requiredPatterns = [
   {
@@ -37,13 +39,30 @@ for (const { label, pattern } of requiredPatterns) {
   }
 }
 
+const scripts = packageJson.scripts ?? {};
+
+if (scripts["security:audit"] !== "pnpm audit --audit-level high") {
+  throw new Error(
+    "package.json must keep security:audit as `pnpm audit --audit-level high`."
+  );
+}
+
+if (!scripts.ci?.includes("pnpm run security:audit")) {
+  throw new Error("package.json ci script must run security:audit before harness gates.");
+}
+
 console.log(
   JSON.stringify(
     {
       status: "ok",
-      check: "Dependabot dependency and base image coverage",
+      check: "Dependabot and dependency audit coverage",
       dependabotConfigPath,
-      requiredCoverage: requiredPatterns.map(({ label }) => label)
+      packageJsonPath,
+      requiredCoverage: [
+        ...requiredPatterns.map(({ label }) => label),
+        "high-severity dependency audit script",
+        "CI dependency audit gate"
+      ]
     },
     null,
     2

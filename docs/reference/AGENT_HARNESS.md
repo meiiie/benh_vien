@@ -14,8 +14,8 @@ Nguồn tham khảo: [How Claude Code works in large codebases: Best practices a
 - `scripts/harness/migration-files.mjs`: kiểm tra migration SQL có tên `NNN_snake_case.sql`, đánh số liên tục từ `001` và không rỗng trước khi chạy các gate nặng hơn.
 - `scripts/harness/compose-api-env.mjs`: kiểm tra compose service `api` thật sự truyền các biến runtime quan trọng như API docs, body limit và record-transfer worker vào container, bảo đảm prod-like compose không publish trực tiếp API port ra host, kiểm tra web runtime dùng Nginx unprivileged trên cổng container `8080`, đồng thời chặn compose image runtime dạng `latest`/thiếu tag và Dockerfile base image thiếu digest `sha256`.
 - `scripts/harness/release-workflow.mjs`: kiểm tra workflow release chạy full CI gate trước khi đăng nhập GHCR, chỉ publish GHCR image theo semantic version, không publish tag `latest`, giữ quyền workflow tối thiểu, đồng thời bật provenance/SBOM attestation và OCI labels truy vết cho image API và web.
-- `scripts/harness/dependabot-config.mjs`: kiểm tra Dependabot vẫn bao phủ npm workspace, GitHub Actions và Dockerfile API/web để dependency/base image được cập nhật có kiểm soát thay vì bị đóng băng.
-- `security:audit`: chạy `pnpm audit --audit-level high` trong CI để chặn dependency có lỗ hổng đã biết mức cao hoặc nghiêm trọng.
+- `scripts/harness/dependabot-config.mjs`: kiểm tra Dependabot vẫn bao phủ npm workspace, GitHub Actions và Dockerfile API/web, đồng thời kiểm tra `security:audit` vẫn nằm trong CI để dependency/base image được cập nhật và kiểm soát có hệ thống.
+- `security:audit`: chạy `pnpm audit --audit-level high` để chặn dependency có lỗ hổng đã biết mức cao hoặc nghiêm trọng.
 - `.github/workflows/ci.yml`: chạy cùng các gate quan trọng trên GitHub.
 - `.coderabbit.yaml`: review bằng tiếng Việt, bám kiến trúc và tránh comment cosmetic.
 
