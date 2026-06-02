@@ -488,6 +488,16 @@ const domainBudgets = [
     role: "FHIR AllergyIntolerance resource type"
   },
   {
+    path: "packages/domain/src/fhir/map-allergy-intolerance-to-fhir.ts",
+    maxLines: 75,
+    role: "FHIR AllergyIntolerance public mapper and clinical references"
+  },
+  {
+    path: "packages/domain/src/fhir/map-allergy-intolerance-codings.ts",
+    maxLines: 95,
+    role: "FHIR AllergyIntolerance profile, status, substance and reaction mapping"
+  },
+  {
     path: "packages/domain/src/fhir/fhir-medication.types.ts",
     maxLines: 20,
     role: "FHIR medication compatibility barrel exports"
@@ -922,6 +932,12 @@ const fhirObservationTypesPath = resolve("packages/domain/src/fhir/fhir-observat
 const fhirAllergyIntoleranceTypesPath = resolve(
   "packages/domain/src/fhir/fhir-allergy-intolerance.types.ts"
 );
+const mapAllergyIntoleranceToFhirPath = resolve(
+  "packages/domain/src/fhir/map-allergy-intolerance-to-fhir.ts"
+);
+const mapAllergyIntoleranceCodingsPath = resolve(
+  "packages/domain/src/fhir/map-allergy-intolerance-codings.ts"
+);
 const fhirMedicationTypesPath = resolve("packages/domain/src/fhir/fhir-medication.types.ts");
 const fhirMedicationRequestTypesPath = resolve(
   "packages/domain/src/fhir/fhir-medication-request.types.ts"
@@ -1211,6 +1227,14 @@ const mapConditionCodingsSource = await readFile(mapConditionCodingsPath, "utf8"
 const fhirObservationTypesSource = await readFile(fhirObservationTypesPath, "utf8");
 const fhirAllergyIntoleranceTypesSource = await readFile(
   fhirAllergyIntoleranceTypesPath,
+  "utf8"
+);
+const mapAllergyIntoleranceToFhirSource = await readFile(
+  mapAllergyIntoleranceToFhirPath,
+  "utf8"
+);
+const mapAllergyIntoleranceCodingsSource = await readFile(
+  mapAllergyIntoleranceCodingsPath,
   "utf8"
 );
 const fhirMedicationTypesSource = await readFile(fhirMedicationTypesPath, "utf8");
@@ -3170,6 +3194,73 @@ for (const required of [
   if (!required.test(allergyIntoleranceValidationSource)) {
     throw new Error(
       "allergy-intolerance.validation.ts must keep AllergyIntolerance code, reaction, status and timeline guards."
+    );
+  }
+}
+
+for (const required of [
+  /export function mapAllergyIntoleranceToFhir/,
+  /from "\.\/map-allergy-intolerance-codings\.js"/,
+  /allergyIntoleranceFhirProfile/,
+  /toAllergyClinicalStatus/,
+  /toAllergyVerificationStatus/,
+  /toAllergyCodeableConcept/,
+  /toAllergyReaction/,
+  /resourceType:\s*"AllergyIntolerance"/,
+  /verificationStatus === "entered-in-error"/
+]) {
+  if (!required.test(mapAllergyIntoleranceToFhirSource)) {
+    throw new Error(
+      "map-allergy-intolerance-to-fhir.ts must keep the public AllergyIntolerance mapper, clinical references and entered-in-error omission rule while delegating profile, status, substance and reaction helpers to map-allergy-intolerance-codings.ts."
+    );
+  }
+}
+
+for (const forbidden of [
+  /const clinicalStatusLabels/,
+  /\bAllergyClinicalStatus\b/,
+  /\bAllergyVerificationStatus\b/,
+  /"http:\/\/terminology\.hl7\.org\/CodeSystem\/allergyintolerance-/
+]) {
+  if (forbidden.test(mapAllergyIntoleranceToFhirSource)) {
+    throw new Error(
+      "AllergyIntolerance FHIR profile, status labels and CodeableConcept mapping belong in map-allergy-intolerance-codings.ts, not in the public mapper."
+    );
+  }
+}
+
+for (const required of [
+  /export const allergyIntoleranceFhirProfile/,
+  /export function toAllergyClinicalStatus/,
+  /export function toAllergyVerificationStatus/,
+  /export function toAllergyCodeableConcept/,
+  /export function toAllergyReaction/,
+  /AllergyClinicalStatus/,
+  /AllergyVerificationStatus/,
+  /AllergyCode/,
+  /AllergyReaction/,
+  /allergyintolerance-clinical/,
+  /allergyintolerance-verification/
+]) {
+  if (!required.test(mapAllergyIntoleranceCodingsSource)) {
+    throw new Error(
+      "map-allergy-intolerance-codings.ts must keep AllergyIntolerance FHIR profile, status labels, substance CodeableConcept and reaction manifestation mapping."
+    );
+  }
+}
+
+for (const forbidden of [
+  /mapAllergyIntoleranceToFhir/,
+  /resourceType:\s*"AllergyIntolerance"/,
+  /patientId/,
+  /encounterId/,
+  /recorderPractitionerId/,
+  /recordedAt/,
+  /note/
+]) {
+  if (forbidden.test(mapAllergyIntoleranceCodingsSource)) {
+    throw new Error(
+      "map-allergy-intolerance-codings.ts must stay a coding helper and must not own AllergyIntolerance resource orchestration or clinical references."
     );
   }
 }

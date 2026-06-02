@@ -1,22 +1,12 @@
-import type {
-  AllergyClinicalStatus,
-  AllergyIntolerance,
-  AllergyVerificationStatus
-} from "../allergy-intolerance/allergy-intolerance.js";
+import type { AllergyIntolerance } from "../allergy-intolerance/allergy-intolerance.js";
 import type { FhirAllergyIntolerance } from "./fhir-types.js";
-
-const clinicalStatusLabels: Record<AllergyClinicalStatus, string> = {
-  active: "Active",
-  inactive: "Inactive",
-  resolved: "Resolved"
-};
-
-const verificationStatusLabels: Record<AllergyVerificationStatus, string> = {
-  confirmed: "Confirmed",
-  "entered-in-error": "Entered in Error",
-  refuted: "Refuted",
-  unconfirmed: "Unconfirmed"
-};
+import {
+  allergyIntoleranceFhirProfile,
+  toAllergyClinicalStatus,
+  toAllergyCodeableConcept,
+  toAllergyReaction,
+  toAllergyVerificationStatus
+} from "./map-allergy-intolerance-codings.js";
 
 export function mapAllergyIntoleranceToFhir(
   allergyIntolerance: AllergyIntolerance
@@ -27,44 +17,17 @@ export function mapAllergyIntoleranceToFhir(
     resourceType: "AllergyIntolerance",
     id: snapshot.id,
     meta: {
-      profile: ["http://hl7.org/fhir/StructureDefinition/AllergyIntolerance"]
+      profile: [allergyIntoleranceFhirProfile]
     },
     clinicalStatus:
       snapshot.verificationStatus === "entered-in-error"
         ? undefined
-        : {
-            coding: [
-              {
-                system: "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
-                code: snapshot.clinicalStatus,
-                display: clinicalStatusLabels[snapshot.clinicalStatus]
-              }
-            ],
-            text: clinicalStatusLabels[snapshot.clinicalStatus]
-          },
-    verificationStatus: {
-      coding: [
-        {
-          system: "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
-          code: snapshot.verificationStatus,
-          display: verificationStatusLabels[snapshot.verificationStatus]
-        }
-      ],
-      text: verificationStatusLabels[snapshot.verificationStatus]
-    },
+        : toAllergyClinicalStatus(snapshot.clinicalStatus),
+    verificationStatus: toAllergyVerificationStatus(snapshot.verificationStatus),
     type: snapshot.type,
     category: [snapshot.category],
     criticality: snapshot.criticality,
-    code: {
-      coding: [
-        {
-          system: snapshot.code.system,
-          code: snapshot.code.code,
-          display: snapshot.code.display
-        }
-      ],
-      text: snapshot.code.display
-    },
+    code: toAllergyCodeableConcept(snapshot.code),
     patient: {
       reference: `Patient/${snapshot.patientId}`
     },
@@ -77,26 +40,7 @@ export function mapAllergyIntoleranceToFhir(
     recorder: {
       reference: `Practitioner/${snapshot.recorderPractitionerId}`
     },
-    reaction: snapshot.reaction
-      ? [
-          {
-            manifestation: [
-              {
-                coding: [
-                  {
-                    system: snapshot.reaction.manifestation.system,
-                    code: snapshot.reaction.manifestation.code,
-                    display: snapshot.reaction.manifestation.display
-                  }
-                ],
-                text: snapshot.reaction.manifestation.display
-              }
-            ],
-            severity: snapshot.reaction.severity,
-            description: snapshot.reaction.description
-          }
-        ]
-      : undefined,
+    reaction: snapshot.reaction ? [toAllergyReaction(snapshot.reaction)] : undefined,
     note: snapshot.note ? [{ text: snapshot.note }] : undefined
   };
 }
