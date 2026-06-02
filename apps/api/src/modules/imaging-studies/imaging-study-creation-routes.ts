@@ -62,14 +62,18 @@ export async function registerImagingStudyCreationRoutes(
       throw parsed.error;
     }
 
-    if (
-      !(await validateImagingStudyReferences(reply, params.patientId, parsed.data, {
+    const validationError = await validateImagingStudyReferences(
+      params.patientId,
+      parsed.data,
+      {
         encounterRepository,
         serviceRequestRepository,
         diagnosticReportRepository
-      }))
-    ) {
-      return;
+      }
+    );
+
+    if (validationError) {
+      return reply.status(422).send(validationError);
     }
 
     try {

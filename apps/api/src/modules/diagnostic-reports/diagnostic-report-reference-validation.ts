@@ -1,4 +1,3 @@
-import type { FastifyReply } from "fastify";
 import type {
   EncounterRepository,
   ObservationRepository,
@@ -11,8 +10,12 @@ export type DiagnosticReportReferenceInput = {
   readonly resultObservationIds: readonly string[];
 };
 
+export type DiagnosticReportValidationError = {
+  readonly error: string;
+  readonly message: string;
+};
+
 export async function validateDiagnosticReportReferences(
-  reply: FastifyReply,
   patientId: string,
   input: DiagnosticReportReferenceInput,
   repositories: {
@@ -20,17 +23,15 @@ export async function validateDiagnosticReportReferences(
     readonly serviceRequestRepository: ServiceRequestRepository;
     readonly observationRepository: ObservationRepository;
   }
-): Promise<boolean> {
+): Promise<DiagnosticReportValidationError | undefined> {
   if (input.encounterId) {
     const encounter = await repositories.encounterRepository.findById(input.encounterId);
 
     if (!encounter || encounter.patientId !== patientId) {
-      reply.status(422).send({
+      return {
         error: "ENCOUNTER_MISMATCH",
         message: "Báo cáo chẩn đoán phải gắn với lượt khám thuộc cùng bệnh nhân."
-      });
-
-      return false;
+      };
     }
   }
 
@@ -40,12 +41,10 @@ export async function validateDiagnosticReportReferences(
     );
 
     if (!serviceRequest || serviceRequest.patientId !== patientId) {
-      reply.status(422).send({
+      return {
         error: "SERVICE_REQUEST_MISMATCH",
         message: "Báo cáo chẩn đoán phải tham chiếu y lệnh thuộc cùng bệnh nhân."
-      });
-
-      return false;
+      };
     }
   }
 
@@ -53,14 +52,12 @@ export async function validateDiagnosticReportReferences(
     const observation = await repositories.observationRepository.findById(observationId);
 
     if (!observation || observation.patientId !== patientId) {
-      reply.status(422).send({
+      return {
         error: "OBSERVATION_MISMATCH",
-        message: "Observation kết quả phải thuộc cùng bệnh nhân."
-      });
-
-      return false;
+        message: "Kết quả quan sát phải thuộc cùng bệnh nhân."
+      };
     }
   }
 
-  return true;
+  return undefined;
 }

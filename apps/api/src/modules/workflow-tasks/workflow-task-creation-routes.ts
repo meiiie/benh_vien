@@ -60,13 +60,17 @@ export async function registerWorkflowTaskCreationRoutes(
       throw parsed.error;
     }
 
-    if (
-      !(await validateWorkflowTaskReferences(reply, params.patientId, parsed.data, {
+    const validationError = await validateWorkflowTaskReferences(
+      params.patientId,
+      parsed.data,
+      {
         encounterRepository,
         serviceRequestRepository
-      }))
-    ) {
-      return;
+      }
+    );
+
+    if (validationError) {
+      return reply.status(422).send(validationError);
     }
 
     try {

@@ -60,13 +60,17 @@ export async function registerServiceRequestCreationRoutes(
       throw parsed.error;
     }
 
-    if (
-      !(await validateServiceRequestReferences(reply, params.patientId, parsed.data, {
+    const validationError = await validateServiceRequestReferences(
+      params.patientId,
+      parsed.data,
+      {
         encounterRepository,
         conditionRepository
-      }))
-    ) {
-      return;
+      }
+    );
+
+    if (validationError) {
+      return reply.status(422).send(validationError);
     }
 
     try {

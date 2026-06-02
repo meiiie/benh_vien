@@ -1,32 +1,33 @@
-import type { FastifyReply } from "fastify";
 import type { EncounterRepository } from "@benh-vien-so/domain";
 
 export type ConditionReferenceInput = {
   readonly encounterId?: string;
 };
 
+export type ConditionValidationError = {
+  readonly error: string;
+  readonly message: string;
+};
+
 export async function validateConditionReferences(
-  reply: FastifyReply,
   patientId: string,
   input: ConditionReferenceInput,
   repositories: {
     readonly encounterRepository: EncounterRepository;
   }
-): Promise<boolean> {
+): Promise<ConditionValidationError | undefined> {
   if (!input.encounterId) {
-    return true;
+    return undefined;
   }
 
   const encounter = await repositories.encounterRepository.findById(input.encounterId);
 
   if (!encounter || encounter.patientId !== patientId) {
-    reply.status(422).send({
+    return {
       error: "ENCOUNTER_MISMATCH",
       message: "Chẩn đoán phải gắn với lượt khám thuộc cùng bệnh nhân."
-    });
-
-    return false;
+    };
   }
 
-  return true;
+  return undefined;
 }

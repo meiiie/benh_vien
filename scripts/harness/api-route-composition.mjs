@@ -2158,6 +2158,18 @@ const workflowTaskRouteHelpersPath = resolve(
 const workflowTaskReferenceValidationPath = resolve(
   "apps/api/src/modules/workflow-tasks/workflow-task-reference-validation.ts"
 );
+const forbiddenReferenceValidationBoundaryPatterns = [
+  {
+    pattern: /\bFastifyReply\b/,
+    message:
+      "Reference validation modules must stay HTTP-framework agnostic; return validation errors for routes to send."
+  },
+  {
+    pattern: /\breply\.status\(/,
+    message:
+      "Reference validation modules must not send HTTP responses directly; route adapters own response status codes."
+  }
+];
 const forbiddenWorkflowTaskRoutePatterns = [
   {
     pattern:
@@ -2438,6 +2450,60 @@ const workflowTaskReferenceValidationSource = await readFile(
   workflowTaskReferenceValidationPath,
   "utf8"
 );
+const referenceValidationBoundarySources = [
+  {
+    label: "ClinicalDocument reference validation",
+    source: clinicalDocumentReferenceValidationSource
+  },
+  {
+    label: "MedicationAdministration reference validation",
+    source: medicationAdministrationReferenceValidationSource
+  },
+  {
+    label: "MedicationDispense reference validation",
+    source: medicationDispenseReferenceValidationSource
+  },
+  {
+    label: "MedicationRequest reference validation",
+    source: medicationRequestReferenceValidationSource
+  },
+  {
+    label: "Procedure reference validation",
+    source: procedureReferenceValidationSource
+  },
+  {
+    label: "Procedure report reference validation",
+    source: procedureReportReferenceValidationSource
+  },
+  {
+    label: "Observation reference validation",
+    source: observationReferenceValidationSource
+  },
+  {
+    label: "Condition reference validation",
+    source: conditionReferenceValidationSource
+  },
+  {
+    label: "AllergyIntolerance reference validation",
+    source: allergyIntoleranceReferenceValidationSource
+  },
+  {
+    label: "DiagnosticReport reference validation",
+    source: diagnosticReportReferenceValidationSource
+  },
+  {
+    label: "ImagingStudy reference validation",
+    source: imagingStudyReferenceValidationSource
+  },
+  {
+    label: "ServiceRequest reference validation",
+    source: serviceRequestReferenceValidationSource
+  },
+  {
+    label: "WorkflowTask reference validation",
+    source: workflowTaskReferenceValidationSource
+  }
+];
 
 for (const forbidden of forbiddenApiRoutesPatterns) {
   if (forbidden.pattern.test(apiRoutesSource)) {
@@ -2505,6 +2571,14 @@ for (const helper of standardizedDomainErrorHelperSources) {
   for (const forbidden of forbiddenStandardizedDomainErrorHelperPatterns) {
     if (forbidden.pattern.test(helper.source)) {
       throw new Error(`${helper.label} ${forbidden.message}`);
+    }
+  }
+}
+
+for (const referenceValidation of referenceValidationBoundarySources) {
+  for (const forbidden of forbiddenReferenceValidationBoundaryPatterns) {
+    if (forbidden.pattern.test(referenceValidation.source)) {
+      throw new Error(`${referenceValidation.label}: ${forbidden.message}`);
     }
   }
 }

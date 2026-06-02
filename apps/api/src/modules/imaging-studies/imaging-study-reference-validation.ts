@@ -1,4 +1,3 @@
-import type { FastifyReply } from "fastify";
 import type {
   DiagnosticReportRepository,
   EncounterRepository,
@@ -11,8 +10,12 @@ export type ImagingStudyReferenceInput = {
   readonly diagnosticReportId?: string;
 };
 
+export type ImagingStudyValidationError = {
+  readonly error: string;
+  readonly message: string;
+};
+
 export async function validateImagingStudyReferences(
-  reply: FastifyReply,
   patientId: string,
   input: ImagingStudyReferenceInput,
   repositories: {
@@ -20,17 +23,15 @@ export async function validateImagingStudyReferences(
     readonly serviceRequestRepository: ServiceRequestRepository;
     readonly diagnosticReportRepository: DiagnosticReportRepository;
   }
-): Promise<boolean> {
+): Promise<ImagingStudyValidationError | undefined> {
   if (input.encounterId) {
     const encounter = await repositories.encounterRepository.findById(input.encounterId);
 
     if (!encounter || encounter.patientId !== patientId) {
-      reply.status(422).send({
+      return {
         error: "ENCOUNTER_MISMATCH",
         message: "Nghiên cứu hình ảnh phải gắn với lượt khám thuộc cùng bệnh nhân."
-      });
-
-      return false;
+      };
     }
   }
 
@@ -40,12 +41,10 @@ export async function validateImagingStudyReferences(
     );
 
     if (!serviceRequest || serviceRequest.patientId !== patientId) {
-      reply.status(422).send({
+      return {
         error: "SERVICE_REQUEST_MISMATCH",
         message: "Nghiên cứu hình ảnh phải tham chiếu y lệnh thuộc cùng bệnh nhân."
-      });
-
-      return false;
+      };
     }
   }
 
@@ -55,14 +54,12 @@ export async function validateImagingStudyReferences(
     );
 
     if (!diagnosticReport || diagnosticReport.patientId !== patientId) {
-      reply.status(422).send({
+      return {
         error: "DIAGNOSTIC_REPORT_MISMATCH",
         message: "Nghiên cứu hình ảnh phải gắn với báo cáo kết quả thuộc cùng bệnh nhân."
-      });
-
-      return false;
+      };
     }
   }
 
-  return true;
+  return undefined;
 }

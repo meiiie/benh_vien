@@ -1,32 +1,33 @@
-import type { FastifyReply } from "fastify";
 import type { EncounterRepository } from "@benh-vien-so/domain";
 
 export type ObservationReferenceInput = {
   readonly encounterId?: string;
 };
 
+export type ObservationValidationError = {
+  readonly error: string;
+  readonly message: string;
+};
+
 export async function validateObservationReferences(
-  reply: FastifyReply,
   patientId: string,
   input: ObservationReferenceInput,
   repositories: {
     readonly encounterRepository: EncounterRepository;
   }
-): Promise<boolean> {
+): Promise<ObservationValidationError | undefined> {
   if (!input.encounterId) {
-    return true;
+    return undefined;
   }
 
   const encounter = await repositories.encounterRepository.findById(input.encounterId);
 
   if (!encounter || encounter.patientId !== patientId) {
-    reply.status(422).send({
+    return {
       error: "ENCOUNTER_MISMATCH",
       message: "Kết quả quan sát phải gắn với lượt khám thuộc cùng bệnh nhân."
-    });
-
-    return false;
+    };
   }
 
-  return true;
+  return undefined;
 }

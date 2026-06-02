@@ -1,4 +1,3 @@
-import type { FastifyReply } from "fastify";
 import type { ConditionRepository, EncounterRepository } from "@benh-vien-so/domain";
 
 export type ServiceRequestReferenceInput = {
@@ -6,25 +5,27 @@ export type ServiceRequestReferenceInput = {
   readonly reasonConditionId?: string;
 };
 
+export type ServiceRequestValidationError = {
+  readonly error: string;
+  readonly message: string;
+};
+
 export async function validateServiceRequestReferences(
-  reply: FastifyReply,
   patientId: string,
   input: ServiceRequestReferenceInput,
   repositories: {
     readonly encounterRepository: EncounterRepository;
     readonly conditionRepository: ConditionRepository;
   }
-): Promise<boolean> {
+): Promise<ServiceRequestValidationError | undefined> {
   if (input.encounterId) {
     const encounter = await repositories.encounterRepository.findById(input.encounterId);
 
     if (!encounter || encounter.patientId !== patientId) {
-      reply.status(422).send({
+      return {
         error: "ENCOUNTER_MISMATCH",
         message: "Chỉ định dịch vụ phải gắn với lượt khám thuộc cùng bệnh nhân."
-      });
-
-      return false;
+      };
     }
   }
 
@@ -34,14 +35,12 @@ export async function validateServiceRequestReferences(
     );
 
     if (!condition || condition.patientId !== patientId) {
-      reply.status(422).send({
+      return {
         error: "CONDITION_MISMATCH",
         message: "Chẩn đoán liên quan phải thuộc cùng bệnh nhân."
-      });
-
-      return false;
+      };
     }
   }
 
-  return true;
+  return undefined;
 }

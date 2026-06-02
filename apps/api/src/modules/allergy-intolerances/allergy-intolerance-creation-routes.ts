@@ -58,12 +58,14 @@ export async function registerAllergyIntoleranceCreationRoutes(
       throw parsed.error;
     }
 
-    if (
-      !(await validateAllergyIntoleranceReferences(reply, params.patientId, parsed.data, {
-        encounterRepository
-      }))
-    ) {
-      return;
+    const validationError = await validateAllergyIntoleranceReferences(
+      params.patientId,
+      parsed.data,
+      { encounterRepository }
+    );
+
+    if (validationError) {
+      return reply.status(422).send(validationError);
     }
 
     try {

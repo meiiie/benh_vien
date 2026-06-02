@@ -1,32 +1,33 @@
-import type { FastifyReply } from "fastify";
 import type { EncounterRepository } from "@benh-vien-so/domain";
 
 export type AllergyIntoleranceReferenceInput = {
   readonly encounterId?: string;
 };
 
+export type AllergyIntoleranceValidationError = {
+  readonly error: string;
+  readonly message: string;
+};
+
 export async function validateAllergyIntoleranceReferences(
-  reply: FastifyReply,
   patientId: string,
   input: AllergyIntoleranceReferenceInput,
   repositories: {
     readonly encounterRepository: EncounterRepository;
   }
-): Promise<boolean> {
+): Promise<AllergyIntoleranceValidationError | undefined> {
   if (!input.encounterId) {
-    return true;
+    return undefined;
   }
 
   const encounter = await repositories.encounterRepository.findById(input.encounterId);
 
   if (!encounter || encounter.patientId !== patientId) {
-    reply.status(422).send({
+    return {
       error: "ENCOUNTER_MISMATCH",
       message: "Dị ứng phải gắn với lượt khám thuộc cùng bệnh nhân."
-    });
-
-    return false;
+    };
   }
 
-  return true;
+  return undefined;
 }

@@ -58,12 +58,14 @@ export async function registerObservationCreationRoutes(
       throw parsed.error;
     }
 
-    if (
-      !(await validateObservationReferences(reply, params.patientId, parsed.data, {
-        encounterRepository
-      }))
-    ) {
-      return;
+    const validationError = await validateObservationReferences(
+      params.patientId,
+      parsed.data,
+      { encounterRepository }
+    );
+
+    if (validationError) {
+      return reply.status(422).send(validationError);
     }
 
     try {

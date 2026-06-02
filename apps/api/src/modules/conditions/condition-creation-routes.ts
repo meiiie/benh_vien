@@ -58,12 +58,14 @@ export async function registerConditionCreationRoutes(
       throw parsed.error;
     }
 
-    if (
-      !(await validateConditionReferences(reply, params.patientId, parsed.data, {
-        encounterRepository
-      }))
-    ) {
-      return;
+    const validationError = await validateConditionReferences(
+      params.patientId,
+      parsed.data,
+      { encounterRepository }
+    );
+
+    if (validationError) {
+      return reply.status(422).send(validationError);
     }
 
     try {
