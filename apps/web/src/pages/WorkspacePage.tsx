@@ -41,10 +41,25 @@ export function WorkspacePage({
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="Patient Workspace"
+        eyebrow="Không gian hồ sơ bệnh nhân"
         title="Bàn làm việc bệnh nhân"
-        description="Luồng chính mô phỏng EMR thật: chọn bệnh nhân, mở lượt khám, gắn tài liệu và theo dõi hồ sơ."
+        description="Luồng chính mô phỏng EMR thật: chọn đúng hồ sơ bệnh nhân, mở lượt khám, ghi nhận dữ liệu lâm sàng và gắn tài liệu bệnh án theo bối cảnh điều trị."
       />
+
+      <section className="workspace-brief" aria-label="Phạm vi thao tác trong bàn làm việc bệnh nhân">
+        <article>
+          <span>Định danh bệnh nhân: </span>
+          <p>Quản lý hồ sơ, mã định danh, trạng thái hợp nhất và cơ sở quản lý.</p>
+        </article>
+        <article>
+          <span>Lượt khám: </span>
+          <p>Gắn dị ứng, chẩn đoán, chỉ định, thủ thuật, kết quả và hình ảnh theo từng đợt điều trị.</p>
+        </article>
+        <article>
+          <span>Thuốc và tài liệu: </span>
+          <p>Theo dõi kê đơn, cấp phát, dùng thuốc thực tế và tài liệu bệnh án liên quan.</p>
+        </article>
+      </section>
 
       <section className="workspace">
         {patientListPanel}

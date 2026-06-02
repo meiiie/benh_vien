@@ -270,14 +270,16 @@
 }
 
 .dashboard-brief,
-.document-brief {
+.document-brief,
+.workspace-brief {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
 .dashboard-brief article,
-.document-brief article {
+.document-brief article,
+.workspace-brief article {
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 16px;
   padding: 14px;
@@ -285,7 +287,8 @@
 }
 
 .dashboard-brief span,
-.document-brief span {
+.document-brief span,
+.workspace-brief span {
   color: var(--primary);
   font-size: 0.72rem;
   font-weight: 900;
@@ -294,7 +297,8 @@
 }
 
 .dashboard-brief p,
-.document-brief p {
+.document-brief p,
+.workspace-brief p {
   margin: 6px 0 0;
   color: var(--slate);
   font-size: 0.86rem;
@@ -1315,6 +1319,7 @@ pre {
   .app-layout,
   .dashboard-brief,
   .document-brief,
+  .workspace-brief,
   .dashboard-grid,
   .settings-grid,
   .workspace,

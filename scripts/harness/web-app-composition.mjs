@@ -9,6 +9,7 @@ const interopPagePath = resolve("apps/web/src/pages/InteropPage.tsx");
 const landingPagePath = resolve("apps/web/src/pages/LandingPage.tsx");
 const loginPagePath = resolve("apps/web/src/pages/LoginPage.tsx");
 const mainPath = resolve("apps/web/src/main.tsx");
+const workspacePagePath = resolve("apps/web/src/pages/WorkspacePage.tsx");
 const stylesPath = resolve("apps/web/src/styles.css");
 const landingStylesPath = resolve("apps/web/src/styles/landing.css");
 const demoLoginPath = resolve("apps/web/src/auth/demoLogin.ts");
@@ -35,8 +36,12 @@ const clinicalDocumentApiPath = resolve(
 const clinicalDocumentPanelPath = resolve(
   "apps/web/src/features/clinical-documents/ClinicalDocumentPanel.tsx"
 );
+const encounterPanelPath = resolve("apps/web/src/features/clinical-records/EncounterPanel.tsx");
 const patientRegistryApiPath = resolve(
   "apps/web/src/features/patient-registry/patientRegistryApi.ts"
+);
+const patientDetailPanelPath = resolve(
+  "apps/web/src/features/patient-registry/PatientDetailPanel.tsx"
 );
 const sharedClinicalFormatterPath = resolve("apps/web/src/lib/clinicalFormatters.ts");
 const clinicalTypeBarrelImportPattern =
@@ -636,6 +641,7 @@ const dashboardPageSource = await readFile(dashboardPagePath, "utf8");
 const documentsPageSource = await readFile(documentsPagePath, "utf8");
 const clinicalApiSource = await readFile(allowedFetchModulePath, "utf8");
 const clinicalDocumentPanelSource = await readFile(clinicalDocumentPanelPath, "utf8");
+const encounterPanelSource = await readFile(encounterPanelPath, "utf8");
 const consentInteropPanelSource = await readFile(consentInteropPanelPath, "utf8");
 const fhirTransferContextSummarySource = await readFile(
   fhirTransferContextSummaryPath,
@@ -645,11 +651,13 @@ const interopPageSource = await readFile(interopPagePath, "utf8");
 const landingPageSource = await readFile(landingPagePath, "utf8");
 const loginPageSource = await readFile(loginPagePath, "utf8");
 const mainSource = await readFile(mainPath, "utf8");
+const workspacePageSource = await readFile(workspacePagePath, "utf8");
 const stylesSource = await readFile(stylesPath, "utf8");
 const landingStylesSource = await readFile(landingStylesPath, "utf8");
 const demoLoginSource = await readFile(demoLoginPath, "utf8");
 const clinicalDocumentApiSource = await readFile(clinicalDocumentApiPath, "utf8");
 const patientRegistryApiSource = await readFile(patientRegistryApiPath, "utf8");
+const patientDetailPanelSource = await readFile(patientDetailPanelPath, "utf8");
 const providerDirectoryFormattersSource = await readFile(
   providerDirectoryFormattersPath,
   "utf8"
@@ -1009,6 +1017,27 @@ if (
 
 if (/Chưa gắn encounter|label="Encounter"|`Encounter \$\{document\.encounterId\}`/.test(clinicalDocumentPanelSource)) {
   throw new Error("Clinical document panel must use Vietnamese encounter labels in demo-facing UI.");
+}
+
+if (/Patient Workspace/.test(workspacePageSource)) {
+  throw new Error("Workspace page must use professional Vietnamese demo-facing labels.");
+}
+
+if (
+  !/className="workspace-brief"/.test(workspacePageSource) ||
+  !/Định danh bệnh nhân/.test(workspacePageSource) ||
+  !/Lượt khám/.test(workspacePageSource) ||
+  !/Thuốc và tài liệu/.test(workspacePageSource)
+) {
+  throw new Error("Workspace page must explain patient identity, encounter and medication/document scope before the clinical panels.");
+}
+
+if (/Patient chart|Master Patient Index/.test(patientDetailPanelSource)) {
+  throw new Error("Patient detail panel must use Vietnamese labels, with MPI explained when needed.");
+}
+
+if (/Encounter timeline/.test(encounterPanelSource)) {
+  throw new Error("Encounter panel must use a Vietnamese timeline label in demo-facing UI.");
 }
 
 const webSourceFiles = await collectSourceFiles(webSrcPath);

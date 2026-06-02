@@ -24,7 +24,7 @@ export function PatientDetailPanel({
     <article className="panel patient-detail">
       <div className="panel-heading">
         <div>
-          <p className="eyebrow">Patient chart</p>
+          <p className="eyebrow">Hồ sơ bệnh nhân</p>
           <h2>Hồ sơ đang chọn</h2>
         </div>
         {patient ? (
@@ -36,7 +36,7 @@ export function PatientDetailPanel({
 
       {patient && isMerged ? (
         <div className="merged-patient-banner" role="status">
-          <p className="eyebrow">Master Patient Index</p>
+          <p className="eyebrow">Chỉ mục bệnh nhân chính (MPI)</p>
           <h3>Hồ sơ đã được merge và chuyển sang chế độ chỉ đọc</h3>
           <p>
             Không ghi thêm dữ liệu lâm sàng vào hồ sơ nguồn này. Các lượt khám,

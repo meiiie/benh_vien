@@ -63,7 +63,7 @@ export function EncounterPanel({
     <article className="panel encounter-panel">
       <div className="panel-heading">
         <div>
-          <p className="eyebrow">Encounter timeline</p>
+          <p className="eyebrow">Dòng thời gian lượt khám</p>
           <h2>Lượt khám và đợt điều trị</h2>
         </div>
         <span className="pill cyan">{isLoading ? "đang tải" : `${encounters.length} lượt`}</span>
