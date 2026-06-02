@@ -36,6 +36,7 @@ import { buildClinicalDocumentPanels } from "./application/clinicalDocumentPanel
 import { buildClinicalRecordPanels } from "./application/clinicalRecordPanelContext.js";
 import { buildInteropPanels } from "./application/interopPanelContext.js";
 import { buildPatientPanels } from "./application/patientPanelContext.js";
+import { normalizeAuthenticatedRoute } from "./config/appNavigation.js";
 
 import { referenceSignals, workflowSteps } from "./config/demoClinicalDefaults.js";
 const apiBaseUrl =
@@ -498,10 +499,14 @@ export function App() {
     return <LandingPage onDemo={() => void handleLogin()} onLogin={() => setAppRoute("login")} />;
   }
 
+  const authenticatedAppRoute = isIntegrationSession
+    ? "interop"
+    : normalizeAuthenticatedRoute(appRoute);
+
   return (
     <AuthenticatedLayout
       apiBaseUrl={apiBaseUrl}
-      currentRoute={isIntegrationSession ? "interop" : appRoute}
+      currentRoute={authenticatedAppRoute}
       userRole={authSession?.actor.role ?? loginForm.role}
       userName={authSession?.actor.displayName ?? loginForm.username}
       onLogout={handleLogout}
@@ -512,7 +517,7 @@ export function App() {
         apiBaseUrl={apiBaseUrl}
         apiRuntimeInfo={platformState.apiRuntimeInfo}
         apiRuntimeWarning={platformState.apiRuntimeWarning}
-        appRoute={appRoute}
+        appRoute={authenticatedAppRoute}
         authSession={authSession}
         canMergePatients={canMergePatients}
         canViewRuntimeInfo={canViewRuntimeInfo}

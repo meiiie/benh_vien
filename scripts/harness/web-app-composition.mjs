@@ -2,6 +2,7 @@ import { readdir, stat, readFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 
 const appPath = resolve("apps/web/src/App.tsx");
+const appNavigationPath = resolve("apps/web/src/config/appNavigation.ts");
 const appRouteRendererPath = resolve("apps/web/src/pages/AppRouteRenderer.tsx");
 const appShellPath = resolve("apps/web/src/components/AppShell.tsx");
 const auditLogPagePath = resolve("apps/web/src/pages/AuditLogPage.tsx");
@@ -83,6 +84,7 @@ const requiredModules = [
   "apps/web/src/application/patientPanelContext.ts",
   "apps/web/src/application/workspaceSelection.ts",
   "apps/web/src/components/AppShell.tsx",
+  "apps/web/src/config/appNavigation.ts",
   "apps/web/src/config/demoCareWorkflowDefaults.ts",
   "apps/web/src/config/demoClinicalDefaults.ts",
   "apps/web/src/config/demoClinicalEntryDefaults.ts",
@@ -646,6 +648,7 @@ const featureModuleBudgets = [
 ];
 
 const appSource = await readFile(appPath, "utf8");
+const appNavigationSource = await readFile(appNavigationPath, "utf8");
 const appRouteRendererSource = await readFile(appRouteRendererPath, "utf8");
 const appShellSource = await readFile(appShellPath, "utf8");
 const auditLogPageSource = await readFile(auditLogPagePath, "utf8");
@@ -1084,6 +1087,52 @@ for (const check of responsiveLandingChecks) {
   if (!check.pattern.test(landingStylesSource)) {
     throw new Error(check.message);
   }
+}
+
+if (
+  !/export type AuthenticatedAppRoute = Exclude<AppRoute, "landing" \| "login">;/.test(
+    appNavigationSource
+  ) ||
+  !/export type AppNavigationRoute = AuthenticatedAppRoute;/.test(appNavigationSource) ||
+  !/export const appNavigationItems: readonly AppNavigationItem\[\]/.test(appNavigationSource) ||
+  !/export const integrationNavigationItem: AppNavigationItem/.test(appNavigationSource) ||
+  !/export function getVisibleNavigationItems/.test(appNavigationSource) ||
+  !/export function normalizeAuthenticatedRoute/.test(appNavigationSource)
+) {
+  throw new Error(
+    "Authenticated app navigation must live in apps/web/src/config/appNavigation.ts with typed routes, visible items and route normalization."
+  );
+}
+
+if (
+  /type AppNavigationRoute =/.test(appShellSource) ||
+  /const navigationItems/.test(appShellSource) ||
+  /readonly currentRoute: string;/.test(appShellSource) ||
+  !/getVisibleNavigationItems\(userRole\)/.test(appShellSource)
+) {
+  throw new Error(
+    "AppShell must consume centralized navigation metadata instead of redefining routes or accepting an untyped currentRoute."
+  );
+}
+
+if (
+  !/normalizeAuthenticatedRoute\(appRoute\)/.test(appSource) ||
+  !/const authenticatedAppRoute =/.test(appSource) ||
+  /currentRoute=\{isIntegrationSession \? "interop" : appRoute\}/.test(appSource)
+) {
+  throw new Error(
+    "App must normalize authenticated routes once before rendering the authenticated layout and route renderer."
+  );
+}
+
+if (
+  !/readonly appRoute: AuthenticatedAppRoute;/.test(appRouteRendererSource) ||
+  !/readonly onNavigate: \(route: AuthenticatedAppRoute\) => void;/.test(appRouteRendererSource) ||
+  !/readonly onNavigate: \(route: AuthenticatedAppRoute\) => void;/.test(dashboardPageSource)
+) {
+  throw new Error(
+    "Authenticated page rendering must use AuthenticatedAppRoute so dashboard navigation cannot point back to public routes."
+  );
 }
 
 if (

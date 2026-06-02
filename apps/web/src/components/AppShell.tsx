@@ -1,25 +1,14 @@
 import type { ReactNode } from "react";
 import { formatDemoRole, type DemoRole } from "../auth/demoLogin.js";
-
-type AppNavigationRoute = "dashboard" | "workspace" | "documents" | "audit" | "interop" | "settings";
-
-const navigationItems: readonly {
-  readonly route: AppNavigationRoute;
-  readonly label: string;
-  readonly hint: string;
-}[] = [
-  { route: "dashboard", label: "Tổng quan", hint: "Vận hành" },
-  { route: "workspace", label: "Hồ sơ bệnh nhân", hint: "Lượt khám" },
-  { route: "documents", label: "Tài liệu", hint: "Bệnh án điện tử" },
-  { route: "audit", label: "Kiểm toán", hint: "Nhật ký truy cập" },
-  { route: "interop", label: "Liên thông", hint: "FHIR/HIS/LIS/PACS" },
-  { route: "settings", label: "Cấu hình", hint: "Vai trò và bảo mật" }
-];
+import {
+  getVisibleNavigationItems,
+  type AppNavigationRoute
+} from "../config/appNavigation.js";
 
 type AuthenticatedLayoutProps = {
   readonly apiBaseUrl: string;
   readonly children: ReactNode;
-  readonly currentRoute: string;
+  readonly currentRoute: AppNavigationRoute;
   readonly onLogout: () => void;
   readonly onNavigate: (route: AppNavigationRoute) => void;
   readonly statusMessage: string;
@@ -37,16 +26,7 @@ export function AuthenticatedLayout({
   userName,
   userRole
 }: AuthenticatedLayoutProps) {
-  const visibleNavigationItems =
-    userRole === "integration"
-      ? [
-          {
-            route: "interop" as const,
-            label: "Gateway",
-            hint: "Callback tiếp nhận"
-          }
-        ]
-      : navigationItems;
+  const visibleNavigationItems = getVisibleNavigationItems(userRole);
 
   return (
     <main className="app-layout">

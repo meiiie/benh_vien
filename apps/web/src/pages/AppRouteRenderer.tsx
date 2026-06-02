@@ -2,7 +2,6 @@ import type { FormEvent, ReactNode } from "react";
 import type { LoginForm } from "../auth/demoLogin.js";
 import type {
   ApiRuntimeInfo,
-  AppRoute,
   AuthSession
 } from "../types/appRuntime.js";
 import type { Patient } from "../types/patientRegistry.js";
@@ -12,6 +11,7 @@ import type {
 } from "../types/recordTransfers.js";
 import { AuditLogPage } from "./AuditLogPage.js";
 import { DashboardPage } from "./DashboardPage.js";
+import type { AuthenticatedAppRoute } from "../config/appNavigation.js";
 import type { DashboardMetrics } from "../application/dashboardMetrics.js";
 import { defaultRecordTransferForm } from "../config/demoTransferDefaults.js";
 import { DocumentsPage } from "./DocumentsPage.js";
@@ -79,7 +79,7 @@ type AppRouteRendererProps = {
   readonly apiBaseUrl: string;
   readonly apiRuntimeInfo?: ApiRuntimeInfo;
   readonly apiRuntimeWarning?: string;
-  readonly appRoute: AppRoute;
+  readonly appRoute: AuthenticatedAppRoute;
   readonly authSession?: AuthSession;
   readonly canMergePatients: boolean;
   readonly canViewRuntimeInfo: boolean;
@@ -102,7 +102,7 @@ type AppRouteRendererProps = {
   readonly onGatewayAcknowledgementSubmit: (
     event: FormEvent<HTMLFormElement>
   ) => void;
-  readonly onNavigate: (route: AppRoute) => void;
+  readonly onNavigate: (route: AuthenticatedAppRoute) => void;
   readonly onReloadRuntimeInfo: () => void;
 };
 

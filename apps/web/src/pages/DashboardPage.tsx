@@ -1,13 +1,13 @@
 import { Info, MetricCard, PageBrief, PageHeader } from "../components/AppShell.js";
 import { formatDateTime } from "../lib/clinicalFormatters.js";
-import type { AppRoute } from "../types/appRuntime.js";
+import type { AuthenticatedAppRoute } from "../config/appNavigation.js";
 import type { Patient } from "../types/patientRegistry.js";
 import type { DashboardMetrics } from "../application/dashboardMetrics.js";
 
 type DashboardPageProps = {
   readonly latestEncounterServiceType?: string;
   readonly metrics: DashboardMetrics;
-  readonly onNavigate: (route: AppRoute) => void;
+  readonly onNavigate: (route: AuthenticatedAppRoute) => void;
   readonly selectedPatient?: Patient;
 };
 
