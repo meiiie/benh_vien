@@ -1086,6 +1086,10 @@ const standardizedJsonErrorRoutePaths = [
       "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-responses.ts"
     ),
     label: "RecordTransfer acknowledgement responses"
+  },
+  {
+    path: resolve("apps/api/src/modules/patients/patient-identifier-conflict.ts"),
+    label: "Patient identifier conflict helper"
   }
 ];
 const standardizedRequestIdNotFoundRoutePaths = [

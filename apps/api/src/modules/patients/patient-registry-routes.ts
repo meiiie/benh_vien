@@ -20,6 +20,7 @@ import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
 import {
   findPatientIdentifierConflict,
   sendPatientIdentifierConflict,
+  sendPatientIdentifierConflictFallback,
   toPatientResponse
 } from "./patient-route-helpers.js";
 
@@ -130,11 +131,7 @@ export async function registerPatientRegistryRoutes(
           );
         }
 
-        return reply.status(409).send({
-          error: "PATIENT_IDENTIFIER_CONFLICT",
-          message:
-            "Định danh bệnh nhân đã thuộc về một hồ sơ khác. Cần đối soát/MPI thay vì tạo hồ sơ mới."
-        });
+        return sendPatientIdentifierConflictFallback(request, reply);
       }
 
       throw error;

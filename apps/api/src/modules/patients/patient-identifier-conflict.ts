@@ -6,6 +6,10 @@ import type {
   PatientRepository
 } from "@benh-vien-so/domain";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
+import { sendJsonErrorResponse } from "../http/http-json-error-response.js";
+
+const patientIdentifierConflictMessage =
+  "Định danh bệnh nhân đã thuộc về một hồ sơ khác. Cần đối soát/MPI thay vì tạo hồ sơ mới.";
 
 export async function findPatientIdentifierConflict(
   repository: PatientRepository,
@@ -48,13 +52,22 @@ export async function sendPatientIdentifierConflict(
     }
   });
 
-  return reply.status(409).send({
+  return sendJsonErrorResponse(reply, 409, request.id, {
     error: "PATIENT_IDENTIFIER_CONFLICT",
-    message:
-      "Định danh bệnh nhân đã thuộc về một hồ sơ khác. Cần đối soát/MPI thay vì tạo hồ sơ mới.",
+    message: patientIdentifierConflictMessage,
     identifier: {
       system: conflict.identifier.system,
       type: conflict.identifier.type
     }
+  });
+}
+
+export function sendPatientIdentifierConflictFallback(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  return sendJsonErrorResponse(reply, 409, request.id, {
+    error: "PATIENT_IDENTIFIER_CONFLICT",
+    message: patientIdentifierConflictMessage
   });
 }
