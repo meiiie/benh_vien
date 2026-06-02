@@ -768,6 +768,11 @@ const domainBudgets = [
     role: "FHIR patient-record document Composition section catalog"
   },
   {
+    path: "packages/domain/src/fhir/patient-record-document-provenance.ts",
+    maxLines: 60,
+    role: "FHIR patient-record document signed Provenance entries"
+  },
+  {
     path: "packages/domain/src/fhir/map-provider-directory-to-fhir.ts",
     maxLines: 75,
     role: "FHIR ProviderDirectory public resources API and bundle orchestration"
@@ -1233,6 +1238,9 @@ const patientRecordDocumentReferencesPath = resolve(
 const patientRecordDocumentSectionsPath = resolve(
   "packages/domain/src/fhir/patient-record-document-sections.ts"
 );
+const patientRecordDocumentProvenancePath = resolve(
+  "packages/domain/src/fhir/patient-record-document-provenance.ts"
+);
 
 const domainReports = [];
 
@@ -1617,6 +1625,10 @@ const patientRecordDocumentReferencesSource = await readFile(
 );
 const patientRecordDocumentSectionsSource = await readFile(
   patientRecordDocumentSectionsPath,
+  "utf8"
+);
+const patientRecordDocumentProvenanceSource = await readFile(
+  patientRecordDocumentProvenancePath,
   "utf8"
 );
 
@@ -4271,8 +4283,10 @@ for (const required of [
   /mapPatientRecordToFhirBundle/,
   /buildPatientRecordComposition/,
   /buildPatientRecordDocumentBundleIdentifier/,
+  /buildPatientRecordDocumentProvenanceEntries/,
   /toPatientRecordCompositionEntry/,
   /from "\.\/patient-record-document-composition\.js"/,
+  /from "\.\/patient-record-document-provenance\.js"/,
   /resourceType:\s*"Bundle"/
 ]) {
   if (!required.test(mapPatientRecordToFhirDocumentBundleSource)) {
@@ -4382,6 +4396,7 @@ for (const required of [
   /function buildPatientRecordDocumentSection/,
   /function escapeXml/,
   /"DocumentReference"/,
+  /"Provenance"/,
   /"MedicationAdministration"/
 ]) {
   if (!required.test(patientRecordDocumentSectionsSource)) {
@@ -4400,6 +4415,35 @@ for (const forbidden of [
   if (forbidden.test(patientRecordDocumentSectionsSource)) {
     throw new Error(
       "patient-record-document-sections.ts must stay a Composition section helper and must not build Bundle or Composition envelopes."
+    );
+  }
+}
+
+for (const required of [
+  /export type PatientRecordDocumentProvenanceEntryInput/,
+  /export function buildPatientRecordDocumentProvenanceEntries/,
+  /mapClinicalDocumentToFhirProvenance/,
+  /document\.toSnapshot\(\)\.status === "signed"/,
+  /custodianOrganizationId/,
+  /urn:wiiicare:nexus:Provenance:/
+]) {
+  if (!required.test(patientRecordDocumentProvenanceSource)) {
+    throw new Error(
+      "patient-record-document-provenance.ts must keep signed-document Provenance entry orchestration for FHIR document Bundles."
+    );
+  }
+}
+
+for (const forbidden of [
+  /mapPatientRecordToFhirBundle/,
+  /buildPatientRecordComposition/,
+  /buildPatientRecordDocumentSections/,
+  /resourceType:\s*"Bundle"/,
+  /resourceType:\s*"Composition"/
+]) {
+  if (forbidden.test(patientRecordDocumentProvenanceSource)) {
+    throw new Error(
+      "patient-record-document-provenance.ts must only build Provenance entries and must not own Bundle or Composition orchestration."
     );
   }
 }

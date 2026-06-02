@@ -23,7 +23,7 @@
 ## Giai đoạn 2: Liên thông FHIR
 
 - Kết nối HAPI FHIR ở chế độ thử nghiệm.
-- Mapping `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Consent`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `DocumentReference`, `Provenance`, `Composition` và `Task` điều phối chuyển hồ sơ.
+- Mapping `Patient`, `Organization`, `Practitioner`, `PractitionerRole`, `Endpoint`, `Consent`, `Encounter`, `AllergyIntolerance`, `Condition`, `ServiceRequest`, `Task`, `Procedure`, `Observation`, `DiagnosticReport`, `ImagingStudy`, `MedicationRequest`, `MedicationDispense`, `MedicationAdministration`, `DocumentReference`, `Provenance`, `Composition` và `Task` điều phối chuyển hồ sơ. FHIR document Bundle đã nhúng `Provenance` cho tài liệu đã ký; chữ ký số pháp lý, chứng thư số và timestamp authority vẫn là phần triển khai thật cần bổ sung.
 - Tạo luồng xuất gói hồ sơ bệnh án cho một bệnh nhân, gồm cả căn cứ đồng ý chia sẻ để tránh tham chiếu treo.
 - Kiểm tra luồng nhận lại dữ liệu từ FHIR server.
 

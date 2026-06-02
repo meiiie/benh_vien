@@ -893,10 +893,37 @@ if (fhirDocumentBundle.entry[0]?.resource.resourceType !== "Composition") {
   throw new Error("Expected first document bundle entry to be Composition.");
 }
 
-if (fhirDocumentBundle.entry.length !== 22) {
+if (fhirDocumentBundle.entry.length !== 23) {
   throw new Error(
-    `Expected document bundle to contain 22 entries, received ${fhirDocumentBundle.entry.length}`
+    `Expected document bundle to contain 23 entries, received ${fhirDocumentBundle.entry.length}`
   );
+}
+
+const documentBundleProvenanceEntry = fhirDocumentBundle.entry.find(
+  (entry) => entry.resource.resourceType === "Provenance"
+);
+
+if (
+  documentBundleProvenanceEntry?.resource.resourceType !== "Provenance" ||
+  documentBundleProvenanceEntry.resource.target[0]?.reference !==
+    "DocumentReference/clinical-document-harness-001"
+) {
+  throw new Error("Expected document bundle to include Provenance for the signed document.");
+}
+
+const documentBundleComposition = fhirDocumentBundle.entry[0]?.resource;
+const documentProvenanceSection =
+  documentBundleComposition?.resourceType === "Composition"
+    ? documentBundleComposition.section?.find(
+        (section) => section.title === "Nguồn gốc và ký xác nhận tài liệu"
+      )
+    : undefined;
+
+if (
+  documentProvenanceSection?.entry?.[0]?.reference !==
+  "Provenance/clinical-document-harness-001-provenance"
+) {
+  throw new Error("Expected Composition to section signed-document Provenance.");
 }
 
 const revokedConsent = Consent.grant({

@@ -66,6 +66,10 @@ const patientRecordDocumentSectionDefinitions: readonly PatientRecordDocumentSec
     {
       title: "Tài liệu lâm sàng",
       resourceTypes: ["DocumentReference"]
+    },
+    {
+      title: "Nguồn gốc và ký xác nhận tài liệu",
+      resourceTypes: ["Provenance"]
     }
   ];
 

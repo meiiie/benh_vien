@@ -7,6 +7,9 @@ import {
   patientRecordDocumentBundleFhirProfile,
   toPatientRecordCompositionEntry
 } from "./patient-record-document-composition.js";
+import {
+  buildPatientRecordDocumentProvenanceEntries
+} from "./patient-record-document-provenance.js";
 
 export type { PatientRecordDocumentBundleInput } from "./patient-record-document-composition.js";
 
@@ -19,9 +22,17 @@ export function mapPatientRecordToFhirDocumentBundle(
     generatedAt
   });
   const patientSnapshot = input.patient.toSnapshot();
+  const entries = [
+    ...collectionBundle.entry,
+    ...buildPatientRecordDocumentProvenanceEntries({
+      documents: input.documents,
+      custodianOrganizationId:
+        input.custodianOrganizationId ?? patientSnapshot.managingOrganizationId
+    })
+  ];
   const composition = buildPatientRecordComposition(
     input,
-    collectionBundle.entry,
+    entries,
     generatedAt
   );
 
@@ -34,6 +45,6 @@ export function mapPatientRecordToFhirDocumentBundle(
     identifier: buildPatientRecordDocumentBundleIdentifier(patientSnapshot.id, generatedAt),
     type: "document",
     timestamp: generatedAt.toISOString(),
-    entry: [toPatientRecordCompositionEntry(composition), ...collectionBundle.entry]
+    entry: [toPatientRecordCompositionEntry(composition), ...entries]
   };
 }

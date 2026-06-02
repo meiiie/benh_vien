@@ -142,6 +142,10 @@ describe("API FHIR interoperability boundary", () => {
       headers: bundleTransferHeaders(accessToken)
     });
     const body = response.json();
+    const resourceTypes = body.entry.map(
+      (entry: { readonly resource: { readonly resourceType: string } }) =>
+        entry.resource.resourceType
+    );
 
     expect(response.statusCode).toBe(200);
     expect(body).toMatchObject({
@@ -160,7 +164,26 @@ describe("API FHIR interoperability boundary", () => {
         }
       ]
     });
-    expect(body.entry).toHaveLength(48);
+    expect(body.entry).toHaveLength(49);
+    expect(
+      resourceTypes.filter((resourceType: string) => resourceType === "Provenance")
+    ).toHaveLength(1);
+    expect(body.entry).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          resource: expect.objectContaining({
+            resourceType: "Provenance",
+            id: "clinical-document-demo-001-provenance",
+            target: [
+              {
+                reference: "DocumentReference/clinical-document-demo-001",
+                display: "Tóm tắt ra viện - Nguyễn Văn An"
+              }
+            ]
+          })
+        })
+      ])
+    );
     expect(body.entry[0].resource.section).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -180,6 +203,14 @@ describe("API FHIR interoperability boundary", () => {
         }),
         expect.objectContaining({
           title: "Dùng thuốc thực tế"
+        }),
+        expect.objectContaining({
+          title: "Nguồn gốc và ký xác nhận tài liệu",
+          entry: [
+            {
+              reference: "Provenance/clinical-document-demo-001-provenance"
+            }
+          ]
         })
       ])
     );
