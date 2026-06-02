@@ -468,6 +468,16 @@ const domainBudgets = [
     role: "FHIR Condition resource type"
   },
   {
+    path: "packages/domain/src/fhir/map-condition-to-fhir.ts",
+    maxLines: 75,
+    role: "FHIR Condition public mapper and clinical references"
+  },
+  {
+    path: "packages/domain/src/fhir/map-condition-codings.ts",
+    maxLines: 115,
+    role: "FHIR Condition profile, status, category, severity and code mapping"
+  },
+  {
     path: "packages/domain/src/fhir/fhir-observation.types.ts",
     maxLines: 70,
     role: "FHIR Observation resource type"
@@ -906,6 +916,8 @@ const fhirClinicalCoreTypesPath = resolve(
 );
 const fhirEncounterTypesPath = resolve("packages/domain/src/fhir/fhir-encounter.types.ts");
 const fhirConditionTypesPath = resolve("packages/domain/src/fhir/fhir-condition.types.ts");
+const mapConditionToFhirPath = resolve("packages/domain/src/fhir/map-condition-to-fhir.ts");
+const mapConditionCodingsPath = resolve("packages/domain/src/fhir/map-condition-codings.ts");
 const fhirObservationTypesPath = resolve("packages/domain/src/fhir/fhir-observation.types.ts");
 const fhirAllergyIntoleranceTypesPath = resolve(
   "packages/domain/src/fhir/fhir-allergy-intolerance.types.ts"
@@ -1194,6 +1206,8 @@ const mapAuditEventReferencesSource = await readFile(
 const fhirClinicalCoreTypesSource = await readFile(fhirClinicalCoreTypesPath, "utf8");
 const fhirEncounterTypesSource = await readFile(fhirEncounterTypesPath, "utf8");
 const fhirConditionTypesSource = await readFile(fhirConditionTypesPath, "utf8");
+const mapConditionToFhirSource = await readFile(mapConditionToFhirPath, "utf8");
+const mapConditionCodingsSource = await readFile(mapConditionCodingsPath, "utf8");
 const fhirObservationTypesSource = await readFile(fhirObservationTypesPath, "utf8");
 const fhirAllergyIntoleranceTypesSource = await readFile(
   fhirAllergyIntoleranceTypesPath,
@@ -3019,6 +3033,78 @@ for (const required of [
   if (!required.test(conditionValidationSource)) {
     throw new Error(
       "condition.validation.ts must keep Condition code, status, severity and timeline guards."
+    );
+  }
+}
+
+for (const required of [
+  /export function mapConditionToFhir/,
+  /from "\.\/map-condition-codings\.js"/,
+  /conditionFhirProfile/,
+  /toConditionClinicalStatus/,
+  /toConditionVerificationStatus/,
+  /toConditionCategory/,
+  /toConditionSeverity/,
+  /toConditionCodeableConcept/,
+  /resourceType:\s*"Condition"/,
+  /verificationStatus === "entered-in-error"/
+]) {
+  if (!required.test(mapConditionToFhirSource)) {
+    throw new Error(
+      "map-condition-to-fhir.ts must keep the public Condition mapper, clinical references and entered-in-error omission rule while delegating profile, labels and CodeableConcept helpers to map-condition-codings.ts."
+    );
+  }
+}
+
+for (const forbidden of [
+  /const categoryLabels/,
+  /\bConditionCategory\b/,
+  /\bConditionClinicalStatus\b/,
+  /\bConditionVerificationStatus\b/,
+  /\bConditionSeverity\b/,
+  /"http:\/\/terminology\.hl7\.org\/CodeSystem\/condition-/
+]) {
+  if (forbidden.test(mapConditionToFhirSource)) {
+    throw new Error(
+      "Condition FHIR profile, terminology labels and CodeableConcept mapping belong in map-condition-codings.ts, not in the public mapper."
+    );
+  }
+}
+
+for (const required of [
+  /export const conditionFhirProfile/,
+  /export function toConditionClinicalStatus/,
+  /export function toConditionVerificationStatus/,
+  /export function toConditionCategory/,
+  /export function toConditionSeverity/,
+  /export function toConditionCodeableConcept/,
+  /ConditionClinicalStatus/,
+  /ConditionVerificationStatus/,
+  /ConditionCategory/,
+  /condition-clinical/,
+  /condition-ver-status/,
+  /condition-category/
+]) {
+  if (!required.test(mapConditionCodingsSource)) {
+    throw new Error(
+      "map-condition-codings.ts must keep Condition FHIR profile, terminology status/category/severity labels and CodeableConcept mapping."
+    );
+  }
+}
+
+for (const forbidden of [
+  /mapConditionToFhir/,
+  /resourceType:\s*"Condition"/,
+  /patientId/,
+  /encounterId/,
+  /recorderPractitionerId/,
+  /onsetAt/,
+  /recordedAt/,
+  /note/
+]) {
+  if (forbidden.test(mapConditionCodingsSource)) {
+    throw new Error(
+      "map-condition-codings.ts must stay a coding helper and must not own Condition resource orchestration or clinical references."
     );
   }
 }
