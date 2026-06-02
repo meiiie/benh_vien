@@ -714,8 +714,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/fhir/patient-record-document-composition.ts",
-    maxLines: 120,
+    maxLines: 95,
     role: "FHIR patient-record document Composition metadata and first-entry mapping"
+  },
+  {
+    path: "packages/domain/src/fhir/patient-record-document-references.ts",
+    maxLines: 70,
+    role: "FHIR patient-record document direct author and custodian reference resolution"
   },
   {
     path: "packages/domain/src/fhir/patient-record-document-sections.ts",
@@ -1120,6 +1125,9 @@ const mapPatientRecordToFhirDocumentBundlePath = resolve(
 const patientRecordDocumentCompositionPath = resolve(
   "packages/domain/src/fhir/patient-record-document-composition.ts"
 );
+const patientRecordDocumentReferencesPath = resolve(
+  "packages/domain/src/fhir/patient-record-document-references.ts"
+);
 const patientRecordDocumentSectionsPath = resolve(
   "packages/domain/src/fhir/patient-record-document-sections.ts"
 );
@@ -1465,6 +1473,10 @@ const mapPatientRecordToFhirDocumentBundleSource = await readFile(
 );
 const patientRecordDocumentCompositionSource = await readFile(
   patientRecordDocumentCompositionPath,
+  "utf8"
+);
+const patientRecordDocumentReferencesSource = await readFile(
+  patientRecordDocumentReferencesPath,
   "utf8"
 );
 const patientRecordDocumentSectionsSource = await readFile(
@@ -3946,13 +3958,15 @@ for (const required of [
   /export function toPatientRecordCompositionEntry/,
   /buildPatientRecordDocumentSections/,
   /resolvePatientRecordCompositionAuthor/,
+  /buildPatientRecordCompositionCustodian/,
+  /from "\.\/patient-record-document-references\.js"/,
   /resourceType:\s*"Composition"/,
   /"http:\/\/loinc\.org"/,
   /"34133-9"/
 ]) {
   if (!required.test(patientRecordDocumentCompositionSource)) {
     throw new Error(
-      "patient-record-document-composition.ts must keep document Bundle profile constants, Composition metadata, author/custodian reference resolution and Composition first-entry mapping."
+      "patient-record-document-composition.ts must keep document Bundle profile constants, Composition metadata and Composition first-entry mapping while delegating direct reference resolution."
     );
   }
 }
@@ -3962,11 +3976,47 @@ for (const forbidden of [
   /mapPatientRecordToFhirBundle/,
   /resourceType:\s*"Bundle"/,
   /mapMedicationAdministrationToFhir/,
-  /mapProviderDirectoryToFhirResources/
+  /mapProviderDirectoryToFhirResources/,
+  /function resolvePatientRecordCompositionAuthor/,
+  /function hasBundleResource/
 ]) {
   if (forbidden.test(patientRecordDocumentCompositionSource)) {
     throw new Error(
       "patient-record-document-composition.ts must stay a Composition metadata helper and must not build Bundle envelopes or remap patient-record resources."
+    );
+  }
+}
+
+for (const required of [
+  /export type PatientRecordCompositionAuthorInput/,
+  /export function resolvePatientRecordCompositionAuthor/,
+  /export function buildPatientRecordCompositionCustodian/,
+  /function hasBundleResource/,
+  /FhirBundleEntry/,
+  /FhirComposition/,
+  /PatientSnapshot/,
+  /"Practitioner"/,
+  /"Organization"/,
+  /Patient\/\$\{patientSnapshot\.id\}/
+]) {
+  if (!required.test(patientRecordDocumentReferencesSource)) {
+    throw new Error(
+      "patient-record-document-references.ts must keep direct Composition author/custodian reference resolution against resources present in the document Bundle."
+    );
+  }
+}
+
+for (const forbidden of [
+  /export function buildPatientRecordComposition\(/,
+  /toPatientRecordCompositionEntry/,
+  /buildPatientRecordDocumentSections/,
+  /resourceType:\s*"Composition"/,
+  /resourceType:\s*"Bundle"/,
+  /mapPatientRecordToFhirBundle/
+]) {
+  if (forbidden.test(patientRecordDocumentReferencesSource)) {
+    throw new Error(
+      "patient-record-document-references.ts must stay a direct reference helper and must not build Composition, sections or Bundle envelopes."
     );
   }
 }

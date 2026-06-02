@@ -1,6 +1,9 @@
-import type { PatientSnapshot } from "../patient/patient.types.js";
 import type { FhirBundle, FhirBundleEntry, FhirComposition } from "./fhir-types.js";
 import type { PatientRecordBundleInput } from "./patient-record-bundle-resources.js";
+import {
+  buildPatientRecordCompositionCustodian,
+  resolvePatientRecordCompositionAuthor
+} from "./patient-record-document-references.js";
 import { buildPatientRecordDocumentSections } from "./patient-record-document-sections.js";
 
 export const patientRecordDocumentBundleFhirProfile = "http://hl7.org/fhir/StructureDefinition/Bundle";
@@ -21,11 +24,6 @@ export function buildPatientRecordComposition(
   const patientSnapshot = input.patient.toSnapshot();
   const custodianOrganizationId =
     input.custodianOrganizationId ?? patientSnapshot.managingOrganizationId;
-  const hasCustodianOrganization = hasBundleResource(
-    entries,
-    "Organization",
-    custodianOrganizationId
-  );
 
   return {
     resourceType: "Composition",
@@ -59,11 +57,7 @@ export function buildPatientRecordComposition(
       }
     ],
     title: `Tóm tắt bệnh án điện tử - ${patientSnapshot.fullName}`,
-    custodian: hasCustodianOrganization
-      ? {
-          reference: `Organization/${custodianOrganizationId}`
-        }
-      : undefined,
+    custodian: buildPatientRecordCompositionCustodian(entries, custodianOrganizationId),
     section: buildPatientRecordDocumentSections(entries)
   };
 }
@@ -85,34 +79,4 @@ export function toPatientRecordCompositionEntry(
     fullUrl: `urn:wiiicare:nexus:Composition:${composition.id}`,
     resource: composition
   };
-}
-
-function resolvePatientRecordCompositionAuthor(
-  input: PatientRecordDocumentBundleInput,
-  entries: FhirBundle["entry"],
-  patientSnapshot: PatientSnapshot,
-  custodianOrganizationId: string
-): string {
-  if (
-    input.authorPractitionerId &&
-    hasBundleResource(entries, "Practitioner", input.authorPractitionerId)
-  ) {
-    return `Practitioner/${input.authorPractitionerId}`;
-  }
-
-  if (hasBundleResource(entries, "Organization", custodianOrganizationId)) {
-    return `Organization/${custodianOrganizationId}`;
-  }
-
-  return `Patient/${patientSnapshot.id}`;
-}
-
-function hasBundleResource(
-  entries: readonly FhirBundleEntry[],
-  resourceType: FhirBundleEntry["resource"]["resourceType"],
-  resourceId: string
-): boolean {
-  return entries.some(
-    (entry) => entry.resource.resourceType === resourceType && entry.resource.id === resourceId
-  );
 }
