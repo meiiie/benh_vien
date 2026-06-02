@@ -41,15 +41,15 @@ export function GatewayAcknowledgementPage({
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="Integration Gateway"
-        title="Callback tiếp nhận hồ sơ liên viện"
-        description="Màn này dành riêng cho tài khoản gateway của bệnh viện nhận. Nó chỉ gửi biên nhận kỹ thuật với mục đích OPERATIONS, không mở workspace lâm sàng của bác sĩ."
+        eyebrow="Cổng liên thông"
+        title="Xác nhận tiếp nhận hồ sơ liên viện"
+        description="Trang này mô phỏng callback từ gateway của bệnh viện nhận. Trong triển khai production, chữ ký HMAC phải được tạo ở gateway server; giao diện này chỉ dùng cho demo vận hành có kiểm soát."
       />
 
       <section className="settings-grid">
         <article className="panel">
-          <p className="eyebrow">Gateway context</p>
-          <h2>Phiên vận hành</h2>
+          <p className="eyebrow">Ngữ cảnh gateway</p>
+          <h2>Phiên xác thực vận hành</h2>
           <div className="detail-grid compact">
             <Info label="Actor" value={authSession?.actor.actorId ?? "Chưa xác thực"} />
             <Info label="Vai trò" value={formatDemoRole(authSession?.actor.role ?? "integration")} />
@@ -57,15 +57,15 @@ export function GatewayAcknowledgementPage({
             <Info label="API" value={apiBaseUrl} />
           </div>
           <p className="empty-state">
-            Luồng demo chuẩn: bác sĩ gửi gói chuyển hồ sơ trước, sau đó đăng nhập bằng gateway để xác nhận bệnh viện nhận đã tiếp nhận. Callback hợp lệ sẽ ghi audit `record-transfer.acknowledgement-callback` và đưa gói sang `completed`.
+            Luồng demo chuẩn: bác sĩ gửi gói hồ sơ trước, sau đó tài khoản gateway của bệnh viện nhận xác nhận đã tiếp nhận. Callback hợp lệ sẽ ghi audit `record-transfer.acknowledgement-callback` và chuyển gói sang trạng thái `completed`.
           </p>
         </article>
 
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Acknowledgement callback</p>
-              <h2>Gửi biên nhận tiếp nhận</h2>
+              <p className="eyebrow">Biên nhận kỹ thuật</p>
+              <h2>Gửi callback xác nhận</h2>
             </div>
             <span className="pill cyan">OPERATIONS</span>
           </div>
@@ -136,7 +136,7 @@ export function GatewayAcknowledgementPage({
 
         {result ? (
           <article className="panel">
-            <p className="eyebrow">Callback result</p>
+            <p className="eyebrow">Kết quả callback</p>
             <h2>Gói đã được xác nhận</h2>
             <div className="detail-grid compact">
               <Info label="Mã gói" value={result.id} />
