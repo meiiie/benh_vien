@@ -328,7 +328,10 @@ const requiredModules = [
   "apps/web/src/features/record-transfers/recordTransferGatewayHandler.ts",
   "apps/web/src/features/record-transfers/recordTransferHandlers.ts",
   "apps/web/src/features/record-transfers/recordTransferHandlerTypes.ts",
+  "apps/web/src/features/record-transfers/recordTransferLabelFormatters.ts",
   "apps/web/src/features/record-transfers/recordTransferLifecycleHandlers.ts",
+  "apps/web/src/features/record-transfers/recordTransferLoaderHelpers.ts",
+  "apps/web/src/features/record-transfers/recordTransferOperationalSummaryModel.ts",
   "apps/web/src/lib/auditFormatters.ts",
   "apps/web/src/lib/clinicalFormatters.ts",
   "apps/web/src/lib/commandDrafts.ts",
@@ -575,6 +578,26 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/record-transfers/recordTransferLifecycleHandlers.ts",
     maxLines: 160,
     role: "Record transfer lifecycle transition handlers"
+  },
+  {
+    path: "apps/web/src/features/record-transfers/recordTransferFormatters.ts",
+    maxLines: 20,
+    role: "Record transfer formatter compatibility barrel"
+  },
+  {
+    path: "apps/web/src/features/record-transfers/recordTransferLabelFormatters.ts",
+    maxLines: 80,
+    role: "Record transfer label formatters"
+  },
+  {
+    path: "apps/web/src/features/record-transfers/recordTransferLoaderHelpers.ts",
+    maxLines: 50,
+    role: "Record transfer loader selection and compatibility helpers"
+  },
+  {
+    path: "apps/web/src/features/record-transfers/recordTransferOperationalSummaryModel.ts",
+    maxLines: 220,
+    role: "Record transfer operational summary model"
   },
   {
     path: "apps/web/src/features/clinical-records/clinicalRecordPanelRenderers.tsx",
