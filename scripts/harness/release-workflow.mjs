@@ -39,6 +39,15 @@ for (const { pattern, message } of requiredPatterns) {
   }
 }
 
+const provenanceAttestationCount = countMatches(releaseWorkflow, /provenance:\s*mode=max/g);
+const sbomAttestationCount = countMatches(releaseWorkflow, /sbom:\s*true/g);
+
+if (provenanceAttestationCount !== 2 || sbomAttestationCount !== 2) {
+  throw new Error(
+    "Release workflow must publish both API and web images with provenance: mode=max and sbom: true."
+  );
+}
+
 if (/:\s*latest\b|:latest\b/.test(releaseWorkflow)) {
   throw new Error(
     "Release workflow must not publish mutable :latest image tags; deploy by explicit semantic version."
@@ -51,9 +60,15 @@ console.log(
       status: "ok",
       check: "Release workflow immutable image tagging",
       releaseWorkflowPath,
+      provenanceAttestationCount,
+      sbomAttestationCount,
       mutableLatestTagsAllowed: false
     },
     null,
     2
   )
 );
+
+function countMatches(source, pattern) {
+  return [...source.matchAll(pattern)].length;
+}

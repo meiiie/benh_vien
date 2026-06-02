@@ -44,4 +44,4 @@ Workflow `Release Images` sẽ build và push:
 - `ghcr.io/meiiie/benh_vien/api:<version>`
 - `ghcr.io/meiiie/benh_vien/web:<version>`
 
-Workflow không publish tag `latest`. Môi trường triển khai phải chọn image bằng tag semantic version cụ thể để tránh nhận artifact mới ngoài kế hoạch kiểm thử.
+Workflow không publish tag `latest`. Môi trường triển khai phải chọn image bằng tag semantic version cụ thể để tránh nhận artifact mới ngoài kế hoạch kiểm thử. Image release cũng bật provenance attestation mức `mode=max` và SBOM attestation để đội vận hành truy vết nguồn build và thành phần phần mềm khi đánh giá rủi ro.
