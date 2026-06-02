@@ -44,6 +44,47 @@ const workflowSignals = [
   "Audit"
 ];
 
+const scopeCards = [
+  {
+    tone: "primary",
+    label: "Đang có trong prototype",
+    title: "Một lát cắt EMR có thể thao tác, không phải slide mô phỏng",
+    points: [
+      "Patient Registry quản lý định danh, hồ sơ và tình huống gộp bệnh nhân.",
+      "Workspace lâm sàng có lượt khám, dị ứng, chẩn đoán, chỉ định, kết quả, thuốc và tài liệu.",
+      "Luồng chuyển hồ sơ tạo FHIR document Bundle, kiểm tra đồng ý chia sẻ và ghi nhật ký kiểm toán."
+    ],
+    evidence: [
+      ["FHIR Bundle", "Gói hồ sơ tự chứa"],
+      ["AuditEvent", "Truy vết thao tác"],
+      ["Outbox", "Gửi và retry"],
+      ["Provider Directory", "Cơ sở và endpoint"]
+    ]
+  },
+  {
+    tone: "integration",
+    label: "Cần tích hợp khi triển khai thật",
+    title: "Các hệ thống bệnh viện phải được cắm bằng hợp đồng kỹ thuật rõ ràng",
+    points: [
+      "HIS: hệ thống thông tin bệnh viện cho tiếp đón, viện phí, bảo hiểm và vận hành nội trú/ngoại trú.",
+      "LIS/RIS: hệ thống xét nghiệm và chẩn đoán hình ảnh trả kết quả có cấu trúc.",
+      "PACS/DICOMweb: kho ảnh y khoa và endpoint truy xuất ảnh, không lưu ảnh lớn trực tiếp vào EMR."
+    ],
+    evidence: []
+  },
+  {
+    tone: "guardrail",
+    label: "Không tuyên bố quá mức",
+    title: "Prototype chưa thay thế hệ thống bệnh viện hoàn chỉnh",
+    points: [
+      "Chưa dùng dữ liệu bệnh nhân thật và chưa khẳng định tuân thủ sản xuất.",
+      "Chưa có chữ ký số pháp lý, SSO/MFA thật, mTLS/JWS gateway hai chiều hoặc MHD registry đầy đủ.",
+      "AI chỉ là hướng mở rộng sau khi EMR, FHIR, phân quyền và audit đủ chắc."
+    ],
+    evidence: []
+  }
+] as const;
+
 export function LandingPage({ onDemo, onLogin }: LandingPageProps) {
   return (
     <main className="marketing-shell">
@@ -141,6 +182,30 @@ export function LandingPage({ onDemo, onLogin }: LandingPageProps) {
             HIS/LIS/PACS thật hoặc thêm AI.
           </p>
         </article>
+      </section>
+
+      <section className="landing-scope-board" aria-label="Ranh giới năng lực của nguyên mẫu">
+        {scopeCards.map((card) => (
+          <article className={`scope-card scope-card--${card.tone}`} key={card.title}>
+            <p className="eyebrow">{card.label}</p>
+            <h2>{card.title}</h2>
+            <ul className="scope-list">
+              {card.points.map((point) => (
+                <li key={point}>{point}</li>
+              ))}
+            </ul>
+            {card.evidence.length ? (
+              <div className="scope-proof-strip" aria-label="Bằng chứng kỹ thuật của lát cắt hiện tại">
+                {card.evidence.map(([label, note]) => (
+                  <span key={label}>
+                    <strong>{label}</strong>
+                    <small>{note}</small>
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </article>
+        ))}
       </section>
 
       <section className="landing-grid">

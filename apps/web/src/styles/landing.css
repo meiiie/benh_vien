@@ -317,6 +317,133 @@
   line-height: 1.62;
 }
 
+.landing-scope-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1.16fr) minmax(320px, 0.84fr);
+  gap: 16px;
+  padding: 20px clamp(16px, 4vw, 24px) 0;
+}
+
+.scope-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 24px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.06);
+}
+
+.scope-card::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 100% 0%, rgba(14, 165, 233, 0.12), transparent 34%);
+  content: "";
+}
+
+.scope-card > * {
+  position: relative;
+}
+
+.scope-card h2 {
+  max-width: 720px;
+  font-size: clamp(1.16rem, 2vw, 1.8rem);
+  line-height: 1.08;
+}
+
+.scope-card--primary {
+  display: grid;
+  grid-row: span 2;
+  align-content: space-between;
+  color: white;
+  background:
+    linear-gradient(140deg, rgba(7, 22, 39, 0.98), rgba(9, 66, 84, 0.94)),
+    #071527;
+}
+
+.scope-card--primary::before {
+  opacity: 0.72;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 38px 38px;
+  mask-image: linear-gradient(140deg, #000, transparent 78%);
+}
+
+.scope-card--primary h2 {
+  color: white;
+}
+
+.scope-card--primary .eyebrow {
+  color: rgba(165, 243, 252, 0.9);
+}
+
+.scope-card--integration {
+  border-color: rgba(20, 184, 166, 0.2);
+  background: rgba(240, 253, 250, 0.8);
+}
+
+.scope-card--guardrail {
+  border-color: rgba(217, 119, 6, 0.22);
+  background: rgba(255, 251, 235, 0.82);
+}
+
+.scope-list {
+  display: grid;
+  gap: 12px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.scope-list li {
+  border-left: 3px solid rgba(0, 86, 210, 0.46);
+  padding-left: 12px;
+  color: var(--slate);
+  font-size: 0.9rem;
+  line-height: 1.58;
+}
+
+.scope-card--primary .scope-list li {
+  border-left-color: rgba(125, 211, 252, 0.76);
+  color: rgba(226, 246, 255, 0.88);
+}
+
+.scope-card--guardrail .scope-list li {
+  border-left-color: rgba(217, 119, 6, 0.56);
+}
+
+.scope-proof-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 34px;
+}
+
+.scope-proof-strip span {
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgba(186, 230, 253, 0.18);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.scope-proof-strip strong,
+.scope-proof-strip small {
+  color: rgba(240, 249, 255, 0.9);
+}
+
+.scope-proof-strip strong {
+  font-size: 0.82rem;
+}
+
+.scope-proof-strip small {
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
 .landing-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -367,12 +494,17 @@
 @media (max-width: 1100px) {
   .landing-hero,
   .landing-context,
+  .landing-scope-board,
   .landing-grid {
     grid-template-columns: 1fr;
   }
 
   .landing-hero {
     gap: 18px;
+  }
+
+  .scope-card--primary {
+    grid-row: auto;
   }
 
   .landing-hero-copy,
@@ -414,6 +546,7 @@
 
   .landing-hero-copy,
   .landing-card,
+  .scope-card,
   .landing-context article,
   .landing-feature-card {
     padding: 18px;
@@ -431,6 +564,10 @@
   .landing-proof-row span {
     flex: 1 1 calc(50% - 8px);
     text-align: center;
+  }
+
+  .scope-proof-strip {
+    grid-template-columns: 1fr;
   }
 
   .marketing-actions {

@@ -1000,12 +1000,28 @@ if (!/Nguyễn Văn An/.test(landingPageSource) || /Nguyễn Minh An/.test(landi
   );
 }
 
+if (
+  !/scopeCards/.test(landingPageSource) ||
+  !/landing-scope-board/.test(landingPageSource) ||
+  !/HIS: hệ thống thông tin bệnh viện/.test(landingPageSource) ||
+  !/LIS\/RIS: hệ thống xét nghiệm/.test(landingPageSource) ||
+  !/PACS\/DICOMweb: kho ảnh y khoa/.test(landingPageSource) ||
+  !/scope-proof-strip/.test(landingPageSource) ||
+  !/Provider Directory/.test(landingPageSource) ||
+  !/Outbox/.test(landingPageSource) ||
+  !/Chưa dùng dữ liệu bệnh nhân thật/.test(landingPageSource)
+) {
+  throw new Error(
+    "Landing page must explain prototype scope, HIS/LIS/PACS integration boundaries and no-real-patient-data guardrails."
+  );
+}
+
 if (!/@import "\.\/styles\/landing\.css";/.test(stylesSource)) {
   throw new Error("Global web stylesheet must import the focused landing stylesheet.");
 }
 
 if (
-  /\.(?:landing-|marketing-|brand-lockup|brand-mark|clinical-window|transfer-timeline|status-pill|feature-tags)/.test(
+  /\.(?:landing-|marketing-|brand-lockup|brand-mark|clinical-window|transfer-timeline|status-pill|feature-tags|scope-card|scope-proof-strip)/.test(
     stylesSource
   )
 ) {
@@ -1038,6 +1054,29 @@ const responsiveLandingChecks = [
       /@media \(max-width: 680px\)[\s\S]*?\.landing-proof-row span\s*\{[\s\S]*?flex:\s*1 1 calc\(50% - 8px\);/,
     message:
       "Landing proof chips must wrap into balanced rows on mobile."
+  },
+  {
+    pattern:
+      /\.landing-scope-board\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1\.16fr\)\s*minmax\(320px,\s*0\.84fr\);/,
+    message:
+      "Landing scope board must use an asymmetric product-readiness layout instead of another equal-card row."
+  },
+  {
+    pattern: /\.scope-card--primary\s*\{[\s\S]*?grid-row:\s*span 2;/,
+    message:
+      "Landing scope board must give the current prototype scope stronger visual hierarchy."
+  },
+  {
+    pattern:
+      /\.scope-proof-strip\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/,
+    message:
+      "Landing scope primary card must include compact technical evidence instead of leaving a visually empty span."
+  },
+  {
+    pattern:
+      /@media \(max-width: 1100px\)[\s\S]*?\.scope-card--primary\s*\{[\s\S]*?grid-row:\s*auto;/,
+    message:
+      "Landing scope board must collapse primary card row span at tablet widths."
   }
 ];
 
