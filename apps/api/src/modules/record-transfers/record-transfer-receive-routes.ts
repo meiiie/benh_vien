@@ -15,11 +15,9 @@ import {
   sendRecordTransferDomainError,
   toReceiveAuditMetadata
 } from "./record-transfer-command-route-helpers.js";
+import { buildAcknowledgementReference } from "./record-transfer-acknowledgement-reference.js";
 import { loadRecordTransferForPatientAccess } from "./record-transfer-route-access.js";
-import {
-  buildAcknowledgementReference,
-  toRecordTransferResponse
-} from "./record-transfer-route-helpers.js";
+import { toRecordTransferResponse } from "./record-transfer-route-helpers.js";
 
 export async function registerRecordTransferReceiveRoutes(
   app: FastifyInstance,

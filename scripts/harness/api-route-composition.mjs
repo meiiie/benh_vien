@@ -393,6 +393,21 @@ const routeBudgets = [
     role: "RecordTransfer acknowledgement callback audit metadata"
   },
   {
+    path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-reference.ts",
+    maxLines: 30,
+    role: "RecordTransfer acknowledgement reference generation"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-recipient-policy.ts",
+    maxLines: 50,
+    role: "RecordTransfer acknowledgement recipient actor scope policy"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-recipient-organization-scope.ts",
+    maxLines: 40,
+    role: "RecordTransfer recipient organization hierarchy scope helper"
+  },
+  {
     path: "apps/api/src/modules/record-transfers/record-transfer-query-routes.ts",
     maxLines: 180,
     role: "RecordTransfer query and read-model routes"
@@ -1088,6 +1103,9 @@ const requiredRecordTransferRegistrations = [
 const recordTransferCommandRoutesPath = resolve(
   "apps/api/src/modules/record-transfers/record-transfer-command-routes.ts"
 );
+const recordTransferRouteHelpersPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-route-helpers.ts"
+);
 const forbiddenRecordTransferCommandRoutePatterns = [
   {
     pattern:
@@ -1117,6 +1135,23 @@ const requiredRecordTransferCommandRegistrations = [
   "registerRecordTransferReceiveRoutes",
   "registerRecordTransferFailureRoutes"
 ];
+const forbiddenRecordTransferRouteHelperPatterns = [
+  {
+    pattern: /\bcanAcknowledgeForRecipient\b|\borganizationIsSameOrChild\b/,
+    message:
+      "RecordTransfer acknowledgement access policy belongs in record-transfer-acknowledgement-policy.ts."
+  },
+  {
+    pattern: /\bbuildAcknowledgementReference\b/,
+    message:
+      "RecordTransfer acknowledgement reference generation belongs in record-transfer-acknowledgement-reference.ts."
+  },
+  {
+    pattern: /\btoCallbackSignatureAuditMetadata\b/,
+    message:
+      "RecordTransfer callback signature audit metadata belongs in record-transfer-acknowledgement-audit.ts."
+  }
+];
 
 const recordTransferAcknowledgementRoutesPath = resolve(
   "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-routes.ts"
@@ -1136,8 +1171,14 @@ const recordTransferAcknowledgementCompletedOutcomePath = resolve(
 const recordTransferAcknowledgementAcceptedOutcomePath = resolve(
   "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-accepted-outcome.ts"
 );
+const recordTransferAcknowledgementAuditPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-audit.ts"
+);
 const recordTransferAcknowledgementPolicyPath = resolve(
   "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-policy.ts"
+);
+const recordTransferAcknowledgementReferencePath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-reference.ts"
 );
 const recordTransferAcknowledgementResponsesPath = resolve(
   "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-responses.ts"
@@ -1199,6 +1240,14 @@ const forbiddenRecordTransferAcknowledgementPolicyPatterns = [
 const requiredRecordTransferAcknowledgementPolicyHelpers = [
   "sendAcknowledgementForbidden",
   "canAcknowledgeForRecipient"
+];
+const requiredRecordTransferAcknowledgementAuditHelpers = [
+  "recordDuplicateAcknowledgementCallbackAudit",
+  "recordAcceptedAcknowledgementCallbackAudit",
+  "toCallbackSignatureAuditMetadata"
+];
+const requiredRecordTransferAcknowledgementReferenceHelpers = [
+  "buildAcknowledgementReference"
 ];
 const forbiddenRecordTransferAcknowledgementResponsePatterns = [
   {
@@ -1781,6 +1830,10 @@ const recordTransferCommandRoutesSource = await readFile(
   recordTransferCommandRoutesPath,
   "utf8"
 );
+const recordTransferRouteHelpersSource = await readFile(
+  recordTransferRouteHelpersPath,
+  "utf8"
+);
 const recordTransferAcknowledgementRoutesSource = await readFile(
   recordTransferAcknowledgementRoutesPath,
   "utf8"
@@ -1805,8 +1858,16 @@ const recordTransferAcknowledgementAcceptedOutcomeSource = await readFile(
   recordTransferAcknowledgementAcceptedOutcomePath,
   "utf8"
 );
+const recordTransferAcknowledgementAuditSource = await readFile(
+  recordTransferAcknowledgementAuditPath,
+  "utf8"
+);
 const recordTransferAcknowledgementPolicySource = await readFile(
   recordTransferAcknowledgementPolicyPath,
+  "utf8"
+);
+const recordTransferAcknowledgementReferenceSource = await readFile(
+  recordTransferAcknowledgementReferencePath,
   "utf8"
 );
 const recordTransferAcknowledgementResponsesSource = await readFile(
@@ -1995,6 +2056,12 @@ for (const registration of requiredRecordTransferCommandRegistrations) {
   }
 }
 
+for (const forbidden of forbiddenRecordTransferRouteHelperPatterns) {
+  if (forbidden.pattern.test(recordTransferRouteHelpersSource)) {
+    throw new Error(forbidden.message);
+  }
+}
+
 for (const forbidden of forbiddenRecordTransferAcknowledgementRoutePatterns) {
   if (forbidden.pattern.test(recordTransferAcknowledgementRoutesSource)) {
     throw new Error(forbidden.message);
@@ -2025,6 +2092,22 @@ for (const helper of requiredRecordTransferAcknowledgementPolicyHelpers) {
   if (!recordTransferAcknowledgementPolicySource.includes(helper)) {
     throw new Error(
       `RecordTransfer acknowledgement access policy must use ${helper} so purpose and recipient checks stay centralized.`
+    );
+  }
+}
+
+for (const helper of requiredRecordTransferAcknowledgementAuditHelpers) {
+  if (!recordTransferAcknowledgementAuditSource.includes(helper)) {
+    throw new Error(
+      `RecordTransfer acknowledgement audit module must expose ${helper} so callback audit metadata stays centralized.`
+    );
+  }
+}
+
+for (const helper of requiredRecordTransferAcknowledgementReferenceHelpers) {
+  if (!recordTransferAcknowledgementReferenceSource.includes(helper)) {
+    throw new Error(
+      `RecordTransfer acknowledgement reference helper must expose ${helper} so receive routes do not own reference generation.`
     );
   }
 }

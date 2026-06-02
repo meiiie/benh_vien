@@ -1,7 +1,10 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import type { ActorContext, ProviderDirectoryRepository } from "@benh-vien-so/domain";
+import type {
+  ActorContext,
+  ProviderDirectoryRepository
+} from "@benh-vien-so/domain";
+import { canAcknowledgeForRecipient } from "./record-transfer-acknowledgement-recipient-policy.js";
 import { sendAcknowledgementForbidden } from "./record-transfer-acknowledgement-responses.js";
-import { canAcknowledgeForRecipient } from "./record-transfer-route-helpers.js";
 
 type AcknowledgementAccessInput = {
   readonly reply: FastifyReply;

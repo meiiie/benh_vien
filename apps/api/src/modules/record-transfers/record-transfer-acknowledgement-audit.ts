@@ -8,7 +8,6 @@ import type {
 } from "@benh-vien-so/domain";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 import type { verifyRecordTransferCallbackSignature } from "./record-transfer-callback-signature.js";
-import { toCallbackSignatureAuditMetadata } from "./record-transfer-route-helpers.js";
 
 type CallbackSignatureVerification = ReturnType<
   typeof verifyRecordTransferCallbackSignature
@@ -78,4 +77,20 @@ export async function recordAcceptedAcknowledgementCallbackAudit(
       ...toCallbackSignatureAuditMetadata(input.signatureVerification)
     }
   });
+}
+
+function toCallbackSignatureAuditMetadata(input: CallbackSignatureVerification): {
+  readonly callbackSignatureRequired: boolean;
+  readonly callbackSignatureVerified: boolean;
+  readonly callbackSignatureTimestamp?: string;
+  readonly callbackSignatureAlgorithm?: string;
+  readonly callbackSignatureKeyId?: string;
+} {
+  return {
+    callbackSignatureRequired: input.required,
+    callbackSignatureVerified: input.verified,
+    callbackSignatureTimestamp: input.timestamp,
+    callbackSignatureAlgorithm: input.algorithm,
+    callbackSignatureKeyId: input.keyId
+  };
 }
