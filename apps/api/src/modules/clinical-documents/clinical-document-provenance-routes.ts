@@ -16,6 +16,7 @@ import {
 } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
+import { sendNotFoundErrorResponse } from "../http/http-not-found-error-response.js";
 
 export async function registerClinicalDocumentProvenanceRoutes(
   app: FastifyInstance,
@@ -35,9 +36,7 @@ export async function registerClinicalDocumentProvenanceRoutes(
     const document = await documentRepository.findById(params.id);
 
     if (!document) {
-      return reply.status(404).send({
-        error: "CLINICAL_DOCUMENT_NOT_FOUND"
-      });
+      return sendNotFoundErrorResponse(reply, "CLINICAL_DOCUMENT_NOT_FOUND");
     }
 
     if (

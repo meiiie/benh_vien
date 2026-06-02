@@ -1267,6 +1267,12 @@ const standardizedNotFoundErrorRoutePaths = [
   },
   {
     path: resolve(
+      "apps/api/src/modules/clinical-documents/clinical-document-provenance-routes.ts"
+    ),
+    label: "ClinicalDocument Provenance route"
+  },
+  {
+    path: resolve(
       "apps/api/src/modules/medication-requests/medication-request-query-routes.ts"
     ),
     label: "MedicationRequest query route"
