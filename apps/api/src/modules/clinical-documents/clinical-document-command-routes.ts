@@ -1,6 +1,5 @@
 import type { FastifyInstance } from "fastify";
 import { ClinicalDocumentIdParamsSchema } from "@benh-vien-so/contracts";
-import { DomainError } from "@benh-vien-so/domain";
 import type {
   AuditEventRepository,
   ClinicalDocumentRepository,
@@ -13,6 +12,7 @@ import {
 } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
+import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
 import { toClinicalDocumentResponse } from "./clinical-document-route-helpers.js";
 
 export async function registerClinicalDocumentCommandRoutes(
@@ -74,11 +74,10 @@ export async function registerClinicalDocumentCommandRoutes(
 
       return toClinicalDocumentResponse(document);
     } catch (error) {
-      if (error instanceof DomainError) {
-        return reply.status(422).send({
-          error: "CLINICAL_DOCUMENT_DOMAIN_ERROR",
-          message: error.message
-        });
+      if (
+        sendDomainErrorResponse(reply, error, "CLINICAL_DOCUMENT_DOMAIN_ERROR")
+      ) {
+        return;
       }
 
       throw error;

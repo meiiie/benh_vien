@@ -3,7 +3,6 @@ import {
   MergePatientRequestSchema,
   PatientIdParamsSchema
 } from "@benh-vien-so/contracts";
-import { DomainError } from "@benh-vien-so/domain";
 import type {
   AuditEventRepository,
   PatientRepository,
@@ -14,6 +13,7 @@ import {
   requirePermission
 } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
+import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
 import { toPatientResponse } from "./patient-route-helpers.js";
 
 export async function registerPatientMergeRoutes(
@@ -99,11 +99,8 @@ export async function registerPatientMergeRoutes(
 
       return toPatientResponse(sourcePatient);
     } catch (error) {
-      if (error instanceof DomainError) {
-        return reply.status(422).send({
-          error: "PATIENT_DOMAIN_ERROR",
-          message: error.message
-        });
+      if (sendDomainErrorResponse(reply, error, "PATIENT_DOMAIN_ERROR")) {
+        return;
       }
 
       throw error;

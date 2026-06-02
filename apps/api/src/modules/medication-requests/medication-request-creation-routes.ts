@@ -4,7 +4,7 @@ import {
   CreateMedicationRequestRequestSchema,
   PatientMedicationRequestsParamsSchema
 } from "@benh-vien-so/contracts";
-import { DomainError, MedicationRequest } from "@benh-vien-so/domain";
+import { MedicationRequest } from "@benh-vien-so/domain";
 import type {
   AuditEventRepository,
   ConditionRepository,
@@ -18,6 +18,7 @@ import {
   requirePermission
 } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
+import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
 import { toMedicationRequestResponse } from "./medication-request-route-helpers.js";
 import { validateMedicationRequestReferences } from "./medication-request-reference-validation.js";
 
@@ -89,11 +90,10 @@ export async function registerMedicationRequestCreationRoutes(
 
       return reply.status(201).send(toMedicationRequestResponse(medicationRequest));
     } catch (error) {
-      if (error instanceof DomainError) {
-        return reply.status(422).send({
-          error: "MEDICATION_REQUEST_DOMAIN_ERROR",
-          message: error.message
-        });
+      if (
+        sendDomainErrorResponse(reply, error, "MEDICATION_REQUEST_DOMAIN_ERROR")
+      ) {
+        return;
       }
 
       throw error;

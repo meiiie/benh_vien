@@ -2,7 +2,6 @@ import type { FastifyInstance } from "fastify";
 import { nanoid } from "nanoid";
 import { CreatePatientRequestSchema } from "@benh-vien-so/contracts";
 import {
-  DomainError,
   Patient,
   PatientIdentifierConflictError
 } from "@benh-vien-so/domain";
@@ -17,6 +16,7 @@ import {
   requirePermission
 } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
+import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
 import {
   findPatientIdentifierConflict,
   sendPatientIdentifierConflict,
@@ -115,11 +115,8 @@ export async function registerPatientRegistryRoutes(
 
       return reply.status(201).send(toPatientResponse(patient));
     } catch (error) {
-      if (error instanceof DomainError) {
-        return reply.status(422).send({
-          error: "PATIENT_DOMAIN_ERROR",
-          message: error.message
-        });
+      if (sendDomainErrorResponse(reply, error, "PATIENT_DOMAIN_ERROR")) {
+        return;
       }
 
       if (error instanceof PatientIdentifierConflictError) {

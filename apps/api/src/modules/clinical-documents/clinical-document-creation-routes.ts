@@ -4,7 +4,7 @@ import {
   CreateClinicalDocumentRequestSchema,
   PatientDocumentsParamsSchema
 } from "@benh-vien-so/contracts";
-import { ClinicalDocument, DomainError } from "@benh-vien-so/domain";
+import { ClinicalDocument } from "@benh-vien-so/domain";
 import type {
   AuditEventRepository,
   ClinicalDocumentRepository,
@@ -17,6 +17,7 @@ import {
   requirePermission
 } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
+import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
 import { toClinicalDocumentResponse } from "./clinical-document-route-helpers.js";
 import { validateClinicalDocumentReferences } from "./clinical-document-reference-validation.js";
 
@@ -86,11 +87,10 @@ export async function registerClinicalDocumentCreationRoutes(
 
       return reply.status(201).send(toClinicalDocumentResponse(document));
     } catch (error) {
-      if (error instanceof DomainError) {
-        return reply.status(422).send({
-          error: "CLINICAL_DOCUMENT_DOMAIN_ERROR",
-          message: error.message
-        });
+      if (
+        sendDomainErrorResponse(reply, error, "CLINICAL_DOCUMENT_DOMAIN_ERROR")
+      ) {
+        return;
       }
 
       throw error;

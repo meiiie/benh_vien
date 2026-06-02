@@ -163,6 +163,11 @@ const routeBudgets = [
     role: "HTTP validation error to FHIR OperationOutcome mapper"
   },
   {
+    path: "apps/api/src/modules/http/http-domain-error-response.ts",
+    maxLines: 40,
+    role: "HTTP DomainError to 422 response mapper"
+  },
+  {
     path: "apps/api/src/modules/http/http-content-negotiation.ts",
     maxLines: 50,
     role: "HTTP FHIR content negotiation helpers"
@@ -1003,6 +1008,58 @@ const requiredHttpBoundaryRegistrations = [
   "registerSecurityHeaderHook",
   "registerHttpErrorHandler",
   "registerRequestIdErrorPayloadHook"
+];
+const httpDomainErrorResponsePath = resolve(
+  "apps/api/src/modules/http/http-domain-error-response.ts"
+);
+const requiredHttpDomainErrorResponseHelpers = [
+  "sendDomainErrorResponse",
+  "DomainError",
+  "status(422)"
+];
+const standardizedDomainErrorRoutePaths = [
+  {
+    path: resolve(
+      "apps/api/src/modules/medication-requests/medication-request-creation-routes.ts"
+    ),
+    label: "MedicationRequest creation route"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/medication-dispenses/medication-dispense-creation-routes.ts"
+    ),
+    label: "MedicationDispense creation route"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/medication-administrations/medication-administration-creation-routes.ts"
+    ),
+    label: "MedicationAdministration creation route"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/clinical-documents/clinical-document-creation-routes.ts"
+    ),
+    label: "ClinicalDocument creation route"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/clinical-documents/clinical-document-command-routes.ts"
+    ),
+    label: "ClinicalDocument command route"
+  },
+  {
+    path: resolve("apps/api/src/modules/procedures/procedure-creation-routes.ts"),
+    label: "Procedure creation route"
+  },
+  {
+    path: resolve("apps/api/src/modules/patients/patient-registry-routes.ts"),
+    label: "Patient registry route"
+  },
+  {
+    path: resolve("apps/api/src/modules/patients/patient-merge-routes.ts"),
+    label: "Patient merge route"
+  }
 ];
 
 const apiDomainRoutesPath = resolve("apps/api/src/modules/http/api-domain-routes.ts");
@@ -2101,6 +2158,16 @@ for (const budget of routeBudgets) {
 const apiRoutesSource = await readFile(apiRoutesPath, "utf8");
 const systemRoutesSource = await readFile(systemRoutesPath, "utf8");
 const httpBoundarySource = await readFile(httpBoundaryPath, "utf8");
+const httpDomainErrorResponseSource = await readFile(
+  httpDomainErrorResponsePath,
+  "utf8"
+);
+const standardizedDomainErrorRouteSources = await Promise.all(
+  standardizedDomainErrorRoutePaths.map(async (route) => ({
+    ...route,
+    source: await readFile(route.path, "utf8")
+  }))
+);
 const apiDomainRoutesSource = await readFile(apiDomainRoutesPath, "utf8");
 const providerDirectoryRoutesSource = await readFile(
   providerDirectoryRoutesPath,
@@ -2333,6 +2400,28 @@ for (const registration of requiredHttpBoundaryRegistrations) {
   if (!httpBoundarySource.includes(registration)) {
     throw new Error(
       `HTTP boundary composition must register ${registration} so request IDs, security headers and error envelopes remain wired.`
+    );
+  }
+}
+
+for (const helper of requiredHttpDomainErrorResponseHelpers) {
+  if (!httpDomainErrorResponseSource.includes(helper)) {
+    throw new Error(
+      `HTTP domain error response helper must keep ${helper} so route adapters share the same DomainError to 422 mapping.`
+    );
+  }
+}
+
+for (const route of standardizedDomainErrorRouteSources) {
+  if (/\bDomainError\b/.test(route.source)) {
+    throw new Error(
+      `${route.label} must use sendDomainErrorResponse instead of inline DomainError response handling.`
+    );
+  }
+
+  if (!route.source.includes("sendDomainErrorResponse")) {
+    throw new Error(
+      `${route.label} must use sendDomainErrorResponse so DomainError payloads stay centralized.`
     );
   }
 }

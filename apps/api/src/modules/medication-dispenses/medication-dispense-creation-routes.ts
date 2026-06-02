@@ -4,7 +4,7 @@ import {
   CreateMedicationDispenseRequestSchema,
   PatientMedicationDispensesParamsSchema
 } from "@benh-vien-so/contracts";
-import { DomainError, MedicationDispense } from "@benh-vien-so/domain";
+import { MedicationDispense } from "@benh-vien-so/domain";
 import type {
   AuditEventRepository,
   EncounterRepository,
@@ -18,6 +18,7 @@ import {
   requirePermission
 } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
+import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
 import { toMedicationDispenseResponse } from "./medication-dispense-route-helpers.js";
 import { validateMedicationDispenseReferences } from "./medication-dispense-reference-validation.js";
 
@@ -91,11 +92,10 @@ export async function registerMedicationDispenseCreationRoutes(
 
       return reply.status(201).send(toMedicationDispenseResponse(medicationDispense));
     } catch (error) {
-      if (error instanceof DomainError) {
-        return reply.status(422).send({
-          error: "MEDICATION_DISPENSE_DOMAIN_ERROR",
-          message: error.message
-        });
+      if (
+        sendDomainErrorResponse(reply, error, "MEDICATION_DISPENSE_DOMAIN_ERROR")
+      ) {
+        return;
       }
 
       throw error;

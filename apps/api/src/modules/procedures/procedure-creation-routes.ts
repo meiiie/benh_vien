@@ -4,7 +4,7 @@ import {
   CreateProcedureRequestSchema,
   PatientProceduresParamsSchema
 } from "@benh-vien-so/contracts";
-import { DomainError, Procedure } from "@benh-vien-so/domain";
+import { Procedure } from "@benh-vien-so/domain";
 import type {
   AuditEventRepository,
   ClinicalDocumentRepository,
@@ -21,6 +21,7 @@ import {
   requirePermission
 } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
+import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
 import {
   toProcedureResponse,
   validateProcedureReferences
@@ -106,11 +107,8 @@ export async function registerProcedureCreationRoutes(
 
       return reply.status(201).send(toProcedureResponse(procedure));
     } catch (error) {
-      if (error instanceof DomainError) {
-        return reply.status(422).send({
-          error: "PROCEDURE_DOMAIN_ERROR",
-          message: error.message
-        });
+      if (sendDomainErrorResponse(reply, error, "PROCEDURE_DOMAIN_ERROR")) {
+        return;
       }
 
       throw error;
