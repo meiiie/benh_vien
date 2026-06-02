@@ -2,7 +2,7 @@ import type { FastifyReply } from "fastify";
 
 export type HttpJsonErrorPayload = {
   readonly error: string;
-  readonly message: string;
+  readonly message?: string;
   readonly [key: string]: unknown;
 };
 

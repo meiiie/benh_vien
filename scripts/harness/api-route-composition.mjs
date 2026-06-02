@@ -1066,6 +1066,18 @@ const standardizedJsonErrorRoutePaths = [
     label: "Auth session route"
   }
 ];
+const standardizedRequestIdNotFoundRoutePaths = [
+  {
+    path: resolve("apps/api/src/modules/patients/patient-merge-routes.ts"),
+    label: "Patient merge route"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/access-control/patient-record-access-responses.ts"
+    ),
+    label: "Patient record access responses"
+  }
+];
 const standardizedDomainErrorRoutePaths = [
   {
     path: resolve(
@@ -2488,6 +2500,12 @@ const standardizedJsonErrorRouteSources = await Promise.all(
     source: await readFile(route.path, "utf8")
   }))
 );
+const standardizedRequestIdNotFoundRouteSources = await Promise.all(
+  standardizedRequestIdNotFoundRoutePaths.map(async (route) => ({
+    ...route,
+    source: await readFile(route.path, "utf8")
+  }))
+);
 const standardizedValidationErrorRouteSources = await Promise.all(
   standardizedValidationErrorRoutePaths.map(async (route) => ({
     ...route,
@@ -2852,6 +2870,20 @@ for (const route of standardizedJsonErrorRouteSources) {
   if (!route.source.includes("sendJsonErrorResponse")) {
     throw new Error(
       `${route.label} must use sendJsonErrorResponse so request-id JSON error payloads stay centralized.`
+    );
+  }
+}
+
+for (const route of standardizedRequestIdNotFoundRouteSources) {
+  if (/\breply\.status\(404\)\.send\(\{/.test(route.source)) {
+    throw new Error(
+      `${route.label} must use sendJsonErrorResponse instead of inline request-id JSON 404 response handling.`
+    );
+  }
+
+  if (!route.source.includes("sendJsonErrorResponse")) {
+    throw new Error(
+      `${route.label} must use sendJsonErrorResponse so request-id JSON 404 payloads stay centralized.`
     );
   }
 }

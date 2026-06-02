@@ -14,6 +14,7 @@ import {
 } from "../access-control/access-context.js";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
+import { sendJsonErrorResponse } from "../http/http-json-error-response.js";
 import { toPatientResponse } from "./patient-route-helpers.js";
 
 export async function registerPatientMergeRoutes(
@@ -39,18 +40,16 @@ export async function registerPatientMergeRoutes(
     const sourcePatient = await repository.findById(params.id);
 
     if (!sourcePatient) {
-      return reply.status(404).send({
-        error: "PATIENT_NOT_FOUND",
-        requestId: request.id
+      return sendJsonErrorResponse(reply, 404, request.id, {
+        error: "PATIENT_NOT_FOUND"
       });
     }
 
     const targetPatient = await repository.findById(parsed.data.targetPatientId);
 
     if (!targetPatient) {
-      return reply.status(404).send({
-        error: "TARGET_PATIENT_NOT_FOUND",
-        requestId: request.id
+      return sendJsonErrorResponse(reply, 404, request.id, {
+        error: "TARGET_PATIENT_NOT_FOUND"
       });
     }
 

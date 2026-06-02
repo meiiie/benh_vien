@@ -1,6 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { ActorContext, Patient } from "@benh-vien-so/domain";
 import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
+import { sendJsonErrorResponse } from "../http/http-json-error-response.js";
 import { acceptsFhirJson } from "./access-context-http.js";
 
 const patientAccessDeniedMessage =
@@ -10,9 +11,8 @@ export function sendPatientNotFoundResponse(
   request: FastifyRequest,
   reply: FastifyReply
 ): void {
-  reply.status(404).send({
-    error: "PATIENT_NOT_FOUND",
-    requestId: request.id
+  sendJsonErrorResponse(reply, 404, request.id, {
+    error: "PATIENT_NOT_FOUND"
   });
 }
 
