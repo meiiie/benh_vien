@@ -1,6 +1,6 @@
 import type { FormEvent } from "react";
 import { formatDemoRole } from "../auth/demoLogin.js";
-import { Info, PageHeader } from "../components/AppShell.js";
+import { Info, PageBrief, PageHeader } from "../components/AppShell.js";
 import { formatRecordTransferStatus } from "../features/record-transfers/recordTransferFormatters.js";
 import { formatDateTime } from "../lib/clinicalFormatters.js";
 import type { AuthSession } from "../types/appRuntime.js";
@@ -61,14 +61,11 @@ export function GatewayAcknowledgementPage({
         description="Trang này mô phỏng callback tiếp nhận từ gateway của bệnh viện nhận. Trong triển khai thật, chữ ký HMAC phải được tạo ở máy chủ gateway; giao diện này chỉ dùng cho demo vận hành có kiểm soát."
       />
 
-      <section className="gateway-brief" aria-label="Phạm vi vận hành của gateway liên thông">
-        {gatewayBriefItems.map((item) => (
-          <article key={item.label}>
-            <span>{item.label}</span>
-            <p>{item.note}</p>
-          </article>
-        ))}
-      </section>
+      <PageBrief
+        ariaLabel="Phạm vi vận hành của gateway liên thông"
+        className="gateway-brief"
+        items={gatewayBriefItems}
+      />
 
       <section className="settings-grid">
         <article className="panel">

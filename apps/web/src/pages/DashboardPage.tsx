@@ -1,4 +1,4 @@
-import { Info, MetricCard, PageHeader } from "../components/AppShell.js";
+import { Info, MetricCard, PageBrief, PageHeader } from "../components/AppShell.js";
 import { formatDateTime } from "../lib/clinicalFormatters.js";
 import type { AppRoute } from "../types/appRuntime.js";
 import type { Patient } from "../types/patientRegistry.js";
@@ -10,6 +10,21 @@ type DashboardPageProps = {
   readonly onNavigate: (route: AppRoute) => void;
   readonly selectedPatient?: Patient;
 };
+
+const dashboardBriefItems = [
+  {
+    label: "EMR lõi: ",
+    note: "Hồ sơ bệnh nhân, lượt khám, chỉ định, kết quả, hình ảnh và thuốc."
+  },
+  {
+    label: "Liên thông: ",
+    note: "Provider Directory, Consent, FHIR Bundle và gói chuyển hồ sơ liên viện."
+  },
+  {
+    label: "Kiểm soát: ",
+    note: "RBAC/ABAC, audit trail và dữ liệu demo không dùng bệnh án thật."
+  }
+] as const;
 
 export function DashboardPage({
   latestEncounterServiceType,
@@ -25,20 +40,11 @@ export function DashboardPage({
         description="Màn hình dành cho đầu ca làm việc: xem nhanh hồ sơ, lượt khám mở, tài liệu chờ ký và trạng thái liên thông."
       />
 
-      <section className="dashboard-brief" aria-label="Phạm vi theo dõi của dashboard">
-        <article>
-          <span>EMR lõi: </span>
-          <p>Hồ sơ bệnh nhân, lượt khám, chỉ định, kết quả, hình ảnh và thuốc.</p>
-        </article>
-        <article>
-          <span>Liên thông: </span>
-          <p>Provider Directory, Consent, FHIR Bundle và gói chuyển hồ sơ liên viện.</p>
-        </article>
-        <article>
-          <span>Kiểm soát: </span>
-          <p>RBAC/ABAC, audit trail và dữ liệu demo không dùng bệnh án thật.</p>
-        </article>
-      </section>
+      <PageBrief
+        ariaLabel="Phạm vi theo dõi của dashboard"
+        className="dashboard-brief"
+        items={dashboardBriefItems}
+      />
 
       <section className="metric-grid">
         <MetricCard label="Bệnh nhân" value={`${metrics.patients}`} note="Hồ sơ trong registry demo" />

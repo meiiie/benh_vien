@@ -108,6 +108,32 @@ export function PageHeader({
   );
 }
 
+export type PageBriefItem = {
+  readonly label: string;
+  readonly note: string;
+};
+
+export function PageBrief({
+  ariaLabel,
+  className,
+  items
+}: {
+  readonly ariaLabel: string;
+  readonly className: string;
+  readonly items: readonly PageBriefItem[];
+}) {
+  return (
+    <section className={`page-brief ${className}`} aria-label={ariaLabel}>
+      {items.map((item) => (
+        <article key={item.label}>
+          <span>{item.label}</span>
+          <p>{item.note}</p>
+        </article>
+      ))}
+    </section>
+  );
+}
+
 export function MetricCard({
   label,
   note,

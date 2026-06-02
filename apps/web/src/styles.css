@@ -269,35 +269,20 @@
   max-width: 1040px;
 }
 
-.audit-brief,
-.dashboard-brief,
-.document-brief,
-.gateway-brief,
-.interop-brief,
-.workspace-brief {
+.page-brief {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
-.audit-brief article,
-.dashboard-brief article,
-.document-brief article,
-.gateway-brief article,
-.interop-brief article,
-.workspace-brief article {
+.page-brief article {
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 16px;
   padding: 14px;
   background: rgba(255, 255, 255, 0.8);
 }
 
-.audit-brief span,
-.dashboard-brief span,
-.document-brief span,
-.gateway-brief span,
-.interop-brief span,
-.workspace-brief span {
+.page-brief span {
   color: var(--primary);
   font-size: 0.72rem;
   font-weight: 900;
@@ -305,12 +290,7 @@
   text-transform: uppercase;
 }
 
-.audit-brief p,
-.dashboard-brief p,
-.document-brief p,
-.gateway-brief p,
-.interop-brief p,
-.workspace-brief p {
+.page-brief p {
   margin: 6px 0 0;
   color: var(--slate);
   font-size: 0.86rem;
@@ -1329,13 +1309,8 @@ pre {
 
 @media (max-width: 1100px) {
   .app-layout,
-  .audit-brief,
-  .dashboard-brief,
-  .document-brief,
-  .gateway-brief,
-  .interop-brief,
-  .workspace-brief,
   .dashboard-grid,
+  .page-brief,
   .settings-grid,
   .workspace,
   .reference-grid {

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { PageHeader } from "../components/AppShell.js";
+import { PageBrief, PageHeader } from "../components/AppShell.js";
 
 type WorkspacePageProps = {
   readonly allergyIntolerancePanel: ReactNode;
@@ -19,6 +19,21 @@ type WorkspacePageProps = {
   readonly serviceRequestPanel: ReactNode;
   readonly workflowTaskPanel: ReactNode;
 };
+
+const workspaceBriefItems = [
+  {
+    label: "Định danh bệnh nhân: ",
+    note: "Quản lý hồ sơ, mã định danh, trạng thái hợp nhất và cơ sở quản lý."
+  },
+  {
+    label: "Lượt khám: ",
+    note: "Gắn dị ứng, chẩn đoán, chỉ định, thủ thuật, kết quả và hình ảnh theo từng đợt điều trị."
+  },
+  {
+    label: "Thuốc và tài liệu: ",
+    note: "Theo dõi kê đơn, cấp phát, dùng thuốc thực tế và tài liệu bệnh án liên quan."
+  }
+] as const;
 
 export function WorkspacePage({
   allergyIntolerancePanel,
@@ -46,20 +61,11 @@ export function WorkspacePage({
         description="Luồng chính mô phỏng EMR thật: chọn đúng hồ sơ bệnh nhân, mở lượt khám, ghi nhận dữ liệu lâm sàng và gắn tài liệu bệnh án theo bối cảnh điều trị."
       />
 
-      <section className="workspace-brief" aria-label="Phạm vi thao tác trong bàn làm việc bệnh nhân">
-        <article>
-          <span>Định danh bệnh nhân: </span>
-          <p>Quản lý hồ sơ, mã định danh, trạng thái hợp nhất và cơ sở quản lý.</p>
-        </article>
-        <article>
-          <span>Lượt khám: </span>
-          <p>Gắn dị ứng, chẩn đoán, chỉ định, thủ thuật, kết quả và hình ảnh theo từng đợt điều trị.</p>
-        </article>
-        <article>
-          <span>Thuốc và tài liệu: </span>
-          <p>Theo dõi kê đơn, cấp phát, dùng thuốc thực tế và tài liệu bệnh án liên quan.</p>
-        </article>
-      </section>
+      <PageBrief
+        ariaLabel="Phạm vi thao tác trong bàn làm việc bệnh nhân"
+        className="workspace-brief"
+        items={workspaceBriefItems}
+      />
 
       <section className="workspace">
         {patientListPanel}

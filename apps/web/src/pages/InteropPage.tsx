@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { FhirPanel, PageHeader } from "../components/AppShell.js";
+import { FhirPanel, PageBrief, PageHeader } from "../components/AppShell.js";
 import {
   FhirDocumentBundleSummary
 } from "../features/interoperability/FhirDocumentBundleSummary.js";
@@ -101,14 +101,11 @@ export function InteropPage({
         description="Màn này trình bày luồng chuyển bệnh án theo hướng EMR: xác định bệnh nhân, cơ sở gửi/nhận, quyền chia sẻ, gói tài liệu FHIR và dấu vết phục vụ kiểm toán."
       />
 
-      <section className="interop-brief" aria-label="Trục chuẩn hóa liên thông bệnh án điện tử">
-        {interopBriefItems.map((item) => (
-          <article key={item.label}>
-            <span>{item.label}</span>
-            <p>{item.note}</p>
-          </article>
-        ))}
-      </section>
+      <PageBrief
+        ariaLabel="Trục chuẩn hóa liên thông bệnh án điện tử"
+        className="interop-brief"
+        items={interopBriefItems}
+      />
 
       <section className="workflow-strip" aria-label="Các bước vận hành liên thông">
         {workflowSteps.map((item, index) => (

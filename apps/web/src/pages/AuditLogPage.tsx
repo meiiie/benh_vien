@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { PageHeader } from "../components/AppShell.js";
+import { PageBrief, PageHeader } from "../components/AppShell.js";
 
 type AuditLogPageProps = {
   readonly auditPanel: ReactNode;
@@ -30,14 +30,11 @@ export function AuditLogPage({ auditPanel, globalAuditPanel }: AuditLogPageProps
         description="Mỗi lần xem FHIR, mở lượt khám, tạo/ký tài liệu hoặc xuất hồ sơ liên viện đều phải để lại dấu vết: tác nhân, mục đích sử dụng, tài nguyên liên quan và trạng thái toàn vẹn."
       />
 
-      <section className="audit-brief" aria-label="Các câu hỏi kiểm toán cần trả lời">
-        {auditBriefItems.map((item) => (
-          <article key={item.label}>
-            <span>{item.label}</span>
-            <p>{item.note}</p>
-          </article>
-        ))}
-      </section>
+      <PageBrief
+        ariaLabel="Các câu hỏi kiểm toán cần trả lời"
+        className="audit-brief"
+        items={auditBriefItems}
+      />
 
       <section className="workspace">
         {globalAuditPanel}

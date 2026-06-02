@@ -3,6 +3,7 @@ import { relative, resolve } from "node:path";
 
 const appPath = resolve("apps/web/src/App.tsx");
 const appRouteRendererPath = resolve("apps/web/src/pages/AppRouteRenderer.tsx");
+const appShellPath = resolve("apps/web/src/components/AppShell.tsx");
 const auditLogPagePath = resolve("apps/web/src/pages/AuditLogPage.tsx");
 const auditPanelsPath = resolve("apps/web/src/features/audit/AuditPanels.tsx");
 const dashboardPagePath = resolve("apps/web/src/pages/DashboardPage.tsx");
@@ -645,6 +646,7 @@ const featureModuleBudgets = [
 
 const appSource = await readFile(appPath, "utf8");
 const appRouteRendererSource = await readFile(appRouteRendererPath, "utf8");
+const appShellSource = await readFile(appShellPath, "utf8");
 const auditLogPageSource = await readFile(auditLogPagePath, "utf8");
 const auditPanelsSource = await readFile(auditPanelsPath, "utf8");
 const dashboardPageSource = await readFile(dashboardPagePath, "utf8");
@@ -1040,6 +1042,45 @@ const responsiveLandingChecks = [
 for (const check of responsiveLandingChecks) {
   if (!check.pattern.test(landingStylesSource)) {
     throw new Error(check.message);
+  }
+}
+
+if (
+  !/export function PageBrief\b/.test(appShellSource) ||
+  !/className=\{`page-brief \$\{className\}`\}/.test(appShellSource)
+) {
+  throw new Error("AppShell must expose a shared PageBrief component that keeps page-specific brief class names.");
+}
+
+if (
+  !/\.page-brief\s*\{/.test(stylesSource) ||
+  /\.dashboard-brief article|\.document-brief article|\.workspace-brief article/.test(
+    stylesSource
+  )
+) {
+  throw new Error("Brief card styling must live on the shared .page-brief selector instead of page-specific duplicates.");
+}
+
+const pageBriefConsumerChecks = [
+  { source: dashboardPageSource, className: "dashboard-brief", page: "Dashboard page" },
+  { source: documentsPageSource, className: "document-brief", page: "Documents page" },
+  { source: workspacePageSource, className: "workspace-brief", page: "Workspace page" },
+  { source: interopPageSource, className: "interop-brief", page: "Interop page" },
+  { source: auditLogPageSource, className: "audit-brief", page: "Audit page" },
+  {
+    source: gatewayAcknowledgementPageSource,
+    className: "gateway-brief",
+    page: "Gateway acknowledgement page"
+  }
+];
+
+for (const check of pageBriefConsumerChecks) {
+  if (!new RegExp(`<PageBrief[\\s\\S]*className="${check.className}"`).test(check.source)) {
+    throw new Error(`${check.page} must render its brief cards through the shared PageBrief component.`);
+  }
+
+  if (new RegExp(`<section className="${check.className}"`).test(check.source)) {
+    throw new Error(`${check.page} must not duplicate PageBrief section markup inline.`);
   }
 }
 
