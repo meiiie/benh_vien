@@ -1,2 +1,19 @@
 * @meiiie
 
+# Clinical and interoperability boundaries
+/packages/domain/ @meiiie
+/packages/contracts/ @meiiie
+/apps/api/ @meiiie
+/apps/web/ @meiiie
+/migrations/ @meiiie
+
+# Operations, compliance and delivery boundaries
+/.github/ @meiiie
+/scripts/harness/ @meiiie
+/docker-compose.yml @meiiie
+/docker-compose.dev.yml @meiiie
+/docker-compose.prod.yml @meiiie
+/infra/ @meiiie
+/docs/STANDARDS.md @meiiie
+/docs/SECURITY.md @meiiie
+/docs/runbooks/ @meiiie

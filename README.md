@@ -103,7 +103,7 @@ Repo đã được chuẩn bị cho GitHub Actions:
 - CI: TypeScript check, test, build, harness smoke và Docker smoke.
 - Release: tag `v*.*.*` sẽ build/push image API và web lên GHCR.
 - Dependabot: kiểm tra npm, Dockerfile và GitHub Actions hằng tuần.
-- Review context: `.coderabbit.yaml`, `AGENTS.md`, `CLAUDE.md`.
+- Review context: `.github/CODEOWNERS`, `.coderabbit.yaml`, `AGENTS.md`, `CLAUDE.md`.
 
 Chi tiết version xem [VERSIONING.md](VERSIONING.md).
 

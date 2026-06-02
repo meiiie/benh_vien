@@ -55,6 +55,14 @@ pnpm run harness:secret-hygiene
 
 Harness này kiểm tra chỉ các file `.env*.example` được track, `.gitignore` vẫn chặn `.env` thật và repo không chứa các private key/token phổ biến trong file text tracked. Đây là guard tối thiểu để giảm rủi ro commit nhầm secret; nếu triển khai thật vẫn cần bật secret scanning chuyên dụng ở GitHub hoặc nền tảng bảo mật của tổ chức.
 
+## Repo governance
+
+```bash
+pnpm run harness:repo-governance
+```
+
+Harness này kiểm tra CODEOWNERS vẫn bao phủ domain, contracts, API, web, migrations, GitHub workflows, harness, compose, infra và tài liệu compliance/runbook; đồng thời kiểm PR template vẫn yêu cầu `pnpm run ci`, tác động API/domain/Docker, bảo mật dữ liệu và ghi chú y tế/tuân thủ cho FHIR, DICOM, audit, phân quyền và rủi ro còn lại.
+
 ## Smoke test FHIR
 
 ```bash
