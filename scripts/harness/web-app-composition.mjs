@@ -323,7 +323,12 @@ const requiredModules = [
   "apps/web/src/features/record-transfers/RecordTransferOperationalSummary.tsx",
   "apps/web/src/features/record-transfers/recordTransferApi.ts",
   "apps/web/src/features/record-transfers/recordTransferCommandBuilders.ts",
+  "apps/web/src/features/record-transfers/recordTransferCreateHandler.ts",
   "apps/web/src/features/record-transfers/recordTransferFormatters.ts",
+  "apps/web/src/features/record-transfers/recordTransferGatewayHandler.ts",
+  "apps/web/src/features/record-transfers/recordTransferHandlers.ts",
+  "apps/web/src/features/record-transfers/recordTransferHandlerTypes.ts",
+  "apps/web/src/features/record-transfers/recordTransferLifecycleHandlers.ts",
   "apps/web/src/lib/auditFormatters.ts",
   "apps/web/src/lib/clinicalFormatters.ts",
   "apps/web/src/lib/commandDrafts.ts",
@@ -545,6 +550,31 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/record-transfers/RecordTransferOperationalSummary.tsx",
     maxLines: 60,
     role: "Record transfer operational status summary UI"
+  },
+  {
+    path: "apps/web/src/features/record-transfers/recordTransferHandlers.ts",
+    maxLines: 60,
+    role: "Record transfer handler composition"
+  },
+  {
+    path: "apps/web/src/features/record-transfers/recordTransferHandlerTypes.ts",
+    maxLines: 70,
+    role: "Record transfer handler state and helper contracts"
+  },
+  {
+    path: "apps/web/src/features/record-transfers/recordTransferCreateHandler.ts",
+    maxLines: 70,
+    role: "Record transfer creation command handler"
+  },
+  {
+    path: "apps/web/src/features/record-transfers/recordTransferGatewayHandler.ts",
+    maxLines: 70,
+    role: "Record transfer gateway acknowledgement handler"
+  },
+  {
+    path: "apps/web/src/features/record-transfers/recordTransferLifecycleHandlers.ts",
+    maxLines: 160,
+    role: "Record transfer lifecycle transition handlers"
   },
   {
     path: "apps/web/src/features/clinical-records/clinicalRecordPanelRenderers.tsx",
