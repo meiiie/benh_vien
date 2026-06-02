@@ -704,8 +704,13 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/fhir/map-patient-record-to-fhir-document-bundle.ts",
-    maxLines: 100,
-    role: "FHIR patient-record document Bundle and Composition mapper"
+    maxLines: 65,
+    role: "FHIR patient-record document Bundle envelope mapper"
+  },
+  {
+    path: "packages/domain/src/fhir/patient-record-document-composition.ts",
+    maxLines: 120,
+    role: "FHIR patient-record document Composition metadata and first-entry mapping"
   },
   {
     path: "packages/domain/src/fhir/patient-record-document-sections.ts",
@@ -1104,6 +1109,9 @@ const patientRecordBundleResourcesPath = resolve(
 const mapPatientRecordToFhirDocumentBundlePath = resolve(
   "packages/domain/src/fhir/map-patient-record-to-fhir-document-bundle.ts"
 );
+const patientRecordDocumentCompositionPath = resolve(
+  "packages/domain/src/fhir/patient-record-document-composition.ts"
+);
 const patientRecordDocumentSectionsPath = resolve(
   "packages/domain/src/fhir/patient-record-document-sections.ts"
 );
@@ -1441,6 +1449,10 @@ const patientRecordBundleResourcesSource = await readFile(
 );
 const mapPatientRecordToFhirDocumentBundleSource = await readFile(
   mapPatientRecordToFhirDocumentBundlePath,
+  "utf8"
+);
+const patientRecordDocumentCompositionSource = await readFile(
+  patientRecordDocumentCompositionPath,
   "utf8"
 );
 const patientRecordDocumentSectionsSource = await readFile(
@@ -3879,14 +3891,15 @@ for (const forbidden of [
 for (const required of [
   /export function mapPatientRecordToFhirDocumentBundle/,
   /mapPatientRecordToFhirBundle/,
-  /function buildComposition/,
-  /buildPatientRecordDocumentSections/,
-  /from "\.\/patient-record-document-sections\.js"/,
+  /buildPatientRecordComposition/,
+  /buildPatientRecordDocumentBundleIdentifier/,
+  /toPatientRecordCompositionEntry/,
+  /from "\.\/patient-record-document-composition\.js"/,
   /resourceType:\s*"Bundle"/
 ]) {
   if (!required.test(mapPatientRecordToFhirDocumentBundleSource)) {
     throw new Error(
-      "map-patient-record-to-fhir-document-bundle.ts must keep the document Bundle envelope, Composition and sections."
+      "map-patient-record-to-fhir-document-bundle.ts must keep only the public document Bundle envelope and delegate Composition metadata to patient-record-document-composition.ts."
     );
   }
 }
@@ -3894,13 +3907,54 @@ for (const required of [
 for (const forbidden of [
   /mapMedicationAdministrationToFhir/,
   /mapProviderDirectoryToFhirResources/,
+  /function buildComposition/,
+  /buildPatientRecordDocumentSections/,
   /function buildSection/,
   /function escapeXml/,
+  /resourceType:\s*"Composition"/,
+  /"http:\/\/loinc\.org"/,
+  /"34133-9"/,
+  /authorPractitionerId/,
   /"DocumentReference"/
 ]) {
   if (forbidden.test(mapPatientRecordToFhirDocumentBundleSource)) {
     throw new Error(
       "Document Bundle mapper must reuse the collection Bundle instead of remapping patient-record resources directly."
+    );
+  }
+}
+
+for (const required of [
+  /export type PatientRecordDocumentBundleInput/,
+  /export const patientRecordDocumentBundleFhirProfile/,
+  /export const patientRecordCompositionFhirProfile/,
+  /export const patientRecordDocumentBundleIdentifierSystem/,
+  /export function buildPatientRecordComposition/,
+  /export function buildPatientRecordDocumentBundleIdentifier/,
+  /export function toPatientRecordCompositionEntry/,
+  /buildPatientRecordDocumentSections/,
+  /resolvePatientRecordCompositionAuthor/,
+  /resourceType:\s*"Composition"/,
+  /"http:\/\/loinc\.org"/,
+  /"34133-9"/
+]) {
+  if (!required.test(patientRecordDocumentCompositionSource)) {
+    throw new Error(
+      "patient-record-document-composition.ts must keep document Bundle profile constants, Composition metadata, author/custodian reference resolution and Composition first-entry mapping."
+    );
+  }
+}
+
+for (const forbidden of [
+  /export function mapPatientRecordToFhirDocumentBundle/,
+  /mapPatientRecordToFhirBundle/,
+  /resourceType:\s*"Bundle"/,
+  /mapMedicationAdministrationToFhir/,
+  /mapProviderDirectoryToFhirResources/
+]) {
+  if (forbidden.test(patientRecordDocumentCompositionSource)) {
+    throw new Error(
+      "patient-record-document-composition.ts must stay a Composition metadata helper and must not build Bundle envelopes or remap patient-record resources."
     );
   }
 }
