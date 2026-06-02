@@ -3,6 +3,7 @@ import { relative, resolve } from "node:path";
 
 const appPath = resolve("apps/web/src/App.tsx");
 const appRouteRendererPath = resolve("apps/web/src/pages/AppRouteRenderer.tsx");
+const dashboardPagePath = resolve("apps/web/src/pages/DashboardPage.tsx");
 const interopPagePath = resolve("apps/web/src/pages/InteropPage.tsx");
 const landingPagePath = resolve("apps/web/src/pages/LandingPage.tsx");
 const loginPagePath = resolve("apps/web/src/pages/LoginPage.tsx");
@@ -627,6 +628,7 @@ const featureModuleBudgets = [
 
 const appSource = await readFile(appPath, "utf8");
 const appRouteRendererSource = await readFile(appRouteRendererPath, "utf8");
+const dashboardPageSource = await readFile(dashboardPagePath, "utf8");
 const clinicalApiSource = await readFile(allowedFetchModulePath, "utf8");
 const consentInteropPanelSource = await readFile(consentInteropPanelPath, "utf8");
 const fhirTransferContextSummarySource = await readFile(
@@ -971,6 +973,19 @@ if (
   !/Giải thích vai trò demo:/.test(loginPageSource)
 ) {
   throw new Error("Login page must render role choices and role explanation from centralized demo role metadata.");
+}
+
+if (/eyebrow="Dashboard"|Today queue|Selected chart|Mở patient workspace/.test(dashboardPageSource)) {
+  throw new Error("Dashboard page must use professional Vietnamese demo-facing labels.");
+}
+
+if (
+  !/className="dashboard-brief"/.test(dashboardPageSource) ||
+  !/EMR lõi/.test(dashboardPageSource) ||
+  !/Liên thông/.test(dashboardPageSource) ||
+  !/Kiểm soát/.test(dashboardPageSource)
+) {
+  throw new Error("Dashboard page must explain its EMR, interoperability and control scope before the metric grid.");
 }
 
 const webSourceFiles = await collectSourceFiles(webSrcPath);

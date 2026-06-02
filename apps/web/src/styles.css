@@ -269,6 +269,34 @@
   max-width: 1040px;
 }
 
+.dashboard-brief {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dashboard-brief article {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.dashboard-brief span {
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dashboard-brief p {
+  margin: 6px 0 0;
+  color: var(--slate);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(9, minmax(0, 1fr));
@@ -1281,6 +1309,7 @@ pre {
 
 @media (max-width: 1100px) {
   .app-layout,
+  .dashboard-brief,
   .dashboard-grid,
   .settings-grid,
   .workspace,

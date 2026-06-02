@@ -20,22 +20,37 @@ export function DashboardPage({
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="Dashboard"
+        eyebrow="Bảng điều phối"
         title="Tổng quan vận hành bệnh án điện tử"
         description="Màn hình dành cho đầu ca làm việc: xem nhanh hồ sơ, lượt khám mở, tài liệu chờ ký và trạng thái liên thông."
       />
 
+      <section className="dashboard-brief" aria-label="Phạm vi theo dõi của dashboard">
+        <article>
+          <span>EMR lõi: </span>
+          <p>Hồ sơ bệnh nhân, lượt khám, chỉ định, kết quả, hình ảnh và thuốc.</p>
+        </article>
+        <article>
+          <span>Liên thông: </span>
+          <p>Provider Directory, Consent, FHIR Bundle và gói chuyển hồ sơ liên viện.</p>
+        </article>
+        <article>
+          <span>Kiểm soát: </span>
+          <p>RBAC/ABAC, audit trail và dữ liệu demo không dùng bệnh án thật.</p>
+        </article>
+      </section>
+
       <section className="metric-grid">
         <MetricCard label="Bệnh nhân" value={`${metrics.patients}`} note="Hồ sơ trong registry demo" />
         <MetricCard
-          label="Provider Directory"
+          label="Danh bạ cơ sở"
           value={`${metrics.providerOrganizations}/${metrics.providerEndpoints}`}
-          note="Cơ sở y tế / endpoint liên thông"
+          note="Provider Directory: cơ sở y tế / endpoint"
         />
         <MetricCard label="Lượt khám mở" value={`${metrics.openEncounters}`} note="Theo bệnh nhân đang chọn" />
         <MetricCard label="Dị ứng" value={`${metrics.allergyIntolerances}`} note="Cảnh báo an toàn" />
         <MetricCard label="Chẩn đoán" value={`${metrics.conditions}`} note="Vấn đề sức khỏe có cấu trúc" />
-        <MetricCard label="Chỉ định DV" value={`${metrics.serviceRequests}`} note="FHIR ServiceRequest" />
+        <MetricCard label="Chỉ định dịch vụ" value={`${metrics.serviceRequests}`} note="FHIR ServiceRequest" />
         <MetricCard label="Công việc" value={`${metrics.workflowTasks}`} note="FHIR Task" />
         <MetricCard label="Thủ thuật" value={`${metrics.procedures}`} note="FHIR Procedure" />
         <MetricCard label="Kết quả" value={`${metrics.diagnosticReports}`} note="FHIR DiagnosticReport" />
@@ -50,12 +65,12 @@ export function DashboardPage({
       <section className="dashboard-grid">
         <article className="panel command-panel">
           <div>
-            <p className="eyebrow">Today queue</p>
+            <p className="eyebrow">Hàng đợi hôm nay</p>
             <h2>Việc nên xử lý tiếp</h2>
           </div>
           <div className="queue-list">
             <button type="button" onClick={() => onNavigate("workspace")}>
-              <strong>Mở patient workspace</strong>
+              <strong>Mở không gian hồ sơ bệnh nhân</strong>
               <span>Xem hồ sơ, lượt khám và tài liệu đang gắn với bệnh nhân.</span>
             </button>
             <button type="button" onClick={() => onNavigate("documents")}>
@@ -63,14 +78,14 @@ export function DashboardPage({
               <span>{metrics.draftDocuments} tài liệu đang ở trạng thái nháp.</span>
             </button>
             <button type="button" onClick={() => onNavigate("interop")}>
-              <strong>Xem gói FHIR</strong>
+              <strong>Xem bản xem trước FHIR</strong>
               <span>Patient, Encounter, AllergyIntolerance, Condition, ServiceRequest, Task, Procedure, Observation, DiagnosticReport, ImagingStudy, MedicationRequest, MedicationDispense, MedicationAdministration, DocumentReference, Provenance và gói chuyển hồ sơ đã có preview.</span>
             </button>
           </div>
         </article>
 
         <article className="panel">
-          <p className="eyebrow">Selected chart</p>
+          <p className="eyebrow">Hồ sơ đang chọn</p>
           <h2>{selectedPatient?.fullName ?? "Chưa chọn bệnh nhân"}</h2>
           {selectedPatient ? (
             <div className="detail-grid compact">
