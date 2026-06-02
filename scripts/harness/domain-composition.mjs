@@ -734,8 +734,8 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/fhir/map-record-transfer-task-codings.ts",
-    maxLines: 100,
-    role: "FHIR RecordTransfer Task status, code and businessStatus mapping"
+    maxLines: 130,
+    role: "FHIR RecordTransfer Task status, code, businessStatus and note mapping"
   },
   {
     path: "packages/domain/src/fhir/map-audit-event-to-fhir.ts",
@@ -1846,6 +1846,7 @@ for (const required of [
   /from "\.\/map-record-transfer-task-codings\.js"/,
   /buildRecordTransferBusinessStatus/,
   /buildRecordTransferCode/,
+  /buildRecordTransferNotes/,
   /formatRecordTransferBundleOutput/,
   /mapRecordTransferStatus/
 ]) {
@@ -1876,21 +1877,23 @@ for (const required of [
   /export function mapRecordTransferStatus/,
   /export function buildRecordTransferBusinessStatus/,
   /export function buildRecordTransferCode/,
+  /export function buildRecordTransferNotes/,
   /export function formatRecordTransferBundleOutput/,
   /export function formatRecordTransferStatus/,
+  /RecordTransferSnapshot/,
+  /receivedByActorId/,
   /from "\.\.\/record-transfer\/record-transfer\.types\.js"/,
   /from "\.\/fhir-types\.js"/
 ]) {
   if (!required.test(mapRecordTransferTaskCodingsSource)) {
     throw new Error(
-      "map-record-transfer-task-codings.ts must keep RecordTransfer Task profile, identifier, status, businessStatus, code and bundle-output mapping."
+      "map-record-transfer-task-codings.ts must keep RecordTransfer Task profile, identifier, status, businessStatus, code, bundle-output and note mapping."
     );
   }
 }
 
 for (const forbidden of [
   /resourceType:\s*"Task"/,
-  /function buildRecordTransferNotes/,
   /mapRecordTransferToFhirTask/
 ]) {
   if (forbidden.test(mapRecordTransferTaskCodingsSource)) {
