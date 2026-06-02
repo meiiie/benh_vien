@@ -428,6 +428,16 @@ const domainBudgets = [
     role: "FHIR document, provenance and composition types"
   },
   {
+    path: "packages/domain/src/fhir/map-clinical-document-to-fhir.ts",
+    maxLines: 65,
+    role: "FHIR DocumentReference public mapper and clinical references"
+  },
+  {
+    path: "packages/domain/src/fhir/map-clinical-document-codings.ts",
+    maxLines: 90,
+    role: "FHIR DocumentReference profile, status, type and attachment content mapping"
+  },
+  {
     path: "packages/domain/src/fhir/fhir-privacy.types.ts",
     maxLines: 110,
     role: "FHIR consent and privacy resource types"
@@ -930,6 +940,12 @@ const fhirClinicalBarrelPath = resolve("packages/domain/src/fhir/fhir-clinical.t
 const fhirSharedTypesPath = resolve("packages/domain/src/fhir/fhir-shared.types.ts");
 const fhirProviderTypesPath = resolve("packages/domain/src/fhir/fhir-provider.types.ts");
 const fhirDocumentTypesPath = resolve("packages/domain/src/fhir/fhir-document.types.ts");
+const mapClinicalDocumentToFhirPath = resolve(
+  "packages/domain/src/fhir/map-clinical-document-to-fhir.ts"
+);
+const mapClinicalDocumentCodingsPath = resolve(
+  "packages/domain/src/fhir/map-clinical-document-codings.ts"
+);
 const fhirPrivacyTypesPath = resolve("packages/domain/src/fhir/fhir-privacy.types.ts");
 const mapConsentToFhirPath = resolve("packages/domain/src/fhir/map-consent-to-fhir.ts");
 const mapConsentCodingsPath = resolve("packages/domain/src/fhir/map-consent-codings.ts");
@@ -1235,6 +1251,14 @@ const fhirClinicalBarrelSource = await readFile(fhirClinicalBarrelPath, "utf8");
 const fhirSharedTypesSource = await readFile(fhirSharedTypesPath, "utf8");
 const fhirProviderTypesSource = await readFile(fhirProviderTypesPath, "utf8");
 const fhirDocumentTypesSource = await readFile(fhirDocumentTypesPath, "utf8");
+const mapClinicalDocumentToFhirSource = await readFile(
+  mapClinicalDocumentToFhirPath,
+  "utf8"
+);
+const mapClinicalDocumentCodingsSource = await readFile(
+  mapClinicalDocumentCodingsPath,
+  "utf8"
+);
 const fhirPrivacyTypesSource = await readFile(fhirPrivacyTypesPath, "utf8");
 const mapConsentToFhirSource = await readFile(mapConsentToFhirPath, "utf8");
 const mapConsentCodingsSource = await readFile(mapConsentCodingsPath, "utf8");
@@ -3758,6 +3782,77 @@ for (const forbidden of [
   if (forbidden.test(patientRecordDocumentSectionsSource)) {
     throw new Error(
       "patient-record-document-sections.ts must stay a Composition section helper and must not build Bundle or Composition envelopes."
+    );
+  }
+}
+
+for (const required of [
+  /export function mapClinicalDocumentToFhir/,
+  /from "\.\/map-clinical-document-codings\.js"/,
+  /documentReferenceFhirProfile/,
+  /toDocumentReferenceStatus/,
+  /toDocumentReferenceDocStatus/,
+  /toDocumentReferenceType/,
+  /toDocumentReferenceContent/,
+  /resourceType:\s*"DocumentReference"/,
+  /patientId/,
+  /encounterId/,
+  /authorPractitionerId/
+]) {
+  if (!required.test(mapClinicalDocumentToFhirSource)) {
+    throw new Error(
+      "map-clinical-document-to-fhir.ts must keep the public DocumentReference mapper and clinical references while delegating profile, status, type and attachment content mapping to map-clinical-document-codings.ts."
+    );
+  }
+}
+
+for (const forbidden of [
+  /const documentTypeLabels/,
+  /\bClinicalDocumentStatus\b/,
+  /\bClinicalDocumentType\b/,
+  /function mapDocumentReferenceStatus/,
+  /function mapDocumentReferenceDocStatus/,
+  /attachmentContentType/,
+  /attachmentHashSha1Base64/,
+  /"http:\/\/hl7\.org\/fhir\/StructureDefinition\/DocumentReference"/
+]) {
+  if (forbidden.test(mapClinicalDocumentToFhirSource)) {
+    throw new Error(
+      "DocumentReference profile, lifecycle status, document type labels and attachment content mapping belong in map-clinical-document-codings.ts, not in the public mapper."
+    );
+  }
+}
+
+for (const required of [
+  /export const documentReferenceFhirProfile/,
+  /export function toDocumentReferenceStatus/,
+  /export function toDocumentReferenceDocStatus/,
+  /export function toDocumentReferenceType/,
+  /export function toDocumentReferenceContent/,
+  /ClinicalDocumentStatus/,
+  /ClinicalDocumentType/,
+  /ClinicalDocumentSnapshot/,
+  /documentTypeLabels/,
+  /attachmentContentType/,
+  /attachmentHashSha1Base64/
+]) {
+  if (!required.test(mapClinicalDocumentCodingsSource)) {
+    throw new Error(
+      "map-clinical-document-codings.ts must keep DocumentReference profile, lifecycle status, document type labels and attachment content mapping."
+    );
+  }
+}
+
+for (const forbidden of [
+  /mapClinicalDocumentToFhir/,
+  /resourceType:\s*"DocumentReference"/,
+  /patientId/,
+  /encounterId/,
+  /authorPractitionerId/
+]) {
+  if (forbidden.test(mapClinicalDocumentCodingsSource)) {
+    throw new Error(
+      "map-clinical-document-codings.ts must stay a DocumentReference coding/content helper and must not own clinical references or resource orchestration."
     );
   }
 }
