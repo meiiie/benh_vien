@@ -15,6 +15,7 @@ pnpm --filter @benh-vien-so/domain run build
 ## Rules
 
 - Với FHIR ClinicalDocument DocumentReference mapper, `map-clinical-document-to-fhir.ts` giữ public resource mapper và clinical references; profile, lifecycle status, document type labels và attachment content mapping nằm trong `map-clinical-document-codings.ts`. Chạy `pnpm run harness:domain-composition` khi đổi boundary clinical document FHIR.
+- Với FHIR ClinicalDocument Provenance mapper, `map-clinical-document-to-fhir-provenance.ts` giữ public Provenance resource mapper, target DocumentReference và timestamp orchestration; profile, signed-document guard, policy URI normalization, activity, agent và source entity mapping nằm trong `map-clinical-document-provenance-codings.ts`. Chạy `pnpm run harness:domain-composition` khi đổi boundary provenance FHIR.
 
 - Domain model phải bảo vệ invariant bằng method hoặc factory.
 - Value object/aggregate dùng thông báo lỗi tiếng Việt có dấu khi lỗi có thể hiển thị cho người dùng.

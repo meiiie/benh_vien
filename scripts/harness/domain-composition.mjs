@@ -438,6 +438,16 @@ const domainBudgets = [
     role: "FHIR DocumentReference profile, status, type and attachment content mapping"
   },
   {
+    path: "packages/domain/src/fhir/map-clinical-document-to-fhir-provenance.ts",
+    maxLines: 65,
+    role: "FHIR ClinicalDocument Provenance public mapper and target orchestration"
+  },
+  {
+    path: "packages/domain/src/fhir/map-clinical-document-provenance-codings.ts",
+    maxLines: 110,
+    role: "FHIR ClinicalDocument Provenance profile, guard, policy, activity, agent and entity mapping"
+  },
+  {
     path: "packages/domain/src/fhir/fhir-privacy.types.ts",
     maxLines: 110,
     role: "FHIR consent and privacy resource types"
@@ -946,6 +956,12 @@ const mapClinicalDocumentToFhirPath = resolve(
 const mapClinicalDocumentCodingsPath = resolve(
   "packages/domain/src/fhir/map-clinical-document-codings.ts"
 );
+const mapClinicalDocumentToFhirProvenancePath = resolve(
+  "packages/domain/src/fhir/map-clinical-document-to-fhir-provenance.ts"
+);
+const mapClinicalDocumentProvenanceCodingsPath = resolve(
+  "packages/domain/src/fhir/map-clinical-document-provenance-codings.ts"
+);
 const fhirPrivacyTypesPath = resolve("packages/domain/src/fhir/fhir-privacy.types.ts");
 const mapConsentToFhirPath = resolve("packages/domain/src/fhir/map-consent-to-fhir.ts");
 const mapConsentCodingsPath = resolve("packages/domain/src/fhir/map-consent-codings.ts");
@@ -1257,6 +1273,14 @@ const mapClinicalDocumentToFhirSource = await readFile(
 );
 const mapClinicalDocumentCodingsSource = await readFile(
   mapClinicalDocumentCodingsPath,
+  "utf8"
+);
+const mapClinicalDocumentToFhirProvenanceSource = await readFile(
+  mapClinicalDocumentToFhirProvenancePath,
+  "utf8"
+);
+const mapClinicalDocumentProvenanceCodingsSource = await readFile(
+  mapClinicalDocumentProvenanceCodingsPath,
   "utf8"
 );
 const fhirPrivacyTypesSource = await readFile(fhirPrivacyTypesPath, "utf8");
@@ -3853,6 +3877,83 @@ for (const forbidden of [
   if (forbidden.test(mapClinicalDocumentCodingsSource)) {
     throw new Error(
       "map-clinical-document-codings.ts must stay a DocumentReference coding/content helper and must not own clinical references or resource orchestration."
+    );
+  }
+}
+
+for (const required of [
+  /export function mapClinicalDocumentToFhirProvenance/,
+  /from "\.\/map-clinical-document-provenance-codings\.js"/,
+  /clinicalDocumentProvenanceFhirProfile/,
+  /assertSignedClinicalDocumentForProvenance/,
+  /resolveClinicalDocumentProvenanceSignerId/,
+  /normalizeClinicalDocumentProvenancePolicyUris/,
+  /buildClinicalDocumentProvenanceActivity/,
+  /buildClinicalDocumentProvenanceAgent/,
+  /buildClinicalDocumentProvenanceEntity/,
+  /resourceType:\s*"Provenance"/,
+  /DocumentReference/,
+  /occurredDateTime/,
+  /recorded/
+]) {
+  if (!required.test(mapClinicalDocumentToFhirProvenanceSource)) {
+    throw new Error(
+      "map-clinical-document-to-fhir-provenance.ts must keep the public Provenance mapper, target DocumentReference and timestamp orchestration while delegating profile, guard, policy, activity, agent and entity mapping to map-clinical-document-provenance-codings.ts."
+    );
+  }
+}
+
+for (const forbidden of [
+  /DomainError/,
+  /v3-DataOperation/,
+  /v3-ParticipationType/,
+  /function buildClinicalDocumentProvenanceActivity/,
+  /function buildClinicalDocumentProvenanceAgent/,
+  /function buildClinicalDocumentProvenanceEntity/,
+  /status !== "signed"/,
+  /"http:\/\/hl7\.org\/fhir\/StructureDefinition\/Provenance"/
+]) {
+  if (forbidden.test(mapClinicalDocumentToFhirProvenanceSource)) {
+    throw new Error(
+      "Provenance profile, signed-document guard, policy normalization, activity, agent and source entity mapping belong in map-clinical-document-provenance-codings.ts, not in the public mapper."
+    );
+  }
+}
+
+for (const required of [
+  /export const clinicalDocumentProvenanceFhirProfile/,
+  /export function assertSignedClinicalDocumentForProvenance/,
+  /export function resolveClinicalDocumentProvenanceSignerId/,
+  /export function normalizeClinicalDocumentProvenancePolicyUris/,
+  /export function buildClinicalDocumentProvenanceActivity/,
+  /export function buildClinicalDocumentProvenanceAgent/,
+  /export function buildClinicalDocumentProvenanceEntity/,
+  /ClinicalDocumentSnapshot/,
+  /DomainError/,
+  /v3-DataOperation/,
+  /v3-ParticipationType/,
+  /\bAUT\b/,
+  /source/,
+  /signed/
+]) {
+  if (!required.test(mapClinicalDocumentProvenanceCodingsSource)) {
+    throw new Error(
+      "map-clinical-document-provenance-codings.ts must keep Provenance profile, signed-document guard, policy normalization, activity, agent and source entity mapping."
+    );
+  }
+}
+
+for (const forbidden of [
+  /mapClinicalDocumentToFhirProvenance/,
+  /resourceType:\s*"Provenance"/,
+  /DocumentReference/,
+  /document\.toSnapshot/,
+  /occurredDateTime/,
+  /recordedAt/
+]) {
+  if (forbidden.test(mapClinicalDocumentProvenanceCodingsSource)) {
+    throw new Error(
+      "map-clinical-document-provenance-codings.ts must stay a Provenance element helper and must not own resource orchestration or target DocumentReference wiring."
     );
   }
 }
