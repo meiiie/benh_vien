@@ -493,6 +493,16 @@ const domainBudgets = [
     role: "FHIR MedicationDispense resource type"
   },
   {
+    path: "packages/domain/src/fhir/map-medication-dispense-to-fhir.ts",
+    maxLines: 95,
+    role: "FHIR MedicationDispense public mapper and clinical references"
+  },
+  {
+    path: "packages/domain/src/fhir/map-medication-dispense-codings.ts",
+    maxLines: 120,
+    role: "FHIR MedicationDispense identifier, category, CodeableConcept and dosage mapping"
+  },
+  {
     path: "packages/domain/src/fhir/fhir-medication-administration.types.ts",
     maxLines: 110,
     role: "FHIR MedicationAdministration resource type"
@@ -867,6 +877,12 @@ const fhirMedicationRequestTypesPath = resolve(
 const fhirMedicationDispenseTypesPath = resolve(
   "packages/domain/src/fhir/fhir-medication-dispense.types.ts"
 );
+const mapMedicationDispenseToFhirPath = resolve(
+  "packages/domain/src/fhir/map-medication-dispense-to-fhir.ts"
+);
+const mapMedicationDispenseCodingsPath = resolve(
+  "packages/domain/src/fhir/map-medication-dispense-codings.ts"
+);
 const fhirMedicationAdministrationTypesPath = resolve(
   "packages/domain/src/fhir/fhir-medication-administration.types.ts"
 );
@@ -1126,6 +1142,14 @@ const fhirMedicationRequestTypesSource = await readFile(
 );
 const fhirMedicationDispenseTypesSource = await readFile(
   fhirMedicationDispenseTypesPath,
+  "utf8"
+);
+const mapMedicationDispenseToFhirSource = await readFile(
+  mapMedicationDispenseToFhirPath,
+  "utf8"
+);
+const mapMedicationDispenseCodingsSource = await readFile(
+  mapMedicationDispenseCodingsPath,
   "utf8"
 );
 const fhirMedicationAdministrationTypesSource = await readFile(
@@ -3564,6 +3588,75 @@ for (const required of [
 ]) {
   if (!required.test(fhirMedicationTypesSource)) {
     throw new Error("fhir-medication.types.ts must re-export all focused FHIR medication type modules.");
+  }
+}
+
+for (const required of [
+  /export function mapMedicationDispenseToFhir/,
+  /from "\.\/map-medication-dispense-codings\.js"/,
+  /buildMedicationDispenseIdentifier/,
+  /buildMedicationDispenseCategory/,
+  /toMedicationDispenseCodeableConcept/,
+  /toMedicationDispenseDosageInstruction/,
+  /resourceType:\s*"MedicationDispense"/
+]) {
+  if (!required.test(mapMedicationDispenseToFhirSource)) {
+    throw new Error(
+      "map-medication-dispense-to-fhir.ts must keep the public MedicationDispense resource mapper and clinical references while delegating identifier, category, CodeableConcept and dosage helpers to map-medication-dispense-codings.ts."
+    );
+  }
+}
+
+for (const forbidden of [
+  /const categorySystem/,
+  /function toCodeableConcept/,
+  /function formatMedicationDispenseCategory/,
+  /Record<MedicationDispenseCategory, string>/,
+  /"http:\/\/terminology\.hl7\.org\/CodeSystem\/medicationdispense-category"/
+]) {
+  if (forbidden.test(mapMedicationDispenseToFhirSource)) {
+    throw new Error(
+      "MedicationDispense FHIR category labels, CodeableConcept conversion and dosage mapping belong in map-medication-dispense-codings.ts, not in the public mapper."
+    );
+  }
+}
+
+for (const required of [
+  /export const medicationDispenseFhirProfile/,
+  /export const medicationDispenseIdentifierSystem/,
+  /export function buildMedicationDispenseIdentifier/,
+  /export function buildMedicationDispenseCategory/,
+  /export function toMedicationDispenseCodeableConcept/,
+  /export function toMedicationDispenseDosageInstruction/,
+  /export function formatMedicationDispenseCategory/,
+  /MedicationDispenseCategory/,
+  /MedicationCode/,
+  /DosageInstruction/,
+  /\binpatient:/,
+  /\boutpatient:/,
+  /medicationdispense-category/
+]) {
+  if (!required.test(mapMedicationDispenseCodingsSource)) {
+    throw new Error(
+      "map-medication-dispense-codings.ts must keep MedicationDispense FHIR profile, identifier, category labels, CodeableConcept and dosage mapping."
+    );
+  }
+}
+
+for (const forbidden of [
+  /mapMedicationDispenseToFhir/,
+  /resourceType:\s*"MedicationDispense"/,
+  /patientId/,
+  /encounterId/,
+  /medicationRequestId/,
+  /dispenserPractitionerId/,
+  /receiverPractitionerId/,
+  /destinationLocationId/
+]) {
+  if (forbidden.test(mapMedicationDispenseCodingsSource)) {
+    throw new Error(
+      "map-medication-dispense-codings.ts must stay a coding/dosage helper and must not own MedicationDispense resource orchestration or clinical references."
+    );
   }
 }
 
