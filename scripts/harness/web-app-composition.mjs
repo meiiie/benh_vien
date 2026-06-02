@@ -293,6 +293,7 @@ const requiredModules = [
   "apps/web/src/features/patient-registry/patientRegistryApi.ts",
   "apps/web/src/features/patient-registry/patientRegistryFormatters.ts",
   "apps/web/src/features/patient-registry/patientRegistrySelectors.ts",
+  "apps/web/src/features/patient-workspace/patientWorkspaceCollectionLoaderFactory.ts",
   "apps/web/src/features/patient-workspace/patientWorkspaceCollectionLoaders.ts",
   "apps/web/src/features/patient-workspace/patientWorkspaceLifecycle.ts",
   "apps/web/src/features/patient-workspace/patientWorkspaceReset.ts",
@@ -413,8 +414,13 @@ const featureModuleBudgets = [
     role: "Patient workspace reset state boundary"
   },
   {
+    path: "apps/web/src/features/patient-workspace/patientWorkspaceCollectionLoaderFactory.ts",
+    maxLines: 70,
+    role: "Patient-scoped collection loader factory"
+  },
+  {
     path: "apps/web/src/features/patient-workspace/patientWorkspaceCollectionLoaders.ts",
-    maxLines: 260,
+    maxLines: 220,
     role: "Patient-scoped EMR collection loader composition"
   },
   {
