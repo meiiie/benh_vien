@@ -214,7 +214,10 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/AllergyIntolerancePanel.tsx",
   "apps/web/src/features/clinical-records/allergyFormatters.ts",
   "apps/web/src/features/clinical-records/carePlanCommandBuilders.ts",
+  "apps/web/src/features/clinical-records/carePlanHandlers.ts",
+  "apps/web/src/features/clinical-records/carePlanHandlerTypes.ts",
   "apps/web/src/features/clinical-records/careWorkflowFormatters.ts",
+  "apps/web/src/features/clinical-records/careWorkflowHandlers.ts",
   "apps/web/src/features/clinical-records/clinicalEntryCommandBuilders.ts",
   "apps/web/src/features/clinical-records/clinicalRecordCorePanelRenderers.tsx",
   "apps/web/src/features/clinical-records/clinicalRecordDiagnosticPanelRenderers.tsx",
@@ -228,6 +231,7 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/ConditionPanel.tsx",
   "apps/web/src/features/clinical-records/conditionFormatters.ts",
   "apps/web/src/features/clinical-records/diagnosticResultFormatters.ts",
+  "apps/web/src/features/clinical-records/diagnosticResultHandlers.ts",
   "apps/web/src/features/clinical-records/diagnosticReportCommandBuilders.ts",
   "apps/web/src/features/clinical-records/DiagnosticReportForm.tsx",
   "apps/web/src/features/clinical-records/DiagnosticReportPanel.tsx",
@@ -747,6 +751,26 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/clinical-records/carePlanCommandBuilders.ts",
     maxLines: 20,
     role: "Care workflow and diagnostic command-builder compatibility barrel"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/carePlanHandlers.ts",
+    maxLines: 50,
+    role: "Care plan handler composition factory"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/carePlanHandlerTypes.ts",
+    maxLines: 90,
+    role: "Care plan handler configuration and submit handler types"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/diagnosticResultHandlers.ts",
+    maxLines: 140,
+    role: "DiagnosticReport and ImagingStudy submit handlers"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/careWorkflowHandlers.ts",
+    maxLines: 130,
+    role: "Procedure and ServiceRequest submit handlers"
   },
   {
     path: "apps/web/src/features/clinical-records/serviceRequestCommandBuilders.ts",
