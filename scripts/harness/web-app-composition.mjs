@@ -280,6 +280,7 @@ const requiredModules = [
   "apps/web/src/features/consents/consentCommandBuilders.ts",
   "apps/web/src/features/consents/consentFormatters.ts",
   "apps/web/src/features/interoperability/FhirTransferContextSummary.tsx",
+  "apps/web/src/features/fhir-preview/fhirPreviewLoaderFactory.ts",
   "apps/web/src/features/fhir-preview/fhirPreviewLoaders.ts",
   "apps/web/src/features/interoperability/FhirDocumentBundleSummary.tsx",
   "apps/web/src/features/interoperability/fhirDocumentBundleSummaryModel.ts",
@@ -422,6 +423,16 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/patient-workspace/patientWorkspaceCollectionLoaders.ts",
     maxLines: 220,
     role: "Patient-scoped EMR collection loader composition"
+  },
+  {
+    path: "apps/web/src/features/fhir-preview/fhirPreviewLoaderFactory.ts",
+    maxLines: 50,
+    role: "FHIR preview loader factory"
+  },
+  {
+    path: "apps/web/src/features/fhir-preview/fhirPreviewLoaders.ts",
+    maxLines: 220,
+    role: "FHIR resource preview loader composition"
   },
   {
     path: "apps/web/src/features/clinical-documents/ClinicalDocumentPanel.tsx",
