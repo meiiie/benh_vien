@@ -3,6 +3,11 @@ import { FhirPanel, PageHeader } from "../components/AppShell.js";
 import {
   FhirDocumentBundleSummary
 } from "../features/interoperability/FhirDocumentBundleSummary.js";
+import {
+  FhirTransferContextSummary,
+  type FhirTransferContext
+} from "../features/interoperability/FhirTransferContextSummary.js";
+import type { Patient } from "../types/patientRegistry.js";
 
 type ReferenceSignal = {
   readonly name: string;
@@ -34,6 +39,8 @@ type InteropPageProps = {
   readonly recordTransferInteropPanel: ReactNode;
   readonly referenceSignals: readonly ReferenceSignal[];
   readonly serviceRequestFhirPreview: unknown;
+  readonly selectedPatient?: Patient;
+  readonly transferContext: FhirTransferContext;
   readonly workflowSteps: readonly string[];
   readonly workflowTaskFhirPreview: unknown;
 };
@@ -63,6 +70,8 @@ export function InteropPage({
   recordTransferInteropPanel,
   referenceSignals,
   serviceRequestFhirPreview,
+  selectedPatient,
+  transferContext,
   workflowSteps,
   workflowTaskFhirPreview
 }: InteropPageProps) {
@@ -84,6 +93,10 @@ export function InteropPage({
       </section>
 
       <section className="workspace">
+        <FhirTransferContextSummary
+          context={transferContext}
+          patient={selectedPatient}
+        />
         {providerDirectoryPanel}
         <FhirPanel title="FHIR CapabilityStatement JSON" badge="CapabilityStatement" value={capabilityStatementPreview} />
         <FhirPanel title="FHIR Provider Directory Bundle JSON" badge="Organization/Endpoint" value={providerDirectoryFhirPreview} />

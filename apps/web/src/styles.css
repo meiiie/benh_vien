@@ -1290,6 +1290,64 @@ select:focus {
   min-height: 520px;
 }
 
+.transfer-context-panel {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(0, 86, 210, 0.12), transparent 30%),
+    radial-gradient(circle at 92% 12%, rgba(20, 184, 166, 0.14), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
+}
+
+.transfer-context-grid {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.transfer-context-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.transfer-context-flow li {
+  display: grid;
+  gap: 8px;
+  border-top: 3px solid rgba(0, 86, 210, 0.56);
+  border-radius: 12px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.transfer-context-flow strong {
+  color: var(--harbor-ink);
+  line-height: 1.35;
+}
+
+.transfer-context-flow span,
+.transfer-context-note,
+.transfer-context-reason {
+  color: var(--slate);
+  font-size: 0.88rem;
+  line-height: 1.58;
+}
+
+.transfer-context-note {
+  margin: 18px 0 0;
+  border-left: 3px solid var(--primary);
+  padding-left: 12px;
+}
+
+.transfer-context-reason {
+  margin: 12px 0 0;
+  border: 1px solid rgba(20, 184, 166, 0.24);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: rgba(240, 253, 250, 0.68);
+}
+
 .bundle-summary-panel {
   overflow: hidden;
   background:

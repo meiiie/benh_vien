@@ -13,6 +13,7 @@ import type {
 import { AuditLogPage } from "./AuditLogPage.js";
 import { DashboardPage } from "./DashboardPage.js";
 import type { DashboardMetrics } from "../application/dashboardMetrics.js";
+import { defaultRecordTransferForm } from "../config/demoTransferDefaults.js";
 import { DocumentsPage } from "./DocumentsPage.js";
 import { GatewayAcknowledgementPage } from "./GatewayAcknowledgementPage.js";
 import { InteropPage } from "./InteropPage.js";
@@ -212,6 +213,8 @@ export function AppRouteRenderer({
         recordTransferInteropPanel={panels.recordTransferInterop()}
         referenceSignals={referenceSignals}
         serviceRequestFhirPreview={fhirPreviews.serviceRequest}
+        selectedPatient={selectedPatient}
+        transferContext={defaultRecordTransferForm}
         workflowSteps={workflowSteps}
         workflowTaskFhirPreview={fhirPreviews.workflowTask}
       />

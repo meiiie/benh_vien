@@ -2,10 +2,15 @@ import { readdir, stat, readFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 
 const appPath = resolve("apps/web/src/App.tsx");
+const appRouteRendererPath = resolve("apps/web/src/pages/AppRouteRenderer.tsx");
+const interopPagePath = resolve("apps/web/src/pages/InteropPage.tsx");
 const landingPagePath = resolve("apps/web/src/pages/LandingPage.tsx");
 const mainPath = resolve("apps/web/src/main.tsx");
 const webSrcPath = resolve("apps/web/src");
 const allowedFetchModulePath = resolve("apps/web/src/api/clinicalApi.ts");
+const fhirTransferContextSummaryPath = resolve(
+  "apps/web/src/features/interoperability/FhirTransferContextSummary.tsx"
+);
 const clinicalDocumentApiPath = resolve(
   "apps/web/src/features/clinical-documents/clinicalDocumentApi.ts"
 );
@@ -131,6 +136,7 @@ const requiredModules = [
   "apps/web/src/features/consents/consentApi.ts",
   "apps/web/src/features/consents/consentCommandBuilders.ts",
   "apps/web/src/features/consents/consentFormatters.ts",
+  "apps/web/src/features/interoperability/FhirTransferContextSummary.tsx",
   "apps/web/src/features/fhir-preview/fhirPreviewLoaders.ts",
   "apps/web/src/features/interoperability/FhirDocumentBundleSummary.tsx",
   "apps/web/src/features/interoperability/fhirDocumentBundleSummaryModel.ts",
@@ -270,6 +276,11 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/interoperability/FhirDocumentBundleSummary.tsx",
     maxLines: 160,
     role: "FHIR document Bundle readiness summary"
+  },
+  {
+    path: "apps/web/src/features/interoperability/FhirTransferContextSummary.tsx",
+    maxLines: 130,
+    role: "FHIR record-transfer context summary"
   },
   {
     path: "apps/web/src/features/interoperability/fhirDocumentBundleSummaryModel.ts",
@@ -599,7 +610,13 @@ const featureModuleBudgets = [
 ];
 
 const appSource = await readFile(appPath, "utf8");
+const appRouteRendererSource = await readFile(appRouteRendererPath, "utf8");
 const clinicalApiSource = await readFile(allowedFetchModulePath, "utf8");
+const fhirTransferContextSummarySource = await readFile(
+  fhirTransferContextSummaryPath,
+  "utf8"
+);
+const interopPageSource = await readFile(interopPagePath, "utf8");
 const landingPageSource = await readFile(landingPagePath, "utf8");
 const mainSource = await readFile(mainPath, "utf8");
 const clinicalDocumentApiSource = await readFile(clinicalDocumentApiPath, "utf8");
@@ -747,6 +764,45 @@ const documentBundleTransferContextChecks = [
 
 for (const check of documentBundleTransferContextChecks) {
   if (!check.pattern.test(patientRegistryApiSource)) {
+    throw new Error(check.message);
+  }
+}
+
+const fhirTransferContextUiChecks = [
+  {
+    source: interopPageSource,
+    pattern: /<FhirTransferContextSummary\b/,
+    message:
+      "Interop page must show the FHIR transfer context before the raw JSON panels."
+  },
+  {
+    source: appRouteRendererSource,
+    pattern: /transferContext=\{defaultRecordTransferForm\}/,
+    message:
+      "App route renderer must pass the demo record-transfer context into InteropPage."
+  },
+  {
+    source: fhirTransferContextSummarySource,
+    pattern: /\bconsentReference\b/,
+    message:
+      "FHIR transfer context summary must display the consent reference used for Bundle export."
+  },
+  {
+    source: fhirTransferContextSummarySource,
+    pattern: /\brecipientOrganizationId\b/,
+    message:
+      "FHIR transfer context summary must display the receiving organization."
+  },
+  {
+    source: fhirTransferContextSummarySource,
+    pattern: /\bbundleType\b/,
+    message:
+      "FHIR transfer context summary must explain whether the package is a document or collection Bundle."
+  }
+];
+
+for (const check of fhirTransferContextUiChecks) {
+  if (!check.pattern.test(check.source)) {
     throw new Error(check.message);
   }
 }
