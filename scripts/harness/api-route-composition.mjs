@@ -1061,6 +1061,69 @@ const standardizedDomainErrorRoutePaths = [
     label: "Patient merge route"
   }
 ];
+const standardizedDomainErrorHelperPaths = [
+  {
+    path: resolve(
+      "apps/api/src/modules/diagnostic-reports/diagnostic-report-route-helpers.ts"
+    ),
+    label: "DiagnosticReport route helper"
+  },
+  {
+    path: resolve("apps/api/src/modules/imaging-studies/imaging-study-route-helpers.ts"),
+    label: "ImagingStudy route helper"
+  },
+  {
+    path: resolve("apps/api/src/modules/consents/consent-route-helpers.ts"),
+    label: "Consent route helper"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/record-transfers/record-transfer-command-route-helpers.ts"
+    ),
+    label: "RecordTransfer command route helper"
+  },
+  {
+    path: resolve("apps/api/src/modules/encounters/encounter-route-helpers.ts"),
+    label: "Encounter route helper"
+  },
+  {
+    path: resolve(
+      "apps/api/src/modules/allergy-intolerances/allergy-intolerance-route-helpers.ts"
+    ),
+    label: "AllergyIntolerance route helper"
+  },
+  {
+    path: resolve("apps/api/src/modules/service-requests/service-request-route-helpers.ts"),
+    label: "ServiceRequest route helper"
+  },
+  {
+    path: resolve("apps/api/src/modules/workflow-tasks/workflow-task-route-helpers.ts"),
+    label: "WorkflowTask route helper"
+  },
+  {
+    path: resolve("apps/api/src/modules/conditions/condition-route-helpers.ts"),
+    label: "Condition route helper"
+  },
+  {
+    path: resolve("apps/api/src/modules/observations/observation-route-helpers.ts"),
+    label: "Observation route helper"
+  }
+];
+const forbiddenStandardizedDomainErrorHelperPatterns = [
+  {
+    pattern: /\binstanceof DomainError\b/,
+    message: "must delegate DomainError matching to sendDomainErrorResponse."
+  },
+  {
+    pattern: /\bstatus\(422\)\.send\b/,
+    message: "must not send a local 422 DomainError envelope."
+  },
+  {
+    pattern:
+      /import\s+\{[\s\S]*?\bDomainError\b[\s\S]*?\}\s+from\s+"@benh-vien-so\/domain"/,
+    message: "must not import DomainError from the domain package directly."
+  }
+];
 
 const apiDomainRoutesPath = resolve("apps/api/src/modules/http/api-domain-routes.ts");
 const requiredApiDomainRegistrations = [
@@ -2168,6 +2231,12 @@ const standardizedDomainErrorRouteSources = await Promise.all(
     source: await readFile(route.path, "utf8")
   }))
 );
+const standardizedDomainErrorHelperSources = await Promise.all(
+  standardizedDomainErrorHelperPaths.map(async (helper) => ({
+    ...helper,
+    source: await readFile(helper.path, "utf8")
+  }))
+);
 const apiDomainRoutesSource = await readFile(apiDomainRoutesPath, "utf8");
 const providerDirectoryRoutesSource = await readFile(
   providerDirectoryRoutesPath,
@@ -2423,6 +2492,20 @@ for (const route of standardizedDomainErrorRouteSources) {
     throw new Error(
       `${route.label} must use sendDomainErrorResponse so DomainError payloads stay centralized.`
     );
+  }
+}
+
+for (const helper of standardizedDomainErrorHelperSources) {
+  if (!helper.source.includes("sendDomainErrorResponse")) {
+    throw new Error(
+      `${helper.label} must use sendDomainErrorResponse so DomainError payloads stay centralized.`
+    );
+  }
+
+  for (const forbidden of forbiddenStandardizedDomainErrorHelperPatterns) {
+    if (forbidden.pattern.test(helper.source)) {
+      throw new Error(`${helper.label} ${forbidden.message}`);
+    }
   }
 }
 

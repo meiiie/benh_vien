@@ -1,21 +1,13 @@
 import type { FastifyReply } from "fastify";
-import { DomainError } from "@benh-vien-so/domain";
 import type {
   ProviderEndpointSnapshot,
   RecordTransfer,
   RecordTransferDeliveryAttempt
 } from "@benh-vien-so/domain";
+import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
 
 export function sendRecordTransferDomainError(reply: FastifyReply, error: unknown): boolean {
-  if (!(error instanceof DomainError)) {
-    return false;
-  }
-
-  reply.status(422).send({
-    error: "RECORD_TRANSFER_DOMAIN_ERROR",
-    message: error.message
-  });
-  return true;
+  return sendDomainErrorResponse(reply, error, "RECORD_TRANSFER_DOMAIN_ERROR");
 }
 
 export function toSendAuditMetadata(

@@ -7,8 +7,8 @@ import type {
   WorkflowTaskRepository,
   WorkflowTaskSnapshot
 } from "@benh-vien-so/domain";
-import { DomainError } from "@benh-vien-so/domain";
 import { requirePatientRecordAccessByPatientId } from "../access-control/access-context.js";
+import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
 
 export function toWorkflowTaskResponse(task: WorkflowTask): WorkflowTaskSnapshot {
   return task.toSnapshot();
@@ -50,14 +50,5 @@ export async function loadWorkflowTaskForPatientAccess(
 }
 
 export function sendWorkflowTaskDomainError(reply: FastifyReply, error: unknown): boolean {
-  if (!(error instanceof DomainError)) {
-    return false;
-  }
-
-  reply.status(422).send({
-    error: "WORKFLOW_TASK_DOMAIN_ERROR",
-    message: error.message
-  });
-
-  return true;
+  return sendDomainErrorResponse(reply, error, "WORKFLOW_TASK_DOMAIN_ERROR");
 }

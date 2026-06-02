@@ -7,8 +7,8 @@ import type {
   PatientRepository,
   ProviderDirectoryRepository
 } from "@benh-vien-so/domain";
-import { DomainError } from "@benh-vien-so/domain";
 import { requirePatientRecordAccessByPatientId } from "../access-control/access-context.js";
+import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
 
 export function toConditionResponse(condition: Condition): ConditionSnapshot {
   return condition.toSnapshot();
@@ -50,14 +50,5 @@ export async function loadConditionForPatientAccess(
 }
 
 export function sendConditionDomainError(reply: FastifyReply, error: unknown): boolean {
-  if (!(error instanceof DomainError)) {
-    return false;
-  }
-
-  reply.status(422).send({
-    error: "CONDITION_DOMAIN_ERROR",
-    message: error.message
-  });
-
-  return true;
+  return sendDomainErrorResponse(reply, error, "CONDITION_DOMAIN_ERROR");
 }

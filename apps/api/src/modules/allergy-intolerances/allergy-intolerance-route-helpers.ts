@@ -7,8 +7,8 @@ import type {
   PatientRepository,
   ProviderDirectoryRepository
 } from "@benh-vien-so/domain";
-import { DomainError } from "@benh-vien-so/domain";
 import { requirePatientRecordAccessByPatientId } from "../access-control/access-context.js";
+import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
 
 export function toAllergyIntoleranceResponse(
   allergyIntolerance: AllergyIntolerance
@@ -57,14 +57,5 @@ export function sendAllergyIntoleranceDomainError(
   reply: FastifyReply,
   error: unknown
 ): boolean {
-  if (!(error instanceof DomainError)) {
-    return false;
-  }
-
-  reply.status(422).send({
-    error: "ALLERGY_INTOLERANCE_DOMAIN_ERROR",
-    message: error.message
-  });
-
-  return true;
+  return sendDomainErrorResponse(reply, error, "ALLERGY_INTOLERANCE_DOMAIN_ERROR");
 }

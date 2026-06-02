@@ -7,8 +7,8 @@ import type {
   ServiceRequestRepository,
   ServiceRequestSnapshot
 } from "@benh-vien-so/domain";
-import { DomainError } from "@benh-vien-so/domain";
 import { requirePatientRecordAccessByPatientId } from "../access-control/access-context.js";
+import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
 
 export function toServiceRequestResponse(
   serviceRequest: ServiceRequest
@@ -52,14 +52,5 @@ export async function loadServiceRequestForPatientAccess(
 }
 
 export function sendServiceRequestDomainError(reply: FastifyReply, error: unknown): boolean {
-  if (!(error instanceof DomainError)) {
-    return false;
-  }
-
-  reply.status(422).send({
-    error: "SERVICE_REQUEST_DOMAIN_ERROR",
-    message: error.message
-  });
-
-  return true;
+  return sendDomainErrorResponse(reply, error, "SERVICE_REQUEST_DOMAIN_ERROR");
 }

@@ -7,8 +7,8 @@ import type {
   PatientRepository,
   ProviderDirectoryRepository
 } from "@benh-vien-so/domain";
-import { DomainError } from "@benh-vien-so/domain";
 import { requirePatientRecordAccessByPatientId } from "../access-control/access-context.js";
+import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
 
 export function toImagingStudyResponse(imagingStudy: ImagingStudy): ImagingStudySnapshot {
   return imagingStudy.toSnapshot();
@@ -50,14 +50,5 @@ export async function loadImagingStudyForPatientAccess(
 }
 
 export function sendImagingStudyDomainError(reply: FastifyReply, error: unknown): boolean {
-  if (!(error instanceof DomainError)) {
-    return false;
-  }
-
-  reply.status(422).send({
-    error: "IMAGING_STUDY_DOMAIN_ERROR",
-    message: error.message
-  });
-
-  return true;
+  return sendDomainErrorResponse(reply, error, "IMAGING_STUDY_DOMAIN_ERROR");
 }

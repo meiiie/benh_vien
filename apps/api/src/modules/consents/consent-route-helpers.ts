@@ -7,9 +7,9 @@ import type {
   PatientRepository,
   ProviderDirectoryRepository
 } from "@benh-vien-so/domain";
-import { DomainError } from "@benh-vien-so/domain";
 import { requirePatientRecordAccessByPatientId } from "../access-control/access-context.js";
 import { sendFhirOperationOutcome } from "../fhir/operation-outcome-response.js";
+import { sendDomainErrorResponse } from "../http/http-domain-error-response.js";
 
 export function toConsentResponse(consent: Consent): ConsentSnapshot {
   return consent.toSnapshot();
@@ -78,14 +78,5 @@ export async function loadConsentForFhirExport(
 }
 
 export function sendConsentDomainError(reply: FastifyReply, error: unknown): boolean {
-  if (!(error instanceof DomainError)) {
-    return false;
-  }
-
-  reply.status(422).send({
-    error: "CONSENT_DOMAIN_ERROR",
-    message: error.message
-  });
-
-  return true;
+  return sendDomainErrorResponse(reply, error, "CONSENT_DOMAIN_ERROR");
 }
