@@ -518,6 +518,16 @@ const domainBudgets = [
     role: "FHIR Procedure resource type"
   },
   {
+    path: "packages/domain/src/fhir/map-procedure-to-fhir.ts",
+    maxLines: 100,
+    role: "FHIR Procedure public mapper and resource references"
+  },
+  {
+    path: "packages/domain/src/fhir/map-procedure-codings.ts",
+    maxLines: 110,
+    role: "FHIR Procedure identifier, category, CodeableConcept and performer mapping"
+  },
+  {
     path: "packages/domain/src/fhir/fhir-diagnostics.types.ts",
     maxLines: 20,
     role: "FHIR diagnostics compatibility barrel exports"
@@ -866,6 +876,8 @@ const fhirServiceRequestTypesPath = resolve(
 );
 const fhirTaskTypesPath = resolve("packages/domain/src/fhir/fhir-task.types.ts");
 const fhirProcedureTypesPath = resolve("packages/domain/src/fhir/fhir-procedure.types.ts");
+const mapProcedureToFhirPath = resolve("packages/domain/src/fhir/map-procedure-to-fhir.ts");
+const mapProcedureCodingsPath = resolve("packages/domain/src/fhir/map-procedure-codings.ts");
 const fhirDiagnosticsTypesPath = resolve("packages/domain/src/fhir/fhir-diagnostics.types.ts");
 const fhirDiagnosticReportTypesPath = resolve(
   "packages/domain/src/fhir/fhir-diagnostic-report.types.ts"
@@ -1124,6 +1136,8 @@ const fhirCareflowTypesSource = await readFile(fhirCareflowTypesPath, "utf8");
 const fhirServiceRequestTypesSource = await readFile(fhirServiceRequestTypesPath, "utf8");
 const fhirTaskTypesSource = await readFile(fhirTaskTypesPath, "utf8");
 const fhirProcedureTypesSource = await readFile(fhirProcedureTypesPath, "utf8");
+const mapProcedureToFhirSource = await readFile(mapProcedureToFhirPath, "utf8");
+const mapProcedureCodingsSource = await readFile(mapProcedureCodingsPath, "utf8");
 const fhirDiagnosticsTypesSource = await readFile(fhirDiagnosticsTypesPath, "utf8");
 const fhirDiagnosticReportTypesSource = await readFile(
   fhirDiagnosticReportTypesPath,
@@ -3406,6 +3420,72 @@ for (const forbidden of [
   if (forbidden.test(mapConsentCodingsSource)) {
     throw new Error(
       "map-consent-codings.ts must stay a coding/provision helper and must not own Consent resource orchestration or revocation extension mapping."
+    );
+  }
+}
+
+for (const required of [
+  /export function mapProcedureToFhir/,
+  /from "\.\/map-procedure-codings\.js"/,
+  /buildProcedureIdentifier/,
+  /buildProcedureCategory/,
+  /toProcedureCodeableConcept/,
+  /toFhirProcedurePerformer/,
+  /resourceType:\s*"Procedure"/
+]) {
+  if (!required.test(mapProcedureToFhirSource)) {
+    throw new Error(
+      "map-procedure-to-fhir.ts must keep the public Procedure resource mapper and references while delegating identifier, category, CodeableConcept and performer helpers to map-procedure-codings.ts."
+    );
+  }
+}
+
+for (const forbidden of [
+  /const procedureCategorySystem/,
+  /function toCodeableConcept/,
+  /function toFhirPerformer/,
+  /function formatProcedureCategory/,
+  /Record<ProcedureCategory, string>/,
+  /"urn:wiiicare:nexus:procedure-category"/
+]) {
+  if (forbidden.test(mapProcedureToFhirSource)) {
+    throw new Error(
+      "Procedure FHIR category labels, CodeableConcept conversion and performer mapping belong in map-procedure-codings.ts, not in the public mapper."
+    );
+  }
+}
+
+for (const required of [
+  /export const procedureFhirProfile/,
+  /export const procedureIdentifierSystem/,
+  /export function buildProcedureIdentifier/,
+  /export function buildProcedureCategory/,
+  /export function toProcedureCodeableConcept/,
+  /export function toFhirProcedurePerformer/,
+  /export function formatProcedureCategory/,
+  /ProcedureCategory/,
+  /ProcedureCoding/,
+  /ProcedurePerformer/,
+  /\bsurgical:/,
+  /\brehabilitation:/
+]) {
+  if (!required.test(mapProcedureCodingsSource)) {
+    throw new Error(
+      "map-procedure-codings.ts must keep Procedure FHIR profile, identifier, category labels, CodeableConcept and performer mapping."
+    );
+  }
+}
+
+for (const forbidden of [
+  /mapProcedureToFhir/,
+  /resourceType:\s*"Procedure"/,
+  /basedOnServiceRequestId/,
+  /reasonConditionId/,
+  /reportReferences/
+]) {
+  if (forbidden.test(mapProcedureCodingsSource)) {
+    throw new Error(
+      "map-procedure-codings.ts must stay a coding/performer helper and must not own Procedure resource orchestration or clinical references."
     );
   }
 }
