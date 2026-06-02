@@ -633,6 +633,16 @@ const domainBudgets = [
     role: "FHIR ImagingStudy resource type"
   },
   {
+    path: "packages/domain/src/fhir/map-imaging-study-to-fhir.ts",
+    maxLines: 75,
+    role: "FHIR ImagingStudy public mapper and clinical/PACS references"
+  },
+  {
+    path: "packages/domain/src/fhir/map-imaging-study-codings.ts",
+    maxLines: 95,
+    role: "FHIR ImagingStudy profile, DICOM identifiers, modalities and series mapping"
+  },
+  {
     path: "packages/domain/src/fhir/fhir-patient.types.ts",
     maxLines: 60,
     role: "FHIR patient resource types"
@@ -1019,6 +1029,12 @@ const mapDiagnosticReportCodingsPath = resolve(
   "packages/domain/src/fhir/map-diagnostic-report-codings.ts"
 );
 const fhirImagingStudyTypesPath = resolve("packages/domain/src/fhir/fhir-imaging-study.types.ts");
+const mapImagingStudyToFhirPath = resolve(
+  "packages/domain/src/fhir/map-imaging-study-to-fhir.ts"
+);
+const mapImagingStudyCodingsPath = resolve(
+  "packages/domain/src/fhir/map-imaging-study-codings.ts"
+);
 const fhirPatientTypesPath = resolve("packages/domain/src/fhir/fhir-patient.types.ts");
 const fhirOperationOutcomeTypesPath = resolve(
   "packages/domain/src/fhir/fhir-operation-outcome.types.ts"
@@ -1328,6 +1344,8 @@ const mapDiagnosticReportCodingsSource = await readFile(
   "utf8"
 );
 const fhirImagingStudyTypesSource = await readFile(fhirImagingStudyTypesPath, "utf8");
+const mapImagingStudyToFhirSource = await readFile(mapImagingStudyToFhirPath, "utf8");
+const mapImagingStudyCodingsSource = await readFile(mapImagingStudyCodingsPath, "utf8");
 const fhirPatientTypesSource = await readFile(fhirPatientTypesPath, "utf8");
 const fhirOperationOutcomeTypesSource = await readFile(
   fhirOperationOutcomeTypesPath,
@@ -4085,6 +4103,76 @@ for (const forbidden of [
   if (forbidden.test(mapDiagnosticReportCodingsSource)) {
     throw new Error(
       "map-diagnostic-report-codings.ts must stay a coding helper and must not own DiagnosticReport resource orchestration, workflow references or presented form mapping."
+    );
+  }
+}
+
+for (const required of [
+  /export function mapImagingStudyToFhir/,
+  /from "\.\/map-imaging-study-codings\.js"/,
+  /imagingStudyFhirProfile/,
+  /buildImagingStudyIdentifiers/,
+  /uniqueImagingStudyModalities/,
+  /toFhirImagingStudySeries/,
+  /resourceType:\s*"ImagingStudy"/,
+  /patientId/,
+  /basedOnServiceRequestId/,
+  /endpointId/
+]) {
+  if (!required.test(mapImagingStudyToFhirSource)) {
+    throw new Error(
+      "map-imaging-study-to-fhir.ts must keep the public ImagingStudy mapper and clinical/PACS references while delegating profile, DICOM identifiers, modality de-duplication and series projection to map-imaging-study-codings.ts."
+    );
+  }
+}
+
+for (const forbidden of [
+  /function uniqueCodings/,
+  /function toDicomUidIdentifierValue/,
+  /\bImagingStudyCoding\b/,
+  /"urn:dicom:uid"/,
+  /"DICOM Study Instance UID"/,
+  /"urn:wiiicare:nexus:accession-number"/
+]) {
+  if (forbidden.test(mapImagingStudyToFhirSource)) {
+    throw new Error(
+      "ImagingStudy FHIR profile, DICOM identifier, accession identifier, modality de-duplication and series projection belong in map-imaging-study-codings.ts, not in the public mapper."
+    );
+  }
+}
+
+for (const required of [
+  /export const imagingStudyFhirProfile/,
+  /export function buildImagingStudyIdentifiers/,
+  /export function uniqueImagingStudyModalities/,
+  /export function toFhirImagingStudySeries/,
+  /function toDicomUidIdentifierValue/,
+  /ImagingStudyCoding/,
+  /ImagingStudySeries/,
+  /urn:dicom:uid/,
+  /accession-number/,
+  /DICOM Study Instance UID/
+]) {
+  if (!required.test(mapImagingStudyCodingsSource)) {
+    throw new Error(
+      "map-imaging-study-codings.ts must keep ImagingStudy FHIR profile, DICOM identifiers, modality de-duplication and series projection."
+    );
+  }
+}
+
+for (const forbidden of [
+  /mapImagingStudyToFhir/,
+  /resourceType:\s*"ImagingStudy"/,
+  /patientId/,
+  /encounterId/,
+  /basedOnServiceRequestId/,
+  /referrerPractitionerId/,
+  /interpreterPractitionerId/,
+  /endpointId/
+]) {
+  if (forbidden.test(mapImagingStudyCodingsSource)) {
+    throw new Error(
+      "map-imaging-study-codings.ts must stay a DICOM coding/series helper and must not own ImagingStudy clinical or PACS references."
     );
   }
 }

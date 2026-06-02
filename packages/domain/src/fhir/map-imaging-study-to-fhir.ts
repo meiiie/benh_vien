@@ -1,38 +1,27 @@
-import type { ImagingStudy, ImagingStudyCoding } from "../imaging-study/imaging-study.js";
+import type { ImagingStudy } from "../imaging-study/imaging-study.js";
 import type { FhirImagingStudy } from "./fhir-types.js";
+import {
+  buildImagingStudyIdentifiers,
+  imagingStudyFhirProfile,
+  toFhirImagingStudySeries,
+  uniqueImagingStudyModalities
+} from "./map-imaging-study-codings.js";
 
 export function mapImagingStudyToFhir(imagingStudy: ImagingStudy): FhirImagingStudy {
   const snapshot = imagingStudy.toSnapshot();
-  const modalityCodings = uniqueCodings(snapshot.series.map((series) => series.modality));
 
   return {
     resourceType: "ImagingStudy",
     id: snapshot.id,
     meta: {
-      profile: ["http://hl7.org/fhir/StructureDefinition/ImagingStudy"]
+      profile: [imagingStudyFhirProfile]
     },
-    identifier: [
-      {
-        system: "urn:dicom:uid",
-        value: toDicomUidIdentifierValue(snapshot.studyInstanceUid),
-        type: {
-          text: "DICOM Study Instance UID"
-        }
-      },
-      ...(snapshot.accessionNumber
-        ? [
-            {
-              system: "urn:wiiicare:nexus:accession-number",
-              value: snapshot.accessionNumber,
-              type: {
-                text: "Accession Number"
-              }
-            }
-          ]
-        : [])
-    ],
+    identifier: buildImagingStudyIdentifiers(
+      snapshot.studyInstanceUid,
+      snapshot.accessionNumber
+    ),
     status: snapshot.status,
-    modality: modalityCodings,
+    modality: uniqueImagingStudyModalities(snapshot.series.map((series) => series.modality)),
     subject: {
       reference: `Patient/${snapshot.patientId}`
     },
@@ -71,36 +60,6 @@ export function mapImagingStudyToFhir(imagingStudy: ImagingStudy): FhirImagingSt
     numberOfSeries: snapshot.numberOfSeries,
     numberOfInstances: snapshot.numberOfInstances,
     description: snapshot.description,
-    series: snapshot.series.map((series) => ({
-      uid: series.uid,
-      number: series.number,
-      modality: series.modality,
-      description: series.description,
-      numberOfInstances: series.numberOfInstances,
-      bodySite: series.bodySite,
-      started: series.startedAt
-    }))
+    series: snapshot.series.map(toFhirImagingStudySeries)
   };
-}
-
-function uniqueCodings(codings: readonly ImagingStudyCoding[]): readonly ImagingStudyCoding[] {
-  const seen = new Set<string>();
-  const unique: ImagingStudyCoding[] = [];
-
-  for (const coding of codings) {
-    const key = `${coding.system}|${coding.code}`;
-
-    if (seen.has(key)) {
-      continue;
-    }
-
-    seen.add(key);
-    unique.push(coding);
-  }
-
-  return unique;
-}
-
-function toDicomUidIdentifierValue(uid: string): string {
-  return uid.startsWith("urn:oid:") ? uid : `urn:oid:${uid}`;
 }
