@@ -230,6 +230,7 @@
 
 .clinical-window-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
@@ -1612,6 +1613,26 @@ pre {
     grid-template-columns: 1fr;
   }
 
+  .landing-hero {
+    gap: 18px;
+  }
+
+  .landing-hero-copy,
+  .landing-card {
+    min-height: auto;
+  }
+
+  .landing-hero-copy {
+    padding: clamp(28px, 4vw, 44px);
+  }
+
+  .landing-hero h1 {
+    max-width: 820px;
+    font-size: clamp(2.35rem, 5.7vw, 3.8rem);
+    line-height: 1;
+    letter-spacing: -0.055em;
+  }
+
   .patient-list-controls {
     grid-template-columns: 1fr;
   }
@@ -1682,9 +1703,18 @@ pre {
     padding: 18px;
   }
 
+  .landing-hero .lede {
+    line-height: 1.62;
+  }
+
   .landing-hero h1 {
-    font-size: clamp(2.35rem, 10vw, 3.1rem);
+    font-size: clamp(2rem, 11vw, 2.9rem);
     line-height: 1;
+  }
+
+  .landing-proof-row span {
+    flex: 1 1 calc(50% - 8px);
+    text-align: center;
   }
 
   .marketing-actions {

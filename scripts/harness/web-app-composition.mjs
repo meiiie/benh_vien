@@ -6,6 +6,7 @@ const appRouteRendererPath = resolve("apps/web/src/pages/AppRouteRenderer.tsx");
 const interopPagePath = resolve("apps/web/src/pages/InteropPage.tsx");
 const landingPagePath = resolve("apps/web/src/pages/LandingPage.tsx");
 const mainPath = resolve("apps/web/src/main.tsx");
+const stylesPath = resolve("apps/web/src/styles.css");
 const webSrcPath = resolve("apps/web/src");
 const allowedFetchModulePath = resolve("apps/web/src/api/clinicalApi.ts");
 const fhirTransferContextSummaryPath = resolve(
@@ -632,6 +633,7 @@ const fhirTransferContextSummarySource = await readFile(
 const interopPageSource = await readFile(interopPagePath, "utf8");
 const landingPageSource = await readFile(landingPagePath, "utf8");
 const mainSource = await readFile(mainPath, "utf8");
+const stylesSource = await readFile(stylesPath, "utf8");
 const clinicalDocumentApiSource = await readFile(clinicalDocumentApiPath, "utf8");
 const patientRegistryApiSource = await readFile(patientRegistryApiPath, "utf8");
 const providerDirectoryFormattersSource = await readFile(
@@ -899,6 +901,39 @@ if (!/Nguyễn Văn An/.test(landingPageSource) || /Nguyễn Minh An/.test(landi
   throw new Error(
     "Landing page demo patient identity must match the in-memory patient registry fixture."
   );
+}
+
+const responsiveLandingChecks = [
+  {
+    pattern:
+      /@media \(max-width: 1100px\)[\s\S]*?\.landing-hero-copy,\s*[\r\n]+\s*\.landing-card\s*\{[\s\S]*?min-height:\s*auto;/,
+    message:
+      "Landing hero and summary card must drop fixed min-height at tablet widths so the product intro does not feel oversized."
+  },
+  {
+    pattern:
+      /@media \(max-width: 1100px\)[\s\S]*?\.landing-hero-copy\s*\{[\s\S]*?padding:\s*clamp\(28px,\s*4vw,\s*44px\);/,
+    message:
+      "Landing hero copy must use the tablet responsive spacing scale."
+  },
+  {
+    pattern:
+      /@media \(max-width: 1100px\)[\s\S]*?\.landing-hero h1\s*\{[\s\S]*?font-size:\s*clamp\(2\.35rem,\s*5\.7vw,\s*3\.8rem\);/,
+    message:
+      "Landing hero heading must use the tablet responsive type scale."
+  },
+  {
+    pattern:
+      /@media \(max-width: 680px\)[\s\S]*?\.landing-proof-row span\s*\{[\s\S]*?flex:\s*1 1 calc\(50% - 8px\);/,
+    message:
+      "Landing proof chips must wrap into balanced rows on mobile."
+  }
+];
+
+for (const check of responsiveLandingChecks) {
+  if (!check.pattern.test(stylesSource)) {
+    throw new Error(check.message);
+  }
 }
 
 const webSourceFiles = await collectSourceFiles(webSrcPath);
