@@ -508,6 +508,16 @@ const domainBudgets = [
     role: "FHIR MedicationAdministration resource type"
   },
   {
+    path: "packages/domain/src/fhir/map-medication-administration-to-fhir.ts",
+    maxLines: 90,
+    role: "FHIR MedicationAdministration public mapper and clinical references"
+  },
+  {
+    path: "packages/domain/src/fhir/map-medication-administration-codings.ts",
+    maxLines: 115,
+    role: "FHIR MedicationAdministration identifier, category, CodeableConcept, performer and dosage mapping"
+  },
+  {
     path: "packages/domain/src/fhir/fhir-careflow.types.ts",
     maxLines: 20,
     role: "FHIR careflow compatibility barrel exports"
@@ -886,6 +896,12 @@ const mapMedicationDispenseCodingsPath = resolve(
 const fhirMedicationAdministrationTypesPath = resolve(
   "packages/domain/src/fhir/fhir-medication-administration.types.ts"
 );
+const mapMedicationAdministrationToFhirPath = resolve(
+  "packages/domain/src/fhir/map-medication-administration-to-fhir.ts"
+);
+const mapMedicationAdministrationCodingsPath = resolve(
+  "packages/domain/src/fhir/map-medication-administration-codings.ts"
+);
 const fhirCareflowTypesPath = resolve("packages/domain/src/fhir/fhir-careflow.types.ts");
 const fhirServiceRequestTypesPath = resolve(
   "packages/domain/src/fhir/fhir-service-request.types.ts"
@@ -1154,6 +1170,14 @@ const mapMedicationDispenseCodingsSource = await readFile(
 );
 const fhirMedicationAdministrationTypesSource = await readFile(
   fhirMedicationAdministrationTypesPath,
+  "utf8"
+);
+const mapMedicationAdministrationToFhirSource = await readFile(
+  mapMedicationAdministrationToFhirPath,
+  "utf8"
+);
+const mapMedicationAdministrationCodingsSource = await readFile(
+  mapMedicationAdministrationCodingsPath,
   "utf8"
 );
 const fhirCareflowTypesSource = await readFile(fhirCareflowTypesPath, "utf8");
@@ -3656,6 +3680,77 @@ for (const forbidden of [
   if (forbidden.test(mapMedicationDispenseCodingsSource)) {
     throw new Error(
       "map-medication-dispense-codings.ts must stay a coding/dosage helper and must not own MedicationDispense resource orchestration or clinical references."
+    );
+  }
+}
+
+for (const required of [
+  /export function mapMedicationAdministrationToFhir/,
+  /from "\.\/map-medication-administration-codings\.js"/,
+  /buildMedicationAdministrationIdentifier/,
+  /buildMedicationAdministrationCategory/,
+  /toMedicationAdministrationCodeableConcept/,
+  /toFhirMedicationAdministrationPerformer/,
+  /toMedicationAdministrationDosage/,
+  /resourceType:\s*"MedicationAdministration"/
+]) {
+  if (!required.test(mapMedicationAdministrationToFhirSource)) {
+    throw new Error(
+      "map-medication-administration-to-fhir.ts must keep the public MedicationAdministration resource mapper and clinical references while delegating identifier, category, CodeableConcept, performer and dosage helpers to map-medication-administration-codings.ts."
+    );
+  }
+}
+
+for (const forbidden of [
+  /const categorySystem/,
+  /function toCodeableConcept/,
+  /function toFhirPerformer/,
+  /function formatMedicationAdministrationCategory/,
+  /Record<MedicationAdministrationCategory, string>/,
+  /"http:\/\/terminology\.hl7\.org\/CodeSystem\/medication-admin-category"/
+]) {
+  if (forbidden.test(mapMedicationAdministrationToFhirSource)) {
+    throw new Error(
+      "MedicationAdministration FHIR category labels, CodeableConcept conversion, performer and dosage mapping belong in map-medication-administration-codings.ts, not in the public mapper."
+    );
+  }
+}
+
+for (const required of [
+  /export const medicationAdministrationFhirProfile/,
+  /export const medicationAdministrationIdentifierSystem/,
+  /export function buildMedicationAdministrationIdentifier/,
+  /export function buildMedicationAdministrationCategory/,
+  /export function toMedicationAdministrationCodeableConcept/,
+  /export function toFhirMedicationAdministrationPerformer/,
+  /export function toMedicationAdministrationDosage/,
+  /export function formatMedicationAdministrationCategory/,
+  /MedicationAdministrationCategory/,
+  /MedicationAdministrationPerformer/,
+  /MedicationAdministrationDosage/,
+  /MedicationCode/,
+  /patient-specified/,
+  /medication-admin-category/
+]) {
+  if (!required.test(mapMedicationAdministrationCodingsSource)) {
+    throw new Error(
+      "map-medication-administration-codings.ts must keep MedicationAdministration FHIR profile, identifier, category labels, CodeableConcept, performer and dosage mapping."
+    );
+  }
+}
+
+for (const forbidden of [
+  /mapMedicationAdministrationToFhir/,
+  /resourceType:\s*"MedicationAdministration"/,
+  /patientId/,
+  /encounterId/,
+  /medicationRequestId/,
+  /reasonConditionId/,
+  /effectivePeriod/
+]) {
+  if (forbidden.test(mapMedicationAdministrationCodingsSource)) {
+    throw new Error(
+      "map-medication-administration-codings.ts must stay a coding/performer/dosage helper and must not own MedicationAdministration resource orchestration or clinical references."
     );
   }
 }
