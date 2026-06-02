@@ -1,15 +1,12 @@
-import type {
-  MedicationRequest,
-  MedicationRequestCategory
-} from "../medication-request/medication-request.js";
+import type { MedicationRequest } from "../medication-request/medication-request.js";
 import type { FhirMedicationRequest } from "./fhir-types.js";
-
-const categoryLabels: Record<MedicationRequestCategory, string> = {
-  community: "Community",
-  discharge: "Discharge",
-  inpatient: "Inpatient",
-  outpatient: "Outpatient"
-};
+import {
+  buildMedicationRequestCategory,
+  buildMedicationRequestDispenseRequest,
+  medicationRequestFhirProfile,
+  toMedicationRequestCodeableConcept,
+  toMedicationRequestDosageInstruction
+} from "./map-medication-request-codings.js";
 
 export function mapMedicationRequestToFhir(
   medicationRequest: MedicationRequest
@@ -20,33 +17,15 @@ export function mapMedicationRequestToFhir(
     resourceType: "MedicationRequest",
     id: snapshot.id,
     meta: {
-      profile: ["http://hl7.org/fhir/StructureDefinition/MedicationRequest"]
+      profile: [medicationRequestFhirProfile]
     },
     status: snapshot.status,
     intent: snapshot.intent,
-    category: [
-      {
-        coding: [
-          {
-            system: "http://terminology.hl7.org/CodeSystem/medicationrequest-category",
-            code: snapshot.category,
-            display: categoryLabels[snapshot.category]
-          }
-        ],
-        text: categoryLabels[snapshot.category]
-      }
-    ],
+    category: [buildMedicationRequestCategory(snapshot.category)],
     priority: snapshot.priority,
-    medicationCodeableConcept: {
-      coding: [
-        {
-          system: snapshot.medicationCode.system,
-          code: snapshot.medicationCode.code,
-          display: snapshot.medicationCode.display
-        }
-      ],
-      text: snapshot.medicationCode.display
-    },
+    medicationCodeableConcept: toMedicationRequestCodeableConcept(
+      snapshot.medicationCode
+    ),
     subject: {
       reference: `Patient/${snapshot.patientId}`
     },
@@ -67,43 +46,10 @@ export function mapMedicationRequestToFhir(
         ]
       : undefined,
     dosageInstruction: [
-      {
-        text: snapshot.dosageInstruction.text,
-        route: snapshot.dosageInstruction.route
-          ? {
-              text: snapshot.dosageInstruction.route
-            }
-          : undefined,
-        timing:
-          snapshot.dosageInstruction.frequency &&
-          snapshot.dosageInstruction.period &&
-          snapshot.dosageInstruction.periodUnit
-            ? {
-                repeat: {
-                  frequency: snapshot.dosageInstruction.frequency,
-                  period: snapshot.dosageInstruction.period,
-                  periodUnit: snapshot.dosageInstruction.periodUnit
-                }
-              }
-            : undefined,
-        doseAndRate: snapshot.dosageInstruction.doseQuantity
-          ? [
-              {
-                doseQuantity: snapshot.dosageInstruction.doseQuantity
-              }
-            ]
-          : undefined
-      }
+      toMedicationRequestDosageInstruction(snapshot.dosageInstruction)
     ],
     dispenseRequest: snapshot.expectedSupplyDurationDays
-      ? {
-          expectedSupplyDuration: {
-            value: snapshot.expectedSupplyDurationDays,
-            unit: "day",
-            system: "http://unitsofmeasure.org",
-            code: "d"
-          }
-        }
+      ? buildMedicationRequestDispenseRequest(snapshot.expectedSupplyDurationDays)
       : undefined,
     note: snapshot.note ? [{ text: snapshot.note }] : undefined
   };

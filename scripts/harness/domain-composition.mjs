@@ -488,6 +488,16 @@ const domainBudgets = [
     role: "FHIR MedicationRequest resource type"
   },
   {
+    path: "packages/domain/src/fhir/map-medication-request-to-fhir.ts",
+    maxLines: 75,
+    role: "FHIR MedicationRequest public mapper and clinical references"
+  },
+  {
+    path: "packages/domain/src/fhir/map-medication-request-codings.ts",
+    maxLines: 115,
+    role: "FHIR MedicationRequest category, CodeableConcept, dosage and dispenseRequest mapping"
+  },
+  {
     path: "packages/domain/src/fhir/fhir-medication-dispense.types.ts",
     maxLines: 130,
     role: "FHIR MedicationDispense resource type"
@@ -884,6 +894,12 @@ const fhirMedicationTypesPath = resolve("packages/domain/src/fhir/fhir-medicatio
 const fhirMedicationRequestTypesPath = resolve(
   "packages/domain/src/fhir/fhir-medication-request.types.ts"
 );
+const mapMedicationRequestToFhirPath = resolve(
+  "packages/domain/src/fhir/map-medication-request-to-fhir.ts"
+);
+const mapMedicationRequestCodingsPath = resolve(
+  "packages/domain/src/fhir/map-medication-request-codings.ts"
+);
 const fhirMedicationDispenseTypesPath = resolve(
   "packages/domain/src/fhir/fhir-medication-dispense.types.ts"
 );
@@ -1154,6 +1170,14 @@ const fhirAllergyIntoleranceTypesSource = await readFile(
 const fhirMedicationTypesSource = await readFile(fhirMedicationTypesPath, "utf8");
 const fhirMedicationRequestTypesSource = await readFile(
   fhirMedicationRequestTypesPath,
+  "utf8"
+);
+const mapMedicationRequestToFhirSource = await readFile(
+  mapMedicationRequestToFhirPath,
+  "utf8"
+);
+const mapMedicationRequestCodingsSource = await readFile(
+  mapMedicationRequestCodingsPath,
   "utf8"
 );
 const fhirMedicationDispenseTypesSource = await readFile(
@@ -3612,6 +3636,76 @@ for (const required of [
 ]) {
   if (!required.test(fhirMedicationTypesSource)) {
     throw new Error("fhir-medication.types.ts must re-export all focused FHIR medication type modules.");
+  }
+}
+
+for (const required of [
+  /export function mapMedicationRequestToFhir/,
+  /from "\.\/map-medication-request-codings\.js"/,
+  /medicationRequestFhirProfile/,
+  /buildMedicationRequestCategory/,
+  /toMedicationRequestCodeableConcept/,
+  /toMedicationRequestDosageInstruction/,
+  /buildMedicationRequestDispenseRequest/,
+  /resourceType:\s*"MedicationRequest"/
+]) {
+  if (!required.test(mapMedicationRequestToFhirSource)) {
+    throw new Error(
+      "map-medication-request-to-fhir.ts must keep the public MedicationRequest resource mapper and clinical references while delegating category, CodeableConcept, dosage and dispenseRequest helpers to map-medication-request-codings.ts."
+    );
+  }
+}
+
+for (const forbidden of [
+  /const categoryLabels/,
+  /Record<MedicationRequestCategory, string>/,
+  /"http:\/\/terminology\.hl7\.org\/CodeSystem\/medicationrequest-category"/,
+  /"http:\/\/unitsofmeasure\.org"/,
+  /expectedSupplyDuration:\s*{/,
+  /doseAndRate:/
+]) {
+  if (forbidden.test(mapMedicationRequestToFhirSource)) {
+    throw new Error(
+      "MedicationRequest FHIR category labels, CodeableConcept conversion, dosage and dispenseRequest mapping belong in map-medication-request-codings.ts, not in the public mapper."
+    );
+  }
+}
+
+for (const required of [
+  /export const medicationRequestFhirProfile/,
+  /export function buildMedicationRequestCategory/,
+  /export function toMedicationRequestCodeableConcept/,
+  /export function toMedicationRequestDosageInstruction/,
+  /export function buildMedicationRequestDispenseRequest/,
+  /export function formatMedicationRequestCategory/,
+  /MedicationRequestCategory/,
+  /MedicationCode/,
+  /DosageInstruction/,
+  /\binpatient:/,
+  /\bdischarge:/,
+  /medicationrequest-category/,
+  /unitsofmeasure\.org/
+]) {
+  if (!required.test(mapMedicationRequestCodingsSource)) {
+    throw new Error(
+      "map-medication-request-codings.ts must keep MedicationRequest FHIR profile, category labels, CodeableConcept, dosage and dispenseRequest mapping."
+    );
+  }
+}
+
+for (const forbidden of [
+  /mapMedicationRequestToFhir/,
+  /resourceType:\s*"MedicationRequest"/,
+  /patientId/,
+  /encounterId/,
+  /requesterPractitionerId/,
+  /reasonConditionId/,
+  /authoredOn/
+]) {
+  if (forbidden.test(mapMedicationRequestCodingsSource)) {
+    throw new Error(
+      "map-medication-request-codings.ts must stay a coding/dosage/supply helper and must not own MedicationRequest resource orchestration or clinical references."
+    );
   }
 }
 
