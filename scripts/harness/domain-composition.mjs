@@ -538,6 +538,16 @@ const domainBudgets = [
     role: "FHIR ServiceRequest resource type"
   },
   {
+    path: "packages/domain/src/fhir/map-service-request-to-fhir.ts",
+    maxLines: 75,
+    role: "FHIR ServiceRequest public mapper and clinical references"
+  },
+  {
+    path: "packages/domain/src/fhir/map-service-request-codings.ts",
+    maxLines: 90,
+    role: "FHIR ServiceRequest profile, SNOMED category and code mapping"
+  },
+  {
     path: "packages/domain/src/fhir/fhir-task.types.ts",
     maxLines: 120,
     role: "FHIR Task resource type"
@@ -932,6 +942,12 @@ const fhirCareflowTypesPath = resolve("packages/domain/src/fhir/fhir-careflow.ty
 const fhirServiceRequestTypesPath = resolve(
   "packages/domain/src/fhir/fhir-service-request.types.ts"
 );
+const mapServiceRequestToFhirPath = resolve(
+  "packages/domain/src/fhir/map-service-request-to-fhir.ts"
+);
+const mapServiceRequestCodingsPath = resolve(
+  "packages/domain/src/fhir/map-service-request-codings.ts"
+);
 const fhirTaskTypesPath = resolve("packages/domain/src/fhir/fhir-task.types.ts");
 const mapWorkflowTaskToFhirPath = resolve(
   "packages/domain/src/fhir/map-workflow-task-to-fhir.ts"
@@ -1222,6 +1238,8 @@ const mapMedicationAdministrationCodingsSource = await readFile(
 );
 const fhirCareflowTypesSource = await readFile(fhirCareflowTypesPath, "utf8");
 const fhirServiceRequestTypesSource = await readFile(fhirServiceRequestTypesPath, "utf8");
+const mapServiceRequestToFhirSource = await readFile(mapServiceRequestToFhirPath, "utf8");
+const mapServiceRequestCodingsSource = await readFile(mapServiceRequestCodingsPath, "utf8");
 const fhirTaskTypesSource = await readFile(fhirTaskTypesPath, "utf8");
 const mapWorkflowTaskToFhirSource = await readFile(mapWorkflowTaskToFhirPath, "utf8");
 const mapWorkflowTaskCodingsSource = await readFile(mapWorkflowTaskCodingsPath, "utf8");
@@ -3510,6 +3528,71 @@ for (const forbidden of [
   if (forbidden.test(mapConsentCodingsSource)) {
     throw new Error(
       "map-consent-codings.ts must stay a coding/provision helper and must not own Consent resource orchestration or revocation extension mapping."
+    );
+  }
+}
+
+for (const required of [
+  /export function mapServiceRequestToFhir/,
+  /from "\.\/map-service-request-codings\.js"/,
+  /serviceRequestFhirProfile/,
+  /buildServiceRequestCategory/,
+  /toServiceRequestCodeableConcept/,
+  /resourceType:\s*"ServiceRequest"/
+]) {
+  if (!required.test(mapServiceRequestToFhirSource)) {
+    throw new Error(
+      "map-service-request-to-fhir.ts must keep the public ServiceRequest resource mapper and clinical references while delegating profile, SNOMED category and CodeableConcept helpers to map-service-request-codings.ts."
+    );
+  }
+}
+
+for (const forbidden of [
+  /const categoryCodings/,
+  /\bServiceRequestCategory\b/,
+  /Record<ServiceRequestCategory/,
+  /"http:\/\/snomed\.info\/sct"/,
+  /categoryCoding/
+]) {
+  if (forbidden.test(mapServiceRequestToFhirSource)) {
+    throw new Error(
+      "ServiceRequest FHIR SNOMED category and CodeableConcept mapping belong in map-service-request-codings.ts, not in the public mapper."
+    );
+  }
+}
+
+for (const required of [
+  /export const serviceRequestFhirProfile/,
+  /export function buildServiceRequestCategory/,
+  /export function toServiceRequestCodeableConcept/,
+  /ServiceRequestCategory/,
+  /ServiceRequestCode/,
+  /snomed\.info\/sct/,
+  /\blaboratory:/,
+  /\bimaging:/,
+  /\btherapy:/
+]) {
+  if (!required.test(mapServiceRequestCodingsSource)) {
+    throw new Error(
+      "map-service-request-codings.ts must keep ServiceRequest FHIR profile, SNOMED category catalog and CodeableConcept mapping."
+    );
+  }
+}
+
+for (const forbidden of [
+  /mapServiceRequestToFhir/,
+  /resourceType:\s*"ServiceRequest"/,
+  /patientId/,
+  /encounterId/,
+  /requesterPractitionerId/,
+  /performerOrganizationId/,
+  /reasonConditionId/,
+  /authoredOn/,
+  /occurrenceAt/
+]) {
+  if (forbidden.test(mapServiceRequestCodingsSource)) {
+    throw new Error(
+      "map-service-request-codings.ts must stay a coding helper and must not own ServiceRequest resource orchestration or clinical references."
     );
   }
 }
