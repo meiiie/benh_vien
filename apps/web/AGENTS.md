@@ -7,6 +7,7 @@
 ## Architecture Rules
 
 - `src/App.tsx` là composition root mỏng: khởi tạo state cấp ứng dụng, tạo API client, nối các composition function, dựng auth gate và chuyển context cho route renderer.
+- `src/App.tsx` phải giữ dưới 650 dòng theo `scripts/harness/web-app-composition.mjs`; nếu cần thêm orchestration mới, ưu tiên tách sang `src/application` hoặc feature module thay vì nới budget.
 - `src/application` chứa application composition của frontend: loader wiring, command/handler wiring, runtime effect, derived context, shell state và panel context.
 - `src/pages` chỉ chứa route/page renderer và layout hiển thị. Không đặt HTTP route, FHIR mapper, consent/audit orchestration hoặc handler matrix ở đây.
 - `src/features` sở hữu UI panel, API adapter, selector, command builder và helper của từng feature.
