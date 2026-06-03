@@ -34,13 +34,13 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/server.fhir-boundary.test.ts",
-    maxLines: 620,
+    maxLines: 480,
     role: "API FHIR export, document reference and OperationOutcome scenarios"
   },
   {
     path: "apps/api/src/server.fhir-validation-boundary.test.ts",
-    maxLines: 120,
-    role: "API FHIR validation and OperationOutcome negotiation scenarios"
+    maxLines: 260,
+    role: "API FHIR validation, primitive guard and OperationOutcome negotiation scenarios"
   },
   {
     path: "apps/api/src/server.provider-directory-boundary.test.ts",
@@ -201,11 +201,13 @@ const requiredFhirBoundaryPatterns = [
   /serves FHIR CapabilityStatement metadata without a demo session/,
   /denies nurse FHIR export even with treatment purpose/,
   /returns a patient-record FHIR Bundle for treatment export/,
-  /exports clinical document attachment metadata as FHIR DocumentReference/,
-  /rejects malformed DICOM UIDs/
+  /exports clinical document attachment metadata as FHIR DocumentReference/
 ];
 const requiredFhirValidationBoundaryPatterns = [
-  /negotiates validation errors as FHIR OperationOutcome/
+  /negotiates validation errors as FHIR OperationOutcome/,
+  /rejects clinical document attachment metadata with invalid MIME type or SHA-1 hash/,
+  /rejects FHIR unsignedInt overflows at the request boundary/,
+  /rejects malformed DICOM UIDs at the request boundary/
 ];
 const requiredProviderDirectoryBoundaryPatterns = [
   /returns provider directory and FHIR Endpoint resources/,
@@ -348,7 +350,7 @@ for (const required of requiredAuditBoundaryPatterns) {
 for (const required of requiredFhirBoundaryPatterns) {
   if (!required.test(fhirBoundarySource)) {
     throw new Error(
-      "server.fhir-boundary.test.ts must keep FHIR Bundle, DocumentReference and DICOM validation scenarios."
+      "server.fhir-boundary.test.ts must keep FHIR Bundle, DocumentReference and OperationOutcome access scenarios."
     );
   }
 }
@@ -356,7 +358,7 @@ for (const required of requiredFhirBoundaryPatterns) {
 for (const required of requiredFhirValidationBoundaryPatterns) {
   if (!required.test(fhirValidationBoundarySource)) {
     throw new Error(
-      "server.fhir-validation-boundary.test.ts must keep FHIR validation OperationOutcome negotiation scenarios."
+      "server.fhir-validation-boundary.test.ts must keep FHIR validation, unsignedInt and DICOM UID scenarios."
     );
   }
 }
