@@ -69,8 +69,13 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/server.record-transfer-boundary.test.ts",
-    maxLines: 780,
-    role: "API record-transfer lifecycle, callback and consent-guard scenarios"
+    maxLines: 560,
+    role: "API record-transfer lifecycle, retry and consent-guard scenarios"
+  },
+  {
+    path: "apps/api/src/server.record-transfer-callback-boundary.test.ts",
+    maxLines: 280,
+    role: "API record-transfer operations callback and HMAC boundary scenarios"
   },
   {
     path: "apps/api/src/server.auth.test-support.ts",
@@ -166,6 +171,9 @@ const diagnosticResourcesBoundaryPath = resolve(
 );
 const consentBoundaryPath = resolve("apps/api/src/server.consent-boundary.test.ts");
 const recordTransferBoundaryPath = resolve("apps/api/src/server.record-transfer-boundary.test.ts");
+const recordTransferCallbackBoundaryPath = resolve(
+  "apps/api/src/server.record-transfer-callback-boundary.test.ts"
+);
 
 const requiredLoginBoundaryPatterns = [
   /returns a signed demo session/,
@@ -241,10 +249,13 @@ const requiredConsentBoundaryPatterns = [
 const requiredRecordTransferBoundaryPatterns = [
   /lists record transfer packages for a patient/,
   /moves a record transfer through sent and received milestones/,
-  /accepts an operations acknowledgement callback for a sent record transfer/,
-  /requires a valid HMAC signature for acknowledgement callbacks/,
   /records failed record transfer delivery and prepares a retry/,
   /denies Bundle export when consent does not match the recipient/
+];
+const requiredRecordTransferCallbackBoundaryPatterns = [
+  /accepts an operations acknowledgement callback for a sent record transfer/,
+  /requires a valid HMAC signature for acknowledgement callbacks/,
+  /RECORD_TRANSFER_CALLBACK_SIGNATURE_INVALID/
 ];
 
 const testReports = [];
@@ -309,6 +320,10 @@ const diagnosticResourcesBoundarySource = await readFile(
 );
 const consentBoundarySource = await readFile(consentBoundaryPath, "utf8");
 const recordTransferBoundarySource = await readFile(recordTransferBoundaryPath, "utf8");
+const recordTransferCallbackBoundarySource = await readFile(
+  recordTransferCallbackBoundaryPath,
+  "utf8"
+);
 
 for (const required of requiredLoginBoundaryPatterns) {
   if (!required.test(loginBoundarySource)) {
@@ -417,7 +432,15 @@ for (const required of requiredConsentBoundaryPatterns) {
 for (const required of requiredRecordTransferBoundaryPatterns) {
   if (!required.test(recordTransferBoundarySource)) {
     throw new Error(
-      "server.record-transfer-boundary.test.ts must keep record-transfer lifecycle, callback, retry and consent-guard scenarios."
+      "server.record-transfer-boundary.test.ts must keep record-transfer lifecycle, retry and consent-guard scenarios."
+    );
+  }
+}
+
+for (const required of requiredRecordTransferCallbackBoundaryPatterns) {
+  if (!required.test(recordTransferCallbackBoundarySource)) {
+    throw new Error(
+      "server.record-transfer-callback-boundary.test.ts must keep operations callback and HMAC signature scenarios."
     );
   }
 }
