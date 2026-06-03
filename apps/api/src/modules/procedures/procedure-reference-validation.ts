@@ -14,6 +14,13 @@ export type ProcedureValidationError = {
   readonly message: string;
 };
 
+type PatientOwnedReferenceValidation = ProcedureValidationError & {
+  readonly id?: string;
+  readonly repository: {
+    readonly findById: (id: string) => Promise<{ readonly patientId: string } | undefined>;
+  };
+};
+
 type ValidateProcedureReferencesInput = {
   readonly patientId: string;
   readonly command: CreateProcedureRequest;
@@ -35,51 +42,36 @@ export async function validateProcedureReferences({
   diagnosticReportRepository,
   clinicalDocumentRepository
 }: ValidateProcedureReferencesInput): Promise<ProcedureValidationError | undefined> {
-  if (command.encounterId) {
-    const encounter = await encounterRepository.findById(command.encounterId);
-
-    if (!encounter || encounter.patientId !== patientId) {
-      return {
-        error: "ENCOUNTER_MISMATCH",
-        message: "Procedure phải gắn với lượt khám thuộc cùng bệnh nhân."
-      };
+  for (const reference of [
+    {
+      id: command.encounterId,
+      repository: encounterRepository,
+      error: "ENCOUNTER_MISMATCH",
+      message: "Procedure phải gắn với lượt khám thuộc cùng bệnh nhân."
+    },
+    {
+      id: command.basedOnServiceRequestId,
+      repository: serviceRequestRepository,
+      error: "SERVICE_REQUEST_MISMATCH",
+      message: "Procedure phải tham chiếu ServiceRequest thuộc cùng bệnh nhân."
+    },
+    {
+      id: command.partOfProcedureId,
+      repository: procedureRepository,
+      error: "PARENT_PROCEDURE_MISMATCH",
+      message: "Procedure cha phải thuộc cùng bệnh nhân."
+    },
+    {
+      id: command.reasonConditionId,
+      repository: conditionRepository,
+      error: "CONDITION_MISMATCH",
+      message: "Chẩn đoán/lý do của Procedure phải thuộc cùng bệnh nhân."
     }
-  }
+  ] as const) {
+    const error = await validatePatientOwnedReference(patientId, reference);
 
-  if (command.basedOnServiceRequestId) {
-    const serviceRequest = await serviceRequestRepository.findById(
-      command.basedOnServiceRequestId
-    );
-
-    if (!serviceRequest || serviceRequest.patientId !== patientId) {
-      return {
-        error: "SERVICE_REQUEST_MISMATCH",
-        message: "Procedure phải tham chiếu ServiceRequest thuộc cùng bệnh nhân."
-      };
-    }
-  }
-
-  if (command.partOfProcedureId) {
-    const parentProcedure = await procedureRepository.findById(
-      command.partOfProcedureId
-    );
-
-    if (!parentProcedure || parentProcedure.patientId !== patientId) {
-      return {
-        error: "PARENT_PROCEDURE_MISMATCH",
-        message: "Procedure cha phải thuộc cùng bệnh nhân."
-      };
-    }
-  }
-
-  if (command.reasonConditionId) {
-    const condition = await conditionRepository.findById(command.reasonConditionId);
-
-    if (!condition || condition.patientId !== patientId) {
-      return {
-        error: "CONDITION_MISMATCH",
-        message: "Chẩn đoán/lý do của Procedure phải thuộc cùng bệnh nhân."
-      };
+    if (error) {
+      return error;
     }
   }
 
@@ -97,4 +89,19 @@ export async function validateProcedureReferences({
   }
 
   return undefined;
+}
+
+async function validatePatientOwnedReference(
+  patientId: string,
+  reference: PatientOwnedReferenceValidation
+): Promise<ProcedureValidationError | undefined> {
+  if (!reference.id) {
+    return undefined;
+  }
+
+  const resource = await reference.repository.findById(reference.id);
+
+  return resource?.patientId === patientId
+    ? undefined
+    : { error: reference.error, message: reference.message };
 }
