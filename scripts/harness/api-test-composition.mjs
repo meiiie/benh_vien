@@ -289,8 +289,18 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/modules/record-transfers/record-transfer-retry-worker.test.ts",
-    maxLines: 280,
-    role: "RecordTransfer retry worker unit scenarios"
+    maxLines: 220,
+    role: "RecordTransfer retry worker lifecycle unit scenarios"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-retry-worker-audit-boundary.test.ts",
+    maxLines: 100,
+    role: "RecordTransfer retry worker audit persistence failure scenarios"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-retry-worker.test-support.ts",
+    maxLines: 70,
+    role: "RecordTransfer retry worker shared unit test fixtures"
   }
 ];
 
@@ -408,6 +418,15 @@ const recordTransferCallbackSignatureConfigurationTestPath = resolve(
 );
 const recordTransferCallbackSignatureTestSupportPath = resolve(
   "apps/api/src/modules/record-transfers/record-transfer-callback-signature.test-support.ts"
+);
+const recordTransferRetryWorkerTestPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-retry-worker.test.ts"
+);
+const recordTransferRetryWorkerAuditTestPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-retry-worker-audit-boundary.test.ts"
+);
+const recordTransferRetryWorkerTestSupportPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-retry-worker.test-support.ts"
 );
 
 const requiredLoginBoundaryPatterns = [
@@ -704,6 +723,27 @@ const requiredRecordTransferCallbackSignatureSupportPatterns = [
 const retiredRecordTransferCallbackSignaturePatterns = [
   /assertRecordTransferCallbackSignatureConfiguration/
 ];
+const requiredRecordTransferRetryWorkerPatterns = [
+  /returns due failed transfers to the ready queue/,
+  /dead-letters failed transfers that reached the configured retry ceiling/,
+  /record-transfer\.retry/,
+  /record-transfer\.dead-letter/
+];
+const requiredRecordTransferRetryWorkerAuditPatterns = [
+  /does not mark persisted retry lifecycle changes as skipped when audit persistence fails/,
+  /FailingAuditEventRepository/,
+  /skippedTransferIds: \[\]/
+];
+const requiredRecordTransferRetryWorkerSupportPatterns = [
+  /createFailedRecordTransfer/,
+  /FailingAuditEventRepository/,
+  /patient-worker-001/,
+  /RecordTransfer\.create/
+];
+const retiredRecordTransferRetryWorkerPatterns = [
+  /FailingAuditEventRepository/,
+  /Audit repository is unavailable/
+];
 
 const testReports = [];
 
@@ -865,6 +905,18 @@ const recordTransferCallbackSignatureConfigurationTestSource = await readFile(
 );
 const recordTransferCallbackSignatureTestSupportSource = await readFile(
   recordTransferCallbackSignatureTestSupportPath,
+  "utf8"
+);
+const recordTransferRetryWorkerTestSource = await readFile(
+  recordTransferRetryWorkerTestPath,
+  "utf8"
+);
+const recordTransferRetryWorkerAuditTestSource = await readFile(
+  recordTransferRetryWorkerAuditTestPath,
+  "utf8"
+);
+const recordTransferRetryWorkerTestSupportSource = await readFile(
+  recordTransferRetryWorkerTestSupportPath,
   "utf8"
 );
 
@@ -1288,6 +1340,38 @@ for (const retired of retiredRecordTransferCallbackSignaturePatterns) {
   if (retired.test(recordTransferCallbackSignatureTestSource)) {
     throw new Error(
       "record-transfer-callback-signature.test.ts must not absorb production startup configuration scenarios back into verification tests."
+    );
+  }
+}
+
+for (const required of requiredRecordTransferRetryWorkerPatterns) {
+  if (!required.test(recordTransferRetryWorkerTestSource)) {
+    throw new Error(
+      "record-transfer-retry-worker.test.ts must keep retry and dead-letter lifecycle scenarios."
+    );
+  }
+}
+
+for (const required of requiredRecordTransferRetryWorkerAuditPatterns) {
+  if (!required.test(recordTransferRetryWorkerAuditTestSource)) {
+    throw new Error(
+      "record-transfer-retry-worker-audit-boundary.test.ts must keep audit persistence failure scenarios."
+    );
+  }
+}
+
+for (const required of requiredRecordTransferRetryWorkerSupportPatterns) {
+  if (!required.test(recordTransferRetryWorkerTestSupportSource)) {
+    throw new Error(
+      "record-transfer-retry-worker.test-support.ts must keep shared retry worker fixtures."
+    );
+  }
+}
+
+for (const retired of retiredRecordTransferRetryWorkerPatterns) {
+  if (retired.test(recordTransferRetryWorkerTestSource)) {
+    throw new Error(
+      "record-transfer-retry-worker.test.ts must not absorb audit persistence failure fixtures back into lifecycle scenarios."
     );
   }
 }
