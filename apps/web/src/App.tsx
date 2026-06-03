@@ -1,29 +1,22 @@
 import { createClinicalApiClient } from "./api/clinicalApi.js";
 import { useAuditState } from "./features/audit/auditState.js";
 import { useClinicalRecordState } from "./features/clinical-records/clinicalRecordState.js";
-import { buildConsentLoaders } from "./features/consents/consentLoaders.js";
 import { useInteroperabilityState } from "./features/interoperability/interoperabilityState.js";
 import { buildPatientRegistrySelection } from "./features/patient-registry/patientRegistrySelectors.js";
 import { usePatientRegistryState } from "./features/patient-registry/patientRegistryState.js";
 import { buildPatientWriteGuard } from "./features/patient-registry/patientWriteGuard.js";
 import { usePlatformState } from "./features/platform/platformState.js";
 import { useFhirPreviewState } from "./features/fhir-preview/fhirPreviewState.js";
-import { buildRecordTransferLoaders } from "./features/record-transfers/recordTransferLoaders.js";
 import { AuthenticatedAppExperience } from "./pages/AuthenticatedAppExperience.js";
 import { PublicAppExperience } from "./pages/PublicAppExperience.js";
-import { buildAppAuditLoaders } from "./application/appAuditLoaders.js";
 import {
   buildAppAccessContext,
   buildAppRouteRuntimeContext,
   buildAppWorkspaceContext
 } from "./application/appDerivedContext.js";
-import { buildAppFhirPreviewLoaders } from "./application/appFhirPreviewLoaders.js";
 import { buildAppHandlerComposition } from "./application/appHandlerComposition.js";
+import { buildAppLoaderComposition } from "./application/appLoaderComposition.js";
 import { buildAppPanelComposition } from "./application/appPanelComposition.js";
-import { buildAppPatientRegistryLoaders } from "./application/appPatientRegistryLoaders.js";
-import { buildAppPatientWorkspaceLifecycle } from "./application/appPatientWorkspaceLifecycle.js";
-import { buildAppPatientWorkspaceLoaders } from "./application/appPatientWorkspaceLoaders.js";
-import { buildAppPlatformLoaders } from "./application/appPlatformLoaders.js";
 import { useAppRuntimeEffects } from "./application/appRuntimeEffects.js";
 import { useAppShellState } from "./application/appShellState.js";
 import { normalizeAuthenticatedRoute } from "./config/appNavigation.js";
@@ -109,74 +102,32 @@ export function App() {
     fhirPreviewState,
     platformState
   });
-  const patientRegistryLoaders = buildAppPatientRegistryLoaders({
-    clinicalApi,
-    isAuditOnlySession,
-    patientRegistryState,
-    setStatusMessage
-  });
-  const fhirPreviewLoaders = buildAppFhirPreviewLoaders({
+  const loaderComposition = buildAppLoaderComposition({
     auditState,
-    canReadAudit,
-    clinicalApi,
-    fhirPreviewState,
-    isAuditOnlySession,
-    platformState,
-    setStatusMessage
-  });
-  const {
-    loadProviderDirectoryFhirPreview
-  } = fhirPreviewLoaders;
-  const auditLoaders = buildAppAuditLoaders({
-    auditState,
-    canReadAudit,
-    clinicalApi,
-    setStatusMessage
-  });
-  const consentLoaders = buildConsentLoaders({
-    clinicalApi,
-    ensureSelectedPatientWritable,
-    loadConsentFhirPreview: fhirPreviewLoaders.loadConsentFhirPreview,
-    selectedPatient,
-    ...interoperabilityState,
-    setStatusMessage
-  });
-  const recordTransferLoaders = buildRecordTransferLoaders({
-    clinicalApi,
-    ...interoperabilityState,
-    setRecordTransferFhirTaskPreview:
-      fhirPreviewState.setRecordTransferFhirTaskPreview,
-    setStatusMessage
-  });
-  const platformLoaders = buildAppPlatformLoaders({
     authSession,
-    clinicalApi,
-    isAuditOnlySession,
-    loadProviderDirectoryFhirPreview,
-    platformState
-  });
-  const {
-    loadApiRuntimeInfo
-  } = platformLoaders;
-  const patientWorkspaceLoaders = buildAppPatientWorkspaceLoaders({
-    clinicalApi,
-    clinicalRecordState,
-    setStatusMessage
-  });
-  const patientWorkspaceLifecycle = buildAppPatientWorkspaceLifecycle({
-    auditState,
-    auditLoaders,
     canReadAudit,
+    clinicalApi,
     clinicalRecordState,
-    consentLoaders,
+    ensureSelectedPatientWritable,
     fhirPreviewState,
-    fhirPreviewLoaders,
     interoperabilityState,
     isAuditOnlySession,
-    patientWorkspaceLoaders,
+    patientRegistryState,
     platformState,
-    recordTransferLoaders
+    selectedPatient,
+    setStatusMessage
   });
+  const {
+    auditLoaders,
+    consentLoaders,
+    fhirPreviewLoaders,
+    patientRegistryLoaders,
+    patientWorkspaceLifecycle,
+    patientWorkspaceLoaders,
+    platformLoaders,
+    recordTransferLoaders
+  } = loaderComposition;
+  const { loadApiRuntimeInfo } = platformLoaders;
   const handlerComposition = buildAppHandlerComposition({
     auditLoaders,
     auditState,
