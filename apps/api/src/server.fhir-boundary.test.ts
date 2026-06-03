@@ -11,6 +11,11 @@ import {
   restoreAuthBoundaryEnv,
   treatmentHeaders
 } from "./server.auth.test-support.js";
+import {
+  bundleResourceTypes,
+  countBundleResource,
+  findAuditEventByRequestId
+} from "./server.fhir.test-support.js";
 
 describe("API FHIR interoperability boundary", () => {
   let app: FastifyInstance;
@@ -97,10 +102,7 @@ describe("API FHIR interoperability boundary", () => {
       headers: bundleTransferHeaders(accessToken)
     });
     const body = response.json();
-    const resourceTypes = body.entry.map(
-      (entry: { readonly resource: { readonly resourceType: string } }) =>
-        entry.resource.resourceType
-    );
+    const resourceTypes = bundleResourceTypes(body);
 
     expect(response.statusCode).toBe(200);
     expect(body).toMatchObject({
@@ -143,10 +145,6 @@ describe("API FHIR interoperability boundary", () => {
       headers: bundleTransferHeaders(accessToken)
     });
     const body = response.json();
-    const resourceTypes = body.entry.map(
-      (entry: { readonly resource: { readonly resourceType: string } }) =>
-        entry.resource.resourceType
-    );
 
     expect(response.statusCode).toBe(200);
     expect(body).toMatchObject({
@@ -166,9 +164,7 @@ describe("API FHIR interoperability boundary", () => {
       ]
     });
     expect(body.entry).toHaveLength(49);
-    expect(
-      resourceTypes.filter((resourceType: string) => resourceType === "Provenance")
-    ).toHaveLength(1);
+    expect(countBundleResource(body, "Provenance")).toBe(1);
     expect(body.entry).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -361,9 +357,9 @@ describe("API FHIR interoperability boundary", () => {
       headers: auditHeaders(auditorToken)
     });
     const auditBody = auditResponse.json();
-    const deniedAuditEvent = auditBody.items.find(
-      (event: { readonly metadata?: { readonly requestId?: string } }) =>
-        event.metadata?.requestId === "fhir-forbidden-nurse-export-001"
+    const deniedAuditEvent = findAuditEventByRequestId(
+      auditBody,
+      "fhir-forbidden-nurse-export-001"
     );
 
     expect(auditResponse.statusCode).toBe(200);
@@ -434,9 +430,9 @@ describe("API FHIR interoperability boundary", () => {
       headers: auditHeaders(auditorToken)
     });
     const auditBody = auditResponse.json();
-    const deniedAuditEvent = auditBody.items.find(
-      (event: { readonly metadata?: { readonly requestId?: string } }) =>
-        event.metadata?.requestId === "fhir-patient-abac-denied-001"
+    const deniedAuditEvent = findAuditEventByRequestId(
+      auditBody,
+      "fhir-patient-abac-denied-001"
     );
 
     expect(auditResponse.statusCode).toBe(200);
