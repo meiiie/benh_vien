@@ -277,7 +277,9 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/MedicationDispenseContextFields.tsx",
   "apps/web/src/features/clinical-records/MedicationDispenseDosageFields.tsx",
   "apps/web/src/features/clinical-records/MedicationDispenseForm.tsx",
+  "apps/web/src/features/clinical-records/MedicationDispenseList.tsx",
   "apps/web/src/features/clinical-records/MedicationDispensePanel.tsx",
+  "apps/web/src/features/clinical-records/MedicationDispenseSummary.tsx",
   "apps/web/src/features/clinical-records/MedicationDispenseSupplyFields.tsx",
   "apps/web/src/features/clinical-records/MedicationRequestForm.tsx",
   "apps/web/src/features/clinical-records/MedicationRequestContextFields.tsx",
@@ -1016,8 +1018,18 @@ const featureModuleBudgets = [
   },
   {
     path: "apps/web/src/features/clinical-records/MedicationDispensePanel.tsx",
-    maxLines: 220,
-    role: "MedicationDispense list, summary and form composition"
+    maxLines: 110,
+    role: "MedicationDispense panel composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/MedicationDispenseList.tsx",
+    maxLines: 80,
+    role: "MedicationDispense selectable list"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/MedicationDispenseSummary.tsx",
+    maxLines: 100,
+    role: "MedicationDispense selected record summary"
   },
   {
     path: "apps/web/src/features/clinical-records/MedicationDispenseForm.tsx",
