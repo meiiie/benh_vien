@@ -189,6 +189,28 @@ describe("patient record access control", () => {
     expect(canAccess(nurseActor, "record-transfer:acknowledge")).toBe(false);
   });
 
+  it("keeps nurse encounter workflow below clinician privileges", () => {
+    const clinicianActor: ActorContext = {
+      actorId: "clinician-001",
+      role: "clinician",
+      purposeOfUse: "TREATMENT"
+    };
+    const nurseActor: ActorContext = {
+      actorId: "nurse-001",
+      role: "nurse",
+      purposeOfUse: "TREATMENT"
+    };
+
+    expect(canAccess(clinicianActor, "encounter:create")).toBe(true);
+    expect(canAccess(clinicianActor, "encounter:finish")).toBe(true);
+    expect(canAccess(clinicianActor, "encounter:fhir-export")).toBe(true);
+    expect(canAccess(nurseActor, "encounter:list")).toBe(true);
+    expect(canAccess(nurseActor, "encounter:read")).toBe(true);
+    expect(canAccess(nurseActor, "encounter:create")).toBe(false);
+    expect(canAccess(nurseActor, "encounter:finish")).toBe(false);
+    expect(canAccess(nurseActor, "encounter:fhir-export")).toBe(false);
+  });
+
   it("filters patient registries by the actor treatment organization", () => {
     const actor: ActorContext = {
       actorId: "practitioner-001",
