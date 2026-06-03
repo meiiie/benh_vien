@@ -19,7 +19,7 @@ import {
 } from "./server.auth.test-support.js";
 
 describe("API record-transfer boundary", () => {
-  let app: FastifyInstance | undefined;
+  let app: FastifyInstance;
   const originalEnv = captureAuthBoundaryEnv();
 
   beforeEach(() => {
@@ -27,17 +27,19 @@ describe("API record-transfer boundary", () => {
   });
 
   afterEach(async () => {
-    if (app) {
-      await app.close();
-      app = undefined;
-    }
-
+    await app.close();
     restoreAuthBoundaryEnv(originalEnv);
   });
 
+  async function readyClinicianSession(
+    options?: Parameters<typeof readyServer>[0]
+  ): Promise<string> {
+    app = await readyServer(options);
+    return loginForToken(app, "practitioner-demo-001", "clinician");
+  }
+
   it("lists record transfer packages for a patient", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const accessToken = await readyClinicianSession();
 
     const response = await app.inject({
       method: "GET",
@@ -60,8 +62,7 @@ describe("API record-transfer boundary", () => {
   });
 
   it("creates a record transfer package and exports it as FHIR Task", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const accessToken = await readyClinicianSession();
 
     const createResponse = await app.inject({
       method: "POST",
@@ -112,8 +113,7 @@ describe("API record-transfer boundary", () => {
   });
 
   it("rejects creating a record transfer directly in the dead-lettered state", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const accessToken = await readyClinicianSession();
 
     const response = await app.inject({
       method: "POST",
@@ -143,8 +143,7 @@ describe("API record-transfer boundary", () => {
   });
 
   it("keeps JSON and FHIR not-found errors separate for record transfers", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const accessToken = await readyClinicianSession();
 
     const jsonResponse = await app.inject({
       method: "GET",
@@ -177,8 +176,7 @@ describe("API record-transfer boundary", () => {
   });
 
   it("moves a record transfer through sent and received milestones", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const accessToken = await readyClinicianSession();
 
     const sendResponse = await app.inject({
       method: "POST",
@@ -272,11 +270,10 @@ describe("API record-transfer boundary", () => {
   });
 
   it("rolls back a record transfer when queuing the delivery attempt fails", async () => {
-    app = await readyServer({
+    const accessToken = await readyClinicianSession({
       recordTransferDeliveryAttemptRepository:
         new FailingRecordTransferDeliveryAttemptRepository()
     });
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
 
     const sendResponse = await app.inject({
       method: "POST",
@@ -309,8 +306,7 @@ describe("API record-transfer boundary", () => {
   });
 
   it("accepts an operations acknowledgement callback for a sent record transfer", async () => {
-    app = await readyServer();
-    const clinicianToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const clinicianToken = await readyClinicianSession();
     const gatewayToken = await loginForToken(
       app,
       "gateway-hai-phong-referral",
@@ -433,8 +429,7 @@ describe("API record-transfer boundary", () => {
     process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON = JSON.stringify({
       [recordTransferCallbackTestKeyId]: recordTransferCallbackTestSecret
     });
-    app = await readyServer();
-    const clinicianToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const clinicianToken = await readyClinicianSession();
     const gatewayToken = await loginForToken(
       app,
       "gateway-hai-phong-referral",
@@ -528,8 +523,7 @@ describe("API record-transfer boundary", () => {
   });
 
   it("records failed record transfer delivery and prepares a retry", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const accessToken = await readyClinicianSession();
 
     const sendResponse = await app.inject({
       method: "POST",
@@ -658,8 +652,7 @@ describe("API record-transfer boundary", () => {
   });
 
   it("denies record transfer creation when consent does not cover the recipient", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const accessToken = await readyClinicianSession();
 
     const response = await app.inject({
       method: "POST",
@@ -685,8 +678,7 @@ describe("API record-transfer boundary", () => {
   });
 
   it("requires a recipient FHIR Bundle endpoint before creating a record transfer", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const accessToken = await readyClinicianSession();
 
     const consentResponse = await app.inject({
       method: "POST",
@@ -728,8 +720,7 @@ describe("API record-transfer boundary", () => {
   });
 
   it("requires transfer context before exporting a patient-record FHIR Bundle", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const accessToken = await readyClinicianSession();
 
     const response = await app.inject({
       method: "GET",
@@ -745,8 +736,7 @@ describe("API record-transfer boundary", () => {
   });
 
   it("denies Bundle export when consent does not match the recipient", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const accessToken = await readyClinicianSession();
 
     const response = await app.inject({
       method: "GET",

@@ -49,7 +49,7 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/server.record-transfer-boundary.test.ts",
-    maxLines: 820,
+    maxLines: 780,
     role: "API record-transfer lifecycle, callback and consent-guard scenarios"
   },
   {
