@@ -7,11 +7,7 @@ import type {
   RecordTransferSnapshot
 } from "@benh-vien-so/domain";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
-import type { verifyRecordTransferCallbackSignature } from "./record-transfer-callback-signature.js";
-
-type CallbackSignatureVerification = ReturnType<
-  typeof verifyRecordTransferCallbackSignature
->;
+import type { CallbackSignatureVerification } from "./record-transfer-callback-signature.js";
 
 type DuplicateAcknowledgementAuditInput = {
   readonly auditRepository: AuditEventRepository;

@@ -409,7 +409,7 @@ const routeBudgets = [
   },
   {
     path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-audit.ts",
-    maxLines: 100,
+    maxLines: 95,
     role: "RecordTransfer acknowledgement callback audit metadata"
   },
   {
