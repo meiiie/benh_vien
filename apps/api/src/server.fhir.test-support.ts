@@ -12,6 +12,15 @@ type AuditEventWithRequestMetadata = {
   };
 };
 
+export function fhirRequestHeaders(
+  headers: Record<string, string> = {}
+): Record<string, string> {
+  return {
+    ...headers,
+    accept: "application/fhir+json"
+  };
+}
+
 export function bundleResourceTypes(body: FhirBundleLike): string[] {
   return body.entry.map((entry) => entry.resource.resourceType);
 }

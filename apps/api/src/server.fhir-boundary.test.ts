@@ -15,6 +15,7 @@ import {
 import {
   bundleResourceTypes,
   countBundleResource,
+  fhirRequestHeaders,
   findAuditEventByRequestId
 } from "./server.fhir.test-support.js";
 
@@ -323,10 +324,9 @@ describe("API FHIR interoperability boundary", () => {
     const unauthenticatedResponse = await app.inject({
       method: "GET",
       url: "/api/v1/patients/patient-demo-001/fhir",
-      headers: {
-        accept: "application/fhir+json",
+      headers: fhirRequestHeaders({
         "x-request-id": "fhir-unauthenticated-001"
-      }
+      })
     });
 
     expectOperationOutcome(unauthenticatedResponse, {
@@ -339,11 +339,10 @@ describe("API FHIR interoperability boundary", () => {
     const forbiddenResponse = await app.inject({
       method: "GET",
       url: "/api/v1/patients/patient-demo-001/fhir",
-      headers: {
+      headers: fhirRequestHeaders({
         ...treatmentHeaders(nurseToken),
-        accept: "application/fhir+json",
         "x-request-id": "fhir-forbidden-nurse-export-001"
-      }
+      })
     });
 
     expectOperationOutcome(forbiddenResponse, {
@@ -409,11 +408,10 @@ describe("API FHIR interoperability boundary", () => {
     const deniedResponse = await app.inject({
       method: "GET",
       url: `/api/v1/patients/${outsidePatient.id}/fhir`,
-      headers: {
+      headers: fhirRequestHeaders({
         ...treatmentHeaders(clinicianToken),
-        accept: "application/fhir+json",
         "x-request-id": "fhir-patient-abac-denied-001"
-      }
+      })
     });
 
     expectOperationOutcome(deniedResponse, {
@@ -455,11 +453,10 @@ describe("API FHIR interoperability boundary", () => {
     const fhirResponse = await app.inject({
       method: "GET",
       url: "/api/v1/audit-events?limit=0",
-      headers: {
+      headers: fhirRequestHeaders({
         ...auditHeaders(auditorToken),
-        accept: "application/fhir+json",
         "x-request-id": "fhir-validation-error-001"
-      }
+      })
     });
 
     expectOperationOutcome(fhirResponse, {
@@ -500,10 +497,10 @@ describe("API FHIR interoperability boundary", () => {
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/documents",
-      headers: {
-        ...jsonRequestHeaders(treatmentHeaders(accessToken)),
+      headers: jsonRequestHeaders({
+        ...treatmentHeaders(accessToken),
         "x-request-id": "clinical-document-validation-001"
-      },
+      }),
       payload: {
         encounterId: "encounter-demo-001",
         type: "lab-report",
@@ -529,10 +526,10 @@ describe("API FHIR interoperability boundary", () => {
     const documentResponse = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/documents",
-      headers: {
-        ...jsonRequestHeaders(treatmentHeaders(accessToken)),
+      headers: jsonRequestHeaders({
+        ...treatmentHeaders(accessToken),
         "x-request-id": "clinical-document-unsigned-int-001"
-      },
+      }),
       payload: {
         encounterId: "encounter-demo-001",
         type: "lab-report",
@@ -552,10 +549,10 @@ describe("API FHIR interoperability boundary", () => {
     const imagingResponse = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/imaging-studies",
-      headers: {
-        ...jsonRequestHeaders(treatmentHeaders(accessToken)),
+      headers: jsonRequestHeaders({
+        ...treatmentHeaders(accessToken),
         "x-request-id": "imaging-study-unsigned-int-001"
-      },
+      }),
       payload: {
         studyInstanceUid: "1.2.826.0.1.3680043.10.543.202605270100",
         series: [
@@ -586,10 +583,10 @@ describe("API FHIR interoperability boundary", () => {
     const invalidStudyUidResponse = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/imaging-studies",
-      headers: {
-        ...jsonRequestHeaders(treatmentHeaders(accessToken)),
+      headers: jsonRequestHeaders({
+        ...treatmentHeaders(accessToken),
         "x-request-id": "imaging-study-invalid-study-uid-001"
-      },
+      }),
       payload: {
         studyInstanceUid: "1.2.826.0.01.3680043.10.543.202605270101",
         series: [
@@ -615,10 +612,10 @@ describe("API FHIR interoperability boundary", () => {
     const invalidSeriesUidResponse = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/imaging-studies",
-      headers: {
-        ...jsonRequestHeaders(treatmentHeaders(accessToken)),
+      headers: jsonRequestHeaders({
+        ...treatmentHeaders(accessToken),
         "x-request-id": "imaging-study-invalid-series-uid-001"
-      },
+      }),
       payload: {
         studyInstanceUid: "1.2.826.0.1.3680043.10.543.202605270102",
         series: [
