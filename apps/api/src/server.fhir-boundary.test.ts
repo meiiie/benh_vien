@@ -6,6 +6,7 @@ import {
   bundleTransferHeaders,
   captureAuthBoundaryEnv,
   expectOperationOutcome,
+  jsonRequestHeaders,
   loginForToken,
   readyServer,
   restoreAuthBoundaryEnv,
@@ -387,10 +388,7 @@ describe("API FHIR interoperability boundary", () => {
     const outsidePatientResponse = await app.inject({
       method: "POST",
       url: "/api/v1/patients",
-      headers: {
-        ...treatmentHeaders(adminToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(adminToken)),
       payload: {
         identifiers: [
           {
@@ -503,8 +501,7 @@ describe("API FHIR interoperability boundary", () => {
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/documents",
       headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json",
+        ...jsonRequestHeaders(treatmentHeaders(accessToken)),
         "x-request-id": "clinical-document-validation-001"
       },
       payload: {
@@ -533,8 +530,7 @@ describe("API FHIR interoperability boundary", () => {
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/documents",
       headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json",
+        ...jsonRequestHeaders(treatmentHeaders(accessToken)),
         "x-request-id": "clinical-document-unsigned-int-001"
       },
       payload: {
@@ -557,8 +553,7 @@ describe("API FHIR interoperability boundary", () => {
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/imaging-studies",
       headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json",
+        ...jsonRequestHeaders(treatmentHeaders(accessToken)),
         "x-request-id": "imaging-study-unsigned-int-001"
       },
       payload: {
@@ -592,8 +587,7 @@ describe("API FHIR interoperability boundary", () => {
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/imaging-studies",
       headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json",
+        ...jsonRequestHeaders(treatmentHeaders(accessToken)),
         "x-request-id": "imaging-study-invalid-study-uid-001"
       },
       payload: {
@@ -622,8 +616,7 @@ describe("API FHIR interoperability boundary", () => {
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/imaging-studies",
       headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json",
+        ...jsonRequestHeaders(treatmentHeaders(accessToken)),
         "x-request-id": "imaging-study-invalid-series-uid-001"
       },
       payload: {
