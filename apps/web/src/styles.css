@@ -201,6 +201,19 @@
   padding: 24px clamp(16px, 3vw, 32px) 56px;
 }
 
+.app-loading-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  color: var(--harbor-ink);
+  background:
+    radial-gradient(circle at 50% 35%, rgba(20, 184, 166, 0.16), transparent 32%),
+    linear-gradient(180deg, #f7f4ec 0%, #eef6f3 100%);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
 .app-topbar {
   display: flex;
   align-items: center;
