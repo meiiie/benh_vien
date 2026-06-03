@@ -4,6 +4,7 @@ import type {
 } from "../medication-request/medication-request.types.js";
 import { DomainError } from "../shared/domain-error.js";
 import {
+  assertDateNotBefore,
   normalizeOptionalText as normalizeOptional,
   normalizeRequiredText as normalizeRequired,
   parseRequiredDate as parseDate
@@ -107,9 +108,7 @@ export function assertMedicationAdministrationLifecycle(
 }
 
 export function validatePersistenceTimeline(createdAt: Date, updatedAt: Date): void {
-  if (updatedAt.getTime() < createdAt.getTime()) {
-    throw new DomainError("Thời điểm cập nhật lần dùng thuốc không được trước thời điểm tạo lần dùng.");
-  }
+  assertDateNotBefore(updatedAt, createdAt, "Thời điểm cập nhật lần dùng thuốc không được trước thời điểm tạo lần dùng.");
 }
 
 function normalizeQuantity(quantity: MedicationQuantity): MedicationQuantity {

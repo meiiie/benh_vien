@@ -1,5 +1,6 @@
 import { DomainError } from "../shared/domain-error.js";
 import {
+  assertDateNotBefore,
   normalizeOptionalText as normalizeOptional,
   normalizeRequiredText as normalizeRequired,
   parseRequiredDate as parseDate
@@ -114,7 +115,5 @@ export function validateSelfReference(id: string, partOfProcedureId: string | un
 }
 
 export function validatePersistenceTimeline(createdAt: Date, updatedAt: Date): void {
-  if (updatedAt < createdAt) {
-    throw new DomainError("Thời điểm cập nhật thủ thuật không được trước thời điểm tạo thủ thuật.");
-  }
+  assertDateNotBefore(updatedAt, createdAt, "Thời điểm cập nhật thủ thuật không được trước thời điểm tạo thủ thuật.");
 }

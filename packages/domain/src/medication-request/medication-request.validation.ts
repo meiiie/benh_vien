@@ -1,5 +1,6 @@
 import { DomainError } from "../shared/domain-error.js";
 import {
+  assertDateNotBefore,
   normalizeOptionalText as normalizeOptional,
   normalizePositiveNumber,
   normalizeRequiredText as normalizeRequired,
@@ -106,9 +107,7 @@ export function normalizePriority(value: MedicationRequestPriority): MedicationR
 }
 
 export function validatePersistenceTimeline(createdAt: Date, updatedAt: Date): void {
-  if (updatedAt.getTime() < createdAt.getTime()) {
-    throw new DomainError("Thời điểm cập nhật chỉ định thuốc không được trước thời điểm tạo chỉ định.");
-  }
+  assertDateNotBefore(updatedAt, createdAt, "Thời điểm cập nhật chỉ định thuốc không được trước thời điểm tạo chỉ định.");
 }
 
 function normalizeTimingUnit(value: MedicationTimingUnit): MedicationTimingUnit {

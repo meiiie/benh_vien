@@ -6,6 +6,7 @@ import type {
 import { medicationTimingUnits } from "../medication-request/medication-request.types.js";
 import { DomainError } from "../shared/domain-error.js";
 import {
+  assertDateNotBefore,
   normalizeOptionalText as normalizeOptional,
   normalizePositiveNumber,
   normalizeRequiredText as normalizeRequired,
@@ -126,9 +127,7 @@ export function normalizeCategory(value: MedicationDispenseCategory): Medication
 }
 
 export function validatePersistenceTimeline(createdAt: Date, updatedAt: Date): void {
-  if (updatedAt.getTime() < createdAt.getTime()) {
-    throw new DomainError("Thời điểm cập nhật cấp phát thuốc không được trước thời điểm tạo cấp phát.");
-  }
+  assertDateNotBefore(updatedAt, createdAt, "Thời điểm cập nhật cấp phát thuốc không được trước thời điểm tạo cấp phát.");
 }
 
 function normalizeTimingUnit(

@@ -25,6 +25,12 @@ export function parseRequiredDate(value: string, message: string): Date {
   return date;
 }
 
+export function assertDateNotBefore(value: Date, lowerBound: Date, message: string): void {
+  if (value.getTime() < lowerBound.getTime()) {
+    throw new DomainError(message);
+  }
+}
+
 export function normalizePositiveNumber(
   value: number | undefined,
   message: string
