@@ -9,6 +9,10 @@ import {
   treatmentHeaders
 } from "./server.auth.test-support.js";
 
+type ClinicalResourceListBody = {
+  readonly items: readonly { readonly id: string }[];
+};
+
 describe("API clinical resource boundary", () => {
   let app: FastifyInstance;
   let accessToken: string;
@@ -24,6 +28,23 @@ describe("API clinical resource boundary", () => {
     await app.close();
     restoreAuthBoundaryEnv(originalEnv);
   });
+
+  async function getTreatmentJson(url: string): Promise<Record<string, unknown>> {
+    const response = await app.inject({
+      method: "GET",
+      url,
+      headers: treatmentHeaders(accessToken)
+    });
+
+    expect(response.statusCode).toBe(200);
+    return response.json() as Record<string, unknown>;
+  }
+
+  async function getClinicalResourceList(
+    url: string
+  ): Promise<ClinicalResourceListBody> {
+    return (await getTreatmentJson(url)) as ClinicalResourceListBody;
+  }
 
   it("returns provider directory and FHIR Endpoint resources", async () => {
     const directoryResponse = await app.inject({
@@ -69,14 +90,10 @@ describe("API clinical resource boundary", () => {
   });
 
   it("lists workflow tasks and exports them as FHIR Task", async () => {
-    const listResponse = await app.inject({
-      method: "GET",
-      url: "/api/v1/patients/patient-demo-001/workflow-tasks",
-      headers: treatmentHeaders(accessToken)
-    });
-    const listBody = listResponse.json();
+    const listBody = await getClinicalResourceList(
+      "/api/v1/patients/patient-demo-001/workflow-tasks"
+    );
 
-    expect(listResponse.statusCode).toBe(200);
     expect(listBody.items).toHaveLength(2);
     expect(listBody.items).toEqual(
       expect.arrayContaining([
@@ -88,14 +105,11 @@ describe("API clinical resource boundary", () => {
       ])
     );
 
-    const fhirResponse = await app.inject({
-      method: "GET",
-      url: "/api/v1/workflow-tasks/workflow-task-demo-002/fhir",
-      headers: treatmentHeaders(accessToken)
-    });
+    const fhirBody = await getTreatmentJson(
+      "/api/v1/workflow-tasks/workflow-task-demo-002/fhir"
+    );
 
-    expect(fhirResponse.statusCode).toBe(200);
-    expect(fhirResponse.json()).toMatchObject({
+    expect(fhirBody).toMatchObject({
       resourceType: "Task",
       id: "workflow-task-demo-002",
       status: "completed",
@@ -114,14 +128,10 @@ describe("API clinical resource boundary", () => {
   });
 
   it("lists procedures and exports them as FHIR Procedure", async () => {
-    const listResponse = await app.inject({
-      method: "GET",
-      url: "/api/v1/patients/patient-demo-001/procedures",
-      headers: treatmentHeaders(accessToken)
-    });
-    const listBody = listResponse.json();
+    const listBody = await getClinicalResourceList(
+      "/api/v1/patients/patient-demo-001/procedures"
+    );
 
-    expect(listResponse.statusCode).toBe(200);
     expect(listBody.items).toHaveLength(2);
     expect(listBody.items).toEqual(
       expect.arrayContaining([
@@ -133,14 +143,11 @@ describe("API clinical resource boundary", () => {
       ])
     );
 
-    const fhirResponse = await app.inject({
-      method: "GET",
-      url: "/api/v1/procedures/procedure-demo-001/fhir",
-      headers: treatmentHeaders(accessToken)
-    });
+    const fhirBody = await getTreatmentJson(
+      "/api/v1/procedures/procedure-demo-001/fhir"
+    );
 
-    expect(fhirResponse.statusCode).toBe(200);
-    expect(fhirResponse.json()).toMatchObject({
+    expect(fhirBody).toMatchObject({
       resourceType: "Procedure",
       id: "procedure-demo-001",
       status: "completed",
@@ -216,24 +223,17 @@ describe("API clinical resource boundary", () => {
   });
 
   it("lists allergy intolerances and exports them as FHIR AllergyIntolerance", async () => {
-    const listResponse = await app.inject({
-      method: "GET",
-      url: "/api/v1/patients/patient-demo-001/allergy-intolerances",
-      headers: treatmentHeaders(accessToken)
-    });
-    const listBody = listResponse.json();
+    const listBody = await getClinicalResourceList(
+      "/api/v1/patients/patient-demo-001/allergy-intolerances"
+    );
 
-    expect(listResponse.statusCode).toBe(200);
     expect(listBody.items).toHaveLength(2);
 
-    const fhirResponse = await app.inject({
-      method: "GET",
-      url: `/api/v1/allergy-intolerances/${listBody.items[0].id}/fhir`,
-      headers: treatmentHeaders(accessToken)
-    });
+    const fhirBody = await getTreatmentJson(
+      `/api/v1/allergy-intolerances/${listBody.items[0].id}/fhir`
+    );
 
-    expect(fhirResponse.statusCode).toBe(200);
-    expect(fhirResponse.json()).toMatchObject({
+    expect(fhirBody).toMatchObject({
       resourceType: "AllergyIntolerance",
       patient: {
         reference: "Patient/patient-demo-001"
@@ -282,24 +282,17 @@ describe("API clinical resource boundary", () => {
   });
 
   it("lists conditions and exports them as FHIR Condition", async () => {
-    const listResponse = await app.inject({
-      method: "GET",
-      url: "/api/v1/patients/patient-demo-001/conditions",
-      headers: treatmentHeaders(accessToken)
-    });
-    const listBody = listResponse.json();
+    const listBody = await getClinicalResourceList(
+      "/api/v1/patients/patient-demo-001/conditions"
+    );
 
-    expect(listResponse.statusCode).toBe(200);
     expect(listBody.items).toHaveLength(2);
 
-    const fhirResponse = await app.inject({
-      method: "GET",
-      url: `/api/v1/conditions/${listBody.items[0].id}/fhir`,
-      headers: treatmentHeaders(accessToken)
-    });
+    const fhirBody = await getTreatmentJson(
+      `/api/v1/conditions/${listBody.items[0].id}/fhir`
+    );
 
-    expect(fhirResponse.statusCode).toBe(200);
-    expect(fhirResponse.json()).toMatchObject({
+    expect(fhirBody).toMatchObject({
       resourceType: "Condition",
       subject: {
         reference: "Patient/patient-demo-001"
@@ -339,24 +332,17 @@ describe("API clinical resource boundary", () => {
   });
 
   it("lists observations and exports them as FHIR Observation", async () => {
-    const listResponse = await app.inject({
-      method: "GET",
-      url: "/api/v1/patients/patient-demo-001/observations",
-      headers: treatmentHeaders(accessToken)
-    });
-    const listBody = listResponse.json();
+    const listBody = await getClinicalResourceList(
+      "/api/v1/patients/patient-demo-001/observations"
+    );
 
-    expect(listResponse.statusCode).toBe(200);
     expect(listBody.items).toHaveLength(2);
 
-    const fhirResponse = await app.inject({
-      method: "GET",
-      url: `/api/v1/observations/${listBody.items[0].id}/fhir`,
-      headers: treatmentHeaders(accessToken)
-    });
+    const fhirBody = await getTreatmentJson(
+      `/api/v1/observations/${listBody.items[0].id}/fhir`
+    );
 
-    expect(fhirResponse.statusCode).toBe(200);
-    expect(fhirResponse.json()).toMatchObject({
+    expect(fhirBody).toMatchObject({
       resourceType: "Observation",
       subject: {
         reference: "Patient/patient-demo-001"
@@ -400,24 +386,17 @@ describe("API clinical resource boundary", () => {
   });
 
   it("lists medication requests and exports them as FHIR MedicationRequest", async () => {
-    const listResponse = await app.inject({
-      method: "GET",
-      url: "/api/v1/patients/patient-demo-001/medication-requests",
-      headers: treatmentHeaders(accessToken)
-    });
-    const listBody = listResponse.json();
+    const listBody = await getClinicalResourceList(
+      "/api/v1/patients/patient-demo-001/medication-requests"
+    );
 
-    expect(listResponse.statusCode).toBe(200);
     expect(listBody.items).toHaveLength(2);
 
-    const fhirResponse = await app.inject({
-      method: "GET",
-      url: `/api/v1/medication-requests/${listBody.items[0].id}/fhir`,
-      headers: treatmentHeaders(accessToken)
-    });
+    const fhirBody = await getTreatmentJson(
+      `/api/v1/medication-requests/${listBody.items[0].id}/fhir`
+    );
 
-    expect(fhirResponse.statusCode).toBe(200);
-    expect(fhirResponse.json()).toMatchObject({
+    expect(fhirBody).toMatchObject({
       resourceType: "MedicationRequest",
       status: "active",
       intent: "order",
@@ -428,14 +407,10 @@ describe("API clinical resource boundary", () => {
   });
 
   it("lists medication dispenses and exports them as FHIR MedicationDispense", async () => {
-    const listResponse = await app.inject({
-      method: "GET",
-      url: "/api/v1/patients/patient-demo-001/medication-dispenses",
-      headers: treatmentHeaders(accessToken)
-    });
-    const listBody = listResponse.json();
+    const listBody = await getClinicalResourceList(
+      "/api/v1/patients/patient-demo-001/medication-dispenses"
+    );
 
-    expect(listResponse.statusCode).toBe(200);
     expect(listBody.items).toHaveLength(2);
     expect(listBody.items).toEqual(
       expect.arrayContaining([
@@ -447,14 +422,11 @@ describe("API clinical resource boundary", () => {
       ])
     );
 
-    const fhirResponse = await app.inject({
-      method: "GET",
-      url: "/api/v1/medication-dispenses/medication-dispense-demo-002/fhir",
-      headers: treatmentHeaders(accessToken)
-    });
+    const fhirBody = await getTreatmentJson(
+      "/api/v1/medication-dispenses/medication-dispense-demo-002/fhir"
+    );
 
-    expect(fhirResponse.statusCode).toBe(200);
-    expect(fhirResponse.json()).toMatchObject({
+    expect(fhirBody).toMatchObject({
       resourceType: "MedicationDispense",
       id: "medication-dispense-demo-002",
       status: "completed",
@@ -530,14 +502,10 @@ describe("API clinical resource boundary", () => {
   });
 
   it("lists medication administrations and exports them as FHIR MedicationAdministration", async () => {
-    const listResponse = await app.inject({
-      method: "GET",
-      url: "/api/v1/patients/patient-demo-001/medication-administrations",
-      headers: treatmentHeaders(accessToken)
-    });
-    const listBody = listResponse.json();
+    const listBody = await getClinicalResourceList(
+      "/api/v1/patients/patient-demo-001/medication-administrations"
+    );
 
-    expect(listResponse.statusCode).toBe(200);
     expect(listBody.items).toHaveLength(2);
     expect(listBody.items).toEqual(
       expect.arrayContaining([
@@ -549,14 +517,11 @@ describe("API clinical resource boundary", () => {
       ])
     );
 
-    const fhirResponse = await app.inject({
-      method: "GET",
-      url: "/api/v1/medication-administrations/medication-administration-demo-002/fhir",
-      headers: treatmentHeaders(accessToken)
-    });
+    const fhirBody = await getTreatmentJson(
+      "/api/v1/medication-administrations/medication-administration-demo-002/fhir"
+    );
 
-    expect(fhirResponse.statusCode).toBe(200);
-    expect(fhirResponse.json()).toMatchObject({
+    expect(fhirBody).toMatchObject({
       resourceType: "MedicationAdministration",
       id: "medication-administration-demo-002",
       status: "completed",
@@ -669,24 +634,17 @@ describe("API clinical resource boundary", () => {
   });
 
   it("lists service requests and exports them as FHIR ServiceRequest", async () => {
-    const listResponse = await app.inject({
-      method: "GET",
-      url: "/api/v1/patients/patient-demo-001/service-requests",
-      headers: treatmentHeaders(accessToken)
-    });
-    const listBody = listResponse.json();
+    const listBody = await getClinicalResourceList(
+      "/api/v1/patients/patient-demo-001/service-requests"
+    );
 
-    expect(listResponse.statusCode).toBe(200);
     expect(listBody.items).toHaveLength(2);
 
-    const fhirResponse = await app.inject({
-      method: "GET",
-      url: `/api/v1/service-requests/${listBody.items[0].id}/fhir`,
-      headers: treatmentHeaders(accessToken)
-    });
+    const fhirBody = await getTreatmentJson(
+      `/api/v1/service-requests/${listBody.items[0].id}/fhir`
+    );
 
-    expect(fhirResponse.statusCode).toBe(200);
-    expect(fhirResponse.json()).toMatchObject({
+    expect(fhirBody).toMatchObject({
       resourceType: "ServiceRequest",
       status: "active",
       intent: "order",
@@ -732,24 +690,17 @@ describe("API clinical resource boundary", () => {
   });
 
   it("lists diagnostic reports and exports them as FHIR DiagnosticReport", async () => {
-    const listResponse = await app.inject({
-      method: "GET",
-      url: "/api/v1/patients/patient-demo-001/diagnostic-reports",
-      headers: treatmentHeaders(accessToken)
-    });
-    const listBody = listResponse.json();
+    const listBody = await getClinicalResourceList(
+      "/api/v1/patients/patient-demo-001/diagnostic-reports"
+    );
 
-    expect(listResponse.statusCode).toBe(200);
     expect(listBody.items).toHaveLength(2);
 
-    const fhirResponse = await app.inject({
-      method: "GET",
-      url: `/api/v1/diagnostic-reports/${listBody.items[0].id}/fhir`,
-      headers: treatmentHeaders(accessToken)
-    });
+    const fhirBody = await getTreatmentJson(
+      `/api/v1/diagnostic-reports/${listBody.items[0].id}/fhir`
+    );
 
-    expect(fhirResponse.statusCode).toBe(200);
-    expect(fhirResponse.json()).toMatchObject({
+    expect(fhirBody).toMatchObject({
       resourceType: "DiagnosticReport",
       subject: {
         reference: "Patient/patient-demo-001"
@@ -799,24 +750,17 @@ describe("API clinical resource boundary", () => {
   });
 
   it("lists imaging studies and exports them as FHIR ImagingStudy", async () => {
-    const listResponse = await app.inject({
-      method: "GET",
-      url: "/api/v1/patients/patient-demo-001/imaging-studies",
-      headers: treatmentHeaders(accessToken)
-    });
-    const listBody = listResponse.json();
+    const listBody = await getClinicalResourceList(
+      "/api/v1/patients/patient-demo-001/imaging-studies"
+    );
 
-    expect(listResponse.statusCode).toBe(200);
     expect(listBody.items).toHaveLength(1);
 
-    const fhirResponse = await app.inject({
-      method: "GET",
-      url: `/api/v1/imaging-studies/${listBody.items[0].id}/fhir`,
-      headers: treatmentHeaders(accessToken)
-    });
+    const fhirBody = await getTreatmentJson(
+      `/api/v1/imaging-studies/${listBody.items[0].id}/fhir`
+    );
 
-    expect(fhirResponse.statusCode).toBe(200);
-    expect(fhirResponse.json()).toMatchObject({
+    expect(fhirBody).toMatchObject({
       resourceType: "ImagingStudy",
       subject: {
         reference: "Patient/patient-demo-001"

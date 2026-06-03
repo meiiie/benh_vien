@@ -39,7 +39,7 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/server.clinical-resources.test.ts",
-    maxLines: 930,
+    maxLines: 850,
     role: "API provider directory and clinical resource scenarios"
   },
   {
