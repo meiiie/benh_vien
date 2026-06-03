@@ -10,26 +10,22 @@ import {
 } from "./server.auth.test-support.js";
 
 describe("API clinical resource boundary", () => {
-  let app: FastifyInstance | undefined;
+  let app: FastifyInstance;
+  let accessToken: string;
   const originalEnv = captureAuthBoundaryEnv();
 
-  beforeEach(() => {
+  beforeEach(async () => {
     applyDefaultAuthBoundaryEnv();
+    app = await readyServer();
+    accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
   });
 
   afterEach(async () => {
-    if (app) {
-      await app.close();
-      app = undefined;
-    }
-
+    await app.close();
     restoreAuthBoundaryEnv(originalEnv);
   });
 
   it("returns provider directory and FHIR Endpoint resources", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-
     const directoryResponse = await app.inject({
       method: "GET",
       url: "/api/v1/provider-directory",
@@ -73,9 +69,6 @@ describe("API clinical resource boundary", () => {
   });
 
   it("lists workflow tasks and exports them as FHIR Task", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-
     const listResponse = await app.inject({
       method: "GET",
       url: "/api/v1/patients/patient-demo-001/workflow-tasks",
@@ -121,9 +114,6 @@ describe("API clinical resource boundary", () => {
   });
 
   it("lists procedures and exports them as FHIR Procedure", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-
     const listResponse = await app.inject({
       method: "GET",
       url: "/api/v1/patients/patient-demo-001/procedures",
@@ -171,9 +161,6 @@ describe("API clinical resource boundary", () => {
   });
 
   it("creates a procedure linked to a service request and diagnostic report", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/procedures",
@@ -229,9 +216,6 @@ describe("API clinical resource boundary", () => {
   });
 
   it("lists allergy intolerances and exports them as FHIR AllergyIntolerance", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-
     const listResponse = await app.inject({
       method: "GET",
       url: "/api/v1/patients/patient-demo-001/allergy-intolerances",
@@ -258,9 +242,6 @@ describe("API clinical resource boundary", () => {
   });
 
   it("creates an allergy intolerance attached to the selected patient encounter", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/allergy-intolerances",
@@ -301,9 +282,6 @@ describe("API clinical resource boundary", () => {
   });
 
   it("lists conditions and exports them as FHIR Condition", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-
     const listResponse = await app.inject({
       method: "GET",
       url: "/api/v1/patients/patient-demo-001/conditions",
@@ -330,9 +308,6 @@ describe("API clinical resource boundary", () => {
   });
 
   it("creates a condition attached to the selected patient encounter", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/conditions",
@@ -364,9 +339,6 @@ describe("API clinical resource boundary", () => {
   });
 
   it("lists observations and exports them as FHIR Observation", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-
     const listResponse = await app.inject({
       method: "GET",
       url: "/api/v1/patients/patient-demo-001/observations",
@@ -393,9 +365,6 @@ describe("API clinical resource boundary", () => {
   });
 
   it("creates an observation attached to the selected patient encounter", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/observations",
@@ -431,9 +400,6 @@ describe("API clinical resource boundary", () => {
   });
 
   it("lists medication requests and exports them as FHIR MedicationRequest", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-
     const listResponse = await app.inject({
       method: "GET",
       url: "/api/v1/patients/patient-demo-001/medication-requests",
@@ -462,9 +428,6 @@ describe("API clinical resource boundary", () => {
   });
 
   it("lists medication dispenses and exports them as FHIR MedicationDispense", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-
     const listResponse = await app.inject({
       method: "GET",
       url: "/api/v1/patients/patient-demo-001/medication-dispenses",
@@ -507,9 +470,6 @@ describe("API clinical resource boundary", () => {
   });
 
   it("creates a medication dispense linked to the original medication request", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/medication-dispenses",
@@ -570,9 +530,6 @@ describe("API clinical resource boundary", () => {
   });
 
   it("lists medication administrations and exports them as FHIR MedicationAdministration", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-
     const listResponse = await app.inject({
       method: "GET",
       url: "/api/v1/patients/patient-demo-001/medication-administrations",
@@ -613,9 +570,6 @@ describe("API clinical resource boundary", () => {
   });
 
   it("creates a medication administration linked to the original medication request", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/medication-administrations",
@@ -671,9 +625,6 @@ describe("API clinical resource boundary", () => {
   });
 
   it("creates a medication request linked to a patient condition", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/medication-requests",
@@ -718,9 +669,6 @@ describe("API clinical resource boundary", () => {
   });
 
   it("lists service requests and exports them as FHIR ServiceRequest", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-
     const listResponse = await app.inject({
       method: "GET",
       url: "/api/v1/patients/patient-demo-001/service-requests",
@@ -749,9 +697,6 @@ describe("API clinical resource boundary", () => {
   });
 
   it("creates a service request linked to a patient condition", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/service-requests",
@@ -787,9 +732,6 @@ describe("API clinical resource boundary", () => {
   });
 
   it("lists diagnostic reports and exports them as FHIR DiagnosticReport", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-
     const listResponse = await app.inject({
       method: "GET",
       url: "/api/v1/patients/patient-demo-001/diagnostic-reports",
@@ -821,9 +763,6 @@ describe("API clinical resource boundary", () => {
   });
 
   it("creates a diagnostic report linked to a service request and observation result", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/diagnostic-reports",
@@ -860,9 +799,6 @@ describe("API clinical resource boundary", () => {
   });
 
   it("lists imaging studies and exports them as FHIR ImagingStudy", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-
     const listResponse = await app.inject({
       method: "GET",
       url: "/api/v1/patients/patient-demo-001/imaging-studies",
@@ -900,9 +836,6 @@ describe("API clinical resource boundary", () => {
   });
 
   it("creates an imaging study linked to a service request and diagnostic report", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/imaging-studies",
