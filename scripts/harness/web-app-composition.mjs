@@ -377,7 +377,10 @@ const requiredModules = [
   "apps/web/src/features/record-transfers/recordTransferLabelFormatters.ts",
   "apps/web/src/features/record-transfers/recordTransferLifecycleHandlers.ts",
   "apps/web/src/features/record-transfers/recordTransferLoaderHelpers.ts",
+  "apps/web/src/features/record-transfers/recordTransferOperationalSummaryMetrics.ts",
   "apps/web/src/features/record-transfers/recordTransferOperationalSummaryModel.ts",
+  "apps/web/src/features/record-transfers/recordTransferOperationalSummaryStateModel.ts",
+  "apps/web/src/features/record-transfers/recordTransferOperationalSummaryTypes.ts",
   "apps/web/src/lib/auditFormatters.ts",
   "apps/web/src/lib/clinicalFormatters.ts",
   "apps/web/src/lib/commandDrafts.ts",
@@ -667,8 +670,23 @@ const featureModuleBudgets = [
   },
   {
     path: "apps/web/src/features/record-transfers/recordTransferOperationalSummaryModel.ts",
-    maxLines: 220,
-    role: "Record transfer operational summary model"
+    maxLines: 40,
+    role: "Record transfer operational summary composition"
+  },
+  {
+    path: "apps/web/src/features/record-transfers/recordTransferOperationalSummaryTypes.ts",
+    maxLines: 60,
+    role: "Record transfer operational summary view model types"
+  },
+  {
+    path: "apps/web/src/features/record-transfers/recordTransferOperationalSummaryMetrics.ts",
+    maxLines: 80,
+    role: "Record transfer delivery attempt metrics and technical signals"
+  },
+  {
+    path: "apps/web/src/features/record-transfers/recordTransferOperationalSummaryStateModel.ts",
+    maxLines: 180,
+    role: "Record transfer status-specific operational summary messages"
   },
   {
     path: "apps/web/src/features/clinical-records/clinicalRecordPanelRenderers.tsx",
