@@ -4,7 +4,6 @@ import {
   applyDefaultAuthBoundaryEnv,
   auditHeaders,
   captureAuthBoundaryEnv,
-  expectOperationOutcome,
   jsonRequestHeaders,
   login,
   loginForToken,
@@ -89,91 +88,6 @@ describe("API auth login boundary", () => {
 
     expect(sessionResponse.statusCode).toBe(200);
     expect(patientResponse.statusCode).toBe(200);
-  });
-
-  it("rejects invalid purpose-of-use headers instead of silently defaulting to treatment", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
-
-    const jsonResponse = await app.inject({
-      method: "GET",
-      url: "/api/v1/patients",
-      headers: {
-        authorization: `Bearer ${accessToken}`,
-        "x-purpose-of-use": "BREAK_GLASS",
-        "x-request-id": "invalid-purpose-json-001"
-      }
-    });
-    const fhirResponse = await app.inject({
-      method: "GET",
-      url: "/api/v1/patients/patient-demo-001/fhir",
-      headers: {
-        authorization: `Bearer ${accessToken}`,
-        accept: "application/fhir+json",
-        "x-purpose-of-use": "BREAK_GLASS",
-        "x-request-id": "invalid-purpose-fhir-001"
-      }
-    });
-
-    expect(jsonResponse.statusCode).toBe(400);
-    expect(jsonResponse.json()).toMatchObject({
-      error: "INVALID_PURPOSE_OF_USE",
-      requestId: "invalid-purpose-json-001",
-      allowedPurposeOfUse: ["TREATMENT", "AUDIT", "OPERATIONS"]
-    });
-    expectOperationOutcome(fhirResponse, {
-      statusCode: 400,
-      code: "invalid",
-      detailsCode: "INVALID_PURPOSE_OF_USE"
-    });
-
-    const auditorToken = await loginForToken(app, "security-officer-demo", "auditor");
-    const auditResponse = await app.inject({
-      method: "GET",
-      url: "/api/v1/audit-events?limit=25",
-      headers: auditHeaders(auditorToken)
-    });
-    const auditBody = auditResponse.json();
-    const jsonDeniedAuditEvent = auditBody.items.find(
-      (event: { readonly metadata?: { readonly requestId?: string } }) =>
-        event.metadata?.requestId === "invalid-purpose-json-001"
-    );
-    const fhirDeniedAuditEvent = auditBody.items.find(
-      (event: { readonly metadata?: { readonly requestId?: string } }) =>
-        event.metadata?.requestId === "invalid-purpose-fhir-001"
-    );
-
-    expect(auditResponse.statusCode).toBe(200);
-    expect(jsonDeniedAuditEvent).toMatchObject({
-      action: "access.denied",
-      resourceType: "AuditEvent",
-      resourceId: "x-purpose-of-use",
-      purposeOfUse: "OPERATIONS",
-      metadata: expect.objectContaining({
-        denialCode: "INVALID_PURPOSE_OF_USE",
-        deniedActorId: "practitioner-demo-001",
-        deniedActorRole: "clinician",
-        deniedActorPurposeOfUse: "INVALID",
-        rejectedHeader: "x-purpose-of-use",
-        route: "GET /api/v1/patients",
-        statusCode: 400
-      })
-    });
-    expect(fhirDeniedAuditEvent).toMatchObject({
-      action: "access.denied",
-      resourceType: "AuditEvent",
-      resourceId: "x-purpose-of-use",
-      purposeOfUse: "OPERATIONS",
-      metadata: expect.objectContaining({
-        denialCode: "INVALID_PURPOSE_OF_USE",
-        deniedActorId: "practitioner-demo-001",
-        deniedActorRole: "clinician",
-        deniedActorPurposeOfUse: "INVALID",
-        rejectedHeader: "x-purpose-of-use",
-        route: "GET /api/v1/patients/patient-demo-001/fhir",
-        statusCode: 400
-      })
-    });
   });
 
   it("disables demo login by default in production", async () => {
@@ -381,50 +295,6 @@ describe("API auth login boundary", () => {
       })
     });
     expect(successfulLoginEvent.metadata).not.toHaveProperty("username");
-  });
-
-  it("rate limits repeated login attempts for the same identity and client", async () => {
-    process.env.BVS_AUTH_LOGIN_RATE_LIMIT_MAX = "2";
-    process.env.BVS_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS = "60";
-    app = await readyServer();
-
-    for (const requestId of ["auth-rate-limit-001", "auth-rate-limit-002"]) {
-      const response = await login(
-        app,
-        {
-          username: "practitioner-demo-001",
-          password: "wrong-password",
-          role: "clinician"
-        },
-        {
-          "x-request-id": requestId
-        }
-      );
-
-      expect(response.statusCode).toBe(401);
-    }
-
-    const response = await login(
-      app,
-      {
-        username: "practitioner-demo-001",
-        password: "wrong-password",
-        role: "clinician"
-      },
-      {
-        "x-request-id": "auth-rate-limit-003"
-      }
-    );
-    const body = response.json();
-
-    expect(response.statusCode).toBe(429);
-    expect(response.headers["retry-after"]).toEqual(expect.stringMatching(/^[1-9]\d*$/));
-    expect(body).toMatchObject({
-      error: "AUTH_RATE_LIMITED",
-      requestId: "auth-rate-limit-003",
-      retryAfterSeconds: expect.any(Number)
-    });
-    expect(JSON.stringify(body)).not.toContain("stack");
   });
 
   it("rejects patient access without a Bearer token", async () => {

@@ -4,8 +4,18 @@ import { resolve } from "node:path";
 const testBudgets = [
   {
     path: "apps/api/src/server.auth.login.test.ts",
-    maxLines: 550,
-    role: "API login and token boundary scenarios"
+    maxLines: 360,
+    role: "API login, token, session and auth error boundary scenarios"
+  },
+  {
+    path: "apps/api/src/server.auth-purpose-boundary.test.ts",
+    maxLines: 130,
+    role: "API purpose-of-use rejection, FHIR negotiation and audit evidence scenarios"
+  },
+  {
+    path: "apps/api/src/server.auth-rate-limit-boundary.test.ts",
+    maxLines: 90,
+    role: "API login rate-limit boundary scenarios"
   },
   {
     path: "apps/api/src/server.runtime.test.ts",
@@ -167,6 +177,10 @@ const retiredTestPaths = [
 ];
 
 const loginBoundaryPath = resolve("apps/api/src/server.auth.login.test.ts");
+const authPurposeBoundaryPath = resolve("apps/api/src/server.auth-purpose-boundary.test.ts");
+const authRateLimitBoundaryPath = resolve(
+  "apps/api/src/server.auth-rate-limit-boundary.test.ts"
+);
 const runtimeBoundaryPath = resolve("apps/api/src/server.runtime.test.ts");
 const startupConfigBoundaryPath = resolve("apps/api/src/server.startup-config.test.ts");
 const patientRegistryBoundaryPath = resolve("apps/api/src/server.patient-registry.test.ts");
@@ -198,8 +212,18 @@ const recordTransferCallbackBoundaryPath = resolve(
 const requiredLoginBoundaryPatterns = [
   /returns a signed demo session/,
   /uses the configured auth token TTL/,
+  /returns request ids for auth boundary errors/,
+  /records successful and failed login attempts in the global audit trail/
+];
+const requiredAuthPurposeBoundaryPatterns = [
+  /rejects invalid purpose-of-use headers instead of silently defaulting to treatment/,
+  /INVALID_PURPOSE_OF_USE/,
+  /invalid-purpose-fhir-001/
+];
+const requiredAuthRateLimitBoundaryPatterns = [
   /rate limits repeated login attempts/,
-  /rejects invalid purpose-of-use headers/
+  /AUTH_RATE_LIMITED/,
+  /retry-after/
 ];
 const requiredRuntimeBoundaryPatterns = [
   /returns readiness checks/,
@@ -329,6 +353,8 @@ for (const budget of testBudgets) {
 }
 
 const loginBoundarySource = await readFile(loginBoundaryPath, "utf8");
+const authPurposeBoundarySource = await readFile(authPurposeBoundaryPath, "utf8");
+const authRateLimitBoundarySource = await readFile(authRateLimitBoundaryPath, "utf8");
 const runtimeBoundarySource = await readFile(runtimeBoundaryPath, "utf8");
 const startupConfigBoundarySource = await readFile(startupConfigBoundaryPath, "utf8");
 const patientRegistryBoundarySource = await readFile(patientRegistryBoundaryPath, "utf8");
@@ -368,7 +394,23 @@ const recordTransferCallbackBoundarySource = await readFile(
 for (const required of requiredLoginBoundaryPatterns) {
   if (!required.test(loginBoundarySource)) {
     throw new Error(
-      "server.auth.login.test.ts must keep core login, token, rate-limit and purpose-of-use boundary scenarios."
+      "server.auth.login.test.ts must keep core login, token, session and auth error boundary scenarios."
+    );
+  }
+}
+
+for (const required of requiredAuthPurposeBoundaryPatterns) {
+  if (!required.test(authPurposeBoundarySource)) {
+    throw new Error(
+      "server.auth-purpose-boundary.test.ts must keep purpose-of-use rejection, FHIR negotiation and audit evidence scenarios."
+    );
+  }
+}
+
+for (const required of requiredAuthRateLimitBoundaryPatterns) {
+  if (!required.test(authRateLimitBoundarySource)) {
+    throw new Error(
+      "server.auth-rate-limit-boundary.test.ts must keep login rate-limit boundary scenarios."
     );
   }
 }
