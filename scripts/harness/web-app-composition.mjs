@@ -266,8 +266,10 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/MedicationAdministrationContextFields.tsx",
   "apps/web/src/features/clinical-records/MedicationAdministrationDosageFields.tsx",
   "apps/web/src/features/clinical-records/MedicationAdministrationForm.tsx",
+  "apps/web/src/features/clinical-records/MedicationAdministrationList.tsx",
   "apps/web/src/features/clinical-records/MedicationAdministrationPanel.tsx",
   "apps/web/src/features/clinical-records/MedicationAdministrationPerformerFields.tsx",
+  "apps/web/src/features/clinical-records/MedicationAdministrationSummary.tsx",
   "apps/web/src/features/clinical-records/MedicationDispenseContextFields.tsx",
   "apps/web/src/features/clinical-records/MedicationDispenseDosageFields.tsx",
   "apps/web/src/features/clinical-records/MedicationDispenseForm.tsx",
@@ -1010,8 +1012,18 @@ const featureModuleBudgets = [
   },
   {
     path: "apps/web/src/features/clinical-records/MedicationAdministrationPanel.tsx",
-    maxLines: 220,
-    role: "MedicationAdministration list, summary and form composition"
+    maxLines: 110,
+    role: "MedicationAdministration panel composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/MedicationAdministrationList.tsx",
+    maxLines: 80,
+    role: "MedicationAdministration selectable list"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/MedicationAdministrationSummary.tsx",
+    maxLines: 100,
+    role: "MedicationAdministration selected record summary"
   },
   {
     path: "apps/web/src/features/clinical-records/MedicationAdministrationForm.tsx",

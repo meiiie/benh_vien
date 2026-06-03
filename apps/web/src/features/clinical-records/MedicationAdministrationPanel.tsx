@@ -1,16 +1,5 @@
 import type { FormEvent } from "react";
-import { Info } from "../../components/AppShell.js";
-import { formatDateTime } from "../../lib/clinicalFormatters.js";
-import {
-  formatMedicationAdministrationCategory,
-  formatMedicationAdministrationDose,
-  formatMedicationAdministrationPerformers,
-  formatMedicationAdministrationPeriod,
-  formatMedicationAdministrationStatus
-} from "./medicationFormatters.js";
-import type {
-  Condition,
-} from "../../types/conditions.js";
+import type { Condition } from "../../types/conditions.js";
 import type { Encounter } from "../../types/encounters.js";
 import type {
   MedicationAdministration,
@@ -18,6 +7,8 @@ import type {
   NewMedicationAdministrationForm
 } from "../../types/medications.js";
 import { MedicationAdministrationForm } from "./MedicationAdministrationForm.js";
+import { MedicationAdministrationList } from "./MedicationAdministrationList.js";
+import { MedicationAdministrationSummary } from "./MedicationAdministrationSummary.js";
 
 type MedicationAdministrationPanelProps = {
   readonly conditions: readonly Condition[];
@@ -67,113 +58,14 @@ export function MedicationAdministrationPanel({
       </div>
 
       <div className="document-layout">
-        <div className="medication-cards">
-          {medicationAdministrations.map((medicationAdministration) => (
-            <button
-              className={
-                medicationAdministration.id === selectedMedicationAdministrationId
-                  ? "medication-card selected"
-                  : "medication-card"
-              }
-              key={medicationAdministration.id}
-              type="button"
-              onClick={() =>
-                onSelectMedicationAdministration(medicationAdministration.id)
-              }
-            >
-              <span>
-                {formatMedicationAdministrationCategory(
-                  medicationAdministration.category
-                )}
-              </span>
-              <strong>{medicationAdministration.medicationCode.display}</strong>
-              <small>
-                {formatMedicationAdministrationStatus(
-                  medicationAdministration.status
-                )}{" "}
-                ·{" "}
-                {formatDateTime(
-                  medicationAdministration.effectivePeriod.start ??
-                    medicationAdministration.updatedAt
-                )}
-              </small>
-            </button>
-          ))}
-          {medicationAdministrations.length === 0 ? (
-            <p className="empty-state">
-              Chưa có bản ghi dùng thuốc thực tế. Hãy xác nhận sau khi có
-              MedicationRequest để phân biệt “chỉ định” với “đã dùng”.
-            </p>
-          ) : null}
-        </div>
-
-        <div className="medication-summary">
-          {selectedMedicationAdministration ? (
-            <>
-              <div className="document-meta">
-                <Info
-                  label="Thuốc"
-                  value={selectedMedicationAdministration.medicationCode.display}
-                />
-                <Info
-                  label="Trạng thái"
-                  value={formatMedicationAdministrationStatus(
-                    selectedMedicationAdministration.status
-                  )}
-                />
-                <Info
-                  label="Bối cảnh"
-                  value={formatMedicationAdministrationCategory(
-                    selectedMedicationAdministration.category
-                  )}
-                />
-                <Info
-                  label="Thời điểm"
-                  value={formatMedicationAdministrationPeriod(
-                    selectedMedicationAdministration.effectivePeriod
-                  )}
-                />
-                <Info
-                  label="Liều thực tế"
-                  value={formatMedicationAdministrationDose(
-                    selectedMedicationAdministration.dosage
-                  )}
-                />
-                <Info
-                  label="Gắn đơn thuốc"
-                  value={
-                    selectedMedicationAdministration.medicationRequestId ??
-                    "Chưa gắn"
-                  }
-                />
-                <Info
-                  label="Người xác nhận"
-                  value={formatMedicationAdministrationPerformers(
-                    selectedMedicationAdministration.performers
-                  )}
-                />
-                <Info
-                  label="Chẩn đoán liên quan"
-                  value={
-                    selectedMedicationAdministration.reasonConditionId ??
-                    "Chưa gắn"
-                  }
-                />
-              </div>
-              <p className="empty-state">
-                MedicationAdministration là sự kiện thuốc đã được dùng hoặc được
-                xác nhận dùng. Đây là phần giúp EMR đóng vòng điều trị: bác sĩ
-                kê, hệ thống lưu chỉ định, nhân sự y tế xác nhận dùng và FHIR
-                Bundle có thể chuyển sang bệnh viện khác.
-              </p>
-            </>
-          ) : (
-            <p className="empty-state">
-              Chọn một lần dùng thuốc để xem siêu dữ liệu và xuất FHIR
-              MedicationAdministration.
-            </p>
-          )}
-        </div>
+        <MedicationAdministrationList
+          medicationAdministrations={medicationAdministrations}
+          selectedMedicationAdministrationId={selectedMedicationAdministrationId}
+          onSelectMedicationAdministration={onSelectMedicationAdministration}
+        />
+        <MedicationAdministrationSummary
+          selectedMedicationAdministration={selectedMedicationAdministration}
+        />
       </div>
 
       <MedicationAdministrationForm
