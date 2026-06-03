@@ -93,6 +93,16 @@ const domainBudgets = [
     role: "AuditEvent action and resource code catalog"
   },
   {
+    path: "packages/domain/src/audit-event/audit-event.test.ts",
+    maxLines: 220,
+    role: "AuditEvent integrity chain and invariant test scenarios"
+  },
+  {
+    path: "packages/domain/src/audit-event/audit-event.fhir-mapping.test.ts",
+    maxLines: 340,
+    role: "AuditEvent FHIR AuditEvent and Bundle mapping test scenarios"
+  },
+  {
     path: "packages/domain/src/access-control/access-control.ts",
     maxLines: 130,
     role: "AccessControl authorization decisions"
