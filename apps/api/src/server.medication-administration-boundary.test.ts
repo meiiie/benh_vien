@@ -14,7 +14,7 @@ type ClinicalResourceListBody = {
   readonly items: readonly { readonly id: string }[];
 };
 
-describe("API medication resource boundary", () => {
+describe("API medication administration boundary", () => {
   let app: FastifyInstance;
   let accessToken: string;
   const originalEnv = captureAuthBoundaryEnv();
@@ -47,56 +47,78 @@ describe("API medication resource boundary", () => {
     return (await getTreatmentJson(url)) as ClinicalResourceListBody;
   }
 
-  it("lists medication requests and exports them as FHIR MedicationRequest", async () => {
+  it("lists medication administrations and exports them as FHIR MedicationAdministration", async () => {
     const listBody = await getClinicalResourceList(
-      "/api/v1/patients/patient-demo-001/medication-requests"
+      "/api/v1/patients/patient-demo-001/medication-administrations"
     );
 
     expect(listBody.items).toHaveLength(2);
+    expect(listBody.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "medication-administration-demo-002",
+          status: "completed",
+          medicationRequestId: "medication-request-demo-002"
+        })
+      ])
+    );
 
     const fhirBody = await getTreatmentJson(
-      `/api/v1/medication-requests/${listBody.items[0].id}/fhir`
+      "/api/v1/medication-administrations/medication-administration-demo-002/fhir"
     );
 
     expect(fhirBody).toMatchObject({
-      resourceType: "MedicationRequest",
-      status: "active",
-      intent: "order",
+      resourceType: "MedicationAdministration",
+      id: "medication-administration-demo-002",
+      status: "completed",
+      request: {
+        reference: "MedicationRequest/medication-request-demo-002"
+      },
       subject: {
         reference: "Patient/patient-demo-001"
       }
     });
   });
 
-  it("creates a medication request linked to a patient condition", async () => {
+  it("creates a medication administration linked to the original medication request", async () => {
     const response = await app.inject({
       method: "POST",
-      url: "/api/v1/patients/patient-demo-001/medication-requests",
+      url: "/api/v1/patients/patient-demo-001/medication-administrations",
       headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         encounterId: "encounter-demo-002",
+        medicationRequestId: "medication-request-demo-002",
         reasonConditionId: "condition-demo-002",
+        status: "completed",
         category: "outpatient",
         medicationCode: {
           system: "http://www.whocc.no/atc",
-          code: "C08CA01",
-          display: "Amlodipine"
+          code: "C09AA05",
+          display: "Ramipril"
         },
-        dosageInstruction: {
-          text: "Take 5 mg every evening",
-          route: "Oral route",
+        effectivePeriod: {
+          start: "2026-05-27T06:05:00.000Z"
+        },
+        performers: [
+          {
+            actorType: "Practitioner",
+            actorId: "nurse-demo-001"
+          }
+        ],
+        dosage: {
+          text: "Take 5 mg every morning",
+          route: {
+            system: "http://snomed.info/sct",
+            code: "26643006",
+            display: "Oral route"
+          },
           doseQuantity: {
             value: 5,
             unit: "mg",
             system: "http://unitsofmeasure.org",
             code: "mg"
-          },
-          frequency: 1,
-          period: 1,
-          periodUnit: "d"
-        },
-        requesterPractitionerId: "practitioner-demo-001",
-        expectedSupplyDurationDays: 30
+          }
+        }
       }
     });
 
@@ -104,6 +126,7 @@ describe("API medication resource boundary", () => {
     expect(response.json()).toMatchObject({
       patientId: "patient-demo-001",
       encounterId: "encounter-demo-002",
+      medicationRequestId: "medication-request-demo-002",
       reasonConditionId: "condition-demo-002",
       category: "outpatient"
     });

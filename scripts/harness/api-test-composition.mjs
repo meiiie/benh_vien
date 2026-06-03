@@ -129,8 +129,18 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/server.medication-resources-boundary.test.ts",
-    maxLines: 340,
-    role: "API medication request, dispense and administration scenarios"
+    maxLines: 150,
+    role: "API medication request prescribing scenarios"
+  },
+  {
+    path: "apps/api/src/server.medication-dispense-boundary.test.ts",
+    maxLines: 170,
+    role: "API medication dispense supply and FHIR export scenarios"
+  },
+  {
+    path: "apps/api/src/server.medication-administration-boundary.test.ts",
+    maxLines: 170,
+    role: "API medication administration performed-medication scenarios"
   },
   {
     path: "apps/api/src/server.diagnostic-resources-boundary.test.ts",
@@ -283,6 +293,12 @@ const clinicalResourcesBoundaryPath = resolve("apps/api/src/server.clinical-reso
 const careWorkflowBoundaryPath = resolve("apps/api/src/server.care-workflow-boundary.test.ts");
 const medicationResourcesBoundaryPath = resolve(
   "apps/api/src/server.medication-resources-boundary.test.ts"
+);
+const medicationDispenseBoundaryPath = resolve(
+  "apps/api/src/server.medication-dispense-boundary.test.ts"
+);
+const medicationAdministrationBoundaryPath = resolve(
+  "apps/api/src/server.medication-administration-boundary.test.ts"
 );
 const diagnosticResourcesBoundaryPath = resolve(
   "apps/api/src/server.diagnostic-resources-boundary.test.ts"
@@ -442,8 +458,15 @@ const requiredCareWorkflowBoundaryPatterns = [
 ];
 const requiredMedicationResourcesBoundaryPatterns = [
   /lists medication requests and exports them as FHIR MedicationRequest/,
+  /creates a medication request linked to a patient condition/
+];
+const requiredMedicationDispenseBoundaryPatterns = [
   /lists medication dispenses and exports them as FHIR MedicationDispense/,
-  /lists medication administrations and exports them as FHIR MedicationAdministration/
+  /creates a medication dispense linked to the original medication request/
+];
+const requiredMedicationAdministrationBoundaryPatterns = [
+  /lists medication administrations and exports them as FHIR MedicationAdministration/,
+  /creates a medication administration linked to the original medication request/
 ];
 const requiredDiagnosticResourcesBoundaryPatterns = [
   /lists diagnostic reports and exports them as FHIR DiagnosticReport/,
@@ -559,6 +582,14 @@ const clinicalResourcesBoundarySource = await readFile(
 const careWorkflowBoundarySource = await readFile(careWorkflowBoundaryPath, "utf8");
 const medicationResourcesBoundarySource = await readFile(
   medicationResourcesBoundaryPath,
+  "utf8"
+);
+const medicationDispenseBoundarySource = await readFile(
+  medicationDispenseBoundaryPath,
+  "utf8"
+);
+const medicationAdministrationBoundarySource = await readFile(
+  medicationAdministrationBoundaryPath,
   "utf8"
 );
 const diagnosticResourcesBoundarySource = await readFile(
@@ -791,7 +822,23 @@ for (const required of requiredCareWorkflowBoundaryPatterns) {
 for (const required of requiredMedicationResourcesBoundaryPatterns) {
   if (!required.test(medicationResourcesBoundarySource)) {
     throw new Error(
-      "server.medication-resources-boundary.test.ts must keep medication request, dispense and administration scenarios."
+      "server.medication-resources-boundary.test.ts must keep medication request prescribing scenarios."
+    );
+  }
+}
+
+for (const required of requiredMedicationDispenseBoundaryPatterns) {
+  if (!required.test(medicationDispenseBoundarySource)) {
+    throw new Error(
+      "server.medication-dispense-boundary.test.ts must keep medication dispense supply and FHIR export scenarios."
+    );
+  }
+}
+
+for (const required of requiredMedicationAdministrationBoundaryPatterns) {
+  if (!required.test(medicationAdministrationBoundarySource)) {
+    throw new Error(
+      "server.medication-administration-boundary.test.ts must keep medication administration scenarios."
     );
   }
 }
