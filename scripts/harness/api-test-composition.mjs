@@ -19,8 +19,18 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/server.runtime.test.ts",
-    maxLines: 520,
-    role: "API runtime, readiness and HTTP envelope scenarios"
+    maxLines: 230,
+    role: "API readiness, runtime metadata and diagnostics scenarios"
+  },
+  {
+    path: "apps/api/src/server.runtime-config-boundary.test.ts",
+    maxLines: 130,
+    role: "API documentation flag and HTTP body limit runtime configuration scenarios"
+  },
+  {
+    path: "apps/api/src/server.http-envelope-boundary.test.ts",
+    maxLines: 220,
+    role: "API HTTP security header, request-id and safe error envelope scenarios"
   },
   {
     path: "apps/api/src/server.startup-config.test.ts",
@@ -192,6 +202,12 @@ const authRateLimitBoundaryPath = resolve(
   "apps/api/src/server.auth-rate-limit-boundary.test.ts"
 );
 const runtimeBoundaryPath = resolve("apps/api/src/server.runtime.test.ts");
+const runtimeConfigBoundaryPath = resolve(
+  "apps/api/src/server.runtime-config-boundary.test.ts"
+);
+const httpEnvelopeBoundaryPath = resolve(
+  "apps/api/src/server.http-envelope-boundary.test.ts"
+);
 const startupConfigBoundaryPath = resolve("apps/api/src/server.startup-config.test.ts");
 const patientRegistryBoundaryPath = resolve("apps/api/src/server.patient-registry.test.ts");
 const patientAccessBoundaryPath = resolve("apps/api/src/server.patient-access.test.ts");
@@ -242,8 +258,21 @@ const requiredAuthRateLimitBoundaryPatterns = [
 const requiredRuntimeBoundaryPatterns = [
   /returns readiness checks/,
   /returns redacted runtime metadata/,
+  /returns runtime diagnostics to operations and audit sessions/,
+  /marks readiness as not ready when the login rate limit store is unhealthy/
+];
+const requiredRuntimeConfigBoundaryPatterns = [
+  /serves API documentation outside production by default/,
+  /can disable API documentation through runtime configuration/,
+  /rejects invalid HTTP body limit configuration/,
+  /rejects oversized JSON request bodies with a safe request error/
+];
+const requiredHttpEnvelopeBoundaryPatterns = [
   /sets baseline HTTP security headers/,
-  /returns a safe validation error envelope/
+  /echoes the request id header for trace correlation/,
+  /replaces unsafe upstream request ids before echoing them/,
+  /returns a safe validation error envelope/,
+  /returns a safe internal error envelope without leaking implementation details/
 ];
 const requiredStartupConfigBoundaryPatterns = [
   /requires explicit CORS origins/,
@@ -379,6 +408,8 @@ const loginBoundarySource = await readFile(loginBoundaryPath, "utf8");
 const authPurposeBoundarySource = await readFile(authPurposeBoundaryPath, "utf8");
 const authRateLimitBoundarySource = await readFile(authRateLimitBoundaryPath, "utf8");
 const runtimeBoundarySource = await readFile(runtimeBoundaryPath, "utf8");
+const runtimeConfigBoundarySource = await readFile(runtimeConfigBoundaryPath, "utf8");
+const httpEnvelopeBoundarySource = await readFile(httpEnvelopeBoundaryPath, "utf8");
 const startupConfigBoundarySource = await readFile(startupConfigBoundaryPath, "utf8");
 const patientRegistryBoundarySource = await readFile(patientRegistryBoundaryPath, "utf8");
 const patientAccessBoundarySource = await readFile(patientAccessBoundaryPath, "utf8");
@@ -443,7 +474,23 @@ for (const required of requiredAuthRateLimitBoundaryPatterns) {
 for (const required of requiredRuntimeBoundaryPatterns) {
   if (!required.test(runtimeBoundarySource)) {
     throw new Error(
-      "server.runtime.test.ts must keep core readiness, runtime metadata, security header and safe error envelope scenarios."
+      "server.runtime.test.ts must keep core readiness, runtime metadata and diagnostics scenarios."
+    );
+  }
+}
+
+for (const required of requiredRuntimeConfigBoundaryPatterns) {
+  if (!required.test(runtimeConfigBoundarySource)) {
+    throw new Error(
+      "server.runtime-config-boundary.test.ts must keep API docs flag and HTTP body limit configuration scenarios."
+    );
+  }
+}
+
+for (const required of requiredHttpEnvelopeBoundaryPatterns) {
+  if (!required.test(httpEnvelopeBoundarySource)) {
+    throw new Error(
+      "server.http-envelope-boundary.test.ts must keep HTTP security header, request-id and safe error envelope scenarios."
     );
   }
 }
