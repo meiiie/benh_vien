@@ -56,6 +56,66 @@ const testBudgets = [
     path: "apps/api/src/server.auth.test-support.ts",
     maxLines: 320,
     role: "Shared API auth boundary test support"
+  },
+  {
+    path: "apps/api/src/infrastructure/postgres/postgres-pool.test.ts",
+    maxLines: 90,
+    role: "PostgreSQL pool lifecycle unit scenarios"
+  },
+  {
+    path: "apps/api/src/modules/auth/auth-password.test.ts",
+    maxLines: 40,
+    role: "Auth password verification unit scenarios"
+  },
+  {
+    path: "apps/api/src/modules/auth/auth-session.test.ts",
+    maxLines: 280,
+    role: "Auth session token unit scenarios"
+  },
+  {
+    path: "apps/api/src/modules/auth/bearer-token.test.ts",
+    maxLines: 40,
+    role: "Auth bearer-token parsing unit scenarios"
+  },
+  {
+    path: "apps/api/src/modules/auth/login-rate-limit.test.ts",
+    maxLines: 180,
+    role: "Auth login rate-limit unit scenarios"
+  },
+  {
+    path: "apps/api/src/modules/network/local-only-hostname.test.ts",
+    maxLines: 70,
+    role: "Network local-only hostname unit scenarios"
+  },
+  {
+    path: "apps/api/src/modules/procedures/procedure-reference-validation.test.ts",
+    maxLines: 140,
+    role: "Procedure reference validation unit scenarios"
+  },
+  {
+    path: "apps/api/src/modules/record-transfer-delivery-attempts/record-transfer-delivery-worker.test.ts",
+    maxLines: 360,
+    role: "RecordTransfer delivery worker unit scenarios"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-audit-metadata.test.ts",
+    maxLines: 100,
+    role: "RecordTransfer acknowledgement audit metadata unit scenarios"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-callback-signature.test.ts",
+    maxLines: 320,
+    role: "RecordTransfer callback signature unit scenarios"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-endpoint-policy.test.ts",
+    maxLines: 100,
+    role: "RecordTransfer endpoint policy unit scenarios"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-retry-worker.test.ts",
+    maxLines: 280,
+    role: "RecordTransfer retry worker unit scenarios"
   }
 ];
 
