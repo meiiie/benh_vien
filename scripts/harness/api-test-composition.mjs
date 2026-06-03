@@ -179,8 +179,18 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/server.record-transfer-delivery-boundary.test.ts",
-    maxLines: 320,
-    role: "API record-transfer delivery, rollback and retry lifecycle scenarios"
+    maxLines: 150,
+    role: "API record-transfer delivery success and receive lifecycle scenarios"
+  },
+  {
+    path: "apps/api/src/server.record-transfer-delivery-failure-boundary.test.ts",
+    maxLines: 220,
+    role: "API record-transfer delivery rollback, failure and retry lifecycle scenarios"
+  },
+  {
+    path: "apps/api/src/server.record-transfer-delivery.test-support.ts",
+    maxLines: 150,
+    role: "API record-transfer delivery boundary request helpers"
   },
   {
     path: "apps/api/src/server.record-transfer-consent-boundary.test.ts",
@@ -280,6 +290,7 @@ const authPurposeBoundaryPath = resolve("apps/api/src/server.auth-purpose-bounda
 const authRateLimitBoundaryPath = resolve(
   "apps/api/src/server.auth-rate-limit-boundary.test.ts"
 );
+const authSupportPath = resolve("apps/api/src/server.auth.test-support.ts");
 const runtimeBoundaryPath = resolve("apps/api/src/server.runtime.test.ts");
 const runtimeConfigBoundaryPath = resolve(
   "apps/api/src/server.runtime-config-boundary.test.ts"
@@ -345,6 +356,12 @@ const recordTransferBoundaryPath = resolve("apps/api/src/server.record-transfer-
 const recordTransferDeliveryBoundaryPath = resolve(
   "apps/api/src/server.record-transfer-delivery-boundary.test.ts"
 );
+const recordTransferDeliveryFailureBoundaryPath = resolve(
+  "apps/api/src/server.record-transfer-delivery-failure-boundary.test.ts"
+);
+const recordTransferDeliverySupportPath = resolve(
+  "apps/api/src/server.record-transfer-delivery.test-support.ts"
+);
 const recordTransferConsentBoundaryPath = resolve(
   "apps/api/src/server.record-transfer-consent-boundary.test.ts"
 );
@@ -385,6 +402,9 @@ const requiredAuthRateLimitBoundaryPatterns = [
   /rate limits repeated login attempts/,
   /AUTH_RATE_LIMITED/,
   /retry-after/
+];
+const retiredAuthSupportPatterns = [
+  /FailingRecordTransferDeliveryAttemptRepository/
 ];
 const requiredRuntimeBoundaryPatterns = [
   /returns readiness checks/,
@@ -563,8 +583,26 @@ const requiredRecordTransferBoundaryPatterns = [
 ];
 const requiredRecordTransferDeliveryBoundaryPatterns = [
   /moves a record transfer through sent and received milestones/,
+  /getRecordTransferDeliveryAttempts/,
+  /Người xác nhận nhận hồ sơ/
+];
+const requiredRecordTransferDeliveryFailureBoundaryPatterns = [
   /rolls back a record transfer when queuing the delivery attempt fails/,
-  /records failed record transfer delivery and prepares a retry/
+  /records failed record transfer delivery and prepares a retry/,
+  /Recipient gateway unavailable\./,
+  /attemptNumber: 2/
+];
+const requiredRecordTransferDeliverySupportPatterns = [
+  /readyRecordTransferDeliverySession/,
+  /FailingRecordTransferDeliveryAttemptRepository/,
+  /sendRecordTransfer/,
+  /failRecordTransfer/,
+  /retryRecordTransfer/
+];
+const retiredRecordTransferDeliveryBoundaryPatterns = [
+  /rolls back a record transfer/,
+  /records failed record transfer delivery/,
+  /FailingRecordTransferDeliveryAttemptRepository/
 ];
 const requiredRecordTransferConsentBoundaryPatterns = [
   /denies record transfer creation when consent does not cover the recipient/,
@@ -636,6 +674,7 @@ const authErrorBoundarySource = await readFile(authErrorBoundaryPath, "utf8");
 const authLoginAuditBoundarySource = await readFile(authLoginAuditBoundaryPath, "utf8");
 const authPurposeBoundarySource = await readFile(authPurposeBoundaryPath, "utf8");
 const authRateLimitBoundarySource = await readFile(authRateLimitBoundaryPath, "utf8");
+const authSupportSource = await readFile(authSupportPath, "utf8");
 const runtimeBoundarySource = await readFile(runtimeBoundaryPath, "utf8");
 const runtimeConfigBoundarySource = await readFile(runtimeConfigBoundaryPath, "utf8");
 const httpEnvelopeBoundarySource = await readFile(httpEnvelopeBoundaryPath, "utf8");
@@ -712,6 +751,14 @@ const recordTransferDeliveryBoundarySource = await readFile(
   recordTransferDeliveryBoundaryPath,
   "utf8"
 );
+const recordTransferDeliveryFailureBoundarySource = await readFile(
+  recordTransferDeliveryFailureBoundaryPath,
+  "utf8"
+);
+const recordTransferDeliverySupportSource = await readFile(
+  recordTransferDeliverySupportPath,
+  "utf8"
+);
 const recordTransferConsentBoundarySource = await readFile(
   recordTransferConsentBoundaryPath,
   "utf8"
@@ -765,6 +812,14 @@ for (const required of requiredAuthRateLimitBoundaryPatterns) {
   if (!required.test(authRateLimitBoundarySource)) {
     throw new Error(
       "server.auth-rate-limit-boundary.test.ts must keep login rate-limit boundary scenarios."
+    );
+  }
+}
+
+for (const retired of retiredAuthSupportPatterns) {
+  if (retired.test(authSupportSource)) {
+    throw new Error(
+      "server.auth.test-support.ts must not absorb record-transfer delivery fixture helpers."
     );
   }
 }
@@ -1020,7 +1075,31 @@ for (const required of requiredRecordTransferBoundaryPatterns) {
 for (const required of requiredRecordTransferDeliveryBoundaryPatterns) {
   if (!required.test(recordTransferDeliveryBoundarySource)) {
     throw new Error(
-      "server.record-transfer-delivery-boundary.test.ts must keep delivery, rollback and retry lifecycle scenarios."
+      "server.record-transfer-delivery-boundary.test.ts must keep delivery success and receive lifecycle scenarios."
+    );
+  }
+}
+
+for (const required of requiredRecordTransferDeliveryFailureBoundaryPatterns) {
+  if (!required.test(recordTransferDeliveryFailureBoundarySource)) {
+    throw new Error(
+      "server.record-transfer-delivery-failure-boundary.test.ts must keep delivery rollback, failure and retry lifecycle scenarios."
+    );
+  }
+}
+
+for (const required of requiredRecordTransferDeliverySupportPatterns) {
+  if (!required.test(recordTransferDeliverySupportSource)) {
+    throw new Error(
+      "server.record-transfer-delivery.test-support.ts must keep delivery boundary request and failure fixture helpers."
+    );
+  }
+}
+
+for (const retired of retiredRecordTransferDeliveryBoundaryPatterns) {
+  if (retired.test(recordTransferDeliveryBoundarySource)) {
+    throw new Error(
+      "server.record-transfer-delivery-boundary.test.ts must not absorb failure or fixture scenarios back into the success lifecycle suite."
     );
   }
 }

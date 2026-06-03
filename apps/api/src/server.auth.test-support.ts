@@ -1,9 +1,5 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import { expect } from "vitest";
-import type {
-  RecordTransferDeliveryAttempt,
-  RecordTransferDeliveryAttemptRepository
-} from "@benh-vien-so/domain";
 import { registerAuthRoutes } from "./modules/auth/auth-routes.js";
 import { createMemoryLoginRateLimiter } from "./modules/auth/login-rate-limit.js";
 import {
@@ -87,22 +83,6 @@ export async function readyServer(
   });
   await server.ready();
   return server;
-}
-
-export class FailingRecordTransferDeliveryAttemptRepository
-  implements RecordTransferDeliveryAttemptRepository
-{
-  async findByRecordTransferId(): Promise<RecordTransferDeliveryAttempt[]> {
-    return [];
-  }
-
-  async findQueued(): Promise<RecordTransferDeliveryAttempt[]> {
-    return [];
-  }
-
-  async save(_attempt: RecordTransferDeliveryAttempt): Promise<void> {
-    throw new Error("delivery attempt store unavailable");
-  }
 }
 
 export async function readyAuthRouteServer(): Promise<FastifyInstance> {
