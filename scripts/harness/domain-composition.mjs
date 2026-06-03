@@ -139,8 +139,28 @@ const domainBudgets = [
   },
   {
     path: "packages/domain/src/audit-event/audit-event.fhir-mapping.test.ts",
-    maxLines: 340,
-    role: "AuditEvent FHIR AuditEvent and Bundle mapping test scenarios"
+    maxLines: 110,
+    role: "AuditEvent sealed-event resource and collection Bundle mapping test scenarios"
+  },
+  {
+    path: "packages/domain/src/audit-event/audit-event.access-fhir-mapping.test.ts",
+    maxLines: 130,
+    role: "AuditEvent access denial and patient identifier conflict FHIR mapping scenarios"
+  },
+  {
+    path: "packages/domain/src/audit-event/audit-event.patient-fhir-mapping.test.ts",
+    maxLines: 80,
+    role: "AuditEvent patient lifecycle FHIR mapping scenarios"
+  },
+  {
+    path: "packages/domain/src/audit-event/audit-event.auth-fhir-mapping.test.ts",
+    maxLines: 100,
+    role: "AuditEvent authentication failure FHIR mapping scenarios"
+  },
+  {
+    path: "packages/domain/src/audit-event/audit-event.test-support.ts",
+    maxLines: 40,
+    role: "AuditEvent shared domain test fixture helpers"
   },
   {
     path: "packages/domain/src/access-control/access-control.ts",
