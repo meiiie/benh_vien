@@ -12,6 +12,11 @@ const auditLogPagePath = resolve("apps/web/src/pages/AuditLogPage.tsx");
 const auditPanelsPath = resolve("apps/web/src/features/audit/AuditPanels.tsx");
 const globalAuditPanelPath = resolve("apps/web/src/features/audit/GlobalAuditPanel.tsx");
 const patientAuditPanelPath = resolve("apps/web/src/features/audit/PatientAuditPanel.tsx");
+const patientAuditActionsPath = resolve("apps/web/src/features/audit/PatientAuditActions.tsx");
+const patientAuditEventListPath = resolve("apps/web/src/features/audit/PatientAuditEventList.tsx");
+const patientAuditIntegrityCardPath = resolve(
+  "apps/web/src/features/audit/PatientAuditIntegrityCard.tsx"
+);
 const dashboardPagePath = resolve("apps/web/src/pages/DashboardPage.tsx");
 const documentsPagePath = resolve("apps/web/src/pages/DocumentsPage.tsx");
 const interopPagePath = resolve("apps/web/src/pages/InteropPage.tsx");
@@ -201,6 +206,9 @@ const requiredModules = [
   "apps/web/src/config/demoTransferDefaults.ts",
   "apps/web/src/features/audit/AuditPanels.tsx",
   "apps/web/src/features/audit/GlobalAuditPanel.tsx",
+  "apps/web/src/features/audit/PatientAuditActions.tsx",
+  "apps/web/src/features/audit/PatientAuditEventList.tsx",
+  "apps/web/src/features/audit/PatientAuditIntegrityCard.tsx",
   "apps/web/src/features/audit/PatientAuditPanel.tsx",
   "apps/web/src/features/audit/auditPanelRenderers.tsx",
   "apps/web/src/features/audit/auditApi.ts",
@@ -572,8 +580,23 @@ const featureModuleBudgets = [
     role: "Global audit log panel"
   },
   {
+    path: "apps/web/src/features/audit/PatientAuditActions.tsx",
+    maxLines: 70,
+    role: "Patient audit action toolbar"
+  },
+  {
+    path: "apps/web/src/features/audit/PatientAuditIntegrityCard.tsx",
+    maxLines: 70,
+    role: "Patient audit integrity report card"
+  },
+  {
+    path: "apps/web/src/features/audit/PatientAuditEventList.tsx",
+    maxLines: 90,
+    role: "Patient audit event list"
+  },
+  {
     path: "apps/web/src/features/audit/PatientAuditPanel.tsx",
-    maxLines: 190,
+    maxLines: 100,
     role: "Patient-scoped audit log and FHIR preview panel"
   },
   {
@@ -1269,6 +1292,9 @@ const auditLogPageSource = await readFile(auditLogPagePath, "utf8");
 const auditPanelsSource = [
   await readFile(auditPanelsPath, "utf8"),
   await readFile(globalAuditPanelPath, "utf8"),
+  await readFile(patientAuditActionsPath, "utf8"),
+  await readFile(patientAuditEventListPath, "utf8"),
+  await readFile(patientAuditIntegrityCardPath, "utf8"),
   await readFile(patientAuditPanelPath, "utf8")
 ].join("\n");
 const dashboardPageSource = await readFile(dashboardPagePath, "utf8");
