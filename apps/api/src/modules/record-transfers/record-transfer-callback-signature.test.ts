@@ -1,30 +1,24 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
-  assertRecordTransferCallbackSignatureConfiguration,
   buildRecordTransferCallbackSignature,
   recordTransferCallbackKeyIdHeader,
   recordTransferCallbackSignatureHeader,
   recordTransferCallbackTimestampHeader,
   verifyRecordTransferCallbackSignature
 } from "./record-transfer-callback-signature.js";
+import {
+  callbackBody,
+  callbackKeyId,
+  callbackSecret,
+  captureCallbackSignatureEnv,
+  recordTransferId,
+  restoreCallbackSignatureEnv
+} from "./record-transfer-callback-signature.test-support.js";
 
-const callbackSecret = "wiiicare-record-transfer-callback-secret-for-unit-tests";
-const callbackKeyId = "gateway-hai-phong-referral";
-const recordTransferId = "record-transfer-demo-001";
-const callbackBody = {
-  recipientOrganizationId: "hospital-hai-phong-referral",
-  acknowledgementReference: "ack-record-transfer-callback-001"
-};
-
-const originalNodeEnv = process.env.NODE_ENV;
-const originalCallbackSecret = process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRET;
-const originalCallbackSecretsJson =
-  process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON;
+const originalEnv = captureCallbackSignatureEnv();
 
 afterEach(() => {
-  restoreEnv("NODE_ENV", originalNodeEnv);
-  restoreEnv("BVS_RECORD_TRANSFER_CALLBACK_SECRET", originalCallbackSecret);
-  restoreEnv("BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON", originalCallbackSecretsJson);
+  restoreCallbackSignatureEnv(originalEnv);
 });
 
 describe("record transfer callback signature", () => {
@@ -251,36 +245,4 @@ describe("record transfer callback signature", () => {
     });
   });
 
-  it("validates callback signature configuration at production startup", () => {
-    process.env.NODE_ENV = "production";
-    delete process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRET;
-    delete process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON;
-
-    expect(() => assertRecordTransferCallbackSignatureConfiguration()).toThrow(
-      "BVS_RECORD_TRANSFER_CALLBACK_SECRET hoặc BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON phải được cấu hình tối thiểu 32 ký tự trong production."
-    );
-
-    process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRET =
-      "change-me-with-a-random-callback-secret-of-at-least-32-characters";
-
-    expect(() => assertRecordTransferCallbackSignatureConfiguration()).toThrow(
-      "BVS_RECORD_TRANSFER_CALLBACK_SECRET không được dùng giá trị mẫu trong production."
-    );
-
-    delete process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRET;
-    process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON = JSON.stringify({
-      [callbackKeyId]: callbackSecret
-    });
-
-    expect(() => assertRecordTransferCallbackSignatureConfiguration()).not.toThrow();
-  });
 });
-
-function restoreEnv(name: string, value: string | undefined): void {
-  if (value === undefined) {
-    delete process.env[name];
-    return;
-  }
-
-  process.env[name] = value;
-}

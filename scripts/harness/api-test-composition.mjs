@@ -259,8 +259,18 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/modules/record-transfers/record-transfer-callback-signature.test.ts",
-    maxLines: 320,
-    role: "RecordTransfer callback signature unit scenarios"
+    maxLines: 260,
+    role: "RecordTransfer callback signature verification unit scenarios"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-callback-signature-configuration.test.ts",
+    maxLines: 70,
+    role: "RecordTransfer callback signature production configuration scenarios"
+  },
+  {
+    path: "apps/api/src/modules/record-transfers/record-transfer-callback-signature.test-support.ts",
+    maxLines: 70,
+    role: "RecordTransfer callback signature shared unit test support"
   },
   {
     path: "apps/api/src/modules/record-transfers/record-transfer-endpoint-policy.test.ts",
@@ -373,6 +383,15 @@ const recordTransferDeliveryWorkerPath = resolve(
 );
 const recordTransferDeliveryWorkerSupportPath = resolve(
   "apps/api/src/modules/record-transfer-delivery-attempts/record-transfer-delivery-worker.test-support.ts"
+);
+const recordTransferCallbackSignatureTestPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-callback-signature.test.ts"
+);
+const recordTransferCallbackSignatureConfigurationTestPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-callback-signature-configuration.test.ts"
+);
+const recordTransferCallbackSignatureTestSupportPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-callback-signature.test-support.ts"
 );
 
 const requiredLoginBoundaryPatterns = [
@@ -632,6 +651,27 @@ const retiredRecordTransferDeliveryWorkerPatterns = [
   /RecordTransfer\.create/,
   /new InMemoryPatientRepository/
 ];
+const requiredRecordTransferCallbackSignaturePatterns = [
+  /does not require signatures in development when no callback secret is configured/,
+  /requires a fresh matching HMAC signature when callback secret is configured/,
+  /rejects malformed, expired and oversized callback signatures/,
+  /selects per-gateway callback secrets by key id when configured/,
+  /fails closed in production when callback secret is missing/
+];
+const requiredRecordTransferCallbackSignatureConfigurationPatterns = [
+  /validates callback signature configuration at production startup/,
+  /assertRecordTransferCallbackSignatureConfiguration/,
+  /không được dùng giá trị mẫu/
+];
+const requiredRecordTransferCallbackSignatureSupportPatterns = [
+  /callbackSecret/,
+  /callbackKeyId/,
+  /captureCallbackSignatureEnv/,
+  /restoreCallbackSignatureEnv/
+];
+const retiredRecordTransferCallbackSignaturePatterns = [
+  /assertRecordTransferCallbackSignatureConfiguration/
+];
 
 const testReports = [];
 
@@ -773,6 +813,18 @@ const recordTransferDeliveryWorkerSource = await readFile(
 );
 const recordTransferDeliveryWorkerSupportSource = await readFile(
   recordTransferDeliveryWorkerSupportPath,
+  "utf8"
+);
+const recordTransferCallbackSignatureTestSource = await readFile(
+  recordTransferCallbackSignatureTestPath,
+  "utf8"
+);
+const recordTransferCallbackSignatureConfigurationTestSource = await readFile(
+  recordTransferCallbackSignatureConfigurationTestPath,
+  "utf8"
+);
+const recordTransferCallbackSignatureTestSupportSource = await readFile(
+  recordTransferCallbackSignatureTestSupportPath,
   "utf8"
 );
 
@@ -1140,6 +1192,38 @@ for (const retired of retiredRecordTransferDeliveryWorkerPatterns) {
   if (retired.test(recordTransferDeliveryWorkerSource)) {
     throw new Error(
       "record-transfer-delivery-worker.test.ts must not absorb fixture orchestration back into behavior scenarios."
+    );
+  }
+}
+
+for (const required of requiredRecordTransferCallbackSignaturePatterns) {
+  if (!required.test(recordTransferCallbackSignatureTestSource)) {
+    throw new Error(
+      "record-transfer-callback-signature.test.ts must keep callback HMAC verification scenarios."
+    );
+  }
+}
+
+for (const required of requiredRecordTransferCallbackSignatureConfigurationPatterns) {
+  if (!required.test(recordTransferCallbackSignatureConfigurationTestSource)) {
+    throw new Error(
+      "record-transfer-callback-signature-configuration.test.ts must keep production startup configuration scenarios."
+    );
+  }
+}
+
+for (const required of requiredRecordTransferCallbackSignatureSupportPatterns) {
+  if (!required.test(recordTransferCallbackSignatureTestSupportSource)) {
+    throw new Error(
+      "record-transfer-callback-signature.test-support.ts must keep shared callback signature test fixtures."
+    );
+  }
+}
+
+for (const retired of retiredRecordTransferCallbackSignaturePatterns) {
+  if (retired.test(recordTransferCallbackSignatureTestSource)) {
+    throw new Error(
+      "record-transfer-callback-signature.test.ts must not absorb production startup configuration scenarios back into verification tests."
     );
   }
 }
