@@ -134,8 +134,13 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/server.audit-fhir-boundary.test.ts",
-    maxLines: 230,
-    role: "API AuditEvent FHIR export and denial evidence scenarios"
+    maxLines: 120,
+    role: "API AuditEvent FHIR Bundle export and authorization scenarios"
+  },
+  {
+    path: "apps/api/src/server.audit-fhir-denied-boundary.test.ts",
+    maxLines: 150,
+    role: "API denied patient access AuditEvent FHIR evidence scenarios"
   },
   {
     path: "apps/api/src/server.audit-integrity-boundary.test.ts",
@@ -453,6 +458,9 @@ const auditGlobalBoundaryPath = resolve("apps/api/src/server.audit-global-bounda
 const auditTraceBoundaryPath = resolve("apps/api/src/server.audit-trace-boundary.test.ts");
 const auditSupportPath = resolve("apps/api/src/server.audit.test-support.ts");
 const auditFhirBoundaryPath = resolve("apps/api/src/server.audit-fhir-boundary.test.ts");
+const auditFhirDeniedBoundaryPath = resolve(
+  "apps/api/src/server.audit-fhir-denied-boundary.test.ts"
+);
 const auditIntegrityBoundaryPath = resolve(
   "apps/api/src/server.audit-integrity-boundary.test.ts"
 );
@@ -727,9 +735,21 @@ const retiredAuditBoundaryPatterns = [
   /audit-trace-demo-001/
 ];
 const requiredAuditFhirBoundaryPatterns = [
-  /records denied patient access in the patient audit trail and FHIR export/,
   /exports patient audit trail as a FHIR AuditEvent Bundle/,
-  /denies clinician treatment-purpose export of the audit FHIR Bundle/
+  /denies clinician treatment-purpose export of the audit FHIR Bundle/,
+  /audit-event:fhir-export/,
+  /integrityHash/
+];
+const requiredAuditFhirDeniedBoundaryPatterns = [
+  /records denied patient access in the patient audit trail and FHIR export/,
+  /PATIENT_ACCESS_DENIED/,
+  /patient-denied-audit-001/,
+  /outcomeDesc: "Access denied"/
+];
+const retiredAuditFhirBoundaryPatterns = [
+  /records denied patient access in the patient audit trail and FHIR export/,
+  /MRN-DENIED-AUDIT-TEST/,
+  /patient-denied-audit-001/
 ];
 const requiredAuditIntegrityBoundaryPatterns = [
   /returns a verified audit integrity report/,
@@ -1061,6 +1081,10 @@ const auditGlobalBoundarySource = await readFile(auditGlobalBoundaryPath, "utf8"
 const auditTraceBoundarySource = await readFile(auditTraceBoundaryPath, "utf8");
 const auditSupportSource = await readFile(auditSupportPath, "utf8");
 const auditFhirBoundarySource = await readFile(auditFhirBoundaryPath, "utf8");
+const auditFhirDeniedBoundarySource = await readFile(
+  auditFhirDeniedBoundaryPath,
+  "utf8"
+);
 const auditIntegrityBoundarySource = await readFile(auditIntegrityBoundaryPath, "utf8");
 const fhirBoundarySource = await readFile(fhirBoundaryPath, "utf8");
 const fhirAccessBoundarySource = await readFile(fhirAccessBoundaryPath, "utf8");
@@ -1425,7 +1449,23 @@ for (const retired of retiredAuditBoundaryPatterns) {
 for (const required of requiredAuditFhirBoundaryPatterns) {
   if (!required.test(auditFhirBoundarySource)) {
     throw new Error(
-      "server.audit-fhir-boundary.test.ts must keep AuditEvent FHIR export and denial evidence scenarios."
+      "server.audit-fhir-boundary.test.ts must keep AuditEvent FHIR Bundle export and authorization scenarios."
+    );
+  }
+}
+
+for (const required of requiredAuditFhirDeniedBoundaryPatterns) {
+  if (!required.test(auditFhirDeniedBoundarySource)) {
+    throw new Error(
+      "server.audit-fhir-denied-boundary.test.ts must keep denied patient access AuditEvent FHIR evidence scenarios."
+    );
+  }
+}
+
+for (const retired of retiredAuditFhirBoundaryPatterns) {
+  if (retired.test(auditFhirBoundarySource)) {
+    throw new Error(
+      "server.audit-fhir-boundary.test.ts must not absorb denied patient access evidence back into the Bundle export suite."
     );
   }
 }
