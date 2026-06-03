@@ -5,6 +5,7 @@ import {
   auditHeaders,
   captureAuthBoundaryEnv,
   expectOperationOutcome,
+  jsonRequestHeaders,
   login,
   loginForToken,
   readyAuthRouteServer,
@@ -225,10 +226,9 @@ describe("API auth login boundary", () => {
     const invalidPayloadResponse = await app.inject({
       method: "POST",
       url: "/api/v1/auth/login",
-      headers: {
-        "content-type": "application/json",
+      headers: jsonRequestHeaders({
         "x-request-id": "auth-invalid-payload-001"
-      },
+      }),
       payload: {
         username: "practitioner-demo-001"
       }
@@ -243,10 +243,9 @@ describe("API auth login boundary", () => {
     const unknownFieldResponse = await app.inject({
       method: "POST",
       url: "/api/v1/auth/login",
-      headers: {
-        "content-type": "application/json",
+      headers: jsonRequestHeaders({
         "x-request-id": "auth-unknown-field-001"
-      },
+      }),
       payload: {
         username: "practitioner-demo-001",
         password: "demo",

@@ -139,10 +139,7 @@ export async function login(
   return app.inject({
     method: "POST",
     url: "/api/v1/auth/login",
-    headers: {
-      ...headers,
-      "content-type": "application/json"
-    },
+    headers: jsonRequestHeaders(headers),
     payload
   });
 }
@@ -193,7 +190,7 @@ export function auditHeaders(accessToken: string): Record<string, string> {
 }
 
 export function jsonRequestHeaders(
-  headers: Record<string, string>
+  headers: Record<string, string> = {}
 ): Record<string, string> {
   return {
     ...headers,

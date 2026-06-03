@@ -4,6 +4,7 @@ import {
   applyDefaultAuthBoundaryEnv,
   auditHeaders,
   captureAuthBoundaryEnv,
+  jsonRequestHeaders,
   loginForToken,
   readyServer,
   restoreAuthBoundaryEnv,
@@ -73,10 +74,7 @@ describe("API audit boundary", () => {
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients",
-      headers: {
-        ...auditHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(auditHeaders(accessToken)),
       payload: {
         identifiers: [
           {
@@ -223,10 +221,7 @@ describe("API audit boundary", () => {
     const createResponse = await app.inject({
       method: "POST",
       url: "/api/v1/patients",
-      headers: {
-        ...treatmentHeaders(adminToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(adminToken)),
       payload: {
         identifiers: [
           {

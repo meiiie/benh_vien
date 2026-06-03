@@ -4,6 +4,7 @@ import {
   applyDefaultAuthBoundaryEnv,
   auditHeaders,
   captureAuthBoundaryEnv,
+  jsonRequestHeaders,
   loginForToken,
   readyServer,
   restoreAuthBoundaryEnv,
@@ -53,11 +54,10 @@ describe("API patient registry boundary", () => {
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients",
-      headers: {
+      headers: jsonRequestHeaders({
         ...treatmentHeaders(adminToken),
-        "content-type": "application/json",
         "x-request-id": "patient-identifier-conflict-001"
-      },
+      }),
       payload: {
         identifiers: [
           {
@@ -124,10 +124,7 @@ describe("API patient registry boundary", () => {
     const createResponse = await app.inject({
       method: "POST",
       url: "/api/v1/patients",
-      headers: {
-        ...treatmentHeaders(adminToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(adminToken)),
       payload: {
         identifiers: [
           {
@@ -148,11 +145,10 @@ describe("API patient registry boundary", () => {
     const clinicianMergeResponse = await app.inject({
       method: "POST",
       url: `/api/v1/patients/${sourcePatientId}/merge`,
-      headers: {
+      headers: jsonRequestHeaders({
         ...treatmentHeaders(clinicianToken),
-        "content-type": "application/json",
         "x-request-id": "patient-merge-clinician-denied-001"
-      },
+      }),
       payload: {
         targetPatientId: "patient-demo-001",
         reason: "Clinician should not merge patient registry records."
@@ -169,11 +165,10 @@ describe("API patient registry boundary", () => {
     const mergeResponse = await app.inject({
       method: "POST",
       url: `/api/v1/patients/${sourcePatientId}/merge`,
-      headers: {
+      headers: jsonRequestHeaders({
         ...treatmentHeaders(adminToken),
-        "content-type": "application/json",
         "x-request-id": "patient-merge-001"
-      },
+      }),
       payload: {
         targetPatientId: "patient-demo-001",
         reason: "Duplicate registration found during MPI review."
@@ -214,11 +209,10 @@ describe("API patient registry boundary", () => {
     const writeAfterMergeResponse = await app.inject({
       method: "POST",
       url: `/api/v1/patients/${sourcePatientId}/encounters`,
-      headers: {
+      headers: jsonRequestHeaders({
         ...treatmentHeaders(adminToken),
-        "content-type": "application/json",
         "x-request-id": "patient-merge-write-denied-001"
-      },
+      }),
       payload: {
         class: "ambulatory",
         serviceType: "Should not write to merged patient",

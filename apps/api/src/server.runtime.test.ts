@@ -8,6 +8,7 @@ import {
   auditHeaders,
   bundleTransferHeaders,
   captureAuthBoundaryEnv,
+  jsonRequestHeaders,
   loginForToken,
   operationsHeaders,
   readyServer,
@@ -269,10 +270,9 @@ describe("API runtime and HTTP envelope boundary", () => {
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/auth/login",
-      headers: {
-        "content-type": "application/json",
+      headers: jsonRequestHeaders({
         "x-request-id": "body-too-large-001"
-      },
+      }),
       payload: {
         username: "practitioner-demo-001",
         password: "x".repeat(2_000),
@@ -321,10 +321,9 @@ describe("API runtime and HTTP envelope boundary", () => {
     const validationResponse = await app.inject({
       method: "POST",
       url: "/api/v1/auth/login",
-      headers: {
-        "content-type": "application/json",
+      headers: jsonRequestHeaders({
         "x-request-id": "x".repeat(129)
-      },
+      }),
       payload: {
         username: "practitioner-demo-001"
       }

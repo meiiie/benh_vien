@@ -4,6 +4,7 @@ import {
   applyDefaultAuthBoundaryEnv,
   captureAuthBoundaryEnv,
   expectOperationOutcome,
+  jsonRequestHeaders,
   loginForToken,
   readyServer,
   restoreAuthBoundaryEnv,
@@ -56,10 +57,7 @@ describe("API consent boundary", () => {
     const createResponse = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/consents",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         category: "record-sharing",
         granteeOrganizationId: "hospital-new-recipient",
@@ -128,10 +126,7 @@ describe("API consent boundary", () => {
     const createResponse = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/consents",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         category: "record-sharing",
         granteeOrganizationId: "hospital-revoked-recipient",
@@ -146,10 +141,7 @@ describe("API consent boundary", () => {
     const revokeResponse = await app.inject({
       method: "POST",
       url: `/api/v1/patients/patient-demo-001/consents/${createdConsent.id}/revoke`,
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         reason: "Người bệnh rút lại đồng ý chia sẻ hồ sơ."
       }
@@ -208,10 +200,7 @@ describe("API consent boundary", () => {
     const createResponse = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/consents",
-      headers: {
-        ...treatmentHeaders(clinicianToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(clinicianToken)),
       payload: {
         category: "record-sharing",
         granteeOrganizationId: "hospital-nurse-denied-recipient",
@@ -226,10 +215,7 @@ describe("API consent boundary", () => {
     const revokeResponse = await app.inject({
       method: "POST",
       url: `/api/v1/patients/patient-demo-001/consents/${createdConsent.id}/revoke`,
-      headers: {
-        ...treatmentHeaders(nurseToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(nurseToken)),
       payload: {
         reason: "Điều dưỡng không có quyền thu hồi consent."
       }
