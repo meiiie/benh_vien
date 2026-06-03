@@ -49,8 +49,23 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/server.patient-registry.test.ts",
-    maxLines: 360,
-    role: "API patient registry, identifier conflict and merge scenarios"
+    maxLines: 90,
+    role: "API patient registry list/access scenarios"
+  },
+  {
+    path: "apps/api/src/server.patient-identifier-boundary.test.ts",
+    maxLines: 110,
+    role: "API patient identifier conflict and audit scenarios"
+  },
+  {
+    path: "apps/api/src/server.patient-merge-boundary.test.ts",
+    maxLines: 170,
+    role: "API patient merge, FHIR replacement link and read-only guard scenarios"
+  },
+  {
+    path: "apps/api/src/server.patient-registry.test-support.ts",
+    maxLines: 130,
+    role: "API patient registry shared boundary test support"
   },
   {
     path: "apps/api/src/server.patient-access.test.ts",
@@ -369,6 +384,13 @@ const httpEnvelopeBoundaryPath = resolve(
 );
 const startupConfigBoundaryPath = resolve("apps/api/src/server.startup-config.test.ts");
 const patientRegistryBoundaryPath = resolve("apps/api/src/server.patient-registry.test.ts");
+const patientIdentifierBoundaryPath = resolve(
+  "apps/api/src/server.patient-identifier-boundary.test.ts"
+);
+const patientMergeBoundaryPath = resolve("apps/api/src/server.patient-merge-boundary.test.ts");
+const patientRegistrySupportPath = resolve(
+  "apps/api/src/server.patient-registry.test-support.ts"
+);
 const patientAccessBoundaryPath = resolve("apps/api/src/server.patient-access.test.ts");
 const patientAccessSupportPath = resolve("apps/api/src/server.patient-access.test-support.ts");
 const patientAccessOutsideClinicalFixturePath = resolve(
@@ -540,8 +562,31 @@ const requiredStartupConfigBoundaryPatterns = [
 ];
 const requiredPatientRegistryBoundaryPatterns = [
   /allows clinician treatment access to patient registry/,
+  /Nguyễn Văn An/
+];
+const requiredPatientIdentifierBoundaryPatterns = [
   /blocks duplicate patient identifiers/,
-  /merges a duplicate patient record/
+  /PATIENT_IDENTIFIER_CONFLICT/,
+  /patient\.identifier-conflict/
+];
+const requiredPatientMergeBoundaryPatterns = [
+  /merges a duplicate patient record/,
+  /patient:merge/,
+  /Patient\/patient-demo-001/,
+  /PATIENT_RECORD_MERGED/,
+  /patient\.merge/
+];
+const requiredPatientRegistrySupportPatterns = [
+  /readyPatientRegistryTestContext/,
+  /createPatientForRegistryMerge/,
+  /findPatientRegistryAuditEvent/,
+  /patientRegistryJsonHeaders/
+];
+const retiredPatientRegistryBoundaryPatterns = [
+  /blocks duplicate patient identifiers/,
+  /merges a duplicate patient record/,
+  /patient\.identifier-conflict/,
+  /patient\.merge/
 ];
 const requiredPatientAccessBoundaryPatterns = [
   /filters treatment patient access by the actor provider organization/,
@@ -889,6 +934,12 @@ const runtimeConfigBoundarySource = await readFile(runtimeConfigBoundaryPath, "u
 const httpEnvelopeBoundarySource = await readFile(httpEnvelopeBoundaryPath, "utf8");
 const startupConfigBoundarySource = await readFile(startupConfigBoundaryPath, "utf8");
 const patientRegistryBoundarySource = await readFile(patientRegistryBoundaryPath, "utf8");
+const patientIdentifierBoundarySource = await readFile(
+  patientIdentifierBoundaryPath,
+  "utf8"
+);
+const patientMergeBoundarySource = await readFile(patientMergeBoundaryPath, "utf8");
+const patientRegistrySupportSource = await readFile(patientRegistrySupportPath, "utf8");
 const patientAccessBoundarySource = await readFile(patientAccessBoundaryPath, "utf8");
 const patientAccessSupportSource = await readFile(patientAccessSupportPath, "utf8");
 const patientAccessOutsideClinicalFixtureSource = await readFile(
@@ -1116,7 +1167,39 @@ for (const required of requiredStartupConfigBoundaryPatterns) {
 for (const required of requiredPatientRegistryBoundaryPatterns) {
   if (!required.test(patientRegistryBoundarySource)) {
     throw new Error(
-      "server.patient-registry.test.ts must keep core patient registry access, identifier conflict and merge scenarios."
+      "server.patient-registry.test.ts must keep core patient registry list/access scenarios."
+    );
+  }
+}
+
+for (const required of requiredPatientIdentifierBoundaryPatterns) {
+  if (!required.test(patientIdentifierBoundarySource)) {
+    throw new Error(
+      "server.patient-identifier-boundary.test.ts must keep patient identifier conflict and audit scenarios."
+    );
+  }
+}
+
+for (const required of requiredPatientMergeBoundaryPatterns) {
+  if (!required.test(patientMergeBoundarySource)) {
+    throw new Error(
+      "server.patient-merge-boundary.test.ts must keep patient merge, FHIR replacement link and read-only guard scenarios."
+    );
+  }
+}
+
+for (const required of requiredPatientRegistrySupportPatterns) {
+  if (!required.test(patientRegistrySupportSource)) {
+    throw new Error(
+      "server.patient-registry.test-support.ts must keep shared patient registry fixtures."
+    );
+  }
+}
+
+for (const retired of retiredPatientRegistryBoundaryPatterns) {
+  if (retired.test(patientRegistryBoundarySource)) {
+    throw new Error(
+      "server.patient-registry.test.ts must not absorb identifier conflict or merge scenarios back into the list/access suite."
     );
   }
 }
