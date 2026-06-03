@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   applyDefaultAuthBoundaryEnv,
   captureAuthBoundaryEnv,
+  jsonRequestHeaders,
   loginForToken,
   readyServer,
   restoreAuthBoundaryEnv,
@@ -171,10 +172,7 @@ describe("API clinical resource boundary", () => {
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/procedures",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         encounterId: "encounter-demo-002",
         basedOnServiceRequestId: "service-request-demo-002",
@@ -245,10 +243,7 @@ describe("API clinical resource boundary", () => {
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/allergy-intolerances",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         encounterId: "encounter-demo-002",
         type: "allergy",
@@ -304,10 +299,7 @@ describe("API clinical resource boundary", () => {
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/conditions",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         encounterId: "encounter-demo-002",
         category: "encounter-diagnosis",
@@ -354,10 +346,7 @@ describe("API clinical resource boundary", () => {
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/observations",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         encounterId: "encounter-demo-002",
         category: "vital-signs",
@@ -445,10 +434,7 @@ describe("API clinical resource boundary", () => {
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/medication-dispenses",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         encounterId: "encounter-demo-002",
         medicationRequestId: "medication-request-demo-002",
@@ -538,10 +524,7 @@ describe("API clinical resource boundary", () => {
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/medication-administrations",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         encounterId: "encounter-demo-002",
         medicationRequestId: "medication-request-demo-002",
@@ -593,10 +576,7 @@ describe("API clinical resource boundary", () => {
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/medication-requests",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         encounterId: "encounter-demo-002",
         reasonConditionId: "condition-demo-002",
@@ -658,10 +638,7 @@ describe("API clinical resource boundary", () => {
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/service-requests",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         encounterId: "encounter-demo-002",
         reasonConditionId: "condition-demo-002",
@@ -717,10 +694,7 @@ describe("API clinical resource boundary", () => {
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/diagnostic-reports",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         encounterId: "encounter-demo-001",
         basedOnServiceRequestId: "service-request-demo-001",
@@ -783,10 +757,7 @@ describe("API clinical resource boundary", () => {
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/imaging-studies",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         encounterId: "encounter-demo-002",
         basedOnServiceRequestId: "service-request-demo-002",
