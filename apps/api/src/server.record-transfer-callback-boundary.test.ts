@@ -3,22 +3,17 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   applyDefaultAuthBoundaryEnv,
   captureAuthBoundaryEnv,
-  jsonRequestHeaders,
   loginForToken,
   operationsHeaders,
   readyServer,
-  recordTransferCallbackKeyIdHeader,
-  recordTransferCallbackSignatureHeader,
-  recordTransferCallbackTestKeyId,
-  recordTransferCallbackTestSecret,
-  recordTransferCallbackTimestampHeader,
   restoreAuthBoundaryEnv,
-  signedRecordTransferCallbackHeaders,
   treatmentHeaders
 } from "./server.auth.test-support.js";
-
-const recordTransferAcknowledgementCallbackUrl =
-  "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback";
+import {
+  buildRecordTransferAcknowledgementPayload,
+  postRecordTransferAcknowledgementCallback,
+  sendRecordTransferForCallback
+} from "./server.record-transfer-callback.test-support.js";
 
 describe("API record-transfer callback boundary", () => {
   let app: FastifyInstance;
@@ -58,27 +53,21 @@ describe("API record-transfer callback boundary", () => {
       permission: "patient:list"
     });
 
-    const sendResponse = await app.inject({
-      method: "POST",
-      url: "/api/v1/record-transfers/record-transfer-demo-001/send",
-      headers: jsonRequestHeaders(treatmentHeaders(clinicianToken)),
-      payload: {
-        sentAt: "2026-05-28T04:30:00.000Z",
-        note: "Queue the document package for the interoperability gateway."
-      }
+    const sendResponse = await sendRecordTransferForCallback({
+      app,
+      clinicianToken,
+      sentAt: "2026-05-28T04:30:00.000Z",
+      note: "Queue the document package for the interoperability gateway."
     });
 
     expect(sendResponse.statusCode).toBe(200);
 
-    const deniedCallbackResponse = await app.inject({
-      method: "POST",
-      url: recordTransferAcknowledgementCallbackUrl,
-      headers: jsonRequestHeaders(operationsHeaders(clinicianToken)),
-      payload: {
-        recipientOrganizationId: "hospital-hai-phong-referral",
-        acknowledgementReference: "ack-denied-from-source-organization",
-        receivedAt: "2026-05-28T04:45:00.000Z"
-      }
+    const deniedCallbackResponse = await postRecordTransferAcknowledgementCallback({
+      app,
+      token: clinicianToken,
+      payload: buildRecordTransferAcknowledgementPayload({
+        acknowledgementReference: "ack-denied-from-source-organization"
+      })
     });
 
     expect(deniedCallbackResponse.statusCode).toBe(403);
@@ -88,20 +77,11 @@ describe("API record-transfer callback boundary", () => {
       requestId: expect.any(String)
     });
 
-    const callbackPayload = {
-      recipientOrganizationId: "hospital-hai-phong-referral",
-      acknowledgementReference: "ack-record-transfer-callback-001",
-      receivedAt: "2026-05-28T04:45:00.000Z",
-      receivedByActorId: "system-hai-phong-referral-gateway",
-      targetEndpointId: "endpoint-fhir-hai-phong-referral",
-      deliveryIdempotencyKey: "wiiicare-record-transfer-callback-test-001",
-      note: "Recipient gateway acknowledged the transferred document package."
-    };
+    const callbackPayload = buildRecordTransferAcknowledgementPayload();
 
-    const callbackResponse = await app.inject({
-      method: "POST",
-      url: recordTransferAcknowledgementCallbackUrl,
-      headers: jsonRequestHeaders(operationsHeaders(gatewayToken)),
+    const callbackResponse = await postRecordTransferAcknowledgementCallback({
+      app,
+      token: gatewayToken,
       payload: callbackPayload
     });
 
@@ -115,10 +95,9 @@ describe("API record-transfer callback boundary", () => {
       acknowledgementReference: "ack-record-transfer-callback-001"
     });
 
-    const duplicateCallbackResponse = await app.inject({
-      method: "POST",
-      url: recordTransferAcknowledgementCallbackUrl,
-      headers: jsonRequestHeaders(operationsHeaders(gatewayToken)),
+    const duplicateCallbackResponse = await postRecordTransferAcknowledgementCallback({
+      app,
+      token: gatewayToken,
       payload: callbackPayload
     });
 
@@ -143,97 +122,6 @@ describe("API record-transfer callback boundary", () => {
           text: "Bi\u00ean nh\u1eadn ti\u1ebfp nh\u1eadn: ack-record-transfer-callback-001"
         }
       ])
-    });
-  });
-
-  it("requires a valid HMAC signature for acknowledgement callbacks when configured", async () => {
-    process.env.BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON = JSON.stringify({
-      [recordTransferCallbackTestKeyId]: recordTransferCallbackTestSecret
-    });
-    const clinicianToken = await readyClinicianSession();
-    const gatewayToken = await loginForToken(
-      app,
-      "gateway-hai-phong-referral",
-      "integration"
-    );
-
-    const sendResponse = await app.inject({
-      method: "POST",
-      url: "/api/v1/record-transfers/record-transfer-demo-001/send",
-      headers: jsonRequestHeaders(treatmentHeaders(clinicianToken)),
-      payload: {
-        sentAt: "2026-05-28T06:00:00.000Z",
-        note: "Queue the document package for the signed callback test."
-      }
-    });
-
-    expect(sendResponse.statusCode).toBe(200);
-
-    const callbackPayload = {
-      recipientOrganizationId: "hospital-hai-phong-referral",
-      acknowledgementReference: "ack-record-transfer-callback-signed-001",
-      receivedAt: new Date().toISOString(),
-      receivedByActorId: "system-hai-phong-referral-gateway",
-      targetEndpointId: "endpoint-fhir-hai-phong-referral",
-      deliveryIdempotencyKey: "wiiicare-record-transfer-callback-signed-test-001",
-      note: "Recipient gateway acknowledged the signed callback."
-    };
-
-    const unsignedCallbackResponse = await app.inject({
-      method: "POST",
-      url: recordTransferAcknowledgementCallbackUrl,
-      headers: {
-        ...jsonRequestHeaders(operationsHeaders(gatewayToken)),
-        [recordTransferCallbackKeyIdHeader]: recordTransferCallbackTestKeyId
-      },
-      payload: callbackPayload
-    });
-
-    expect(unsignedCallbackResponse.statusCode).toBe(403);
-    expect(unsignedCallbackResponse.json()).toMatchObject({
-      error: "RECORD_TRANSFER_CALLBACK_SIGNATURE_REQUIRED",
-      permission: "record-transfer:acknowledge",
-      requestId: expect.any(String)
-    });
-
-    const invalidTimestamp = new Date().toISOString();
-    const invalidSignatureResponse = await app.inject({
-      method: "POST",
-      url: recordTransferAcknowledgementCallbackUrl,
-      headers: {
-        ...jsonRequestHeaders(operationsHeaders(gatewayToken)),
-        [recordTransferCallbackKeyIdHeader]: recordTransferCallbackTestKeyId,
-        [recordTransferCallbackTimestampHeader]: invalidTimestamp,
-        [recordTransferCallbackSignatureHeader]: "invalid-signature"
-      },
-      payload: callbackPayload
-    });
-
-    expect(invalidSignatureResponse.statusCode).toBe(403);
-    expect(invalidSignatureResponse.json()).toMatchObject({
-      error: "RECORD_TRANSFER_CALLBACK_SIGNATURE_INVALID",
-      permission: "record-transfer:acknowledge",
-      requestId: expect.any(String)
-    });
-
-    const signedCallbackResponse = await app.inject({
-      method: "POST",
-      url: recordTransferAcknowledgementCallbackUrl,
-      headers: {
-        ...jsonRequestHeaders(operationsHeaders(gatewayToken)),
-        ...signedRecordTransferCallbackHeaders({
-          recordTransferId: "record-transfer-demo-001",
-          body: callbackPayload
-        })
-      },
-      payload: callbackPayload
-    });
-
-    expect(signedCallbackResponse.statusCode).toBe(200);
-    expect(signedCallbackResponse.json()).toMatchObject({
-      status: "completed",
-      receivedByActorId: "system-hai-phong-referral-gateway",
-      acknowledgementReference: "ack-record-transfer-callback-signed-001"
     });
   });
 });

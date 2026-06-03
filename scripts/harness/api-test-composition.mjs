@@ -199,8 +199,18 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/server.record-transfer-callback-boundary.test.ts",
-    maxLines: 280,
-    role: "API record-transfer operations callback and HMAC boundary scenarios"
+    maxLines: 180,
+    role: "API record-transfer operations callback lifecycle scenarios"
+  },
+  {
+    path: "apps/api/src/server.record-transfer-callback-security-boundary.test.ts",
+    maxLines: 160,
+    role: "API record-transfer callback HMAC security boundary scenarios"
+  },
+  {
+    path: "apps/api/src/server.record-transfer-callback.test-support.ts",
+    maxLines: 120,
+    role: "API record-transfer callback boundary request helpers"
   },
   {
     path: "apps/api/src/server.auth.test-support.ts",
@@ -377,6 +387,12 @@ const recordTransferConsentBoundaryPath = resolve(
 );
 const recordTransferCallbackBoundaryPath = resolve(
   "apps/api/src/server.record-transfer-callback-boundary.test.ts"
+);
+const recordTransferCallbackSecurityBoundaryPath = resolve(
+  "apps/api/src/server.record-transfer-callback-security-boundary.test.ts"
+);
+const recordTransferCallbackSupportPath = resolve(
+  "apps/api/src/server.record-transfer-callback.test-support.ts"
 );
 const recordTransferDeliveryWorkerPath = resolve(
   "apps/api/src/modules/record-transfer-delivery-attempts/record-transfer-delivery-worker.test.ts"
@@ -631,8 +647,24 @@ const requiredRecordTransferConsentBoundaryPatterns = [
 ];
 const requiredRecordTransferCallbackBoundaryPatterns = [
   /accepts an operations acknowledgement callback for a sent record transfer/,
+  /gateway-hai-phong-referral/,
+  /fhir-task/
+];
+const requiredRecordTransferCallbackSecurityBoundaryPatterns = [
   /requires a valid HMAC signature for acknowledgement callbacks/,
+  /RECORD_TRANSFER_CALLBACK_SIGNATURE_REQUIRED/,
   /RECORD_TRANSFER_CALLBACK_SIGNATURE_INVALID/
+];
+const requiredRecordTransferCallbackSupportPatterns = [
+  /recordTransferAcknowledgementCallbackUrl/,
+  /configureRecordTransferCallbackSecret/,
+  /sendRecordTransferForCallback/,
+  /postRecordTransferAcknowledgementCallback/
+];
+const retiredRecordTransferCallbackBoundaryPatterns = [
+  /RECORD_TRANSFER_CALLBACK_SIGNATURE_REQUIRED/,
+  /RECORD_TRANSFER_CALLBACK_SIGNATURE_INVALID/,
+  /signedRecordTransferCallbackHeaders/
 ];
 const requiredRecordTransferDeliveryWorkerPatterns = [
   /posts a queued FHIR Bundle and marks the delivery attempt as succeeded/,
@@ -805,6 +837,14 @@ const recordTransferConsentBoundarySource = await readFile(
 );
 const recordTransferCallbackBoundarySource = await readFile(
   recordTransferCallbackBoundaryPath,
+  "utf8"
+);
+const recordTransferCallbackSecurityBoundarySource = await readFile(
+  recordTransferCallbackSecurityBoundaryPath,
+  "utf8"
+);
+const recordTransferCallbackSupportSource = await readFile(
+  recordTransferCallbackSupportPath,
   "utf8"
 );
 const recordTransferDeliveryWorkerSource = await readFile(
@@ -1167,7 +1207,31 @@ for (const required of requiredRecordTransferConsentBoundaryPatterns) {
 for (const required of requiredRecordTransferCallbackBoundaryPatterns) {
   if (!required.test(recordTransferCallbackBoundarySource)) {
     throw new Error(
-      "server.record-transfer-callback-boundary.test.ts must keep operations callback and HMAC signature scenarios."
+      "server.record-transfer-callback-boundary.test.ts must keep operations callback lifecycle scenarios."
+    );
+  }
+}
+
+for (const required of requiredRecordTransferCallbackSecurityBoundaryPatterns) {
+  if (!required.test(recordTransferCallbackSecurityBoundarySource)) {
+    throw new Error(
+      "server.record-transfer-callback-security-boundary.test.ts must keep callback HMAC security scenarios."
+    );
+  }
+}
+
+for (const required of requiredRecordTransferCallbackSupportPatterns) {
+  if (!required.test(recordTransferCallbackSupportSource)) {
+    throw new Error(
+      "server.record-transfer-callback.test-support.ts must keep callback request helper fixtures."
+    );
+  }
+}
+
+for (const retired of retiredRecordTransferCallbackBoundaryPatterns) {
+  if (retired.test(recordTransferCallbackBoundarySource)) {
+    throw new Error(
+      "server.record-transfer-callback-boundary.test.ts must not absorb HMAC security scenarios back into the lifecycle suite."
     );
   }
 }
