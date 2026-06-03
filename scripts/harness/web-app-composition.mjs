@@ -212,6 +212,7 @@ const requiredModules = [
   "apps/web/src/features/clinical-documents/clinicalDocumentPanelRenderers.tsx",
   "apps/web/src/features/clinical-records/AllergyIntoleranceForm.tsx",
   "apps/web/src/features/clinical-records/AllergyIntolerancePanel.tsx",
+  "apps/web/src/features/clinical-records/allergyIntoleranceHandlers.ts",
   "apps/web/src/features/clinical-records/allergyFormatters.ts",
   "apps/web/src/features/clinical-records/carePlanCommandBuilders.ts",
   "apps/web/src/features/clinical-records/carePlanHandlers.ts",
@@ -219,6 +220,8 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/careWorkflowFormatters.ts",
   "apps/web/src/features/clinical-records/careWorkflowHandlers.ts",
   "apps/web/src/features/clinical-records/clinicalEntryCommandBuilders.ts",
+  "apps/web/src/features/clinical-records/clinicalEntryHandlers.ts",
+  "apps/web/src/features/clinical-records/clinicalEntryHandlerTypes.ts",
   "apps/web/src/features/clinical-records/clinicalRecordCorePanelRenderers.tsx",
   "apps/web/src/features/clinical-records/clinicalRecordDiagnosticPanelRenderers.tsx",
   "apps/web/src/features/clinical-records/clinicalRecordMedicationPanelRenderers.tsx",
@@ -229,6 +232,7 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/clinicalRecordPanelRendererStatusTypes.ts",
   "apps/web/src/features/clinical-records/ConditionForm.tsx",
   "apps/web/src/features/clinical-records/ConditionPanel.tsx",
+  "apps/web/src/features/clinical-records/conditionHandlers.ts",
   "apps/web/src/features/clinical-records/conditionFormatters.ts",
   "apps/web/src/features/clinical-records/diagnosticResultFormatters.ts",
   "apps/web/src/features/clinical-records/diagnosticResultHandlers.ts",
@@ -277,6 +281,7 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/medicationRequestCommandBuilders.ts",
   "apps/web/src/features/clinical-records/ObservationForm.tsx",
   "apps/web/src/features/clinical-records/ObservationPanel.tsx",
+  "apps/web/src/features/clinical-records/observationHandlers.ts",
   "apps/web/src/features/clinical-records/procedureCommandBuilders.ts",
   "apps/web/src/features/clinical-records/ProcedureForm.tsx",
   "apps/web/src/features/clinical-records/ProcedurePanel.tsx",
@@ -721,6 +726,31 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/clinical-records/clinicalEntryApi.ts",
     maxLines: 120,
     role: "Allergy, condition and observation API adapter"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/clinicalEntryHandlers.ts",
+    maxLines: 60,
+    role: "Clinical entry submit handler composition factory"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/clinicalEntryHandlerTypes.ts",
+    maxLines: 80,
+    role: "Clinical entry submit handler configuration and event types"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/allergyIntoleranceHandlers.ts",
+    maxLines: 100,
+    role: "AllergyIntolerance safety submit handler"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/conditionHandlers.ts",
+    maxLines: 90,
+    role: "Condition diagnosis submit handler"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/observationHandlers.ts",
+    maxLines: 100,
+    role: "Observation clinical measurement submit handler"
   },
   {
     path: "apps/web/src/features/clinical-records/medicationApi.ts",
