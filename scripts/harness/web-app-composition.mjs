@@ -28,6 +28,9 @@ const settingsPagePath = resolve("apps/web/src/pages/SettingsPage.tsx");
 const workspacePagePath = resolve("apps/web/src/pages/WorkspacePage.tsx");
 const stylesPath = resolve("apps/web/src/styles.css");
 const landingStylesPath = resolve("apps/web/src/styles/landing.css");
+const webDistAssetsPath = resolve("apps/web/dist/assets");
+const maxInitialBundleBytes = 240 * 1024;
+const maxAuthenticatedBundleBytes = 320 * 1024;
 const demoLoginPath = resolve("apps/web/src/auth/demoLogin.ts");
 const webSrcPath = resolve("apps/web/src");
 const allowedFetchModulePath = resolve("apps/web/src/api/clinicalApi.ts");
@@ -432,6 +435,7 @@ const requiredModules = [
   "apps/web/src/lib/commandDrafts.ts",
   "apps/web/src/lib/fhirPreviewLoader.ts",
   "apps/web/src/lib/patientScopedCollectionLoader.ts",
+  "apps/web/src/pages/AuthenticatedAppContainer.tsx",
   "apps/web/src/pages/AuthenticatedAppExperience.tsx",
   "apps/web/src/pages/AppRouteRenderer.tsx",
   "apps/web/src/pages/AppRouteRendererTypes.ts",
@@ -673,6 +677,11 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/fhir-preview/selectedRecordTransferFhirPreviewEffect.ts",
     maxLines: 50,
     role: "Selected record-transfer FHIR Task and delivery-attempt effect"
+  },
+  {
+    path: "apps/web/src/pages/AuthenticatedAppContainer.tsx",
+    maxLines: 300,
+    role: "Lazy authenticated state, loader and panel composition container"
   },
   {
     path: "apps/web/src/pages/AuthenticatedAppExperience.tsx",
@@ -2217,6 +2226,32 @@ if (misplacedPageCompositionModules.length > 0) {
   );
 }
 
+const webBundleReport = await readWebBundleReport();
+
+if (!webBundleReport.initialBundle) {
+  throw new Error(
+    "Web build must emit a focused index JavaScript bundle; run pnpm --filter @benh-vien-so/web run build before this harness."
+  );
+}
+
+if (!webBundleReport.authenticatedBundle) {
+  throw new Error(
+    "Web build must split the authenticated application into a separate AuthenticatedAppContainer chunk."
+  );
+}
+
+if (webBundleReport.initialBundle.size > maxInitialBundleBytes) {
+  throw new Error(
+    `Initial web bundle must stay under ${maxInitialBundleBytes} bytes; found ${webBundleReport.initialBundle.name} at ${webBundleReport.initialBundle.size} bytes.`
+  );
+}
+
+if (webBundleReport.authenticatedBundle.size > maxAuthenticatedBundleBytes) {
+  throw new Error(
+    `Authenticated web bundle must stay under ${maxAuthenticatedBundleBytes} bytes; found ${webBundleReport.authenticatedBundle.name} at ${webBundleReport.authenticatedBundle.size} bytes.`
+  );
+}
+
 console.log(
   JSON.stringify(
     {
@@ -2226,6 +2261,10 @@ console.log(
       landingPagePath,
       appLineCount,
       maxAppLines,
+      initialBundleBytes: webBundleReport.initialBundle.size,
+      maxInitialBundleBytes,
+      authenticatedBundleBytes: webBundleReport.authenticatedBundle.size,
+      maxAuthenticatedBundleBytes,
       clinicalDocumentApiPath,
       patientRegistryApiPath,
       featureBudgetCount: featureModuleBudgets.length,
@@ -2293,6 +2332,34 @@ async function findForbiddenLayerImports(sourceFiles) {
   }
 
   return violations;
+}
+
+async function readWebBundleReport() {
+  const entries = await readdir(webDistAssetsPath);
+  const jsAssetReports = [];
+
+  for (const entry of entries) {
+    if (!entry.endsWith(".js")) {
+      continue;
+    }
+
+    const entryPath = resolve(webDistAssetsPath, entry);
+    const entryStat = await stat(entryPath);
+
+    jsAssetReports.push({
+      name: entry,
+      size: entryStat.size
+    });
+  }
+
+  return {
+    authenticatedBundle: jsAssetReports.find((asset) =>
+      /^AuthenticatedAppContainer-.*\.js$/.test(asset.name)
+    ),
+    initialBundle: jsAssetReports.find((asset) =>
+      /^index-.*\.js$/.test(asset.name)
+    )
+  };
 }
 
 function extractModuleSpecifiers(source) {
