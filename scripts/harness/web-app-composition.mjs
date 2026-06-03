@@ -237,8 +237,14 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/diagnosticResultFormatters.ts",
   "apps/web/src/features/clinical-records/diagnosticResultHandlers.ts",
   "apps/web/src/features/clinical-records/diagnosticReportCommandBuilders.ts",
+  "apps/web/src/features/clinical-records/DiagnosticReportClassificationFields.tsx",
+  "apps/web/src/features/clinical-records/DiagnosticReportConclusionFields.tsx",
+  "apps/web/src/features/clinical-records/DiagnosticReportContextFields.tsx",
   "apps/web/src/features/clinical-records/DiagnosticReportForm.tsx",
+  "apps/web/src/features/clinical-records/DiagnosticReportObservationFields.tsx",
   "apps/web/src/features/clinical-records/DiagnosticReportPanel.tsx",
+  "apps/web/src/features/clinical-records/DiagnosticReportPerformerFields.tsx",
+  "apps/web/src/features/clinical-records/DiagnosticReportTimingFields.tsx",
   "apps/web/src/features/clinical-records/EncounterPanel.tsx",
   "apps/web/src/features/clinical-records/encounterFormatters.ts",
   "apps/web/src/features/clinical-records/encounterScopedFormUpdater.ts",
@@ -1075,8 +1081,38 @@ const featureModuleBudgets = [
   },
   {
     path: "apps/web/src/features/clinical-records/DiagnosticReportForm.tsx",
-    maxLines: 260,
-    role: "DiagnosticReport LIS/RIS result command form"
+    maxLines: 90,
+    role: "DiagnosticReport LIS/RIS command form composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/DiagnosticReportContextFields.tsx",
+    maxLines: 80,
+    role: "DiagnosticReport encounter and service request fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/DiagnosticReportClassificationFields.tsx",
+    maxLines: 80,
+    role: "DiagnosticReport category and code fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/DiagnosticReportTimingFields.tsx",
+    maxLines: 60,
+    role: "DiagnosticReport effective and issued date fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/DiagnosticReportPerformerFields.tsx",
+    maxLines: 70,
+    role: "DiagnosticReport performer and interpreter fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/DiagnosticReportObservationFields.tsx",
+    maxLines: 90,
+    role: "DiagnosticReport result Observation checkbox fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/DiagnosticReportConclusionFields.tsx",
+    maxLines: 65,
+    role: "DiagnosticReport conclusion and presented form fields"
   },
   {
     path: "apps/web/src/features/clinical-records/ImagingStudyPanel.tsx",
