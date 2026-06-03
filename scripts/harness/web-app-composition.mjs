@@ -429,6 +429,7 @@ const requiredModules = [
   "apps/web/src/lib/commandDrafts.ts",
   "apps/web/src/lib/fhirPreviewLoader.ts",
   "apps/web/src/lib/patientScopedCollectionLoader.ts",
+  "apps/web/src/pages/AuthenticatedAppExperience.tsx",
   "apps/web/src/pages/AppRouteRenderer.tsx",
   "apps/web/src/pages/AppRouteRendererTypes.ts",
   "apps/web/src/pages/AuditLogPage.tsx",
@@ -440,6 +441,7 @@ const requiredModules = [
   "apps/web/src/pages/InteropPage.tsx",
   "apps/web/src/pages/LandingPage.tsx",
   "apps/web/src/pages/LoginPage.tsx",
+  "apps/web/src/pages/PublicAppExperience.tsx",
   "apps/web/src/pages/SettingsPage.tsx",
   "apps/web/src/pages/WorkspaceRouteRenderer.tsx",
   "apps/web/src/pages/WorkspacePage.tsx",
@@ -635,6 +637,16 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/fhir-preview/selectedRecordTransferFhirPreviewEffect.ts",
     maxLines: 50,
     role: "Selected record-transfer FHIR Task and delivery-attempt effect"
+  },
+  {
+    path: "apps/web/src/pages/AuthenticatedAppExperience.tsx",
+    maxLines: 60,
+    role: "Authenticated layout and route rendering shell"
+  },
+  {
+    path: "apps/web/src/pages/PublicAppExperience.tsx",
+    maxLines: 50,
+    role: "Public landing and login route shell"
   },
   {
     path: "apps/web/src/pages/AppRouteRenderer.tsx",

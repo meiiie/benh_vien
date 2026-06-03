@@ -1,6 +1,5 @@
 import { createClinicalApiClient } from "./api/clinicalApi.js";
 import { useAuditState } from "./features/audit/auditState.js";
-import { AuthenticatedLayout } from "./components/AppShell.js";
 import { useClinicalRecordState } from "./features/clinical-records/clinicalRecordState.js";
 import { buildConsentLoaders } from "./features/consents/consentLoaders.js";
 import { useInteroperabilityState } from "./features/interoperability/interoperabilityState.js";
@@ -10,9 +9,8 @@ import { buildPatientWriteGuard } from "./features/patient-registry/patientWrite
 import { usePlatformState } from "./features/platform/platformState.js";
 import { useFhirPreviewState } from "./features/fhir-preview/fhirPreviewState.js";
 import { buildRecordTransferLoaders } from "./features/record-transfers/recordTransferLoaders.js";
-import { LandingPage } from "./pages/LandingPage.js";
-import { LoginPage } from "./pages/LoginPage.js";
-import { AppRouteRenderer } from "./pages/AppRouteRenderer.js";
+import { AuthenticatedAppExperience } from "./pages/AuthenticatedAppExperience.js";
+import { PublicAppExperience } from "./pages/PublicAppExperience.js";
 import { buildAppAuditLoaders } from "./application/appAuditLoaders.js";
 import { buildAppAuthSessionHandlers } from "./application/appAuthSessionHandlers.js";
 import { buildAuditPanels } from "./application/auditPanelContext.js";
@@ -455,19 +453,18 @@ export function App() {
   });
 
   if (!isAuthenticated) {
-    if (appRoute === "login") {
-      return (
-        <LoginPage
-          form={loginForm}
-          error={loginError}
-          onBack={() => setAppRoute("landing")}
-          onChange={setLoginForm}
-          onSubmit={handleLogin}
-        />
-      );
-    }
-
-    return <LandingPage onDemo={() => void handleLogin()} onLogin={() => setAppRoute("login")} />;
+    return (
+      <PublicAppExperience
+        appRoute={appRoute}
+        loginError={loginError}
+        loginForm={loginForm}
+        onBackToLanding={() => setAppRoute("landing")}
+        onDemo={() => void handleLogin()}
+        onLogin={() => setAppRoute("login")}
+        onLoginFormChange={setLoginForm}
+        onLoginSubmit={handleLogin}
+      />
+    );
   }
 
   const authenticatedAppRoute = isIntegrationSession
@@ -475,50 +472,50 @@ export function App() {
     : normalizeAuthenticatedRoute(appRoute);
 
   return (
-    <AuthenticatedLayout
+    <AuthenticatedAppExperience
       apiBaseUrl={apiBaseUrl}
       currentRoute={authenticatedAppRoute}
       userRole={authSession?.actor.role ?? loginForm.role}
       userName={authSession?.actor.displayName ?? loginForm.username}
       onLogout={handleLogout}
-      onNavigate={isIntegrationSession ? () => setAppRoute("interop") : setAppRoute}
+      onShellNavigate={(route) =>
+        setAppRoute(isIntegrationSession ? "interop" : route)
+      }
       statusMessage={statusMessage}
-    >
-      <AppRouteRenderer
-        apiBaseUrl={apiBaseUrl}
-        apiRuntimeInfo={platformState.apiRuntimeInfo}
-        apiRuntimeWarning={platformState.apiRuntimeWarning}
-        appRoute={authenticatedAppRoute}
-        authSession={authSession}
-        canMergePatients={canMergePatients}
-        canViewRuntimeInfo={canViewRuntimeInfo}
-        dashboardMetrics={dashboardMetrics}
-        fhirPreviews={fhirPreviews}
-        gatewayAcknowledgementForm={interoperabilityState.gatewayAcknowledgementForm}
-        gatewayAcknowledgementResult={
-          interoperabilityState.gatewayAcknowledgementResult
-        }
-        isIntegrationSession={isIntegrationSession}
-        isSubmittingGatewayAcknowledgement={
-          interoperabilityState.isSubmittingGatewayAcknowledgement
-        }
-        latestEncounterServiceType={latestEncounterServiceType}
-        loginForm={loginForm}
-        panels={routePanels}
-        providerDirectory={platformState.providerDirectory}
-        referenceSignals={referenceSignals}
-        selectedPatient={selectedPatient}
-        workflowSteps={workflowSteps}
-        onGatewayAcknowledgementFormChange={
-          interoperabilityState.setGatewayAcknowledgementForm
-        }
-        onGatewayAcknowledgementSubmit={(event) =>
-          void handleGatewayAcknowledgementSubmit(event)
-        }
-        onNavigate={setAppRoute}
-        onReloadRuntimeInfo={() => void loadApiRuntimeInfo()}
-      />
-    </AuthenticatedLayout>
+      apiRuntimeInfo={platformState.apiRuntimeInfo}
+      apiRuntimeWarning={platformState.apiRuntimeWarning}
+      appRoute={authenticatedAppRoute}
+      authSession={authSession}
+      canMergePatients={canMergePatients}
+      canViewRuntimeInfo={canViewRuntimeInfo}
+      dashboardMetrics={dashboardMetrics}
+      fhirPreviews={fhirPreviews}
+      gatewayAcknowledgementForm={
+        interoperabilityState.gatewayAcknowledgementForm
+      }
+      gatewayAcknowledgementResult={
+        interoperabilityState.gatewayAcknowledgementResult
+      }
+      isIntegrationSession={isIntegrationSession}
+      isSubmittingGatewayAcknowledgement={
+        interoperabilityState.isSubmittingGatewayAcknowledgement
+      }
+      latestEncounterServiceType={latestEncounterServiceType}
+      loginForm={loginForm}
+      panels={routePanels}
+      providerDirectory={platformState.providerDirectory}
+      referenceSignals={referenceSignals}
+      selectedPatient={selectedPatient}
+      workflowSteps={workflowSteps}
+      onGatewayAcknowledgementFormChange={
+        interoperabilityState.setGatewayAcknowledgementForm
+      }
+      onGatewayAcknowledgementSubmit={(event) =>
+        void handleGatewayAcknowledgementSubmit(event)
+      }
+      onNavigate={setAppRoute}
+      onReloadRuntimeInfo={() => void loadApiRuntimeInfo()}
+    />
   );
 
 }
