@@ -363,6 +363,12 @@ const requiredModules = [
   "apps/web/src/features/fhir-preview/fhirPreviewLoaderTypes.ts",
   "apps/web/src/features/fhir-preview/operationalFhirPreviewLoaders.ts",
   "apps/web/src/features/fhir-preview/patientFhirPreviewLoaders.ts",
+  "apps/web/src/features/fhir-preview/selectedClinicalResourceFhirPreviewEffects.ts",
+  "apps/web/src/features/fhir-preview/selectedDocumentFhirPreviewEffect.ts",
+  "apps/web/src/features/fhir-preview/selectedFhirPreviewEffects.ts",
+  "apps/web/src/features/fhir-preview/selectedFhirPreviewEffectTypes.ts",
+  "apps/web/src/features/fhir-preview/selectedPreviewEffectHook.ts",
+  "apps/web/src/features/fhir-preview/selectedRecordTransferFhirPreviewEffect.ts",
   "apps/web/src/features/interoperability/FhirDocumentBundleSummary.tsx",
   "apps/web/src/features/interoperability/fhirDocumentBundleSummaryModel.ts",
   "apps/web/src/features/interoperability/interopPanelRenderers.tsx",
@@ -580,6 +586,36 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/fhir-preview/operationalFhirPreviewLoaders.ts",
     maxLines: 90,
     role: "Audit, provider directory and record-transfer FHIR preview loaders"
+  },
+  {
+    path: "apps/web/src/features/fhir-preview/selectedFhirPreviewEffects.ts",
+    maxLines: 30,
+    role: "Selected FHIR preview effect composition"
+  },
+  {
+    path: "apps/web/src/features/fhir-preview/selectedFhirPreviewEffectTypes.ts",
+    maxLines: 80,
+    role: "Selected FHIR preview effect contracts"
+  },
+  {
+    path: "apps/web/src/features/fhir-preview/selectedPreviewEffectHook.ts",
+    maxLines: 30,
+    role: "Selected FHIR preview shared hook"
+  },
+  {
+    path: "apps/web/src/features/fhir-preview/selectedDocumentFhirPreviewEffect.ts",
+    maxLines: 40,
+    role: "Selected DocumentReference and Provenance preview effect"
+  },
+  {
+    path: "apps/web/src/features/fhir-preview/selectedClinicalResourceFhirPreviewEffects.ts",
+    maxLines: 80,
+    role: "Selected clinical resource FHIR preview effects"
+  },
+  {
+    path: "apps/web/src/features/fhir-preview/selectedRecordTransferFhirPreviewEffect.ts",
+    maxLines: 50,
+    role: "Selected record-transfer FHIR Task and delivery-attempt effect"
   },
   {
     path: "apps/web/src/features/audit/AuditPanels.tsx",
