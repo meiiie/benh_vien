@@ -137,11 +137,6 @@ export function App() {
   const {
     loadAuditFhirBundle,
     loadConsentFhirPreview,
-    loadDocumentFhirPreview,
-    loadDocumentProvenanceFhirPreview,
-    loadEncounterFhirPreview,
-    loadPatientFhirBundlePreview,
-    loadPatientFhirDocumentBundlePreview,
     loadProviderDirectoryFhirPreview
   } = fhirPreviewLoaders;
   const auditLoaders = buildAppAuditLoaders({
@@ -209,21 +204,6 @@ export function App() {
     clinicalRecordState,
     setStatusMessage
   });
-  const {
-    loadAllergyIntolerances,
-    loadClinicalDocuments,
-    loadConditions,
-    loadDiagnosticReports,
-    loadEncounters,
-    loadImagingStudies,
-    loadMedicationAdministrations,
-    loadMedicationDispenses,
-    loadMedicationRequests,
-    loadObservations,
-    loadProcedures,
-    loadServiceRequests,
-    loadWorkflowTasks
-  } = patientWorkspaceLoaders;
   const patientWorkspaceLifecycle = buildAppPatientWorkspaceLifecycle({
     auditState,
     auditLoaders,
@@ -274,27 +254,12 @@ export function App() {
     handleFinishEncounter,
     handleSignClinicalDocument
   } = buildAppClinicalRecordHandlers({
+    auditLoaders,
     clinicalApi,
     clinicalRecordState,
     ensureSelectedPatientWritable,
-    loadAllergyIntolerances,
-    loadAuditEvents,
-    loadClinicalDocuments,
-    loadConditions,
-    loadDiagnosticReports,
-    loadDocumentFhirPreview,
-    loadDocumentProvenanceFhirPreview,
-    loadEncounterFhirPreview,
-    loadEncounters,
-    loadImagingStudies,
-    loadMedicationAdministrations,
-    loadMedicationDispenses,
-    loadMedicationRequests,
-    loadObservations,
-    loadPatientFhirBundlePreview,
-    loadPatientFhirDocumentBundlePreview,
-    loadProcedures,
-    loadServiceRequests,
+    fhirPreviewLoaders,
+    patientWorkspaceLoaders,
     selectedPatient,
     setAppRoute,
     setStatusMessage

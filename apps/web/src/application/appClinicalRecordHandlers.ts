@@ -7,75 +7,35 @@ import { buildEncounterHandlers } from "../features/clinical-records/encounterHa
 import { buildMedicationHandlers } from "../features/clinical-records/medicationHandlers.js";
 import type { AppRoute } from "../types/appRuntime.js";
 import type { Patient } from "../types/patientRegistry.js";
+import type { buildAppAuditLoaders } from "./appAuditLoaders.js";
+import type { buildAppFhirPreviewLoaders } from "./appFhirPreviewLoaders.js";
+import type { buildAppPatientWorkspaceLoaders } from "./appPatientWorkspaceLoaders.js";
 
 type ClinicalRecordState = ReturnType<typeof useClinicalRecordState>;
-type EncounterHandlerConfig = Parameters<typeof buildEncounterHandlers>[0];
-type ClinicalEntryHandlerConfig = Parameters<typeof buildClinicalEntryHandlers>[0];
-type MedicationHandlerConfig = Parameters<typeof buildMedicationHandlers>[0];
-type CarePlanHandlerConfig = Parameters<typeof buildCarePlanHandlers>[0];
-type ClinicalDocumentHandlerConfig =
-  Parameters<typeof buildClinicalDocumentHandlers>[0];
+type AppAuditLoaders = ReturnType<typeof buildAppAuditLoaders>;
+type AppFhirPreviewLoaders = ReturnType<typeof buildAppFhirPreviewLoaders>;
+type AppPatientWorkspaceLoaders =
+  ReturnType<typeof buildAppPatientWorkspaceLoaders>;
 
 type BuildAppClinicalRecordHandlersInput = {
+  readonly auditLoaders: AppAuditLoaders;
   readonly clinicalApi: ClinicalApiClient;
   readonly clinicalRecordState: ClinicalRecordState;
   readonly ensureSelectedPatientWritable: () => boolean;
-  readonly loadAllergyIntolerances:
-    ClinicalEntryHandlerConfig["loadAllergyIntolerances"];
-  readonly loadAuditEvents: EncounterHandlerConfig["loadAuditEvents"];
-  readonly loadClinicalDocuments:
-    ClinicalDocumentHandlerConfig["loadClinicalDocuments"];
-  readonly loadConditions: ClinicalEntryHandlerConfig["loadConditions"];
-  readonly loadDiagnosticReports:
-    CarePlanHandlerConfig["loadDiagnosticReports"];
-  readonly loadDocumentFhirPreview:
-    ClinicalDocumentHandlerConfig["loadDocumentFhirPreview"];
-  readonly loadDocumentProvenanceFhirPreview:
-    ClinicalDocumentHandlerConfig["loadDocumentProvenanceFhirPreview"];
-  readonly loadEncounterFhirPreview:
-    EncounterHandlerConfig["loadEncounterFhirPreview"];
-  readonly loadEncounters: EncounterHandlerConfig["loadEncounters"];
-  readonly loadImagingStudies: CarePlanHandlerConfig["loadImagingStudies"];
-  readonly loadMedicationAdministrations:
-    MedicationHandlerConfig["loadMedicationAdministrations"];
-  readonly loadMedicationDispenses:
-    MedicationHandlerConfig["loadMedicationDispenses"];
-  readonly loadMedicationRequests:
-    MedicationHandlerConfig["loadMedicationRequests"];
-  readonly loadObservations: ClinicalEntryHandlerConfig["loadObservations"];
-  readonly loadPatientFhirBundlePreview:
-    ClinicalEntryHandlerConfig["loadPatientFhirBundlePreview"];
-  readonly loadPatientFhirDocumentBundlePreview:
-    MedicationHandlerConfig["loadPatientFhirDocumentBundlePreview"];
-  readonly loadProcedures: CarePlanHandlerConfig["loadProcedures"];
-  readonly loadServiceRequests: CarePlanHandlerConfig["loadServiceRequests"];
+  readonly fhirPreviewLoaders: AppFhirPreviewLoaders;
+  readonly patientWorkspaceLoaders: AppPatientWorkspaceLoaders;
   readonly selectedPatient: Patient | undefined;
   readonly setAppRoute: (route: AppRoute) => void;
   readonly setStatusMessage: (message: string) => void;
 };
 
 export function buildAppClinicalRecordHandlers({
+  auditLoaders,
   clinicalApi,
   clinicalRecordState,
   ensureSelectedPatientWritable,
-  loadAllergyIntolerances,
-  loadAuditEvents,
-  loadClinicalDocuments,
-  loadConditions,
-  loadDiagnosticReports,
-  loadDocumentFhirPreview,
-  loadDocumentProvenanceFhirPreview,
-  loadEncounterFhirPreview,
-  loadEncounters,
-  loadImagingStudies,
-  loadMedicationAdministrations,
-  loadMedicationDispenses,
-  loadMedicationRequests,
-  loadObservations,
-  loadPatientFhirBundlePreview,
-  loadPatientFhirDocumentBundlePreview,
-  loadProcedures,
-  loadServiceRequests,
+  fhirPreviewLoaders,
+  patientWorkspaceLoaders,
   selectedPatient,
   setAppRoute,
   setStatusMessage
@@ -84,9 +44,9 @@ export function buildAppClinicalRecordHandlers({
     clinicalApi,
     ...clinicalRecordState,
     ensureSelectedPatientWritable,
-    loadAuditEvents,
-    loadEncounterFhirPreview,
-    loadEncounters,
+    loadAuditEvents: auditLoaders.loadAuditEvents,
+    loadEncounterFhirPreview: fhirPreviewLoaders.loadEncounterFhirPreview,
+    loadEncounters: patientWorkspaceLoaders.loadEncounters,
     selectedPatient,
     setAppRoute,
     setStatusMessage
@@ -96,11 +56,13 @@ export function buildAppClinicalRecordHandlers({
     clinicalApi,
     ...clinicalRecordState,
     ensureSelectedPatientWritable,
-    loadAllergyIntolerances,
-    loadAuditEvents,
-    loadConditions,
-    loadObservations,
-    loadPatientFhirBundlePreview,
+    loadAllergyIntolerances:
+      patientWorkspaceLoaders.loadAllergyIntolerances,
+    loadAuditEvents: auditLoaders.loadAuditEvents,
+    loadConditions: patientWorkspaceLoaders.loadConditions,
+    loadObservations: patientWorkspaceLoaders.loadObservations,
+    loadPatientFhirBundlePreview:
+      fhirPreviewLoaders.loadPatientFhirBundlePreview,
     selectedPatient,
     setAppRoute,
     setStatusMessage
@@ -109,12 +71,15 @@ export function buildAppClinicalRecordHandlers({
   const medicationHandlers = buildMedicationHandlers({
     clinicalApi,
     ensureSelectedPatientWritable,
-    loadAuditEvents,
-    loadMedicationAdministrations,
-    loadMedicationDispenses,
-    loadMedicationRequests,
-    loadPatientFhirBundlePreview,
-    loadPatientFhirDocumentBundlePreview,
+    loadAuditEvents: auditLoaders.loadAuditEvents,
+    loadMedicationAdministrations:
+      patientWorkspaceLoaders.loadMedicationAdministrations,
+    loadMedicationDispenses: patientWorkspaceLoaders.loadMedicationDispenses,
+    loadMedicationRequests: patientWorkspaceLoaders.loadMedicationRequests,
+    loadPatientFhirBundlePreview:
+      fhirPreviewLoaders.loadPatientFhirBundlePreview,
+    loadPatientFhirDocumentBundlePreview:
+      fhirPreviewLoaders.loadPatientFhirDocumentBundlePreview,
     ...clinicalRecordState,
     selectedPatient,
     setAppRoute,
@@ -125,13 +90,15 @@ export function buildAppClinicalRecordHandlers({
     clinicalApi,
     ...clinicalRecordState,
     ensureSelectedPatientWritable,
-    loadAuditEvents,
-    loadDiagnosticReports,
-    loadImagingStudies,
-    loadPatientFhirBundlePreview,
-    loadPatientFhirDocumentBundlePreview,
-    loadProcedures,
-    loadServiceRequests,
+    loadAuditEvents: auditLoaders.loadAuditEvents,
+    loadDiagnosticReports: patientWorkspaceLoaders.loadDiagnosticReports,
+    loadImagingStudies: patientWorkspaceLoaders.loadImagingStudies,
+    loadPatientFhirBundlePreview:
+      fhirPreviewLoaders.loadPatientFhirBundlePreview,
+    loadPatientFhirDocumentBundlePreview:
+      fhirPreviewLoaders.loadPatientFhirDocumentBundlePreview,
+    loadProcedures: patientWorkspaceLoaders.loadProcedures,
+    loadServiceRequests: patientWorkspaceLoaders.loadServiceRequests,
     selectedPatient,
     setAppRoute,
     setStatusMessage
@@ -141,10 +108,11 @@ export function buildAppClinicalRecordHandlers({
     clinicalApi,
     ...clinicalRecordState,
     ensureSelectedPatientWritable,
-    loadAuditEvents,
-    loadClinicalDocuments,
-    loadDocumentFhirPreview,
-    loadDocumentProvenanceFhirPreview,
+    loadAuditEvents: auditLoaders.loadAuditEvents,
+    loadClinicalDocuments: patientWorkspaceLoaders.loadClinicalDocuments,
+    loadDocumentFhirPreview: fhirPreviewLoaders.loadDocumentFhirPreview,
+    loadDocumentProvenanceFhirPreview:
+      fhirPreviewLoaders.loadDocumentProvenanceFhirPreview,
     selectedPatient,
     setAppRoute,
     setStatusMessage

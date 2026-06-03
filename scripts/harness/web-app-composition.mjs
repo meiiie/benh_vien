@@ -504,6 +504,11 @@ const featureModuleBudgets = [
     role: "Patient workspace lifecycle composition with grouped loader contracts"
   },
   {
+    path: "apps/web/src/application/appClinicalRecordHandlers.ts",
+    maxLines: 140,
+    role: "Clinical record command handler composition with grouped loader contracts"
+  },
+  {
     path: "apps/web/src/config/demoClinicalDefaults.ts",
     maxLines: 20,
     role: "Demo defaults compatibility barrel"
