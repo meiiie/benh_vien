@@ -295,8 +295,13 @@ const requiredModules = [
   "apps/web/src/features/consents/consentCommandBuilders.ts",
   "apps/web/src/features/consents/consentFormatters.ts",
   "apps/web/src/features/interoperability/FhirTransferContextSummary.tsx",
+  "apps/web/src/features/fhir-preview/clinicalResourceFhirPreviewLoaders.ts",
+  "apps/web/src/features/fhir-preview/documentConsentFhirPreviewLoaders.ts",
   "apps/web/src/features/fhir-preview/fhirPreviewLoaderFactory.ts",
   "apps/web/src/features/fhir-preview/fhirPreviewLoaders.ts",
+  "apps/web/src/features/fhir-preview/fhirPreviewLoaderTypes.ts",
+  "apps/web/src/features/fhir-preview/operationalFhirPreviewLoaders.ts",
+  "apps/web/src/features/fhir-preview/patientFhirPreviewLoaders.ts",
   "apps/web/src/features/interoperability/FhirDocumentBundleSummary.tsx",
   "apps/web/src/features/interoperability/fhirDocumentBundleSummaryModel.ts",
   "apps/web/src/features/interoperability/interopPanelRenderers.tsx",
@@ -484,8 +489,33 @@ const featureModuleBudgets = [
   },
   {
     path: "apps/web/src/features/fhir-preview/fhirPreviewLoaders.ts",
-    maxLines: 220,
-    role: "FHIR resource preview loader composition"
+    maxLines: 60,
+    role: "FHIR preview loader composition factory"
+  },
+  {
+    path: "apps/web/src/features/fhir-preview/fhirPreviewLoaderTypes.ts",
+    maxLines: 70,
+    role: "FHIR preview loader configuration and builder types"
+  },
+  {
+    path: "apps/web/src/features/fhir-preview/clinicalResourceFhirPreviewLoaders.ts",
+    maxLines: 130,
+    role: "Clinical resource FHIR preview loaders"
+  },
+  {
+    path: "apps/web/src/features/fhir-preview/documentConsentFhirPreviewLoaders.ts",
+    maxLines: 60,
+    role: "DocumentReference, Provenance and Consent FHIR preview loaders"
+  },
+  {
+    path: "apps/web/src/features/fhir-preview/patientFhirPreviewLoaders.ts",
+    maxLines: 70,
+    role: "Patient and patient Bundle FHIR preview loaders"
+  },
+  {
+    path: "apps/web/src/features/fhir-preview/operationalFhirPreviewLoaders.ts",
+    maxLines: 90,
+    role: "Audit, provider directory and record-transfer FHIR preview loaders"
   },
   {
     path: "apps/web/src/features/audit/AuditPanels.tsx",
