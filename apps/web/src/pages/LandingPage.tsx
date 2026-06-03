@@ -5,54 +5,77 @@ type LandingPageProps = {
 
 const capabilityCards = [
   {
-    label: "Hồ sơ lâm sàng",
-    title: "Không gian hồ sơ bệnh nhân",
+    label: "Lõi hồ sơ",
+    title: "Không gian bệnh án theo bệnh nhân",
     description:
-      "Theo dõi bệnh nhân, lượt khám, dị ứng, chẩn đoán, chỉ định, kết quả và thuốc trong một bàn làm việc thống nhất.",
-    tags: ["Patient", "Encounter", "Medication"]
+      "Tập hợp định danh, lượt khám, dị ứng, chẩn đoán, chỉ định, kết quả, thuốc và tài liệu lâm sàng trong một không gian làm việc thống nhất.",
+    tags: ["Patient", "Encounter", "Dữ liệu lâm sàng"]
   },
   {
-    label: "Bệnh án điện tử",
-    title: "Trung tâm tài liệu bệnh án",
+    label: "Tài liệu",
+    title: "Bệnh án điện tử có dấu vết kỹ thuật",
     description:
-      "Quản lý tài liệu bệnh án, metadata tệp, nguồn tạo, băm kiểm chứng và ánh xạ sang DocumentReference/Provenance.",
+      "Quản lý tệp bệnh án, metadata, nguồn tạo, hash kiểm chứng và ánh xạ sang DocumentReference/Provenance để phục vụ truy vết.",
     tags: ["DocumentReference", "Provenance", "Hash"]
   },
   {
     label: "Liên thông",
-    title: "Chuyển hồ sơ liên viện",
+    title: "Chuyển hồ sơ có đồng ý của người bệnh",
     description:
-      "Mô phỏng chuyển hồ sơ theo đồng ý của người bệnh, tạo gói FHIR Bundle, hàng đợi gửi, retry và callback biên nhận.",
+      "Tạo gói FHIR document Bundle, kiểm tra đồng ý chia sẻ dữ liệu, đưa vào outbox, retry khi lỗi và nhận callback biên nhận từ hệ thống đích.",
     tags: ["Consent", "FHIR Task", "Outbox"]
   },
   {
-    label: "An toàn vận hành",
-    title: "Kiểm soát truy cập và audit",
+    label: "Kiểm soát",
+    title: "Phân quyền và nhật ký kiểm toán",
     description:
-      "Phân quyền theo vai trò, mục đích sử dụng, phạm vi tổ chức và chuỗi audit để phục vụ kiểm toán truy cập dữ liệu nhạy cảm.",
-    tags: ["RBAC", "ABAC", "Audit trail"]
+      "Kết hợp vai trò, mục đích sử dụng, phạm vi tổ chức và nhật ký kiểm toán để giảm truy cập sai mục đích vào dữ liệu nhạy cảm.",
+    tags: ["RBAC", "ABAC", "AuditEvent"]
   }
 ];
 
-const workflowSignals = [
-  "Tiếp nhận",
-  "Lượt khám",
-  "Tài liệu",
-  "Đồng ý",
-  "Chuyển hồ sơ",
-  "FHIR",
-  "Audit"
+const workflowSteps = [
+  {
+    code: "01",
+    label: "Định danh",
+    detail: "Đăng ký, đối soát và xử lý trường hợp gộp hồ sơ bệnh nhân."
+  },
+  {
+    code: "02",
+    label: "Khám bệnh",
+    detail: "Ghi nhận lượt khám, dữ liệu lâm sàng và tài liệu phát sinh."
+  },
+  {
+    code: "03",
+    label: "Đồng ý",
+    detail: "Kiểm tra phạm vi chia sẻ trước khi đóng gói hồ sơ."
+  },
+  {
+    code: "04",
+    label: "Đóng gói",
+    detail: "Sinh FHIR document Bundle tự chứa, có Composition và Provenance."
+  },
+  {
+    code: "05",
+    label: "Gửi nhận",
+    detail: "Chuyển qua gateway, outbox, retry và callback biên nhận."
+  },
+  {
+    code: "06",
+    label: "Kiểm toán",
+    detail: "Lưu AuditEvent và kiểm tra toàn vẹn chuỗi truy cập."
+  }
 ];
 
 const scopeCards = [
   {
     tone: "primary",
-    label: "Đang có trong prototype",
+    label: "Đã có trong prototype",
     title: "Một lát cắt EMR có thể thao tác, không phải slide mô phỏng",
     points: [
       "Patient Registry quản lý định danh, hồ sơ và tình huống gộp bệnh nhân.",
-      "Workspace lâm sàng có lượt khám, dị ứng, chẩn đoán, chỉ định, kết quả, thuốc và tài liệu.",
-      "Luồng chuyển hồ sơ tạo FHIR document Bundle, kiểm tra đồng ý chia sẻ và ghi nhật ký kiểm toán."
+      "Không gian lâm sàng có lượt khám, dị ứng, chẩn đoán, chỉ định, kết quả, thuốc và tài liệu.",
+      "Luồng chuyển hồ sơ tạo FHIR document Bundle, kiểm tra đồng ý chia sẻ dữ liệu và ghi nhật ký kiểm toán."
     ],
     evidence: [
       ["FHIR Bundle", "Gói hồ sơ tự chứa"],
@@ -64,26 +87,37 @@ const scopeCards = [
   {
     tone: "integration",
     label: "Cần tích hợp khi triển khai thật",
-    title: "Các hệ thống bệnh viện phải được cắm bằng hợp đồng kỹ thuật rõ ràng",
+    title: "HIS, LIS và PACS phải được cắm bằng hợp đồng kỹ thuật rõ ràng",
     points: [
       "HIS: hệ thống thông tin bệnh viện cho tiếp đón, viện phí, bảo hiểm và vận hành nội trú/ngoại trú.",
       "LIS/RIS: hệ thống xét nghiệm và chẩn đoán hình ảnh trả kết quả có cấu trúc.",
-      "PACS/DICOMweb: kho ảnh y khoa và endpoint truy xuất ảnh, không lưu ảnh lớn trực tiếp vào EMR."
+      "PACS/DICOMweb: kho ảnh y khoa và endpoint truy xuất ảnh, không nên nhét ảnh lớn trực tiếp vào EMR."
     ],
     evidence: []
   },
   {
     tone: "guardrail",
-    label: "Không tuyên bố quá mức",
-    title: "Prototype chưa thay thế hệ thống bệnh viện hoàn chỉnh",
+    label: "Ranh giới trung thực",
+    title: "Prototype chưa phải hệ thống bệnh viện sản xuất",
     points: [
-      "Chưa dùng dữ liệu bệnh nhân thật và chưa khẳng định tuân thủ sản xuất.",
-      "Chưa có chữ ký số pháp lý, SSO/MFA thật, mTLS/JWS gateway hai chiều hoặc MHD registry đầy đủ.",
-      "AI chỉ là hướng mở rộng sau khi EMR, FHIR, phân quyền và audit đủ chắc."
+      "Chưa dùng dữ liệu bệnh nhân thật và chưa tuyên bố tuân thủ pháp lý ở môi trường sản xuất.",
+      "Chưa có chữ ký số pháp lý, SSO/MFA thật, mTLS/JWS gateway hai chiều hoặc registry MHD đầy đủ.",
+      "AI chỉ nên bổ sung sau khi EMR, FHIR, phân quyền và audit đã đủ chắc."
     ],
     evidence: []
   }
 ] as const;
+
+const standardBadges = [
+  "HL7 FHIR R4",
+  "FHIR document Bundle",
+  "Provider Directory",
+  "DocumentReference",
+  "Provenance",
+  "AuditEvent",
+  "Sẵn sàng DICOM/PACS",
+  "Migration PostgreSQL"
+];
 
 export function LandingPage({ onDemo, onLogin }: LandingPageProps) {
   return (
@@ -94,7 +128,7 @@ export function LandingPage({ onDemo, onLogin }: LandingPageProps) {
             W
           </span>
           <span>
-            <strong>WiiiCare Nexus</strong>
+            <strong>Wiii Care</strong>
             <small>HoLiLiHu · The Wiii Lab</small>
           </span>
         </div>
@@ -103,83 +137,100 @@ export function LandingPage({ onDemo, onLogin }: LandingPageProps) {
             Đăng nhập
           </button>
           <button className="primary-button" type="button" onClick={onDemo}>
-            Vào phiên demo
+            Mở không gian demo
           </button>
         </div>
       </nav>
 
-      <section className="landing-hero">
+      <section className="landing-hero" aria-labelledby="landing-title">
         <div className="landing-hero-copy">
           <p className="eyebrow">Nguyên mẫu EMR liên thông</p>
-          <h1>Bệnh án điện tử liên thông cho bối cảnh bệnh viện Việt Nam</h1>
+          <h1 id="landing-title">Bệnh án điện tử cho mạng lưới bệnh viện Việt Nam</h1>
           <p className="lede">
-            WiiiCare Nexus là mô hình EMR (Electronic Medical Record, bệnh án điện tử)
-            tập trung vào hồ sơ bệnh nhân, tài liệu lâm sàng, đồng ý chia sẻ dữ liệu,
-            chuyển hồ sơ liên viện và audit trail (nhật ký kiểm toán). Mục tiêu không phải làm màn hình đẹp
-            đơn thuần, mà là trình bày một lát cắt sản phẩm đủ gần thực tế để phát triển
-            thành hệ thống bệnh viện số.
+            Wiii Care mô phỏng lõi EMR (Electronic Medical Record, bệnh án điện tử) phục vụ
+            quản lý hồ sơ bệnh nhân, tài liệu lâm sàng, đồng ý chia sẻ dữ liệu và chuyển hồ sơ
+            liên viện theo chuẩn FHIR. Trọng tâm của nguyên mẫu là luồng nghiệp vụ đủ thật để
+            thảo luận kỹ thuật, không chỉ là giao diện trình diễn.
           </p>
+
           <div className="landing-actions">
-            <button className="ghost-button" type="button" onClick={onDemo}>
+            <button className="primary-button" type="button" onClick={onDemo}>
               Vào nhanh bằng tài khoản bác sĩ
             </button>
-            <button className="primary-button" type="button" onClick={onLogin}>
+            <button className="ghost-button" type="button" onClick={onLogin}>
               Chọn vai trò đăng nhập
             </button>
           </div>
+
           <div className="landing-proof-row" aria-label="Tín hiệu năng lực sản phẩm">
             <span>FHIR R4</span>
             <span>FHIR document Bundle</span>
-            <span>Schema migrations có kiểm soát</span>
+            <span>Consent trước khi chia sẻ</span>
             <span>RBAC/ABAC + audit</span>
-            <span>Luồng chuyển viện Hải Phòng</span>
+            <span>Luồng chuyển hồ sơ Hải Phòng</span>
           </div>
+
+          <dl className="landing-metrics" aria-label="Các trụ cột của nguyên mẫu">
+            <div>
+              <dt>06</dt>
+              <dd>Bước chuyển hồ sơ có kiểm soát</dd>
+            </div>
+            <div>
+              <dt>FHIR R4</dt>
+              <dd>Chuẩn trao đổi dữ liệu y tế chính</dd>
+            </div>
+            <div>
+              <dt>Không PHI</dt>
+              <dd>Không dùng dữ liệu bệnh nhân thật</dd>
+            </div>
+          </dl>
         </div>
-        <aside className="landing-card" aria-label="Tổng quan luồng sản phẩm">
-          <span className="status-pill">Prototype an toàn, không dùng dữ liệu thật</span>
-          <div className="clinical-window">
-            <div className="clinical-window-header">
-              <span>Trung tâm điều phối lâm sàng</span>
-              <strong>Gói chuyển hồ sơ #demo-001</strong>
-            </div>
-            <div className="patient-strip">
-              <span>Bệnh nhân</span>
-              <strong>Nguyễn Văn An</strong>
-              <small>Consent hợp lệ · Endpoint FHIR sẵn sàng</small>
-            </div>
-            <ol className="transfer-timeline" aria-label="Luồng chuyển hồ sơ">
-              {workflowSignals.map((signal, index) => (
-                <li key={signal}>
-                  <span>{String(index + 1).padStart(2, "0")}</span>
-                  <strong>{signal}</strong>
-                </li>
-              ))}
-            </ol>
+
+        <aside className="landing-card handoff-console" aria-label="Minh họa luồng chuyển hồ sơ">
+          <div className="console-header">
+            <span>Bàn giao lâm sàng</span>
+            <strong>Gói chuyển hồ sơ #demo-001</strong>
           </div>
-          <small>
-            Lát cắt hiện tại ưu tiên luồng nghiệp vụ thật: bác sĩ tạo hồ sơ, gateway
-            nhận gói chuyển, auditor kiểm tra lịch sử truy cập.
-          </small>
+          <div className="patient-strip">
+            <span>Bệnh nhân</span>
+            <strong>Nguyễn Văn An</strong>
+            <small>Consent hợp lệ · Endpoint FHIR sẵn sàng · Audit đang bật</small>
+          </div>
+          <ol className="transfer-timeline" aria-label="Luồng chuyển hồ sơ liên viện">
+            {workflowSteps.map((step) => (
+              <li key={step.code}>
+                <span>{step.code}</span>
+                <div>
+                  <strong>{step.label}</strong>
+                  <small>{step.detail}</small>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <p>
+            Lát cắt hiện tại ưu tiên bệnh viện Hải Phòng hoặc mạng lưới cơ sở tương tự: nơi
+            hồ sơ cần đi qua nhiều hệ thống, nhiều vai trò và nhiều điểm kiểm soát.
+          </p>
         </aside>
       </section>
 
       <section className="landing-context" aria-label="Bối cảnh triển khai">
         <article>
           <p className="eyebrow">Bài toán</p>
-          <h2>Chuyển bệnh án giữa bệnh viện không chỉ là upload file</h2>
+          <h2>Chuyển bệnh án không đơn giản là upload một tệp PDF</h2>
           <p>
-            Hệ thống cần biết ai được truy cập, bệnh nhân đã đồng ý hay chưa, tài liệu
-            thuộc hồ sơ nào, cơ sở nhận có endpoint kỹ thuật nào, và toàn bộ thao tác
-            có để lại dấu vết kiểm toán hay không.
+            Hệ thống phải biết hồ sơ thuộc bệnh nhân nào, ai được truy cập, bệnh nhân đã đồng
+            ý chia sẻ chưa, cơ sở nhận có endpoint kỹ thuật nào và toàn bộ thao tác có để lại
+            dấu vết kiểm toán hay không.
           </p>
         </article>
         <article>
-          <p className="eyebrow">Cách tiếp cận</p>
+          <p className="eyebrow">Chiến lược</p>
           <h2>Đi từ EMR lõi trước, AI và tự động hóa để sau</h2>
           <p>
-            Nền tảng hiện bám vào hồ sơ bệnh nhân, tài liệu, Provider Directory
-            (danh bạ cơ sở, nhân sự và endpoint), FHIR, phân quyền và audit. Đây là phần xương sống cần chắc trước khi tích hợp
-            HIS/LIS/PACS thật hoặc thêm AI.
+            Nền tảng hiện bám vào Patient Registry, không gian lâm sàng, Provider Directory
+            (danh bạ cơ sở, nhân sự và endpoint), FHIR, phân quyền và audit. Đây là phần
+            xương sống cần chắc trước khi tích hợp HIS/LIS/PACS thật.
           </p>
         </article>
       </section>
@@ -208,7 +259,7 @@ export function LandingPage({ onDemo, onLogin }: LandingPageProps) {
         ))}
       </section>
 
-      <section className="landing-grid">
+      <section className="landing-grid" aria-label="Các năng lực chính">
         {capabilityCards.map((card) => (
           <article className="landing-feature-card" key={card.title}>
             <p className="eyebrow">{card.label}</p>
@@ -223,13 +274,10 @@ export function LandingPage({ onDemo, onLogin }: LandingPageProps) {
         ))}
       </section>
 
-      <section className="landing-standard-strip" aria-label="Chuẩn và giới hạn hiện tại">
-        <span>HL7 FHIR R4</span>
-        <span>Provider Directory</span>
-        <span>DocumentReference</span>
-        <span>AuditEvent</span>
-        <span>Hồ sơ Orthanc/PACS</span>
-        <span>Lab HAPI FHIR</span>
+      <section className="landing-standard-strip" aria-label="Chuẩn và thành phần kỹ thuật">
+        {standardBadges.map((badge) => (
+          <span key={badge}>{badge}</span>
+        ))}
       </section>
     </main>
   );
