@@ -218,6 +218,31 @@ const domainBudgets = [
     role: "Patient identifier, props, snapshot and registration input types"
   },
   {
+    path: "packages/domain/src/patient/patient.test.ts",
+    maxLines: 80,
+    role: "Patient registration and identifier uniqueness test scenarios"
+  },
+  {
+    path: "packages/domain/src/patient/patient.fhir-mapping.test.ts",
+    maxLines: 100,
+    role: "Patient and Encounter FHIR mapping test scenarios"
+  },
+  {
+    path: "packages/domain/src/patient/patient.merge.test.ts",
+    maxLines: 70,
+    role: "Patient merge lifecycle test scenarios"
+  },
+  {
+    path: "packages/domain/src/patient/patient.rehydration.test.ts",
+    maxLines: 130,
+    role: "Patient persisted snapshot invariant test scenarios"
+  },
+  {
+    path: "packages/domain/src/patient/patient.test-support.ts",
+    maxLines: 90,
+    role: "Patient shared domain test fixture helpers"
+  },
+  {
     path: "packages/domain/src/workflow-task/workflow-task.ts",
     maxLines: 100,
     role: "WorkflowTask aggregate lifecycle behavior"
