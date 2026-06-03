@@ -418,6 +418,31 @@ const domainBudgets = [
     role: "ServiceRequest status, intent, category, priority and snapshot types"
   },
   {
+    path: "packages/domain/src/service-request/service-request.test.ts",
+    maxLines: 80,
+    role: "ServiceRequest ordering and normalization test scenarios"
+  },
+  {
+    path: "packages/domain/src/service-request/service-request.fhir-mapping.test.ts",
+    maxLines: 60,
+    role: "ServiceRequest FHIR category coding test scenarios"
+  },
+  {
+    path: "packages/domain/src/service-request/service-request.validation.test.ts",
+    maxLines: 80,
+    role: "ServiceRequest code and scheduling validation test scenarios"
+  },
+  {
+    path: "packages/domain/src/service-request/service-request.rehydration.test.ts",
+    maxLines: 80,
+    role: "ServiceRequest persisted snapshot invariant test scenarios"
+  },
+  {
+    path: "packages/domain/src/service-request/service-request.test-support.ts",
+    maxLines: 60,
+    role: "ServiceRequest shared laboratory order test fixture helpers"
+  },
+  {
     path: "packages/domain/src/imaging-study/imaging-study.ts",
     maxLines: 150,
     role: "ImagingStudy record and rehydration behavior"
