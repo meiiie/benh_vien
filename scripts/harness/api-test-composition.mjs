@@ -158,9 +158,24 @@ const testBudgets = [
     role: "API provider directory and baseline clinical access scenarios"
   },
   {
-    path: "apps/api/src/server.clinical-resources.test.ts",
-    maxLines: 260,
-    role: "API allergy, condition and observation clinical record scenarios"
+    path: "apps/api/src/server.clinical-resource.test-support.ts",
+    maxLines: 80,
+    role: "API clinical resource shared boundary test support"
+  },
+  {
+    path: "apps/api/src/server.allergy-intolerance-boundary.test.ts",
+    maxLines: 110,
+    role: "API allergy intolerance list, creation and FHIR export scenarios"
+  },
+  {
+    path: "apps/api/src/server.condition-boundary.test.ts",
+    maxLines: 100,
+    role: "API condition list, creation and FHIR export scenarios"
+  },
+  {
+    path: "apps/api/src/server.observation-boundary.test.ts",
+    maxLines: 100,
+    role: "API observation list, creation and FHIR export scenarios"
   },
   {
     path: "apps/api/src/server.care-workflow.test-support.ts",
@@ -362,6 +377,10 @@ const retiredTestPaths = [
   {
     path: "apps/api/src/server.care-workflow-boundary.test.ts",
     role: "legacy mixed ServiceRequest/Task/Procedure care workflow suite"
+  },
+  {
+    path: "apps/api/src/server.clinical-resources.test.ts",
+    role: "legacy mixed AllergyIntolerance/Condition/Observation clinical resource suite"
   }
 ];
 
@@ -431,7 +450,14 @@ const fhirRequestValidationBoundaryPath = resolve(
 const providerDirectoryBoundaryPath = resolve(
   "apps/api/src/server.provider-directory-boundary.test.ts"
 );
-const clinicalResourcesBoundaryPath = resolve("apps/api/src/server.clinical-resources.test.ts");
+const clinicalResourceSupportPath = resolve(
+  "apps/api/src/server.clinical-resource.test-support.ts"
+);
+const allergyIntoleranceBoundaryPath = resolve(
+  "apps/api/src/server.allergy-intolerance-boundary.test.ts"
+);
+const conditionBoundaryPath = resolve("apps/api/src/server.condition-boundary.test.ts");
+const observationBoundaryPath = resolve("apps/api/src/server.observation-boundary.test.ts");
 const careWorkflowSupportPath = resolve("apps/api/src/server.care-workflow.test-support.ts");
 const workflowTaskBoundaryPath = resolve("apps/api/src/server.workflow-task-boundary.test.ts");
 const procedureBoundaryPath = resolve("apps/api/src/server.procedure-boundary.test.ts");
@@ -702,9 +728,28 @@ const requiredProviderDirectoryBoundaryPatterns = [
   /denies nurse encounter creation and finish privileges/
 ];
 const requiredClinicalResourcesBoundaryPatterns = [
+  /readyClinicalResourceTestContext/,
+  /clinicalJsonHeaders/,
+  /getClinicalResourceList/,
+  /getTreatmentJson/
+];
+const requiredAllergyIntoleranceBoundaryPatterns = [
   /lists allergy intolerances and exports them as FHIR AllergyIntolerance/,
+  /creates an allergy intolerance attached to the selected patient encounter/,
+  /resourceType: "AllergyIntolerance"/,
+  /Cảnh báo dị ứng thử nghiệm trong API test/
+];
+const requiredConditionBoundaryPatterns = [
   /lists conditions and exports them as FHIR Condition/,
-  /lists observations and exports them as FHIR Observation/
+  /creates a condition attached to the selected patient encounter/,
+  /resourceType: "Condition"/,
+  /Sốt chưa rõ nguyên nhân/
+];
+const requiredObservationBoundaryPatterns = [
+  /lists observations and exports them as FHIR Observation/,
+  /creates an observation attached to the selected patient encounter/,
+  /resourceType: "Observation"/,
+  /vital-signs/
 ];
 const requiredCareWorkflowSupportPatterns = [
   /readyCareWorkflowTestContext/,
@@ -988,8 +1033,17 @@ const providerDirectoryBoundarySource = await readFile(
   providerDirectoryBoundaryPath,
   "utf8"
 );
-const clinicalResourcesBoundarySource = await readFile(
-  clinicalResourcesBoundaryPath,
+const clinicalResourceSupportSource = await readFile(
+  clinicalResourceSupportPath,
+  "utf8"
+);
+const allergyIntoleranceBoundarySource = await readFile(
+  allergyIntoleranceBoundaryPath,
+  "utf8"
+);
+const conditionBoundarySource = await readFile(conditionBoundaryPath, "utf8");
+const observationBoundarySource = await readFile(
+  observationBoundaryPath,
   "utf8"
 );
 const careWorkflowSupportSource = await readFile(careWorkflowSupportPath, "utf8");
@@ -1365,9 +1419,33 @@ for (const required of requiredProviderDirectoryBoundaryPatterns) {
 }
 
 for (const required of requiredClinicalResourcesBoundaryPatterns) {
-  if (!required.test(clinicalResourcesBoundarySource)) {
+  if (!required.test(clinicalResourceSupportSource)) {
     throw new Error(
-      "server.clinical-resources.test.ts must keep allergy, condition and observation clinical record scenarios."
+      "server.clinical-resource.test-support.ts must keep shared clinical resource boundary fixtures."
+    );
+  }
+}
+
+for (const required of requiredAllergyIntoleranceBoundaryPatterns) {
+  if (!required.test(allergyIntoleranceBoundarySource)) {
+    throw new Error(
+      "server.allergy-intolerance-boundary.test.ts must keep allergy intolerance list, creation and FHIR export scenarios."
+    );
+  }
+}
+
+for (const required of requiredConditionBoundaryPatterns) {
+  if (!required.test(conditionBoundarySource)) {
+    throw new Error(
+      "server.condition-boundary.test.ts must keep condition list, creation and FHIR export scenarios."
+    );
+  }
+}
+
+for (const required of requiredObservationBoundaryPatterns) {
+  if (!required.test(observationBoundarySource)) {
+    throw new Error(
+      "server.observation-boundary.test.ts must keep observation list, creation and FHIR export scenarios."
     );
   }
 }
