@@ -1,57 +1,48 @@
 import type { ClinicalRecordPanelHandlers } from "../features/clinical-records/clinicalRecordPanelRendererCommandTypes.js";
 import type { useClinicalRecordState } from "../features/clinical-records/clinicalRecordState.js";
+import type { buildAppClinicalRecordHandlers } from "./appClinicalRecordHandlers.js";
 
 type ClinicalRecordState = ReturnType<typeof useClinicalRecordState>;
+type ClinicalRecordCommandHandlers =
+  ReturnType<typeof buildAppClinicalRecordHandlers>;
 
-type ClinicalRecordCommandHandlers = Pick<
-  ClinicalRecordPanelHandlers,
-  | "onCreateAllergyIntolerance"
-  | "onCreateCondition"
-  | "onCreateDiagnosticReport"
-  | "onCreateEncounter"
-  | "onCreateImagingStudy"
-  | "onCreateMedicationAdministration"
-  | "onCreateMedicationDispense"
-  | "onCreateMedicationRequest"
-  | "onCreateObservation"
-  | "onCreateProcedure"
-  | "onCreateServiceRequest"
-  | "onFinishEncounter"
->;
-
-type BuildAppClinicalRecordPanelHandlersInput =
-  ClinicalRecordCommandHandlers & {
-    readonly clinicalRecordState: ClinicalRecordState;
-  };
+type BuildAppClinicalRecordPanelHandlersInput = {
+  readonly clinicalRecordHandlers: ClinicalRecordCommandHandlers;
+  readonly clinicalRecordState: ClinicalRecordState;
+};
 
 export function buildAppClinicalRecordPanelHandlers({
-  clinicalRecordState,
-  onCreateAllergyIntolerance,
-  onCreateCondition,
-  onCreateDiagnosticReport,
-  onCreateEncounter,
-  onCreateImagingStudy,
-  onCreateMedicationAdministration,
-  onCreateMedicationDispense,
-  onCreateMedicationRequest,
-  onCreateObservation,
-  onCreateProcedure,
-  onCreateServiceRequest,
-  onFinishEncounter
+  clinicalRecordHandlers,
+  clinicalRecordState
 }: BuildAppClinicalRecordPanelHandlersInput): ClinicalRecordPanelHandlers {
+  const {
+    handleCreateAllergyIntolerance,
+    handleCreateCondition,
+    handleCreateDiagnosticReport,
+    handleCreateEncounter,
+    handleCreateImagingStudy,
+    handleCreateMedicationAdministration,
+    handleCreateMedicationDispense,
+    handleCreateMedicationRequest,
+    handleCreateObservation,
+    handleCreateProcedure,
+    handleCreateServiceRequest,
+    handleFinishEncounter
+  } = clinicalRecordHandlers;
+
   return {
-    onCreateAllergyIntolerance,
-    onCreateCondition,
-    onCreateDiagnosticReport,
-    onCreateEncounter,
-    onCreateImagingStudy,
-    onCreateMedicationAdministration,
-    onCreateMedicationDispense,
-    onCreateMedicationRequest,
-    onCreateObservation,
-    onCreateProcedure,
-    onCreateServiceRequest,
-    onFinishEncounter,
+    onCreateAllergyIntolerance: handleCreateAllergyIntolerance,
+    onCreateCondition: handleCreateCondition,
+    onCreateDiagnosticReport: handleCreateDiagnosticReport,
+    onCreateEncounter: handleCreateEncounter,
+    onCreateImagingStudy: handleCreateImagingStudy,
+    onCreateMedicationAdministration: handleCreateMedicationAdministration,
+    onCreateMedicationDispense: handleCreateMedicationDispense,
+    onCreateMedicationRequest: handleCreateMedicationRequest,
+    onCreateObservation: handleCreateObservation,
+    onCreateProcedure: handleCreateProcedure,
+    onCreateServiceRequest: handleCreateServiceRequest,
+    onFinishEncounter: handleFinishEncounter,
     onAllergyIntoleranceFormChange:
       clinicalRecordState.setAllergyIntoleranceForm,
     onConditionFormChange: clinicalRecordState.setConditionForm,

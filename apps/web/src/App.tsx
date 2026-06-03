@@ -13,15 +13,14 @@ import { AuthenticatedAppExperience } from "./pages/AuthenticatedAppExperience.j
 import { PublicAppExperience } from "./pages/PublicAppExperience.js";
 import { buildAppAuditLoaders } from "./application/appAuditLoaders.js";
 import { buildAppAuthSessionHandlers } from "./application/appAuthSessionHandlers.js";
-import { buildAuditPanels } from "./application/auditPanelContext.js";
 import {
   buildAppAccessContext,
   buildAppRouteRuntimeContext,
   buildAppWorkspaceContext
 } from "./application/appDerivedContext.js";
 import { buildAppClinicalRecordHandlers } from "./application/appClinicalRecordHandlers.js";
-import { buildAppClinicalRecordPanelHandlers } from "./application/appClinicalRecordPanelHandlers.js";
 import { buildAppFhirPreviewLoaders } from "./application/appFhirPreviewLoaders.js";
+import { buildAppPanelComposition } from "./application/appPanelComposition.js";
 import { buildAppPatientRegistryHandlers } from "./application/appPatientRegistryHandlers.js";
 import { buildAppPatientRegistryLoaders } from "./application/appPatientRegistryLoaders.js";
 import { buildAppPatientWorkspaceLifecycle } from "./application/appPatientWorkspaceLifecycle.js";
@@ -30,11 +29,6 @@ import { buildAppPlatformLoaders } from "./application/appPlatformLoaders.js";
 import { buildAppRecordTransferHandlers } from "./application/appRecordTransferHandlers.js";
 import { useAppRuntimeEffects } from "./application/appRuntimeEffects.js";
 import { useAppShellState } from "./application/appShellState.js";
-import { buildAppRoutePanels } from "./application/appRoutePanels.js";
-import { buildClinicalDocumentPanels } from "./application/clinicalDocumentPanelContext.js";
-import { buildClinicalRecordPanels } from "./application/clinicalRecordPanelContext.js";
-import { buildInteropPanels } from "./application/interopPanelContext.js";
-import { buildPatientPanels } from "./application/patientPanelContext.js";
 import { normalizeAuthenticatedRoute } from "./config/appNavigation.js";
 
 import { referenceSignals, workflowSteps } from "./config/demoClinicalDefaults.js";
@@ -124,7 +118,6 @@ export function App() {
     patientRegistryState,
     setStatusMessage
   });
-  const { loadPatients } = patientRegistryLoaders;
   const fhirPreviewLoaders = buildAppFhirPreviewLoaders({
     auditState,
     canReadAudit,
@@ -135,8 +128,6 @@ export function App() {
     setStatusMessage
   });
   const {
-    loadAuditFhirBundle,
-    loadConsentFhirPreview,
     loadProviderDirectoryFhirPreview
   } = fhirPreviewLoaders;
   const auditLoaders = buildAppAuditLoaders({
@@ -145,20 +136,14 @@ export function App() {
     clinicalApi,
     setStatusMessage
   });
-  const {
-    loadAuditEvents,
-    loadGlobalAuditEvents,
-    verifyAuditIntegrity
-  } = auditLoaders;
   const consentLoaders = buildConsentLoaders({
     clinicalApi,
     ensureSelectedPatientWritable,
-    loadConsentFhirPreview,
+    loadConsentFhirPreview: fhirPreviewLoaders.loadConsentFhirPreview,
     selectedPatient,
     ...interoperabilityState,
     setStatusMessage
   });
-  const { handleRevokeConsent } = consentLoaders;
   const recordTransferLoaders = buildRecordTransferLoaders({
     clinicalApi,
     ...interoperabilityState,
@@ -171,14 +156,7 @@ export function App() {
     loadRecordTransferFhirTaskPreview,
     loadRecordTransfers
   } = recordTransferLoaders;
-  const {
-    handleCreateRecordTransfer,
-    handleFailRecordTransfer,
-    handleGatewayAcknowledgementSubmit,
-    handleReceiveRecordTransfer,
-    handleRetryRecordTransfer,
-    handleSendRecordTransfer
-  } = buildAppRecordTransferHandlers({
+  const recordTransferHandlers = buildAppRecordTransferHandlers({
     clinicalApi,
     ensureSelectedPatientWritable,
     interoperabilityState,
@@ -188,6 +166,7 @@ export function App() {
     selectedPatient,
     setStatusMessage
   });
+  const { handleGatewayAcknowledgementSubmit } = recordTransferHandlers;
   const platformLoaders = buildAppPlatformLoaders({
     authSession,
     clinicalApi,
@@ -196,8 +175,7 @@ export function App() {
     platformState
   });
   const {
-    loadApiRuntimeInfo,
-    loadProviderDirectory
+    loadApiRuntimeInfo
   } = platformLoaders;
   const patientWorkspaceLoaders = buildAppPatientWorkspaceLoaders({
     clinicalApi,
@@ -222,14 +200,11 @@ export function App() {
     clearPatientWorkspaceState,
     loadPatientWorkspace
   } = patientWorkspaceLifecycle;
-  const {
-    handleCreatePatient,
-    handleMergeSelectedPatient
-  } = buildAppPatientRegistryHandlers({
+  const patientRegistryHandlers = buildAppPatientRegistryHandlers({
     canMergePatients,
     clinicalApi,
     isPatientMergeConfirmationValid,
-    loadPatients,
+    loadPatients: patientRegistryLoaders.loadPatients,
     loadPatientWorkspace,
     patientMergeConfirmationCode,
     patientMergeTargetId,
@@ -238,22 +213,7 @@ export function App() {
     setAppRoute,
     setStatusMessage
   });
-  const {
-    handleCreateAllergyIntolerance,
-    handleCreateClinicalDocument,
-    handleCreateCondition,
-    handleCreateDiagnosticReport,
-    handleCreateEncounter,
-    handleCreateImagingStudy,
-    handleCreateMedicationAdministration,
-    handleCreateMedicationDispense,
-    handleCreateMedicationRequest,
-    handleCreateObservation,
-    handleCreateProcedure,
-    handleCreateServiceRequest,
-    handleFinishEncounter,
-    handleSignClinicalDocument
-  } = buildAppClinicalRecordHandlers({
+  const clinicalRecordHandlers = buildAppClinicalRecordHandlers({
     auditLoaders,
     clinicalApi,
     clinicalRecordState,
@@ -281,80 +241,33 @@ export function App() {
     setLoginError,
     setStatusMessage
   });
-  const patientPanels = buildPatientPanels({
+  const routePanels = buildAppPanelComposition({
+    auditLoaders,
+    auditState,
+    canReadAudit,
+    clinicalRecordHandlers,
+    clinicalRecordState,
+    consentLoaders,
+    fhirPreviewLoaders,
     hasPatientListFilter,
+    interoperabilityState,
     isPatientMergeConfirmationValid,
     isSelectedPatientMerged,
-    onCreatePatient: handleCreatePatient,
-    onMergePatient: handleMergeSelectedPatient,
-    onPatientRefresh: loadPatients,
     patientMergeCandidates,
     patientMergeConfirmationCode,
     patientMergeTargetId,
+    patientRegistryHandlers,
+    patientRegistryLoaders,
     patientRegistryState,
+    patientWorkspaceCollections,
+    platformLoaders,
+    platformState,
+    recordTransferHandlers,
     selectedPatient,
     selectedPatientMergeTarget,
-    visiblePatients
-  });
-  const interopPanels = buildInteropPanels({
-    interoperabilityState,
-    isSelectedPatientMerged,
-    onCreateRecordTransfer: handleCreateRecordTransfer,
-    onFailRecordTransfer: handleFailRecordTransfer,
-    onLoadConsentFhirPreview: loadConsentFhirPreview,
-    onProviderDirectoryRefresh: loadProviderDirectory,
-    onReceiveRecordTransfer: handleReceiveRecordTransfer,
-    onRetryRecordTransfer: handleRetryRecordTransfer,
-    onRevokeConsent: handleRevokeConsent,
-    onSendRecordTransfer: handleSendRecordTransfer,
-    platformState,
     selectedPatientWriteDisabled,
+    visiblePatients,
     workspaceSelection
-  });
-  const auditPanels = buildAuditPanels({
-    auditState,
-    canReadAudit,
-    onExportAuditFhir: loadAuditFhirBundle,
-    onLoadAuditEvents: loadAuditEvents,
-    onReloadGlobalAuditEvents: loadGlobalAuditEvents,
-    onVerifyAuditIntegrity: verifyAuditIntegrity,
-    selectedPatient
-  });
-  const clinicalRecordPanels = buildClinicalRecordPanels({
-    clinicalRecordState,
-    handlers: buildAppClinicalRecordPanelHandlers({
-      clinicalRecordState,
-      onCreateAllergyIntolerance: handleCreateAllergyIntolerance,
-      onCreateCondition: handleCreateCondition,
-      onCreateDiagnosticReport: handleCreateDiagnosticReport,
-      onCreateEncounter: handleCreateEncounter,
-      onCreateImagingStudy: handleCreateImagingStudy,
-      onCreateMedicationAdministration: handleCreateMedicationAdministration,
-      onCreateMedicationDispense: handleCreateMedicationDispense,
-      onCreateMedicationRequest: handleCreateMedicationRequest,
-      onCreateObservation: handleCreateObservation,
-      onCreateProcedure: handleCreateProcedure,
-      onCreateServiceRequest: handleCreateServiceRequest,
-      onFinishEncounter: handleFinishEncounter
-    }),
-    isWriteDisabled: selectedPatientWriteDisabled,
-    patientWorkspaceCollections,
-    workspaceSelection
-  });
-  const clinicalDocumentPanels = buildClinicalDocumentPanels({
-    clinicalRecordState,
-    isSelectedPatientMerged,
-    isWriteDisabled: selectedPatientWriteDisabled,
-    onCreateDocument: handleCreateClinicalDocument,
-    onSignDocument: handleSignClinicalDocument,
-    workspaceSelection
-  });
-  const routePanels = buildAppRoutePanels({
-    auditPanels,
-    clinicalDocumentPanels,
-    clinicalRecordPanels,
-    interopPanels,
-    patientPanels
   });
   useAppRuntimeEffects({
     auditState,
