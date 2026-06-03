@@ -251,7 +251,11 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/DiagnosticReportPanel.tsx",
   "apps/web/src/features/clinical-records/DiagnosticReportPerformerFields.tsx",
   "apps/web/src/features/clinical-records/DiagnosticReportTimingFields.tsx",
+  "apps/web/src/features/clinical-records/EncounterForm.tsx",
   "apps/web/src/features/clinical-records/EncounterPanel.tsx",
+  "apps/web/src/features/clinical-records/EncounterPanelTypes.ts",
+  "apps/web/src/features/clinical-records/EncounterSummary.tsx",
+  "apps/web/src/features/clinical-records/EncounterTimeline.tsx",
   "apps/web/src/features/clinical-records/encounterFormatters.ts",
   "apps/web/src/features/clinical-records/encounterScopedFormUpdater.ts",
   "apps/web/src/features/clinical-records/encounterSelectors.ts",
@@ -579,6 +583,31 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/clinical-documents/ClinicalDocumentForm.tsx",
     maxLines: 180,
     role: "Clinical document metadata and attachment command form"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/EncounterPanel.tsx",
+    maxLines: 90,
+    role: "Encounter panel composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/EncounterPanelTypes.ts",
+    maxLines: 30,
+    role: "Encounter panel count types"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/EncounterTimeline.tsx",
+    maxLines: 80,
+    role: "Encounter selectable timeline"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/EncounterSummary.tsx",
+    maxLines: 120,
+    role: "Encounter selected record summary and finish action"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/EncounterForm.tsx",
+    maxLines: 90,
+    role: "Encounter creation command form"
   },
   {
     path: "apps/web/src/features/record-transfers/RecordTransferInteropPanel.tsx",
