@@ -44,8 +44,33 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/server.startup-config.test.ts",
-    maxLines: 260,
-    role: "API startup and production configuration scenarios"
+    maxLines: 100,
+    role: "API startup CORS production configuration scenarios"
+  },
+  {
+    path: "apps/api/src/server.startup-auth-config-boundary.test.ts",
+    maxLines: 80,
+    role: "API startup auth secret and token TTL configuration scenarios"
+  },
+  {
+    path: "apps/api/src/server.startup-callback-config-boundary.test.ts",
+    maxLines: 60,
+    role: "API startup record-transfer callback secret configuration scenarios"
+  },
+  {
+    path: "apps/api/src/server.startup-public-api-config-boundary.test.ts",
+    maxLines: 100,
+    role: "API startup public API URL production configuration scenarios"
+  },
+  {
+    path: "apps/api/src/server.startup-repository-config-boundary.test.ts",
+    maxLines: 70,
+    role: "API startup repository production configuration scenarios"
+  },
+  {
+    path: "apps/api/src/server.startup-config.test-support.ts",
+    maxLines: 50,
+    role: "API startup configuration shared boundary test support"
   },
   {
     path: "apps/api/src/server.patient-registry.test.ts",
@@ -422,6 +447,19 @@ const httpEnvelopeBoundaryPath = resolve(
   "apps/api/src/server.http-envelope-boundary.test.ts"
 );
 const startupConfigBoundaryPath = resolve("apps/api/src/server.startup-config.test.ts");
+const startupAuthConfigBoundaryPath = resolve(
+  "apps/api/src/server.startup-auth-config-boundary.test.ts"
+);
+const startupCallbackConfigBoundaryPath = resolve(
+  "apps/api/src/server.startup-callback-config-boundary.test.ts"
+);
+const startupPublicApiConfigBoundaryPath = resolve(
+  "apps/api/src/server.startup-public-api-config-boundary.test.ts"
+);
+const startupRepositoryConfigBoundaryPath = resolve(
+  "apps/api/src/server.startup-repository-config-boundary.test.ts"
+);
+const startupConfigSupportPath = resolve("apps/api/src/server.startup-config.test-support.ts");
 const patientRegistryBoundaryPath = resolve("apps/api/src/server.patient-registry.test.ts");
 const patientIdentifierBoundaryPath = resolve(
   "apps/api/src/server.patient-identifier-boundary.test.ts"
@@ -608,9 +646,44 @@ const requiredHttpEnvelopeBoundaryPatterns = [
 const requiredStartupConfigBoundaryPatterns = [
   /requires explicit CORS origins/,
   /rejects unsafe CORS origins/,
+  /BVS_CORS_ORIGINS/
+];
+const requiredStartupAuthConfigBoundaryPatterns = [
+  /requires a strong auth secret at startup in production/,
+  /rejects placeholder auth secrets at startup in production/,
+  /requires a bounded auth token TTL at startup/,
+  /BVS_AUTH_TOKEN_TTL_SECONDS/
+];
+const requiredStartupCallbackConfigBoundaryPatterns = [
+  /requires callback signature secrets at startup in production/,
+  /BVS_RECORD_TRANSFER_CALLBACK_SECRET/,
+  /BVS_RECORD_TRANSFER_CALLBACK_SECRETS_JSON phải được cấu hình tối thiểu 32 ký tự/
+];
+const requiredStartupRepositoryConfigBoundaryPatterns = [
+  /rejects invalid repository configuration/,
   /requires PostgreSQL repositories/,
+  /BVS_REPOSITORY/
+];
+const requiredStartupPublicApiConfigBoundaryPatterns = [
+  /requires a public API base URL in production/,
+  /rejects invalid public API base URLs/,
+  /rejects public API base URLs with query or fragment/,
+  /requires HTTPS public API base URLs in production/,
   /rejects local-only public API base URLs/,
-  /requires callback signature secrets at startup in production/
+  /BVS_PUBLIC_API_BASE_URL/
+];
+const requiredStartupConfigSupportPatterns = [
+  /configureProductionStartupDefaults/,
+  /expectStartupConfigError/,
+  /productionPublicApiBaseUrl/,
+  /productionCorsOrigin/
+];
+const retiredStartupConfigBoundaryPatterns = [
+  /requires a strong auth secret at startup in production/,
+  /requires callback signature secrets at startup in production/,
+  /rejects invalid repository configuration/,
+  /requires a public API base URL in production/,
+  /rejects local-only public API base URLs/
 ];
 const requiredPatientRegistryBoundaryPatterns = [
   /allows clinician treatment access to patient registry/,
@@ -1039,6 +1112,23 @@ const runtimeBoundarySource = await readFile(runtimeBoundaryPath, "utf8");
 const runtimeConfigBoundarySource = await readFile(runtimeConfigBoundaryPath, "utf8");
 const httpEnvelopeBoundarySource = await readFile(httpEnvelopeBoundaryPath, "utf8");
 const startupConfigBoundarySource = await readFile(startupConfigBoundaryPath, "utf8");
+const startupAuthConfigBoundarySource = await readFile(
+  startupAuthConfigBoundaryPath,
+  "utf8"
+);
+const startupCallbackConfigBoundarySource = await readFile(
+  startupCallbackConfigBoundaryPath,
+  "utf8"
+);
+const startupPublicApiConfigBoundarySource = await readFile(
+  startupPublicApiConfigBoundaryPath,
+  "utf8"
+);
+const startupRepositoryConfigBoundarySource = await readFile(
+  startupRepositoryConfigBoundaryPath,
+  "utf8"
+);
+const startupConfigSupportSource = await readFile(startupConfigSupportPath, "utf8");
 const patientRegistryBoundarySource = await readFile(patientRegistryBoundaryPath, "utf8");
 const patientIdentifierBoundarySource = await readFile(
   patientIdentifierBoundaryPath,
@@ -1281,7 +1371,55 @@ for (const required of requiredHttpEnvelopeBoundaryPatterns) {
 for (const required of requiredStartupConfigBoundaryPatterns) {
   if (!required.test(startupConfigBoundarySource)) {
     throw new Error(
-      "server.startup-config.test.ts must keep core CORS, repository, public API URL and production startup validation scenarios."
+      "server.startup-config.test.ts must keep startup CORS production configuration scenarios."
+    );
+  }
+}
+
+for (const required of requiredStartupAuthConfigBoundaryPatterns) {
+  if (!required.test(startupAuthConfigBoundarySource)) {
+    throw new Error(
+      "server.startup-auth-config-boundary.test.ts must keep startup auth secret and token TTL configuration scenarios."
+    );
+  }
+}
+
+for (const required of requiredStartupCallbackConfigBoundaryPatterns) {
+  if (!required.test(startupCallbackConfigBoundarySource)) {
+    throw new Error(
+      "server.startup-callback-config-boundary.test.ts must keep startup callback secret configuration scenarios."
+    );
+  }
+}
+
+for (const required of requiredStartupRepositoryConfigBoundaryPatterns) {
+  if (!required.test(startupRepositoryConfigBoundarySource)) {
+    throw new Error(
+      "server.startup-repository-config-boundary.test.ts must keep startup repository production configuration scenarios."
+    );
+  }
+}
+
+for (const required of requiredStartupPublicApiConfigBoundaryPatterns) {
+  if (!required.test(startupPublicApiConfigBoundarySource)) {
+    throw new Error(
+      "server.startup-public-api-config-boundary.test.ts must keep startup public API URL production configuration scenarios."
+    );
+  }
+}
+
+for (const required of requiredStartupConfigSupportPatterns) {
+  if (!required.test(startupConfigSupportSource)) {
+    throw new Error(
+      "server.startup-config.test-support.ts must keep shared startup configuration fixtures."
+    );
+  }
+}
+
+for (const retired of retiredStartupConfigBoundaryPatterns) {
+  if (retired.test(startupConfigBoundarySource)) {
+    throw new Error(
+      "server.startup-config.test.ts must not absorb auth, callback, repository or public API URL startup scenarios back into the CORS suite."
     );
   }
 }
