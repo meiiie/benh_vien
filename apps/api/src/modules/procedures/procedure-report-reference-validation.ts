@@ -3,6 +3,7 @@ import type {
   ClinicalDocumentRepository,
   DiagnosticReportRepository
 } from "@benh-vien-so/domain";
+import { validatePatientOwnedReference } from "../clinical-references/patient-owned-reference-validation.js";
 import type { ProcedureValidationError } from "./procedure-reference-validation.js";
 
 export async function validateProcedureReportReference(
@@ -12,27 +13,21 @@ export async function validateProcedureReportReference(
   clinicalDocumentRepository: ClinicalDocumentRepository
 ): Promise<ProcedureValidationError | undefined> {
   if (reportReference.resourceType === "DiagnosticReport") {
-    const diagnosticReport = await diagnosticReportRepository.findById(
-      reportReference.id
-    );
-
-    if (!diagnosticReport || diagnosticReport.patientId !== patientId) {
-      return {
-        error: "DIAGNOSTIC_REPORT_MISMATCH",
-        message: "Báo cáo liên quan Procedure phải thuộc cùng bệnh nhân."
-      };
-    }
+    return validatePatientOwnedReference(patientId, {
+      id: reportReference.id,
+      repository: diagnosticReportRepository,
+      error: "DIAGNOSTIC_REPORT_MISMATCH",
+      message: "Báo cáo liên quan Procedure phải thuộc cùng bệnh nhân."
+    });
   }
 
   if (reportReference.resourceType === "DocumentReference") {
-    const document = await clinicalDocumentRepository.findById(reportReference.id);
-
-    if (!document || document.patientId !== patientId) {
-      return {
-        error: "DOCUMENT_REFERENCE_MISMATCH",
-        message: "Tài liệu liên quan Procedure phải thuộc cùng bệnh nhân."
-      };
-    }
+    return validatePatientOwnedReference(patientId, {
+      id: reportReference.id,
+      repository: clinicalDocumentRepository,
+      error: "DOCUMENT_REFERENCE_MISMATCH",
+      message: "Tài liệu liên quan Procedure phải thuộc cùng bệnh nhân."
+    });
   }
 
   return undefined;

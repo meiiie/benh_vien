@@ -3,6 +3,7 @@ import type {
   EncounterRepository,
   ServiceRequestRepository
 } from "@benh-vien-so/domain";
+import { validatePatientOwnedReferences } from "../clinical-references/patient-owned-reference-validation.js";
 
 export type ImagingStudyReferenceInput = {
   readonly encounterId?: string;
@@ -24,42 +25,25 @@ export async function validateImagingStudyReferences(
     readonly diagnosticReportRepository: DiagnosticReportRepository;
   }
 ): Promise<ImagingStudyValidationError | undefined> {
-  if (input.encounterId) {
-    const encounter = await repositories.encounterRepository.findById(input.encounterId);
-
-    if (!encounter || encounter.patientId !== patientId) {
-      return {
-        error: "ENCOUNTER_MISMATCH",
-        message: "Nghiên cứu hình ảnh phải gắn với lượt khám thuộc cùng bệnh nhân."
-      };
+  return validatePatientOwnedReferences(patientId, [
+    {
+      id: input.encounterId,
+      repository: repositories.encounterRepository,
+      error: "ENCOUNTER_MISMATCH",
+      message: "Nghiên cứu hình ảnh phải gắn với lượt khám thuộc cùng bệnh nhân."
+    },
+    {
+      id: input.basedOnServiceRequestId,
+      repository: repositories.serviceRequestRepository,
+      error: "SERVICE_REQUEST_MISMATCH",
+      message: "Nghiên cứu hình ảnh phải tham chiếu y lệnh thuộc cùng bệnh nhân."
+    },
+    {
+      id: input.diagnosticReportId,
+      repository: repositories.diagnosticReportRepository,
+      error: "DIAGNOSTIC_REPORT_MISMATCH",
+      message:
+        "Nghiên cứu hình ảnh phải gắn với báo cáo kết quả thuộc cùng bệnh nhân."
     }
-  }
-
-  if (input.basedOnServiceRequestId) {
-    const serviceRequest = await repositories.serviceRequestRepository.findById(
-      input.basedOnServiceRequestId
-    );
-
-    if (!serviceRequest || serviceRequest.patientId !== patientId) {
-      return {
-        error: "SERVICE_REQUEST_MISMATCH",
-        message: "Nghiên cứu hình ảnh phải tham chiếu y lệnh thuộc cùng bệnh nhân."
-      };
-    }
-  }
-
-  if (input.diagnosticReportId) {
-    const diagnosticReport = await repositories.diagnosticReportRepository.findById(
-      input.diagnosticReportId
-    );
-
-    if (!diagnosticReport || diagnosticReport.patientId !== patientId) {
-      return {
-        error: "DIAGNOSTIC_REPORT_MISMATCH",
-        message: "Nghiên cứu hình ảnh phải gắn với báo cáo kết quả thuộc cùng bệnh nhân."
-      };
-    }
-  }
-
-  return undefined;
+  ]);
 }

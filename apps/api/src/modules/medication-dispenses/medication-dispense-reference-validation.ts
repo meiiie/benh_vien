@@ -3,6 +3,7 @@ import type {
   EncounterRepository,
   MedicationRequestRepository
 } from "@benh-vien-so/domain";
+import { validatePatientOwnedReferences } from "../clinical-references/patient-owned-reference-validation.js";
 
 export type MedicationDispenseValidationError = {
   readonly error: string;
@@ -24,30 +25,19 @@ export async function validateMedicationDispenseReferences({
 }: ValidateMedicationDispenseReferencesInput): Promise<
   MedicationDispenseValidationError | undefined
 > {
-  if (command.encounterId) {
-    const encounter = await encounterRepository.findById(command.encounterId);
-
-    if (!encounter || encounter.patientId !== patientId) {
-      return {
-        error: "ENCOUNTER_MISMATCH",
-        message: "Cấp phát thuốc phải gắn với lượt khám thuộc cùng bệnh nhân."
-      };
+  return validatePatientOwnedReferences(patientId, [
+    {
+      id: command.encounterId,
+      repository: encounterRepository,
+      error: "ENCOUNTER_MISMATCH",
+      message: "Cấp phát thuốc phải gắn với lượt khám thuộc cùng bệnh nhân."
+    },
+    {
+      id: command.medicationRequestId,
+      repository: medicationRequestRepository,
+      error: "MEDICATION_REQUEST_MISMATCH",
+      message:
+        "Cấp phát thuốc phải tham chiếu MedicationRequest thuộc cùng bệnh nhân."
     }
-  }
-
-  if (command.medicationRequestId) {
-    const medicationRequest = await medicationRequestRepository.findById(
-      command.medicationRequestId
-    );
-
-    if (!medicationRequest || medicationRequest.patientId !== patientId) {
-      return {
-        error: "MEDICATION_REQUEST_MISMATCH",
-        message:
-          "Cấp phát thuốc phải tham chiếu MedicationRequest thuộc cùng bệnh nhân."
-      };
-    }
-  }
-
-  return undefined;
+  ]);
 }

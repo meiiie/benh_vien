@@ -1,5 +1,6 @@
 import type { CreateClinicalDocumentRequest } from "@benh-vien-so/contracts";
 import type { EncounterRepository } from "@benh-vien-so/domain";
+import { validatePatientOwnedReference } from "../clinical-references/patient-owned-reference-validation.js";
 
 export type ClinicalDocumentValidationError = {
   readonly error: string;
@@ -19,16 +20,10 @@ export async function validateClinicalDocumentReferences({
 }: ValidateClinicalDocumentReferencesInput): Promise<
   ClinicalDocumentValidationError | undefined
 > {
-  if (command.encounterId) {
-    const encounter = await encounterRepository.findById(command.encounterId);
-
-    if (!encounter || encounter.patientId !== patientId) {
-      return {
-        error: "ENCOUNTER_MISMATCH",
-        message: "Tài liệu phải gắn với lượt khám thuộc cùng bệnh nhân."
-      };
-    }
-  }
-
-  return undefined;
+  return validatePatientOwnedReference(patientId, {
+    id: command.encounterId,
+    repository: encounterRepository,
+    error: "ENCOUNTER_MISMATCH",
+    message: "Tài liệu phải gắn với lượt khám thuộc cùng bệnh nhân."
+  });
 }

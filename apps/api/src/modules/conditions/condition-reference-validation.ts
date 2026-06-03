@@ -1,4 +1,5 @@
 import type { EncounterRepository } from "@benh-vien-so/domain";
+import { validatePatientOwnedReference } from "../clinical-references/patient-owned-reference-validation.js";
 
 export type ConditionReferenceInput = {
   readonly encounterId?: string;
@@ -16,18 +17,10 @@ export async function validateConditionReferences(
     readonly encounterRepository: EncounterRepository;
   }
 ): Promise<ConditionValidationError | undefined> {
-  if (!input.encounterId) {
-    return undefined;
-  }
-
-  const encounter = await repositories.encounterRepository.findById(input.encounterId);
-
-  if (!encounter || encounter.patientId !== patientId) {
-    return {
-      error: "ENCOUNTER_MISMATCH",
-      message: "Chẩn đoán phải gắn với lượt khám thuộc cùng bệnh nhân."
-    };
-  }
-
-  return undefined;
+  return validatePatientOwnedReference(patientId, {
+    id: input.encounterId,
+    repository: repositories.encounterRepository,
+    error: "ENCOUNTER_MISMATCH",
+    message: "Chẩn đoán phải gắn với lượt khám thuộc cùng bệnh nhân."
+  });
 }
