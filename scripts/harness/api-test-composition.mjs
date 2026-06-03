@@ -114,8 +114,23 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/server.audit-boundary.test.ts",
-    maxLines: 260,
-    role: "API audit-purpose access and JSON audit trail scenarios"
+    maxLines: 120,
+    role: "API audit-purpose patient context and create-denial scenarios"
+  },
+  {
+    path: "apps/api/src/server.audit-global-boundary.test.ts",
+    maxLines: 120,
+    role: "API global audit denied-event review scenarios"
+  },
+  {
+    path: "apps/api/src/server.audit-trace-boundary.test.ts",
+    maxLines: 90,
+    role: "API audit request-id trace scenarios"
+  },
+  {
+    path: "apps/api/src/server.audit.test-support.ts",
+    maxLines: 90,
+    role: "API audit shared boundary test support"
   },
   {
     path: "apps/api/src/server.audit-fhir-boundary.test.ts",
@@ -434,6 +449,9 @@ const patientAccessTestResourcePath = resolve(
   "apps/api/src/server.patient-access.test-resource.ts"
 );
 const auditBoundaryPath = resolve("apps/api/src/server.audit-boundary.test.ts");
+const auditGlobalBoundaryPath = resolve("apps/api/src/server.audit-global-boundary.test.ts");
+const auditTraceBoundaryPath = resolve("apps/api/src/server.audit-trace-boundary.test.ts");
+const auditSupportPath = resolve("apps/api/src/server.audit.test-support.ts");
 const auditFhirBoundaryPath = resolve("apps/api/src/server.audit-fhir-boundary.test.ts");
 const auditIntegrityBoundaryPath = resolve(
   "apps/api/src/server.audit-integrity-boundary.test.ts"
@@ -682,8 +700,31 @@ const retiredPatientAccessSupportPatterns = [
 const requiredAuditBoundaryPatterns = [
   /allows auditor audit-purpose patient registry context/,
   /allows auditor audit-purpose access to patient audit events/,
+  /denies auditor treatment-purpose patient registry context/,
+  /denies auditor attempts to create clinical data/
+];
+const requiredAuditGlobalBoundaryPatterns = [
   /allows auditor audit-purpose review of global security audit events/,
-  /stores request id in audit metadata for clinical access/
+  /global-audit-clinician-denied-001/,
+  /global-audit-denied-001/,
+  /deniedActorPurposeOfUse: "TREATMENT"/
+];
+const requiredAuditTraceBoundaryPatterns = [
+  /stores request id in audit metadata for clinical access/,
+  /audit-trace-demo-001/,
+  /patient\.read/
+];
+const requiredAuditSupportPatterns = [
+  /readyAuditTestContext/,
+  /findAuditEventByRequestId/,
+  /tokenTreatmentRequestIdHeaders/,
+  /auditPurposeHeaders/
+];
+const retiredAuditBoundaryPatterns = [
+  /allows auditor audit-purpose review of global security audit events/,
+  /stores request id in audit metadata for clinical access/,
+  /global-audit-denied-001/,
+  /audit-trace-demo-001/
 ];
 const requiredAuditFhirBoundaryPatterns = [
   /records denied patient access in the patient audit trail and FHIR export/,
@@ -1016,6 +1057,9 @@ const patientAccessTestResourceSource = await readFile(
   "utf8"
 );
 const auditBoundarySource = await readFile(auditBoundaryPath, "utf8");
+const auditGlobalBoundarySource = await readFile(auditGlobalBoundaryPath, "utf8");
+const auditTraceBoundarySource = await readFile(auditTraceBoundaryPath, "utf8");
+const auditSupportSource = await readFile(auditSupportPath, "utf8");
 const auditFhirBoundarySource = await readFile(auditFhirBoundaryPath, "utf8");
 const auditIntegrityBoundarySource = await readFile(auditIntegrityBoundaryPath, "utf8");
 const fhirBoundarySource = await readFile(fhirBoundaryPath, "utf8");
@@ -1341,7 +1385,39 @@ for (const retired of retiredPatientAccessSupportPatterns) {
 for (const required of requiredAuditBoundaryPatterns) {
   if (!required.test(auditBoundarySource)) {
     throw new Error(
-      "server.audit-boundary.test.ts must keep audit-purpose access and JSON audit trail scenarios."
+      "server.audit-boundary.test.ts must keep audit-purpose patient context and create-denial scenarios."
+    );
+  }
+}
+
+for (const required of requiredAuditGlobalBoundaryPatterns) {
+  if (!required.test(auditGlobalBoundarySource)) {
+    throw new Error(
+      "server.audit-global-boundary.test.ts must keep global audit denied-event review scenarios."
+    );
+  }
+}
+
+for (const required of requiredAuditTraceBoundaryPatterns) {
+  if (!required.test(auditTraceBoundarySource)) {
+    throw new Error(
+      "server.audit-trace-boundary.test.ts must keep audit request-id trace scenarios."
+    );
+  }
+}
+
+for (const required of requiredAuditSupportPatterns) {
+  if (!required.test(auditSupportSource)) {
+    throw new Error(
+      "server.audit.test-support.ts must keep shared audit boundary fixtures."
+    );
+  }
+}
+
+for (const retired of retiredAuditBoundaryPatterns) {
+  if (retired.test(auditBoundarySource)) {
+    throw new Error(
+      "server.audit-boundary.test.ts must not absorb global audit review or request-id trace scenarios back into the access suite."
     );
   }
 }
