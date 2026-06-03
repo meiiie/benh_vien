@@ -1,8 +1,35 @@
 import { describe, expect, it } from "vitest";
+import type { FhirTask } from "../fhir/fhir-types.js";
 import { mapRecordTransferToFhirTask } from "../fhir/map-record-transfer-to-fhir-task.js";
+import { mapRecordTransferStatus } from "../fhir/map-record-transfer-task-codings.js";
 import { RecordTransfer } from "./record-transfer.js";
+import type { RecordTransferStatus } from "./record-transfer.types.js";
+import { recordTransferStatuses } from "./record-transfer.types.js";
 
 describe("RecordTransfer FHIR Task mapping", () => {
+  it("maps every internal transfer state to an explicit FHIR Task status", () => {
+    const expectedStatuses: Record<RecordTransferStatus, FhirTask["status"]> = {
+      cancelled: "cancelled",
+      completed: "completed",
+      "dead-lettered": "failed",
+      draft: "draft",
+      failed: "failed",
+      "in-progress": "in-progress",
+      ready: "ready",
+      requested: "requested"
+    };
+
+    expect(Object.keys(expectedStatuses).sort()).toEqual(
+      [...recordTransferStatuses].sort()
+    );
+
+    for (const [status, expectedFhirStatus] of Object.entries(expectedStatuses)) {
+      expect(mapRecordTransferStatus(status as RecordTransferStatus)).toBe(
+        expectedFhirStatus
+      );
+    }
+  });
+
   it("exports acknowledgement details as Task notes after a transfer is received", () => {
     const transfer = createRecordTransfer("record-transfer-fhir-task-001");
 
