@@ -408,6 +408,31 @@ const domainBudgets = [
     role: "ImagingStudy status, coding, series, snapshot and command input types"
   },
   {
+    path: "packages/domain/src/imaging-study/imaging-study.test.ts",
+    maxLines: 80,
+    role: "ImagingStudy DICOM metadata recording test scenarios"
+  },
+  {
+    path: "packages/domain/src/imaging-study/imaging-study.fhir-mapping.test.ts",
+    maxLines: 90,
+    role: "ImagingStudy PACS-facing FHIR mapping test scenarios"
+  },
+  {
+    path: "packages/domain/src/imaging-study/imaging-study.validation.test.ts",
+    maxLines: 130,
+    role: "ImagingStudy DICOM UID and count validation test scenarios"
+  },
+  {
+    path: "packages/domain/src/imaging-study/imaging-study.rehydration.test.ts",
+    maxLines: 80,
+    role: "ImagingStudy persisted snapshot invariant test scenarios"
+  },
+  {
+    path: "packages/domain/src/imaging-study/imaging-study.test-support.ts",
+    maxLines: 50,
+    role: "ImagingStudy shared DICOM test fixture helpers"
+  },
+  {
     path: "packages/domain/src/clinical-document/clinical-document.ts",
     maxLines: 130,
     role: "ClinicalDocument aggregate signing behavior"
