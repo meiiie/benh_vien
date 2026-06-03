@@ -518,6 +518,31 @@ const domainBudgets = [
     role: "DiagnosticReport status, category, code, snapshot and command input types"
   },
   {
+    path: "packages/domain/src/diagnostic-report/diagnostic-report.test.ts",
+    maxLines: 60,
+    role: "DiagnosticReport issuing and Observation deduplication test scenarios"
+  },
+  {
+    path: "packages/domain/src/diagnostic-report/diagnostic-report.fhir-mapping.test.ts",
+    maxLines: 70,
+    role: "DiagnosticReport FHIR category, order and result mapping test scenarios"
+  },
+  {
+    path: "packages/domain/src/diagnostic-report/diagnostic-report.validation.test.ts",
+    maxLines: 70,
+    role: "DiagnosticReport content and timeline validation test scenarios"
+  },
+  {
+    path: "packages/domain/src/diagnostic-report/diagnostic-report.rehydration.test.ts",
+    maxLines: 80,
+    role: "DiagnosticReport persisted snapshot invariant test scenarios"
+  },
+  {
+    path: "packages/domain/src/diagnostic-report/diagnostic-report.test-support.ts",
+    maxLines: 60,
+    role: "DiagnosticReport shared laboratory result test fixture helpers"
+  },
+  {
     path: "packages/domain/src/observation/observation.ts",
     maxLines: 140,
     role: "Observation recording behavior"
