@@ -261,10 +261,15 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/MedicationRequestDosageTimingFields.tsx",
   "apps/web/src/features/clinical-records/MedicationRequestPrescriptionFields.tsx",
   "apps/web/src/features/clinical-records/MedicationRequestPanel.tsx",
+  "apps/web/src/features/clinical-records/medicationAdministrationHandlers.ts",
   "apps/web/src/features/clinical-records/medicationAdministrationFormatters.ts",
+  "apps/web/src/features/clinical-records/medicationDispenseHandlers.ts",
   "apps/web/src/features/clinical-records/medicationDispenseFormatters.ts",
   "apps/web/src/features/clinical-records/medicationFormatterPrimitives.ts",
   "apps/web/src/features/clinical-records/medicationFormatters.ts",
+  "apps/web/src/features/clinical-records/medicationHandlers.ts",
+  "apps/web/src/features/clinical-records/medicationHandlerTypes.ts",
+  "apps/web/src/features/clinical-records/medicationRequestHandlers.ts",
   "apps/web/src/features/clinical-records/medicationRequestFormatters.ts",
   "apps/web/src/features/clinical-records/medicationAdministrationCommandBuilders.ts",
   "apps/web/src/features/clinical-records/medicationCommandBuilders.ts",
@@ -751,6 +756,31 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/clinical-records/medicationAdministrationCommandBuilders.ts",
     maxLines: 120,
     role: "MedicationAdministration actual-use command builder"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/medicationHandlers.ts",
+    maxLines: 60,
+    role: "Medication submit handler composition factory"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/medicationHandlerTypes.ts",
+    maxLines: 80,
+    role: "Medication submit handler configuration and event types"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/medicationRequestHandlers.ts",
+    maxLines: 100,
+    role: "MedicationRequest prescribing submit handler"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/medicationDispenseHandlers.ts",
+    maxLines: 110,
+    role: "MedicationDispense supply submit handler"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/medicationAdministrationHandlers.ts",
+    maxLines: 120,
+    role: "MedicationAdministration actual-use submit handler"
   },
   {
     path: "apps/web/src/features/clinical-records/medicationFormatters.ts",
