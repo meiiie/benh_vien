@@ -5,6 +5,7 @@ import {
   captureAuthBoundaryEnv,
   expectOperationOutcome,
   FailingRecordTransferDeliveryAttemptRepository,
+  jsonRequestHeaders,
   loginForToken,
   operationsHeaders,
   readyServer,
@@ -67,10 +68,7 @@ describe("API record-transfer boundary", () => {
     const createResponse = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/record-transfers",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         priority: "urgent",
         bundleType: "document",
@@ -118,10 +116,7 @@ describe("API record-transfer boundary", () => {
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/record-transfers",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         status: "dead-lettered",
         priority: "urgent",
@@ -181,10 +176,7 @@ describe("API record-transfer boundary", () => {
     const sendResponse = await app.inject({
       method: "POST",
       url: "/api/v1/record-transfers/record-transfer-demo-001/send",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         sentAt: "2026-05-28T04:00:00.000Z",
         note: "Xếp gói hồ sơ vào hàng chờ gửi qua gateway liên thông."
@@ -225,10 +217,7 @@ describe("API record-transfer boundary", () => {
     const receiveResponse = await app.inject({
       method: "POST",
       url: "/api/v1/record-transfers/record-transfer-demo-001/receive",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         receivedAt: "2026-05-28T04:15:00.000Z",
         note: "Bệnh viện nhận đã xác nhận tiếp nhận."
@@ -278,10 +267,7 @@ describe("API record-transfer boundary", () => {
     const sendResponse = await app.inject({
       method: "POST",
       url: "/api/v1/record-transfers/record-transfer-demo-001/send",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         sentAt: "2026-05-28T04:00:00.000Z",
         note: "Giả lập lỗi kho lịch sử gửi để kiểm tra rollback."
@@ -328,10 +314,7 @@ describe("API record-transfer boundary", () => {
     const sendResponse = await app.inject({
       method: "POST",
       url: "/api/v1/record-transfers/record-transfer-demo-001/send",
-      headers: {
-        ...treatmentHeaders(clinicianToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(clinicianToken)),
       payload: {
         sentAt: "2026-05-28T04:30:00.000Z",
         note: "Xếp gói hồ sơ vào hàng chờ gửi qua gateway liên thông."
@@ -343,10 +326,7 @@ describe("API record-transfer boundary", () => {
     const deniedCallbackResponse = await app.inject({
       method: "POST",
       url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
-      headers: {
-        ...operationsHeaders(clinicianToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(operationsHeaders(clinicianToken)),
       payload: {
         recipientOrganizationId: "hospital-hai-phong-referral",
         acknowledgementReference: "ack-denied-from-source-organization",
@@ -374,10 +354,7 @@ describe("API record-transfer boundary", () => {
     const callbackResponse = await app.inject({
       method: "POST",
       url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
-      headers: {
-        ...operationsHeaders(gatewayToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(operationsHeaders(gatewayToken)),
       payload: callbackPayload
     });
 
@@ -394,10 +371,7 @@ describe("API record-transfer boundary", () => {
     const duplicateCallbackResponse = await app.inject({
       method: "POST",
       url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
-      headers: {
-        ...operationsHeaders(gatewayToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(operationsHeaders(gatewayToken)),
       payload: callbackPayload
     });
 
@@ -439,10 +413,7 @@ describe("API record-transfer boundary", () => {
     const sendResponse = await app.inject({
       method: "POST",
       url: "/api/v1/record-transfers/record-transfer-demo-001/send",
-      headers: {
-        ...treatmentHeaders(clinicianToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(clinicianToken)),
       payload: {
         sentAt: "2026-05-28T06:00:00.000Z",
         note: "Xếp gói hồ sơ vào hàng chờ gửi qua gateway liên thông."
@@ -465,8 +436,7 @@ describe("API record-transfer boundary", () => {
       method: "POST",
       url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
       headers: {
-        ...operationsHeaders(gatewayToken),
-        "content-type": "application/json",
+        ...jsonRequestHeaders(operationsHeaders(gatewayToken)),
         [recordTransferCallbackKeyIdHeader]: recordTransferCallbackTestKeyId
       },
       payload: callbackPayload
@@ -484,8 +454,7 @@ describe("API record-transfer boundary", () => {
       method: "POST",
       url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
       headers: {
-        ...operationsHeaders(gatewayToken),
-        "content-type": "application/json",
+        ...jsonRequestHeaders(operationsHeaders(gatewayToken)),
         [recordTransferCallbackKeyIdHeader]: recordTransferCallbackTestKeyId,
         [recordTransferCallbackTimestampHeader]: invalidTimestamp,
         [recordTransferCallbackSignatureHeader]: "invalid-signature"
@@ -504,8 +473,7 @@ describe("API record-transfer boundary", () => {
       method: "POST",
       url: "/api/v1/record-transfers/record-transfer-demo-001/acknowledgement-callback",
       headers: {
-        ...operationsHeaders(gatewayToken),
-        "content-type": "application/json",
+        ...jsonRequestHeaders(operationsHeaders(gatewayToken)),
         ...signedRecordTransferCallbackHeaders({
           recordTransferId: "record-transfer-demo-001",
           body: callbackPayload
@@ -528,10 +496,7 @@ describe("API record-transfer boundary", () => {
     const sendResponse = await app.inject({
       method: "POST",
       url: "/api/v1/record-transfers/record-transfer-demo-001/send",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         sentAt: "2026-05-28T05:00:00.000Z",
         note: "Xếp gói hồ sơ vào hàng chờ gửi qua gateway liên thông."
@@ -543,10 +508,7 @@ describe("API record-transfer boundary", () => {
     const failResponse = await app.inject({
       method: "POST",
       url: "/api/v1/record-transfers/record-transfer-demo-001/fail",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         failedAt: "2026-05-28T05:05:00.000Z",
         failureReason: "Recipient gateway unavailable.",
@@ -587,10 +549,7 @@ describe("API record-transfer boundary", () => {
     const retryResponse = await app.inject({
       method: "POST",
       url: "/api/v1/record-transfers/record-transfer-demo-001/retry",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         retryAt: "2026-05-28T05:20:00.000Z",
         note: "Đưa lại vào hàng đợi gửi khi gateway sẵn sàng."
@@ -612,10 +571,7 @@ describe("API record-transfer boundary", () => {
     const resendResponse = await app.inject({
       method: "POST",
       url: "/api/v1/record-transfers/record-transfer-demo-001/send",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         sentAt: "2026-05-28T05:25:00.000Z"
       }
@@ -657,10 +613,7 @@ describe("API record-transfer boundary", () => {
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/record-transfers",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         bundleType: "document",
         sourceOrganizationId: "hospital-hai-phong-demo",
@@ -683,10 +636,7 @@ describe("API record-transfer boundary", () => {
     const consentResponse = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/consents",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         category: "record-sharing",
         granteeOrganizationId: "department-laboratory",
@@ -699,10 +649,7 @@ describe("API record-transfer boundary", () => {
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/patients/patient-demo-001/record-transfers",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "content-type": "application/json"
-      },
+      headers: jsonRequestHeaders(treatmentHeaders(accessToken)),
       payload: {
         bundleType: "document",
         sourceOrganizationId: "hospital-hai-phong-demo",

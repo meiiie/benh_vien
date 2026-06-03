@@ -192,6 +192,15 @@ export function auditHeaders(accessToken: string): Record<string, string> {
   };
 }
 
+export function jsonRequestHeaders(
+  headers: Record<string, string>
+): Record<string, string> {
+  return {
+    ...headers,
+    "content-type": "application/json"
+  };
+}
+
 export function expectOperationOutcome(
   response: {
     readonly statusCode: number;
