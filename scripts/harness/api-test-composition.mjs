@@ -119,8 +119,18 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/server.record-transfer-boundary.test.ts",
-    maxLines: 560,
-    role: "API record-transfer lifecycle, retry and consent-guard scenarios"
+    maxLines: 230,
+    role: "API record-transfer package creation, FHIR Task and not-found scenarios"
+  },
+  {
+    path: "apps/api/src/server.record-transfer-delivery-boundary.test.ts",
+    maxLines: 320,
+    role: "API record-transfer delivery, rollback and retry lifecycle scenarios"
+  },
+  {
+    path: "apps/api/src/server.record-transfer-consent-boundary.test.ts",
+    maxLines: 180,
+    role: "API record-transfer consent, endpoint and Bundle export guard scenarios"
   },
   {
     path: "apps/api/src/server.record-transfer-callback-boundary.test.ts",
@@ -241,6 +251,12 @@ const diagnosticResourcesBoundaryPath = resolve(
 );
 const consentBoundaryPath = resolve("apps/api/src/server.consent-boundary.test.ts");
 const recordTransferBoundaryPath = resolve("apps/api/src/server.record-transfer-boundary.test.ts");
+const recordTransferDeliveryBoundaryPath = resolve(
+  "apps/api/src/server.record-transfer-delivery-boundary.test.ts"
+);
+const recordTransferConsentBoundaryPath = resolve(
+  "apps/api/src/server.record-transfer-consent-boundary.test.ts"
+);
 const recordTransferCallbackBoundaryPath = resolve(
   "apps/api/src/server.record-transfer-callback-boundary.test.ts"
 );
@@ -370,8 +386,19 @@ const requiredConsentBoundaryPatterns = [
 ];
 const requiredRecordTransferBoundaryPatterns = [
   /lists record transfer packages for a patient/,
+  /creates a record transfer package and exports it as FHIR Task/,
+  /rejects creating a record transfer directly in the dead-lettered state/,
+  /keeps JSON and FHIR not-found errors separate for record transfers/
+];
+const requiredRecordTransferDeliveryBoundaryPatterns = [
   /moves a record transfer through sent and received milestones/,
-  /records failed record transfer delivery and prepares a retry/,
+  /rolls back a record transfer when queuing the delivery attempt fails/,
+  /records failed record transfer delivery and prepares a retry/
+];
+const requiredRecordTransferConsentBoundaryPatterns = [
+  /denies record transfer creation when consent does not cover the recipient/,
+  /requires a recipient FHIR Bundle endpoint before creating a record transfer/,
+  /requires transfer context before exporting a patient-record FHIR Bundle/,
   /denies Bundle export when consent does not match the recipient/
 ];
 const requiredRecordTransferCallbackBoundaryPatterns = [
@@ -455,6 +482,14 @@ const diagnosticResourcesBoundarySource = await readFile(
 );
 const consentBoundarySource = await readFile(consentBoundaryPath, "utf8");
 const recordTransferBoundarySource = await readFile(recordTransferBoundaryPath, "utf8");
+const recordTransferDeliveryBoundarySource = await readFile(
+  recordTransferDeliveryBoundaryPath,
+  "utf8"
+);
+const recordTransferConsentBoundarySource = await readFile(
+  recordTransferConsentBoundaryPath,
+  "utf8"
+);
 const recordTransferCallbackBoundarySource = await readFile(
   recordTransferCallbackBoundaryPath,
   "utf8"
@@ -647,7 +682,23 @@ for (const required of requiredConsentBoundaryPatterns) {
 for (const required of requiredRecordTransferBoundaryPatterns) {
   if (!required.test(recordTransferBoundarySource)) {
     throw new Error(
-      "server.record-transfer-boundary.test.ts must keep record-transfer lifecycle, retry and consent-guard scenarios."
+      "server.record-transfer-boundary.test.ts must keep record-transfer package creation, FHIR Task and not-found scenarios."
+    );
+  }
+}
+
+for (const required of requiredRecordTransferDeliveryBoundaryPatterns) {
+  if (!required.test(recordTransferDeliveryBoundarySource)) {
+    throw new Error(
+      "server.record-transfer-delivery-boundary.test.ts must keep delivery, rollback and retry lifecycle scenarios."
+    );
+  }
+}
+
+for (const required of requiredRecordTransferConsentBoundaryPatterns) {
+  if (!required.test(recordTransferConsentBoundarySource)) {
+    throw new Error(
+      "server.record-transfer-consent-boundary.test.ts must keep consent, endpoint and Bundle export guard scenarios."
     );
   }
 }
