@@ -13,7 +13,7 @@ import {
 } from "./server.auth.test-support.js";
 
 describe("API FHIR interoperability boundary", () => {
-  let app: FastifyInstance | undefined;
+  let app: FastifyInstance;
   const originalEnv = captureAuthBoundaryEnv();
 
   beforeEach(() => {
@@ -21,13 +21,17 @@ describe("API FHIR interoperability boundary", () => {
   });
 
   afterEach(async () => {
-    if (app) {
-      await app.close();
-      app = undefined;
-    }
-
+    await app.close();
     restoreAuthBoundaryEnv(originalEnv);
   });
+
+  async function readySessionToken(
+    username = "practitioner-demo-001",
+    role = "clinician"
+  ): Promise<string> {
+    app = await readyServer();
+    return loginForToken(app, username, role);
+  }
 
   it("serves FHIR CapabilityStatement metadata without a demo session", async () => {
     process.env.BVS_PUBLIC_API_BASE_URL = "https://api.wiiicare.example.vn/api/v1/";
@@ -69,8 +73,7 @@ describe("API FHIR interoperability boundary", () => {
   });
 
   it("denies nurse FHIR export even with treatment purpose", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "nurse-demo-001", "nurse");
+    const accessToken = await readySessionToken("nurse-demo-001", "nurse");
 
     const response = await app.inject({
       method: "GET",
@@ -86,8 +89,7 @@ describe("API FHIR interoperability boundary", () => {
   });
 
   it("returns a patient-record FHIR Bundle for treatment export", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const accessToken = await readySessionToken();
 
     const response = await app.inject({
       method: "GET",
@@ -133,8 +135,7 @@ describe("API FHIR interoperability boundary", () => {
   });
 
   it("returns a patient-record FHIR document Bundle with Composition first", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const accessToken = await readySessionToken();
 
     const response = await app.inject({
       method: "GET",
@@ -217,8 +218,7 @@ describe("API FHIR interoperability boundary", () => {
   });
 
   it("exports signed clinical document provenance as FHIR Provenance", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const accessToken = await readySessionToken();
 
     const response = await app.inject({
       method: "GET",
@@ -258,8 +258,7 @@ describe("API FHIR interoperability boundary", () => {
   });
 
   it("exports clinical document attachment metadata as FHIR DocumentReference", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const accessToken = await readySessionToken();
 
     const response = await app.inject({
       method: "GET",
@@ -288,8 +287,7 @@ describe("API FHIR interoperability boundary", () => {
   });
 
   it("rejects FHIR Provenance export for an unsigned clinical document", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const accessToken = await readySessionToken();
 
     const response = await app.inject({
       method: "GET",
@@ -305,8 +303,7 @@ describe("API FHIR interoperability boundary", () => {
   });
 
   it("returns FHIR OperationOutcome when a FHIR DocumentReference target is missing", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const accessToken = await readySessionToken();
 
     const response = await app.inject({
       method: "GET",
@@ -459,8 +456,7 @@ describe("API FHIR interoperability boundary", () => {
   });
 
   it("negotiates validation errors as FHIR OperationOutcome when requested", async () => {
-    app = await readyServer();
-    const auditorToken = await loginForToken(app, "security-officer-demo", "auditor");
+    const auditorToken = await readySessionToken("security-officer-demo", "auditor");
 
     const fhirResponse = await app.inject({
       method: "GET",
@@ -505,8 +501,7 @@ describe("API FHIR interoperability boundary", () => {
   });
 
   it("rejects clinical document attachment metadata with invalid MIME type or SHA-1 hash", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const accessToken = await readySessionToken();
 
     const response = await app.inject({
       method: "POST",
@@ -536,8 +531,7 @@ describe("API FHIR interoperability boundary", () => {
   });
 
   it("rejects FHIR unsignedInt overflows at the request boundary", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const accessToken = await readySessionToken();
 
     const documentResponse = await app.inject({
       method: "POST",
@@ -596,8 +590,7 @@ describe("API FHIR interoperability boundary", () => {
   });
 
   it("rejects malformed DICOM UIDs at the request boundary", async () => {
-    app = await readyServer();
-    const accessToken = await loginForToken(app, "practitioner-demo-001", "clinician");
+    const accessToken = await readySessionToken();
 
     const invalidStudyUidResponse = await app.inject({
       method: "POST",

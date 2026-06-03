@@ -34,7 +34,7 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/server.fhir-boundary.test.ts",
-    maxLines: 680,
+    maxLines: 660,
     role: "API FHIR export, document reference and OperationOutcome scenarios"
   },
   {
