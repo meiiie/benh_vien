@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, LightMyRequestResponse } from "fastify";
 import type {
   RecordTransferDeliveryAttempt,
   RecordTransferDeliveryAttemptRepository
@@ -51,7 +51,7 @@ export async function sendRecordTransfer(
   app: FastifyInstance,
   accessToken: string,
   payload: Record<string, unknown>
-) {
+): Promise<LightMyRequestResponse> {
   return app.inject({
     method: "POST",
     url: "/api/v1/record-transfers/record-transfer-demo-001/send",
@@ -63,7 +63,7 @@ export async function sendRecordTransfer(
 export async function getRecordTransferDeliveryAttempts(
   app: FastifyInstance,
   accessToken: string
-) {
+): Promise<LightMyRequestResponse> {
   return app.inject({
     method: "GET",
     url: "/api/v1/record-transfers/record-transfer-demo-001/delivery-attempts",
@@ -75,7 +75,7 @@ export async function receiveRecordTransfer(
   app: FastifyInstance,
   accessToken: string,
   payload: Record<string, unknown>
-) {
+): Promise<LightMyRequestResponse> {
   return app.inject({
     method: "POST",
     url: "/api/v1/record-transfers/record-transfer-demo-001/receive",
@@ -88,7 +88,7 @@ export async function failRecordTransfer(
   app: FastifyInstance,
   accessToken: string,
   payload: Record<string, unknown>
-) {
+): Promise<LightMyRequestResponse> {
   return app.inject({
     method: "POST",
     url: "/api/v1/record-transfers/record-transfer-demo-001/fail",
@@ -101,7 +101,7 @@ export async function retryRecordTransfer(
   app: FastifyInstance,
   accessToken: string,
   payload: Record<string, unknown>
-) {
+): Promise<LightMyRequestResponse> {
   return app.inject({
     method: "POST",
     url: "/api/v1/record-transfers/record-transfer-demo-001/retry",
@@ -113,7 +113,7 @@ export async function retryRecordTransfer(
 export async function listPatientRecordTransfers(
   app: FastifyInstance,
   accessToken: string
-) {
+): Promise<LightMyRequestResponse> {
   return app.inject({
     method: "GET",
     url: "/api/v1/patients/patient-demo-001/record-transfers",
@@ -124,7 +124,7 @@ export async function listPatientRecordTransfers(
 export async function getRecordTransferFhirTask(
   app: FastifyInstance,
   accessToken: string
-) {
+): Promise<LightMyRequestResponse> {
   return app.inject({
     method: "GET",
     url: "/api/v1/record-transfers/record-transfer-demo-001/fhir-task",
