@@ -59,8 +59,23 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/server.patient-access.test-support.ts",
-    maxLines: 560,
-    role: "API patient access ABAC outside-organization fixture and denied route catalog"
+    maxLines: 420,
+    role: "API patient access ABAC outside-organization fixture orchestration"
+  },
+  {
+    path: "apps/api/src/server.patient-access.denied-request-catalog.ts",
+    maxLines: 140,
+    role: "API patient access ABAC denied route catalog"
+  },
+  {
+    path: "apps/api/src/server.patient-access.patient-fixture.ts",
+    maxLines: 50,
+    role: "API patient access ABAC outside-patient creation helper"
+  },
+  {
+    path: "apps/api/src/server.patient-access.test-resource.ts",
+    maxLines: 40,
+    role: "API patient access ABAC treatment resource creation helper"
   },
   {
     path: "apps/api/src/server.audit-boundary.test.ts",
@@ -241,6 +256,15 @@ const startupConfigBoundaryPath = resolve("apps/api/src/server.startup-config.te
 const patientRegistryBoundaryPath = resolve("apps/api/src/server.patient-registry.test.ts");
 const patientAccessBoundaryPath = resolve("apps/api/src/server.patient-access.test.ts");
 const patientAccessSupportPath = resolve("apps/api/src/server.patient-access.test-support.ts");
+const patientAccessDeniedRequestCatalogPath = resolve(
+  "apps/api/src/server.patient-access.denied-request-catalog.ts"
+);
+const patientAccessPatientFixturePath = resolve(
+  "apps/api/src/server.patient-access.patient-fixture.ts"
+);
+const patientAccessTestResourcePath = resolve(
+  "apps/api/src/server.patient-access.test-resource.ts"
+);
 const auditBoundaryPath = resolve("apps/api/src/server.audit-boundary.test.ts");
 const auditFhirBoundaryPath = resolve("apps/api/src/server.audit-fhir-boundary.test.ts");
 const auditIntegrityBoundaryPath = resolve(
@@ -341,6 +365,27 @@ const requiredPatientAccessBoundaryPatterns = [
 ];
 const requiredPatientAccessSupportPatterns = [
   /createOutsidePatientAccessFixture/,
+  /createOutsidePatient/,
+  /createListDeniedRequests/,
+  /createReadDeniedRequests/,
+  /createFhirExportDeniedRequests/
+];
+const requiredPatientAccessDeniedRequestCatalogPatterns = [
+  /record-transfer-list-abac-denied-001/,
+  /transfer-read-abac-denied-001/,
+  /imaging-study-export-abac-denied-001/
+];
+const requiredPatientAccessTestResourcePatterns = [
+  /createTreatmentResource/,
+  /jsonRequestHeaders/,
+  /treatmentHeaders/
+];
+const requiredPatientAccessPatientFixturePatterns = [
+  /createOutsidePatient/,
+  /MRN-OUTSIDE-TEST/,
+  /hospital-outside-demo/
+];
+const retiredPatientAccessSupportPatterns = [
   /record-transfer-list-abac-denied-001/,
   /imaging-study-export-abac-denied-001/
 ];
@@ -481,6 +526,18 @@ const startupConfigBoundarySource = await readFile(startupConfigBoundaryPath, "u
 const patientRegistryBoundarySource = await readFile(patientRegistryBoundaryPath, "utf8");
 const patientAccessBoundarySource = await readFile(patientAccessBoundaryPath, "utf8");
 const patientAccessSupportSource = await readFile(patientAccessSupportPath, "utf8");
+const patientAccessDeniedRequestCatalogSource = await readFile(
+  patientAccessDeniedRequestCatalogPath,
+  "utf8"
+);
+const patientAccessPatientFixtureSource = await readFile(
+  patientAccessPatientFixturePath,
+  "utf8"
+);
+const patientAccessTestResourceSource = await readFile(
+  patientAccessTestResourcePath,
+  "utf8"
+);
 const auditBoundarySource = await readFile(auditBoundaryPath, "utf8");
 const auditFhirBoundarySource = await readFile(auditFhirBoundaryPath, "utf8");
 const auditIntegrityBoundarySource = await readFile(auditIntegrityBoundaryPath, "utf8");
@@ -614,7 +671,39 @@ for (const required of requiredPatientAccessBoundaryPatterns) {
 for (const required of requiredPatientAccessSupportPatterns) {
   if (!required.test(patientAccessSupportSource)) {
     throw new Error(
-      "server.patient-access.test-support.ts must keep outside-organization ABAC fixture and denied route catalog coverage."
+      "server.patient-access.test-support.ts must keep outside-organization ABAC fixture orchestration."
+    );
+  }
+}
+
+for (const required of requiredPatientAccessDeniedRequestCatalogPatterns) {
+  if (!required.test(patientAccessDeniedRequestCatalogSource)) {
+    throw new Error(
+      "server.patient-access.denied-request-catalog.ts must keep ABAC denied route catalog coverage."
+    );
+  }
+}
+
+for (const required of requiredPatientAccessTestResourcePatterns) {
+  if (!required.test(patientAccessTestResourceSource)) {
+    throw new Error(
+      "server.patient-access.test-resource.ts must keep the treatment resource creation helper."
+    );
+  }
+}
+
+for (const required of requiredPatientAccessPatientFixturePatterns) {
+  if (!required.test(patientAccessPatientFixtureSource)) {
+    throw new Error(
+      "server.patient-access.patient-fixture.ts must keep outside-patient creation coverage."
+    );
+  }
+}
+
+for (const retired of retiredPatientAccessSupportPatterns) {
+  if (retired.test(patientAccessSupportSource)) {
+    throw new Error(
+      "server.patient-access.test-support.ts must not absorb denied route catalog entries back into the fixture orchestration."
     );
   }
 }

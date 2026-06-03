@@ -1,14 +1,12 @@
 import type { FastifyInstance } from "fastify";
-import { expect } from "vitest";
 import {
-  jsonRequestHeaders,
-  treatmentHeaders
-} from "./server.auth.test-support.js";
-
-export type DeniedRequest = {
-  readonly url: string;
-  readonly requestId: string;
-};
+  createFhirExportDeniedRequests,
+  createListDeniedRequests,
+  createReadDeniedRequests,
+  type DeniedRequest
+} from "./server.patient-access.denied-request-catalog.js";
+import { createOutsidePatient } from "./server.patient-access.patient-fixture.js";
+import { createTreatmentResource } from "./server.patient-access.test-resource.js";
 
 export type OutsidePatientAccessFixture = {
   readonly outsidePatientId: string;
@@ -21,44 +19,8 @@ export async function createOutsidePatientAccessFixture(
   app: FastifyInstance,
   adminToken: string
 ): Promise<OutsidePatientAccessFixture> {
-  const createResponse = await app.inject({
-    method: "POST",
-    url: "/api/v1/patients",
-    headers: jsonRequestHeaders(treatmentHeaders(adminToken)),
-    payload: {
-      identifiers: [
-        {
-          system: "urn:benh-vien-so:mrn",
-          value: "MRN-OUTSIDE-TEST",
-          type: "hospital-mrn"
-        }
-      ],
-      fullName: "Outside Hospital Patient",
-      gender: "unknown",
-      managingOrganizationId: "hospital-outside-demo"
-    }
-  });
-
-  expect(createResponse.statusCode).toBe(201);
-  const outsidePatientId = createResponse.json().id as string;
-
-  const listDeniedRequests = [
-    deniedRequest(`/api/v1/patients/${outsidePatientId}/encounters`, "encounter-list-abac-denied-001"),
-    deniedRequest(`/api/v1/patients/${outsidePatientId}/allergy-intolerances`, "allergy-list-abac-denied-001"),
-    deniedRequest(`/api/v1/patients/${outsidePatientId}/conditions`, "condition-list-abac-denied-001"),
-    deniedRequest(`/api/v1/patients/${outsidePatientId}/medication-requests`, "medication-request-list-abac-denied-001"),
-    deniedRequest(`/api/v1/patients/${outsidePatientId}/medication-dispenses`, "medication-dispense-list-abac-denied-001"),
-    deniedRequest(`/api/v1/patients/${outsidePatientId}/medication-administrations`, "medication-administration-list-abac-denied-001"),
-    deniedRequest(`/api/v1/patients/${outsidePatientId}/documents`, "document-list-abac-denied-001"),
-    deniedRequest(`/api/v1/patients/${outsidePatientId}/observations`, "observation-list-abac-denied-001"),
-    deniedRequest(`/api/v1/patients/${outsidePatientId}/service-requests`, "service-request-list-abac-denied-001"),
-    deniedRequest(`/api/v1/patients/${outsidePatientId}/workflow-tasks`, "workflow-task-list-abac-denied-001"),
-    deniedRequest(`/api/v1/patients/${outsidePatientId}/procedures`, "procedure-list-abac-denied-001"),
-    deniedRequest(`/api/v1/patients/${outsidePatientId}/diagnostic-reports`, "diagnostic-report-list-abac-denied-001"),
-    deniedRequest(`/api/v1/patients/${outsidePatientId}/imaging-studies`, "imaging-study-list-abac-denied-001"),
-    deniedRequest(`/api/v1/patients/${outsidePatientId}/consents`, "consent-list-abac-denied-001"),
-    deniedRequest(`/api/v1/patients/${outsidePatientId}/record-transfers`, "record-transfer-list-abac-denied-001")
-  ];
+  const outsidePatientId = await createOutsidePatient(app, adminToken);
+  const listDeniedRequests = createListDeniedRequests(outsidePatientId);
 
   const outsideEncounterId = await createTreatmentResource(
     app,
@@ -412,66 +374,42 @@ export async function createOutsidePatientAccessFixture(
     }
   );
 
-  const readDeniedRequests = [
-    deniedRequest(`/api/v1/encounters/${outsideEncounterId}`, "encounter-read-abac-denied-001"),
-    deniedRequest(`/api/v1/allergy-intolerances/${outsideAllergyId}`, "allergy-read-abac-denied-001"),
-    deniedRequest(`/api/v1/conditions/${outsideConditionId}`, "condition-read-abac-denied-001"),
-    deniedRequest(`/api/v1/medication-requests/${outsideMedicationRequestId}`, "medication-request-read-abac-denied-001"),
-    deniedRequest(`/api/v1/medication-dispenses/${outsideMedicationDispenseId}`, "medication-dispense-read-abac-denied-001"),
-    deniedRequest(`/api/v1/medication-administrations/${outsideMedicationAdministrationId}`, "medication-administration-read-abac-denied-001"),
-    deniedRequest(`/api/v1/clinical-documents/${outsideDocumentId}/fhir`, "document-read-abac-denied-001"),
-    deniedRequest(`/api/v1/observations/${outsideObservationId}`, "observation-read-abac-denied-001"),
-    deniedRequest(`/api/v1/service-requests/${outsideServiceRequestId}`, "service-request-read-abac-denied-001"),
-    deniedRequest(`/api/v1/workflow-tasks/${outsideTaskId}`, "workflow-task-read-abac-denied-001"),
-    deniedRequest(`/api/v1/procedures/${outsideProcedureId}`, "procedure-read-abac-denied-001"),
-    deniedRequest(`/api/v1/diagnostic-reports/${outsideDiagnosticReportId}`, "diagnostic-report-read-abac-denied-001"),
-    deniedRequest(`/api/v1/imaging-studies/${outsideImagingStudyId}`, "imaging-study-read-abac-denied-001"),
-    deniedRequest(`/api/v1/record-transfers/${outsideTransferId}`, "transfer-read-abac-denied-001")
-  ];
+  const readDeniedRequests = createReadDeniedRequests({
+    outsideAllergyId,
+    outsideConditionId,
+    outsideDiagnosticReportId,
+    outsideDocumentId,
+    outsideEncounterId,
+    outsideImagingStudyId,
+    outsideMedicationAdministrationId,
+    outsideMedicationDispenseId,
+    outsideMedicationRequestId,
+    outsideObservationId,
+    outsideProcedureId,
+    outsideServiceRequestId,
+    outsideTaskId,
+    outsideTransferId
+  });
 
-  const fhirExportDeniedRequests = [
-    deniedRequest(`/api/v1/encounters/${outsideEncounterId}/fhir`, "encounter-export-abac-denied-001"),
-    deniedRequest(`/api/v1/allergy-intolerances/${outsideAllergyId}/fhir`, "allergy-export-abac-denied-001"),
-    deniedRequest(`/api/v1/conditions/${outsideConditionId}/fhir`, "condition-export-abac-denied-001"),
-    deniedRequest(`/api/v1/medication-requests/${outsideMedicationRequestId}/fhir`, "medication-request-export-abac-denied-001"),
-    deniedRequest(`/api/v1/medication-dispenses/${outsideMedicationDispenseId}/fhir`, "medication-dispense-export-abac-denied-001"),
-    deniedRequest(`/api/v1/medication-administrations/${outsideMedicationAdministrationId}/fhir`, "medication-administration-export-abac-denied-001"),
-    deniedRequest(`/api/v1/service-requests/${outsideServiceRequestId}/fhir`, "service-request-export-abac-denied-001"),
-    deniedRequest(`/api/v1/workflow-tasks/${outsideTaskId}/fhir`, "workflow-task-export-abac-denied-001"),
-    deniedRequest(`/api/v1/procedures/${outsideProcedureId}/fhir`, "procedure-export-abac-denied-001"),
-    deniedRequest(`/api/v1/diagnostic-reports/${outsideDiagnosticReportId}/fhir`, "diagnostic-report-export-abac-denied-001"),
-    deniedRequest(`/api/v1/imaging-studies/${outsideImagingStudyId}/fhir`, "imaging-study-export-abac-denied-001"),
-    deniedRequest(`/api/v1/consents/${outsideConsentId}/fhir`, "consent-export-abac-denied-001")
-  ];
+  const fhirExportDeniedRequests = createFhirExportDeniedRequests({
+    outsideAllergyId,
+    outsideConditionId,
+    outsideConsentId,
+    outsideDiagnosticReportId,
+    outsideEncounterId,
+    outsideImagingStudyId,
+    outsideMedicationAdministrationId,
+    outsideMedicationDispenseId,
+    outsideMedicationRequestId,
+    outsideProcedureId,
+    outsideServiceRequestId,
+    outsideTaskId
+  });
 
   return {
     outsidePatientId,
     listDeniedRequests,
     readDeniedRequests,
     fhirExportDeniedRequests
-  };
-}
-
-async function createTreatmentResource(
-  app: FastifyInstance,
-  token: string,
-  url: string,
-  payload: Record<string, unknown>
-): Promise<string> {
-  const response = await app.inject({
-    method: "POST",
-    url,
-    headers: jsonRequestHeaders(treatmentHeaders(token)),
-    payload
-  });
-
-  expect(response.statusCode).toBe(201);
-  return response.json().id as string;
-}
-
-function deniedRequest(url: string, requestId: string): DeniedRequest {
-  return {
-    url,
-    requestId
   };
 }
