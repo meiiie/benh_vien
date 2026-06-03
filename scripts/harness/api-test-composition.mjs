@@ -43,9 +43,19 @@ const testBudgets = [
     role: "API FHIR validation and OperationOutcome negotiation scenarios"
   },
   {
+    path: "apps/api/src/server.provider-directory-boundary.test.ts",
+    maxLines: 140,
+    role: "API provider directory and baseline clinical access scenarios"
+  },
+  {
     path: "apps/api/src/server.clinical-resources.test.ts",
-    maxLines: 850,
-    role: "API provider directory and clinical resource scenarios"
+    maxLines: 660,
+    role: "API clinical resource list, command and FHIR export scenarios"
+  },
+  {
+    path: "apps/api/src/server.diagnostic-resources-boundary.test.ts",
+    maxLines: 220,
+    role: "API diagnostic report, imaging study and PACS-facing resource scenarios"
   },
   {
     path: "apps/api/src/server.consent-boundary.test.ts",
@@ -141,7 +151,13 @@ const fhirBoundaryPath = resolve("apps/api/src/server.fhir-boundary.test.ts");
 const fhirValidationBoundaryPath = resolve(
   "apps/api/src/server.fhir-validation-boundary.test.ts"
 );
+const providerDirectoryBoundaryPath = resolve(
+  "apps/api/src/server.provider-directory-boundary.test.ts"
+);
 const clinicalResourcesBoundaryPath = resolve("apps/api/src/server.clinical-resources.test.ts");
+const diagnosticResourcesBoundaryPath = resolve(
+  "apps/api/src/server.diagnostic-resources-boundary.test.ts"
+);
 const consentBoundaryPath = resolve("apps/api/src/server.consent-boundary.test.ts");
 const recordTransferBoundaryPath = resolve("apps/api/src/server.record-transfer-boundary.test.ts");
 
@@ -191,10 +207,17 @@ const requiredFhirBoundaryPatterns = [
 const requiredFhirValidationBoundaryPatterns = [
   /negotiates validation errors as FHIR OperationOutcome/
 ];
-const requiredClinicalResourcesBoundaryPatterns = [
+const requiredProviderDirectoryBoundaryPatterns = [
   /returns provider directory and FHIR Endpoint resources/,
+  /denies nurse encounter creation and finish privileges/
+];
+const requiredClinicalResourcesBoundaryPatterns = [
   /lists workflow tasks and exports them as FHIR Task/,
   /lists medication administrations and exports them as FHIR MedicationAdministration/,
+  /lists service requests and exports them as FHIR ServiceRequest/
+];
+const requiredDiagnosticResourcesBoundaryPatterns = [
+  /lists diagnostic reports and exports them as FHIR DiagnosticReport/,
   /lists imaging studies and exports them as FHIR ImagingStudy/
 ];
 const requiredConsentBoundaryPatterns = [
@@ -259,8 +282,16 @@ const fhirValidationBoundarySource = await readFile(
   fhirValidationBoundaryPath,
   "utf8"
 );
+const providerDirectoryBoundarySource = await readFile(
+  providerDirectoryBoundaryPath,
+  "utf8"
+);
 const clinicalResourcesBoundarySource = await readFile(
   clinicalResourcesBoundaryPath,
+  "utf8"
+);
+const diagnosticResourcesBoundarySource = await readFile(
+  diagnosticResourcesBoundaryPath,
   "utf8"
 );
 const consentBoundarySource = await readFile(consentBoundaryPath, "utf8");
@@ -330,10 +361,26 @@ for (const required of requiredFhirValidationBoundaryPatterns) {
   }
 }
 
+for (const required of requiredProviderDirectoryBoundaryPatterns) {
+  if (!required.test(providerDirectoryBoundarySource)) {
+    throw new Error(
+      "server.provider-directory-boundary.test.ts must keep provider-directory and baseline clinical access scenarios."
+    );
+  }
+}
+
 for (const required of requiredClinicalResourcesBoundaryPatterns) {
   if (!required.test(clinicalResourcesBoundarySource)) {
     throw new Error(
-      "server.clinical-resources.test.ts must keep provider directory, workflow, medication and imaging resource scenarios."
+      "server.clinical-resources.test.ts must keep workflow, medication and service-request resource scenarios."
+    );
+  }
+}
+
+for (const required of requiredDiagnosticResourcesBoundaryPatterns) {
+  if (!required.test(diagnosticResourcesBoundarySource)) {
+    throw new Error(
+      "server.diagnostic-resources-boundary.test.ts must keep diagnostic report and imaging study scenarios."
     );
   }
 }
