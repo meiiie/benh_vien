@@ -118,34 +118,14 @@ export function App() {
     fhirPreviewState,
     platformState
   });
-  const { loadPatients } = buildAppPatientRegistryLoaders({
+  const patientRegistryLoaders = buildAppPatientRegistryLoaders({
     clinicalApi,
     isAuditOnlySession,
     patientRegistryState,
     setStatusMessage
   });
-  const {
-    loadAllergyIntoleranceFhirPreview,
-    loadAuditFhirBundle,
-    loadConditionFhirPreview,
-    loadConsentFhirPreview,
-    loadDiagnosticReportFhirPreview,
-    loadDocumentFhirPreview,
-    loadDocumentProvenanceFhirPreview,
-    loadEncounterFhirPreview,
-    loadImagingStudyFhirPreview,
-    loadMedicationAdministrationFhirPreview,
-    loadMedicationDispenseFhirPreview,
-    loadMedicationRequestFhirPreview,
-    loadObservationFhirPreview,
-    loadPatientFhirBundlePreview,
-    loadPatientFhirDocumentBundlePreview,
-    loadPatientFhirPreview,
-    loadProcedureFhirPreview,
-    loadProviderDirectoryFhirPreview,
-    loadServiceRequestFhirPreview,
-    loadWorkflowTaskFhirPreview
-  } = buildAppFhirPreviewLoaders({
+  const { loadPatients } = patientRegistryLoaders;
+  const fhirPreviewLoaders = buildAppFhirPreviewLoaders({
     auditState,
     canReadAudit,
     clinicalApi,
@@ -155,15 +135,27 @@ export function App() {
     setStatusMessage
   });
   const {
-    loadAuditEvents,
-    loadGlobalAuditEvents,
-    verifyAuditIntegrity
-  } = buildAppAuditLoaders({
+    loadAuditFhirBundle,
+    loadConsentFhirPreview,
+    loadDocumentFhirPreview,
+    loadDocumentProvenanceFhirPreview,
+    loadEncounterFhirPreview,
+    loadPatientFhirBundlePreview,
+    loadPatientFhirDocumentBundlePreview,
+    loadPatientFhirPreview,
+    loadProviderDirectoryFhirPreview
+  } = fhirPreviewLoaders;
+  const auditLoaders = buildAppAuditLoaders({
     auditState,
     canReadAudit,
     clinicalApi,
     setStatusMessage
   });
+  const {
+    loadAuditEvents,
+    loadGlobalAuditEvents,
+    verifyAuditIntegrity
+  } = auditLoaders;
   const {
     handleRevokeConsent,
     loadConsents
@@ -175,17 +167,18 @@ export function App() {
     ...interoperabilityState,
     setStatusMessage
   });
-  const {
-    loadRecordTransferDeliveryAttempts,
-    loadRecordTransferFhirTaskPreview,
-    loadRecordTransfers
-  } = buildRecordTransferLoaders({
+  const recordTransferLoaders = buildRecordTransferLoaders({
     clinicalApi,
     ...interoperabilityState,
     setRecordTransferFhirTaskPreview:
       fhirPreviewState.setRecordTransferFhirTaskPreview,
     setStatusMessage
   });
+  const {
+    loadRecordTransferDeliveryAttempts,
+    loadRecordTransferFhirTaskPreview,
+    loadRecordTransfers
+  } = recordTransferLoaders;
   const {
     handleCreateRecordTransfer,
     handleFailRecordTransfer,
@@ -203,16 +196,22 @@ export function App() {
     selectedPatient,
     setStatusMessage
   });
-  const {
-    loadApiRuntimeInfo,
-    loadCapabilityStatement,
-    loadProviderDirectory
-  } = buildAppPlatformLoaders({
+  const platformLoaders = buildAppPlatformLoaders({
     authSession,
     clinicalApi,
     isAuditOnlySession,
     loadProviderDirectoryFhirPreview,
     platformState
+  });
+  const {
+    loadApiRuntimeInfo,
+    loadCapabilityStatement,
+    loadProviderDirectory
+  } = platformLoaders;
+  const patientWorkspaceLoaders = buildAppPatientWorkspaceLoaders({
+    clinicalApi,
+    clinicalRecordState,
+    setStatusMessage
   });
   const {
     loadAllergyIntolerances,
@@ -228,15 +227,8 @@ export function App() {
     loadProcedures,
     loadServiceRequests,
     loadWorkflowTasks
-  } = buildAppPatientWorkspaceLoaders({
-    clinicalApi,
-    clinicalRecordState,
-    setStatusMessage
-  });
-  const {
-    clearPatientWorkspaceState,
-    loadPatientWorkspace
-  } = buildAppPatientWorkspaceLifecycle({
+  } = patientWorkspaceLoaders;
+  const patientWorkspaceLifecycle = buildAppPatientWorkspaceLifecycle({
     auditState,
     canReadAudit,
     clinicalRecordState,
@@ -265,6 +257,10 @@ export function App() {
     loadWorkflowTasks,
     platformState
   });
+  const {
+    clearPatientWorkspaceState,
+    loadPatientWorkspace
+  } = patientWorkspaceLifecycle;
   const {
     handleCreatePatient,
     handleMergeSelectedPatient
@@ -416,39 +412,22 @@ export function App() {
   });
   useAppRuntimeEffects({
     auditState,
+    auditLoaders,
     authSession,
     canReadAudit,
     canViewRuntimeInfo,
-    clearPatientWorkspaceState,
     clinicalRecordState,
+    fhirPreviewLoaders,
     fhirPreviewState,
     interoperabilityState,
     isAuthenticated,
     isIntegrationSession,
-    loadAllergyIntoleranceFhirPreview,
-    loadApiRuntimeInfo,
-    loadCapabilityStatement,
-    loadConditionFhirPreview,
-    loadDiagnosticReportFhirPreview,
-    loadDocumentFhirPreview,
-    loadDocumentProvenanceFhirPreview,
-    loadEncounterFhirPreview,
-    loadGlobalAuditEvents,
-    loadImagingStudyFhirPreview,
-    loadMedicationAdministrationFhirPreview,
-    loadMedicationDispenseFhirPreview,
-    loadMedicationRequestFhirPreview,
-    loadObservationFhirPreview,
-    loadPatientWorkspace,
-    loadPatients,
-    loadProcedureFhirPreview,
-    loadProviderDirectory,
-    loadRecordTransferDeliveryAttempts,
-    loadRecordTransferFhirTaskPreview,
-    loadServiceRequestFhirPreview,
-    loadWorkflowTaskFhirPreview,
+    patientRegistryLoaders,
+    patientWorkspaceLifecycle,
     patientRegistryState,
+    platformLoaders,
     platformState,
+    recordTransferLoaders,
     workspaceSelection
   });
 

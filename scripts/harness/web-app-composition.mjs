@@ -494,6 +494,11 @@ const featureModuleBudgets = [
     role: "Clinical record panel command and selection handler mapping"
   },
   {
+    path: "apps/web/src/application/appRuntimeEffects.ts",
+    maxLines: 150,
+    role: "Runtime effect composition with grouped loader contracts"
+  },
+  {
     path: "apps/web/src/config/demoClinicalDefaults.ts",
     maxLines: 20,
     role: "Demo defaults compatibility barrel"
