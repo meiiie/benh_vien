@@ -24,7 +24,7 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/server.patient-access.test.ts",
-    maxLines: 780,
+    maxLines: 650,
     role: "API patient access ABAC scenarios across clinical resources"
   },
   {

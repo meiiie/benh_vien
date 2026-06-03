@@ -11,7 +11,7 @@ import {
 } from "./server.auth.test-support.js";
 
 describe("API patient access ABAC boundary", () => {
-  let app: FastifyInstance | undefined;
+  let app: FastifyInstance;
   const originalEnv = captureAuthBoundaryEnv();
 
   beforeEach(() => {
@@ -19,13 +19,28 @@ describe("API patient access ABAC boundary", () => {
   });
 
   afterEach(async () => {
-    if (app) {
-      await app.close();
-      app = undefined;
-    }
-
+    await app.close();
     restoreAuthBoundaryEnv(originalEnv);
   });
+
+  async function createTreatmentResource(
+    token: string,
+    url: string,
+    payload: Record<string, unknown>
+  ): Promise<string> {
+    const response = await app.inject({
+      method: "POST",
+      url,
+      headers: {
+        ...treatmentHeaders(token),
+        "content-type": "application/json"
+      },
+      payload
+    });
+
+    expect(response.statusCode).toBe(201);
+    return response.json().id as string;
+  }
 
   it("filters treatment patient access by the actor provider organization", async () => {
     app = await readyServer();
@@ -152,33 +167,22 @@ describe("API patient access ABAC boundary", () => {
       });
     }
 
-    const outsideEncounterResponse = await app.inject({
-      method: "POST",
-      url: `/api/v1/patients/${outsidePatientId}/encounters`,
-      headers: {
-        ...treatmentHeaders(adminToken),
-        "content-type": "application/json"
-      },
-      payload: {
+    const outsideEncounterId = await createTreatmentResource(
+      adminToken,
+      `/api/v1/patients/${outsidePatientId}/encounters`,
+      {
         class: "ambulatory",
         serviceType: "Khám ngoài tổ chức",
         reasonText: "Encounter ngoài tổ chức để kiểm tra ABAC.",
         attendingPractitionerId: "practitioner-demo-003",
         startedAt: "2026-05-28T00:30:00.000Z"
       }
-    });
-    const outsideEncounterId = outsideEncounterResponse.json().id as string;
+    );
 
-    expect(outsideEncounterResponse.statusCode).toBe(201);
-
-    const outsideAllergyResponse = await app.inject({
-      method: "POST",
-      url: `/api/v1/patients/${outsidePatientId}/allergy-intolerances`,
-      headers: {
-        ...treatmentHeaders(adminToken),
-        "content-type": "application/json"
-      },
-      payload: {
+    const outsideAllergyId = await createTreatmentResource(
+      adminToken,
+      `/api/v1/patients/${outsidePatientId}/allergy-intolerances`,
+      {
         encounterId: outsideEncounterId,
         type: "allergy",
         category: "medication",
@@ -189,19 +193,12 @@ describe("API patient access ABAC boundary", () => {
         },
         recorderPractitionerId: "practitioner-demo-003"
       }
-    });
-    const outsideAllergyId = outsideAllergyResponse.json().id as string;
+    );
 
-    expect(outsideAllergyResponse.statusCode).toBe(201);
-
-    const outsideConditionResponse = await app.inject({
-      method: "POST",
-      url: `/api/v1/patients/${outsidePatientId}/conditions`,
-      headers: {
-        ...treatmentHeaders(adminToken),
-        "content-type": "application/json"
-      },
-      payload: {
+    const outsideConditionId = await createTreatmentResource(
+      adminToken,
+      `/api/v1/patients/${outsidePatientId}/conditions`,
+      {
         encounterId: outsideEncounterId,
         category: "encounter-diagnosis",
         code: {
@@ -211,37 +208,23 @@ describe("API patient access ABAC boundary", () => {
         },
         recorderPractitionerId: "practitioner-demo-003"
       }
-    });
-    const outsideConditionId = outsideConditionResponse.json().id as string;
+    );
 
-    expect(outsideConditionResponse.statusCode).toBe(201);
-
-    const outsideDocumentResponse = await app.inject({
-      method: "POST",
-      url: `/api/v1/patients/${outsidePatientId}/documents`,
-      headers: {
-        ...treatmentHeaders(adminToken),
-        "content-type": "application/json"
-      },
-      payload: {
+    const outsideDocumentId = await createTreatmentResource(
+      adminToken,
+      `/api/v1/patients/${outsidePatientId}/documents`,
+      {
         type: "referral-letter",
         title: "Outside referral letter",
         storageUri: "s3://wiiicare-test/outside/referral-letter.pdf",
         authorPractitionerId: "practitioner-demo-003"
       }
-    });
-    const outsideDocumentId = outsideDocumentResponse.json().id as string;
+    );
 
-    expect(outsideDocumentResponse.statusCode).toBe(201);
-
-    const outsideObservationResponse = await app.inject({
-      method: "POST",
-      url: `/api/v1/patients/${outsidePatientId}/observations`,
-      headers: {
-        ...treatmentHeaders(adminToken),
-        "content-type": "application/json"
-      },
-      payload: {
+    const outsideObservationId = await createTreatmentResource(
+      adminToken,
+      `/api/v1/patients/${outsidePatientId}/observations`,
+      {
         category: "vital-signs",
         code: {
           system: "http://loinc.org",
@@ -257,19 +240,12 @@ describe("API patient access ABAC boundary", () => {
         },
         performerPractitionerId: "practitioner-demo-001"
       }
-    });
-    const outsideObservationId = outsideObservationResponse.json().id as string;
+    );
 
-    expect(outsideObservationResponse.statusCode).toBe(201);
-
-    const outsideMedicationRequestResponse = await app.inject({
-      method: "POST",
-      url: `/api/v1/patients/${outsidePatientId}/medication-requests`,
-      headers: {
-        ...treatmentHeaders(adminToken),
-        "content-type": "application/json"
-      },
-      payload: {
+    const outsideMedicationRequestId = await createTreatmentResource(
+      adminToken,
+      `/api/v1/patients/${outsidePatientId}/medication-requests`,
+      {
         encounterId: outsideEncounterId,
         reasonConditionId: outsideConditionId,
         category: "outpatient",
@@ -294,19 +270,12 @@ describe("API patient access ABAC boundary", () => {
         requesterPractitionerId: "practitioner-demo-003",
         expectedSupplyDurationDays: 7
       }
-    });
-    const outsideMedicationRequestId = outsideMedicationRequestResponse.json().id as string;
+    );
 
-    expect(outsideMedicationRequestResponse.statusCode).toBe(201);
-
-    const outsideMedicationDispenseResponse = await app.inject({
-      method: "POST",
-      url: `/api/v1/patients/${outsidePatientId}/medication-dispenses`,
-      headers: {
-        ...treatmentHeaders(adminToken),
-        "content-type": "application/json"
-      },
-      payload: {
+    const outsideMedicationDispenseId = await createTreatmentResource(
+      adminToken,
+      `/api/v1/patients/${outsidePatientId}/medication-dispenses`,
+      {
         encounterId: outsideEncounterId,
         medicationRequestId: outsideMedicationRequestId,
         status: "completed",
@@ -346,20 +315,12 @@ describe("API patient access ABAC boundary", () => {
           periodUnit: "d"
         }
       }
-    });
-    const outsideMedicationDispenseId = outsideMedicationDispenseResponse.json()
-      .id as string;
+    );
 
-    expect(outsideMedicationDispenseResponse.statusCode).toBe(201);
-
-    const outsideMedicationAdministrationResponse = await app.inject({
-      method: "POST",
-      url: `/api/v1/patients/${outsidePatientId}/medication-administrations`,
-      headers: {
-        ...treatmentHeaders(adminToken),
-        "content-type": "application/json"
-      },
-      payload: {
+    const outsideMedicationAdministrationId = await createTreatmentResource(
+      adminToken,
+      `/api/v1/patients/${outsidePatientId}/medication-administrations`,
+      {
         encounterId: outsideEncounterId,
         medicationRequestId: outsideMedicationRequestId,
         reasonConditionId: outsideConditionId,
@@ -394,20 +355,12 @@ describe("API patient access ABAC boundary", () => {
           }
         }
       }
-    });
-    const outsideMedicationAdministrationId = outsideMedicationAdministrationResponse.json()
-      .id as string;
+    );
 
-    expect(outsideMedicationAdministrationResponse.statusCode).toBe(201);
-
-    const outsideServiceRequestResponse = await app.inject({
-      method: "POST",
-      url: `/api/v1/patients/${outsidePatientId}/service-requests`,
-      headers: {
-        ...treatmentHeaders(adminToken),
-        "content-type": "application/json"
-      },
-      payload: {
+    const outsideServiceRequestId = await createTreatmentResource(
+      adminToken,
+      `/api/v1/patients/${outsidePatientId}/service-requests`,
+      {
         encounterId: outsideEncounterId,
         reasonConditionId: outsideConditionId,
         category: "laboratory",
@@ -418,19 +371,12 @@ describe("API patient access ABAC boundary", () => {
         },
         requesterPractitionerId: "practitioner-demo-003"
       }
-    });
-    const outsideServiceRequestId = outsideServiceRequestResponse.json().id as string;
+    );
 
-    expect(outsideServiceRequestResponse.statusCode).toBe(201);
-
-    const outsideDiagnosticReportResponse = await app.inject({
-      method: "POST",
-      url: `/api/v1/patients/${outsidePatientId}/diagnostic-reports`,
-      headers: {
-        ...treatmentHeaders(adminToken),
-        "content-type": "application/json"
-      },
-      payload: {
+    const outsideDiagnosticReportId = await createTreatmentResource(
+      adminToken,
+      `/api/v1/patients/${outsidePatientId}/diagnostic-reports`,
+      {
         encounterId: outsideEncounterId,
         basedOnServiceRequestId: outsideServiceRequestId,
         category: "laboratory",
@@ -446,19 +392,12 @@ describe("API patient access ABAC boundary", () => {
         resultObservationIds: [outsideObservationId],
         conclusion: "Outside diagnostic report for ABAC verification."
       }
-    });
-    const outsideDiagnosticReportId = outsideDiagnosticReportResponse.json().id as string;
+    );
 
-    expect(outsideDiagnosticReportResponse.statusCode).toBe(201);
-
-    const outsideProcedureResponse = await app.inject({
-      method: "POST",
-      url: `/api/v1/patients/${outsidePatientId}/procedures`,
-      headers: {
-        ...treatmentHeaders(adminToken),
-        "content-type": "application/json"
-      },
-      payload: {
+    const outsideProcedureId = await createTreatmentResource(
+      adminToken,
+      `/api/v1/patients/${outsidePatientId}/procedures`,
+      {
         encounterId: outsideEncounterId,
         basedOnServiceRequestId: outsideServiceRequestId,
         reasonConditionId: outsideConditionId,
@@ -488,19 +427,12 @@ describe("API patient access ABAC boundary", () => {
         ],
         note: "Outside procedure for ABAC verification."
       }
-    });
-    const outsideProcedureId = outsideProcedureResponse.json().id as string;
+    );
 
-    expect(outsideProcedureResponse.statusCode).toBe(201);
-
-    const outsideImagingStudyResponse = await app.inject({
-      method: "POST",
-      url: `/api/v1/patients/${outsidePatientId}/imaging-studies`,
-      headers: {
-        ...treatmentHeaders(adminToken),
-        "content-type": "application/json"
-      },
-      payload: {
+    const outsideImagingStudyId = await createTreatmentResource(
+      adminToken,
+      `/api/v1/patients/${outsidePatientId}/imaging-studies`,
+      {
         encounterId: outsideEncounterId,
         basedOnServiceRequestId: outsideServiceRequestId,
         diagnosticReportId: outsideDiagnosticReportId,
@@ -530,19 +462,12 @@ describe("API patient access ABAC boundary", () => {
           }
         ]
       }
-    });
-    const outsideImagingStudyId = outsideImagingStudyResponse.json().id as string;
+    );
 
-    expect(outsideImagingStudyResponse.statusCode).toBe(201);
-
-    const outsideTaskResponse = await app.inject({
-      method: "POST",
-      url: `/api/v1/patients/${outsidePatientId}/workflow-tasks`,
-      headers: {
-        ...treatmentHeaders(adminToken),
-        "content-type": "application/json"
-      },
-      payload: {
+    const outsideTaskId = await createTreatmentResource(
+      adminToken,
+      `/api/v1/patients/${outsidePatientId}/workflow-tasks`,
+      {
         encounterId: outsideEncounterId,
         basedOnServiceRequestId: outsideServiceRequestId,
         status: "requested",
@@ -554,47 +479,30 @@ describe("API patient access ABAC boundary", () => {
         requesterPractitionerId: "practitioner-demo-003",
         ownerOrganizationId: "hospital-outside-demo"
       }
-    });
-    const outsideTaskId = outsideTaskResponse.json().id as string;
+    );
 
-    expect(outsideTaskResponse.statusCode).toBe(201);
-
-    const outsideConsentResponse = await app.inject({
-      method: "POST",
-      url: `/api/v1/patients/${outsidePatientId}/consents`,
-      headers: {
-        ...treatmentHeaders(adminToken),
-        "content-type": "application/json"
-      },
-      payload: {
+    const outsideConsentId = await createTreatmentResource(
+      adminToken,
+      `/api/v1/patients/${outsidePatientId}/consents`,
+      {
         category: "record-sharing",
         granteeOrganizationId: "hospital-hai-phong-referral",
         validFrom: "2026-05-28T00:00:00.000Z",
         validUntil: "2026-12-31T23:59:59.000Z"
       }
-    });
-    const outsideConsentId = outsideConsentResponse.json().id as string;
+    );
 
-    expect(outsideConsentResponse.statusCode).toBe(201);
-
-    const outsideTransferResponse = await app.inject({
-      method: "POST",
-      url: `/api/v1/patients/${outsidePatientId}/record-transfers`,
-      headers: {
-        ...treatmentHeaders(adminToken),
-        "content-type": "application/json"
-      },
-      payload: {
+    const outsideTransferId = await createTreatmentResource(
+      adminToken,
+      `/api/v1/patients/${outsidePatientId}/record-transfers`,
+      {
         bundleType: "document",
         sourceOrganizationId: "hospital-outside-demo",
         recipientOrganizationId: "hospital-hai-phong-referral",
         consentReference: outsideConsentId,
         reason: "Outside transfer for ABAC verification."
       }
-    });
-    const outsideTransferId = outsideTransferResponse.json().id as string;
-
-    expect(outsideTransferResponse.statusCode).toBe(201);
+    );
 
     for (const [url, requestId] of [
       [`/api/v1/encounters/${outsideEncounterId}`, "encounter-read-abac-denied-001"],
