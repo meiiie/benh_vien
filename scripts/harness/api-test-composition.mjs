@@ -44,8 +44,18 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/server.audit-boundary.test.ts",
-    maxLines: 480,
-    role: "API audit access, AuditEvent FHIR export and integrity scenarios"
+    maxLines: 260,
+    role: "API audit-purpose access and JSON audit trail scenarios"
+  },
+  {
+    path: "apps/api/src/server.audit-fhir-boundary.test.ts",
+    maxLines: 230,
+    role: "API AuditEvent FHIR export and denial evidence scenarios"
+  },
+  {
+    path: "apps/api/src/server.audit-integrity-boundary.test.ts",
+    maxLines: 80,
+    role: "API audit integrity verification scenarios"
   },
   {
     path: "apps/api/src/server.fhir-boundary.test.ts",
@@ -187,6 +197,10 @@ const patientRegistryBoundaryPath = resolve("apps/api/src/server.patient-registr
 const patientAccessBoundaryPath = resolve("apps/api/src/server.patient-access.test.ts");
 const patientAccessSupportPath = resolve("apps/api/src/server.patient-access.test-support.ts");
 const auditBoundaryPath = resolve("apps/api/src/server.audit-boundary.test.ts");
+const auditFhirBoundaryPath = resolve("apps/api/src/server.audit-fhir-boundary.test.ts");
+const auditIntegrityBoundaryPath = resolve(
+  "apps/api/src/server.audit-integrity-boundary.test.ts"
+);
 const fhirBoundaryPath = resolve("apps/api/src/server.fhir-boundary.test.ts");
 const fhirAccessBoundaryPath = resolve("apps/api/src/server.fhir-access-boundary.test.ts");
 const fhirDocumentBoundaryPath = resolve("apps/api/src/server.fhir-document-boundary.test.ts");
@@ -256,8 +270,17 @@ const requiredPatientAccessSupportPatterns = [
 const requiredAuditBoundaryPatterns = [
   /allows auditor audit-purpose patient registry context/,
   /allows auditor audit-purpose access to patient audit events/,
+  /allows auditor audit-purpose review of global security audit events/,
+  /stores request id in audit metadata for clinical access/
+];
+const requiredAuditFhirBoundaryPatterns = [
+  /records denied patient access in the patient audit trail and FHIR export/,
   /exports patient audit trail as a FHIR AuditEvent Bundle/,
-  /returns a verified audit integrity report/
+  /denies clinician treatment-purpose export of the audit FHIR Bundle/
+];
+const requiredAuditIntegrityBoundaryPatterns = [
+  /returns a verified audit integrity report/,
+  /latestHash/
 ];
 const requiredFhirBoundaryPatterns = [
   /serves FHIR CapabilityStatement metadata without a demo session/,
@@ -361,6 +384,8 @@ const patientRegistryBoundarySource = await readFile(patientRegistryBoundaryPath
 const patientAccessBoundarySource = await readFile(patientAccessBoundaryPath, "utf8");
 const patientAccessSupportSource = await readFile(patientAccessSupportPath, "utf8");
 const auditBoundarySource = await readFile(auditBoundaryPath, "utf8");
+const auditFhirBoundarySource = await readFile(auditFhirBoundaryPath, "utf8");
+const auditIntegrityBoundarySource = await readFile(auditIntegrityBoundaryPath, "utf8");
 const fhirBoundarySource = await readFile(fhirBoundaryPath, "utf8");
 const fhirAccessBoundarySource = await readFile(fhirAccessBoundaryPath, "utf8");
 const fhirDocumentBoundarySource = await readFile(fhirDocumentBoundaryPath, "utf8");
@@ -458,7 +483,23 @@ for (const required of requiredPatientAccessSupportPatterns) {
 for (const required of requiredAuditBoundaryPatterns) {
   if (!required.test(auditBoundarySource)) {
     throw new Error(
-      "server.audit-boundary.test.ts must keep audit-purpose access, AuditEvent FHIR export and audit integrity scenarios."
+      "server.audit-boundary.test.ts must keep audit-purpose access and JSON audit trail scenarios."
+    );
+  }
+}
+
+for (const required of requiredAuditFhirBoundaryPatterns) {
+  if (!required.test(auditFhirBoundarySource)) {
+    throw new Error(
+      "server.audit-fhir-boundary.test.ts must keep AuditEvent FHIR export and denial evidence scenarios."
+    );
+  }
+}
+
+for (const required of requiredAuditIntegrityBoundaryPatterns) {
+  if (!required.test(auditIntegrityBoundarySource)) {
+    throw new Error(
+      "server.audit-integrity-boundary.test.ts must keep audit integrity verification scenarios."
     );
   }
 }
