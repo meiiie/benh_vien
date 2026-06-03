@@ -22,6 +22,7 @@ import {
   buildAppWorkspaceContext
 } from "./application/appDerivedContext.js";
 import { buildAppClinicalRecordHandlers } from "./application/appClinicalRecordHandlers.js";
+import { buildAppClinicalRecordPanelHandlers } from "./application/appClinicalRecordPanelHandlers.js";
 import { buildAppFhirPreviewLoaders } from "./application/appFhirPreviewLoaders.js";
 import { buildAppPatientRegistryHandlers } from "./application/appPatientRegistryHandlers.js";
 import { buildAppPatientRegistryLoaders } from "./application/appPatientRegistryLoaders.js";
@@ -381,7 +382,8 @@ export function App() {
   });
   const clinicalRecordPanels = buildClinicalRecordPanels({
     clinicalRecordState,
-    handlers: {
+    handlers: buildAppClinicalRecordPanelHandlers({
+      clinicalRecordState,
       onCreateAllergyIntolerance: handleCreateAllergyIntolerance,
       onCreateCondition: handleCreateCondition,
       onCreateDiagnosticReport: handleCreateDiagnosticReport,
@@ -393,39 +395,8 @@ export function App() {
       onCreateObservation: handleCreateObservation,
       onCreateProcedure: handleCreateProcedure,
       onCreateServiceRequest: handleCreateServiceRequest,
-      onFinishEncounter: handleFinishEncounter,
-      onAllergyIntoleranceFormChange:
-        clinicalRecordState.setAllergyIntoleranceForm,
-      onConditionFormChange: clinicalRecordState.setConditionForm,
-      onDiagnosticReportFormChange: clinicalRecordState.setDiagnosticReportForm,
-      onEncounterFormChange: clinicalRecordState.setEncounterForm,
-      onImagingStudyFormChange: clinicalRecordState.setImagingStudyForm,
-      onMedicationAdministrationFormChange:
-        clinicalRecordState.setMedicationAdministrationForm,
-      onMedicationDispenseFormChange:
-        clinicalRecordState.setMedicationDispenseForm,
-      onMedicationRequestFormChange: clinicalRecordState.setMedicationRequestForm,
-      onObservationFormChange: clinicalRecordState.setObservationForm,
-      onProcedureFormChange: clinicalRecordState.setProcedureForm,
-      onServiceRequestFormChange: clinicalRecordState.setServiceRequestForm,
-      onSelectAllergyIntolerance:
-        clinicalRecordState.setSelectedAllergyIntoleranceId,
-      onSelectCondition: clinicalRecordState.setSelectedConditionId,
-      onSelectDiagnosticReport:
-        clinicalRecordState.setSelectedDiagnosticReportId,
-      onSelectEncounter: clinicalRecordState.setSelectedEncounterId,
-      onSelectImagingStudy: clinicalRecordState.setSelectedImagingStudyId,
-      onSelectMedicationAdministration:
-        clinicalRecordState.setSelectedMedicationAdministrationId,
-      onSelectMedicationDispense:
-        clinicalRecordState.setSelectedMedicationDispenseId,
-      onSelectMedicationRequest:
-        clinicalRecordState.setSelectedMedicationRequestId,
-      onSelectObservation: clinicalRecordState.setSelectedObservationId,
-      onSelectProcedure: clinicalRecordState.setSelectedProcedureId,
-      onSelectServiceRequest: clinicalRecordState.setSelectedServiceRequestId,
-      onSelectWorkflowTask: clinicalRecordState.setSelectedWorkflowTaskId
-    },
+      onFinishEncounter: handleFinishEncounter
+    }),
     isWriteDisabled: selectedPatientWriteDisabled,
     patientWorkspaceCollections,
     workspaceSelection

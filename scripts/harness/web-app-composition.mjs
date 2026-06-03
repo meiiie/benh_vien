@@ -189,6 +189,7 @@ const requiredModules = [
   "apps/web/src/application/appAuditLoaders.ts",
   "apps/web/src/application/appAuthSessionHandlers.ts",
   "apps/web/src/application/appClinicalRecordHandlers.ts",
+  "apps/web/src/application/appClinicalRecordPanelHandlers.ts",
   "apps/web/src/application/appDerivedContext.ts",
   "apps/web/src/application/appFhirPreviewLoaders.ts",
   "apps/web/src/application/appLifecycleEffects.ts",
@@ -462,6 +463,7 @@ const forbiddenPageCompositionModules = [
   "apps/web/src/pages/appAuditLoaders.ts",
   "apps/web/src/pages/appAuthSessionHandlers.ts",
   "apps/web/src/pages/appClinicalRecordHandlers.ts",
+  "apps/web/src/pages/appClinicalRecordPanelHandlers.ts",
   "apps/web/src/pages/appDerivedContext.ts",
   "apps/web/src/pages/appFhirPreviewLoaders.ts",
   "apps/web/src/pages/appLifecycleEffects.ts",
@@ -484,6 +486,11 @@ const forbiddenPageCompositionModules = [
 ];
 const maxAppLines = 650;
 const featureModuleBudgets = [
+  {
+    path: "apps/web/src/application/appClinicalRecordPanelHandlers.ts",
+    maxLines: 100,
+    role: "Clinical record panel command and selection handler mapping"
+  },
   {
     path: "apps/web/src/config/demoClinicalDefaults.ts",
     maxLines: 20,
