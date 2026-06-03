@@ -243,8 +243,13 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/encounterFormatters.ts",
   "apps/web/src/features/clinical-records/encounterScopedFormUpdater.ts",
   "apps/web/src/features/clinical-records/encounterSelectors.ts",
+  "apps/web/src/features/clinical-records/ImagingStudyContextFields.tsx",
   "apps/web/src/features/clinical-records/ImagingStudyForm.tsx",
   "apps/web/src/features/clinical-records/ImagingStudyPanel.tsx",
+  "apps/web/src/features/clinical-records/ImagingStudyParticipantFields.tsx",
+  "apps/web/src/features/clinical-records/ImagingStudySeriesDetailFields.tsx",
+  "apps/web/src/features/clinical-records/ImagingStudySeriesReferenceFields.tsx",
+  "apps/web/src/features/clinical-records/ImagingStudyStudyIdentityFields.tsx",
   "apps/web/src/features/clinical-records/imagingStudyCommandBuilders.ts",
   "apps/web/src/features/clinical-records/MedicationAdministrationContextFields.tsx",
   "apps/web/src/features/clinical-records/MedicationAdministrationDosageFields.tsx",
@@ -1080,8 +1085,33 @@ const featureModuleBudgets = [
   },
   {
     path: "apps/web/src/features/clinical-records/ImagingStudyForm.tsx",
-    maxLines: 240,
-    role: "ImagingStudy PACS/DICOM command form"
+    maxLines: 90,
+    role: "ImagingStudy PACS/DICOM command form composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/ImagingStudyContextFields.tsx",
+    maxLines: 95,
+    role: "ImagingStudy encounter, order and diagnostic report references"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/ImagingStudyStudyIdentityFields.tsx",
+    maxLines: 70,
+    role: "ImagingStudy study UID, accession and start fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/ImagingStudyParticipantFields.tsx",
+    maxLines: 70,
+    role: "ImagingStudy clinical participant and PACS endpoint fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/ImagingStudySeriesReferenceFields.tsx",
+    maxLines: 65,
+    role: "ImagingStudy DICOM series UID and instance count fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/ImagingStudySeriesDetailFields.tsx",
+    maxLines: 95,
+    role: "ImagingStudy modality, series description and body site fields"
   }
 ];
 
