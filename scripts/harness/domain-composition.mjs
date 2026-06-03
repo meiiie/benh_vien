@@ -88,6 +88,26 @@ const domainBudgets = [
     role: "ProviderDirectory snapshot, coding, telecom and endpoint type definitions"
   },
   {
+    path: "packages/domain/src/provider-directory/provider-directory.test.ts",
+    maxLines: 70,
+    role: "ProviderDirectory cross-resource reference validation test scenarios"
+  },
+  {
+    path: "packages/domain/src/provider-directory/provider-directory.fhir-mapping.test.ts",
+    maxLines: 70,
+    role: "ProviderDirectory FHIR Bundle mapping test scenarios"
+  },
+  {
+    path: "packages/domain/src/provider-directory/provider-directory.rehydration.test.ts",
+    maxLines: 130,
+    role: "ProviderDirectory persisted snapshot invariant test scenarios"
+  },
+  {
+    path: "packages/domain/src/provider-directory/provider-directory.test-support.ts",
+    maxLines: 140,
+    role: "ProviderDirectory shared organization, practitioner, role and endpoint fixtures"
+  },
+  {
     path: "packages/domain/src/audit-event/audit-event.ts",
     maxLines: 160,
     role: "AuditEvent aggregate record and rehydration behavior"
