@@ -214,8 +214,13 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/modules/record-transfer-delivery-attempts/record-transfer-delivery-worker.test.ts",
-    maxLines: 360,
+    maxLines: 240,
     role: "RecordTransfer delivery worker unit scenarios"
+  },
+  {
+    path: "apps/api/src/modules/record-transfer-delivery-attempts/record-transfer-delivery-worker.test-support.ts",
+    maxLines: 150,
+    role: "RecordTransfer delivery worker fixture orchestration"
   },
   {
     path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-audit-metadata.test.ts",
@@ -313,6 +318,12 @@ const recordTransferConsentBoundaryPath = resolve(
 );
 const recordTransferCallbackBoundaryPath = resolve(
   "apps/api/src/server.record-transfer-callback-boundary.test.ts"
+);
+const recordTransferDeliveryWorkerPath = resolve(
+  "apps/api/src/modules/record-transfer-delivery-attempts/record-transfer-delivery-worker.test.ts"
+);
+const recordTransferDeliveryWorkerSupportPath = resolve(
+  "apps/api/src/modules/record-transfer-delivery-attempts/record-transfer-delivery-worker.test-support.ts"
 );
 
 const requiredLoginBoundaryPatterns = [
@@ -500,6 +511,23 @@ const requiredRecordTransferCallbackBoundaryPatterns = [
   /requires a valid HMAC signature for acknowledgement callbacks/,
   /RECORD_TRANSFER_CALLBACK_SIGNATURE_INVALID/
 ];
+const requiredRecordTransferDeliveryWorkerPatterns = [
+  /posts a queued FHIR Bundle and marks the delivery attempt as succeeded/,
+  /marks the attempt and record transfer as failed when the endpoint rejects the Bundle/,
+  /does not call the sender when production endpoint policy rejects the target endpoint/,
+  /processQueuedRecordTransferDeliveries/
+];
+const requiredRecordTransferDeliveryWorkerSupportPatterns = [
+  /createDeliveryWorkerDependencies/,
+  /RecordTransfer\.create/,
+  /RecordTransferDeliveryAttempt\.queue/,
+  /InMemoryRecordTransferDeliveryAttemptRepository/,
+  /patient-worker-001/
+];
+const retiredRecordTransferDeliveryWorkerPatterns = [
+  /RecordTransfer\.create/,
+  /new InMemoryPatientRepository/
+];
 
 const testReports = [];
 
@@ -608,6 +636,14 @@ const recordTransferConsentBoundarySource = await readFile(
 );
 const recordTransferCallbackBoundarySource = await readFile(
   recordTransferCallbackBoundaryPath,
+  "utf8"
+);
+const recordTransferDeliveryWorkerSource = await readFile(
+  recordTransferDeliveryWorkerPath,
+  "utf8"
+);
+const recordTransferDeliveryWorkerSupportSource = await readFile(
+  recordTransferDeliveryWorkerSupportPath,
   "utf8"
 );
 
@@ -887,6 +923,30 @@ for (const required of requiredRecordTransferCallbackBoundaryPatterns) {
   if (!required.test(recordTransferCallbackBoundarySource)) {
     throw new Error(
       "server.record-transfer-callback-boundary.test.ts must keep operations callback and HMAC signature scenarios."
+    );
+  }
+}
+
+for (const required of requiredRecordTransferDeliveryWorkerPatterns) {
+  if (!required.test(recordTransferDeliveryWorkerSource)) {
+    throw new Error(
+      "record-transfer-delivery-worker.test.ts must keep delivery success, endpoint failure and production endpoint policy scenarios."
+    );
+  }
+}
+
+for (const required of requiredRecordTransferDeliveryWorkerSupportPatterns) {
+  if (!required.test(recordTransferDeliveryWorkerSupportSource)) {
+    throw new Error(
+      "record-transfer-delivery-worker.test-support.ts must keep record-transfer delivery fixture orchestration."
+    );
+  }
+}
+
+for (const retired of retiredRecordTransferDeliveryWorkerPatterns) {
+  if (retired.test(recordTransferDeliveryWorkerSource)) {
+    throw new Error(
+      "record-transfer-delivery-worker.test.ts must not absorb fixture orchestration back into behavior scenarios."
     );
   }
 }
