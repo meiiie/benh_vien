@@ -129,8 +129,13 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/server.fhir-validation-boundary.test.ts",
-    maxLines: 260,
-    role: "API FHIR validation, primitive guard and OperationOutcome negotiation scenarios"
+    maxLines: 120,
+    role: "API FHIR validation OperationOutcome negotiation scenarios"
+  },
+  {
+    path: "apps/api/src/server.fhir-request-validation-boundary.test.ts",
+    maxLines: 190,
+    role: "API FHIR request primitive, attachment and DICOM validation scenarios"
   },
   {
     path: "apps/api/src/server.provider-directory-boundary.test.ts",
@@ -364,6 +369,9 @@ const fhirDocumentBoundaryPath = resolve("apps/api/src/server.fhir-document-boun
 const fhirValidationBoundaryPath = resolve(
   "apps/api/src/server.fhir-validation-boundary.test.ts"
 );
+const fhirRequestValidationBoundaryPath = resolve(
+  "apps/api/src/server.fhir-request-validation-boundary.test.ts"
+);
 const providerDirectoryBoundaryPath = resolve(
   "apps/api/src/server.provider-directory-boundary.test.ts"
 );
@@ -588,9 +596,17 @@ const requiredFhirDocumentBoundaryPatterns = [
 ];
 const requiredFhirValidationBoundaryPatterns = [
   /negotiates validation errors as FHIR OperationOutcome/,
+  /json-validation-error-001/
+];
+const requiredFhirRequestValidationBoundaryPatterns = [
   /rejects clinical document attachment metadata with invalid MIME type or SHA-1 hash/,
   /rejects FHIR unsignedInt overflows at the request boundary/,
   /rejects malformed DICOM UIDs at the request boundary/
+];
+const retiredFhirValidationBoundaryPatterns = [
+  /attachmentContentType/,
+  /attachmentSizeBytes/,
+  /studyInstanceUid/
 ];
 const requiredProviderDirectoryBoundaryPatterns = [
   /returns provider directory and FHIR Endpoint resources/,
@@ -830,6 +846,10 @@ const fhirAccessBoundarySource = await readFile(fhirAccessBoundaryPath, "utf8");
 const fhirDocumentBoundarySource = await readFile(fhirDocumentBoundaryPath, "utf8");
 const fhirValidationBoundarySource = await readFile(
   fhirValidationBoundaryPath,
+  "utf8"
+);
+const fhirRequestValidationBoundarySource = await readFile(
+  fhirRequestValidationBoundaryPath,
   "utf8"
 );
 const providerDirectoryBoundarySource = await readFile(
@@ -1139,7 +1159,23 @@ for (const required of requiredFhirDocumentBoundaryPatterns) {
 for (const required of requiredFhirValidationBoundaryPatterns) {
   if (!required.test(fhirValidationBoundarySource)) {
     throw new Error(
-      "server.fhir-validation-boundary.test.ts must keep FHIR validation, unsignedInt and DICOM UID scenarios."
+      "server.fhir-validation-boundary.test.ts must keep FHIR validation OperationOutcome negotiation scenarios."
+    );
+  }
+}
+
+for (const required of requiredFhirRequestValidationBoundaryPatterns) {
+  if (!required.test(fhirRequestValidationBoundarySource)) {
+    throw new Error(
+      "server.fhir-request-validation-boundary.test.ts must keep FHIR request attachment, unsignedInt and DICOM UID validation scenarios."
+    );
+  }
+}
+
+for (const retired of retiredFhirValidationBoundaryPatterns) {
+  if (retired.test(fhirValidationBoundarySource)) {
+    throw new Error(
+      "server.fhir-validation-boundary.test.ts must not absorb request payload validation scenarios back into OperationOutcome negotiation."
     );
   }
 }
