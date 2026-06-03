@@ -38,6 +38,26 @@ const domainBudgets = [
     role: "RecordTransfer status, snapshot and command input types"
   },
   {
+    path: "packages/domain/src/record-transfer/record-transfer.test.ts",
+    maxLines: 130,
+    role: "RecordTransfer creation and lifecycle test scenarios"
+  },
+  {
+    path: "packages/domain/src/record-transfer/record-transfer.delivery.test.ts",
+    maxLines: 120,
+    role: "RecordTransfer delivery failure, retry and dead-letter test scenarios"
+  },
+  {
+    path: "packages/domain/src/record-transfer/record-transfer.rehydration.test.ts",
+    maxLines: 120,
+    role: "RecordTransfer persisted snapshot invariant test scenarios"
+  },
+  {
+    path: "packages/domain/src/record-transfer/record-transfer.test-support.ts",
+    maxLines: 80,
+    role: "RecordTransfer shared domain test fixture helpers"
+  },
+  {
     path: "packages/domain/src/provider-directory/provider-directory.ts",
     maxLines: 150,
     role: "ProviderDirectory aggregate behavior"
