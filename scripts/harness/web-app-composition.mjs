@@ -239,6 +239,7 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/carePlanCommandBuilders.ts",
   "apps/web/src/features/clinical-records/carePlanHandlers.ts",
   "apps/web/src/features/clinical-records/carePlanHandlerTypes.ts",
+  "apps/web/src/features/clinical-records/careWorkflowFormatterPrimitives.ts",
   "apps/web/src/features/clinical-records/careWorkflowFormatters.ts",
   "apps/web/src/features/clinical-records/careWorkflowHandlers.ts",
   "apps/web/src/features/clinical-records/clinicalEntryCommandBuilders.ts",
@@ -324,6 +325,7 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/ObservationPanel.tsx",
   "apps/web/src/features/clinical-records/observationHandlers.ts",
   "apps/web/src/features/clinical-records/procedureCommandBuilders.ts",
+  "apps/web/src/features/clinical-records/procedureFormatters.ts",
   "apps/web/src/features/clinical-records/ProcedureClassificationFields.tsx",
   "apps/web/src/features/clinical-records/ProcedureCodeFields.tsx",
   "apps/web/src/features/clinical-records/ProcedureContextFields.tsx",
@@ -333,9 +335,11 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/ProcedurePerformerFields.tsx",
   "apps/web/src/features/clinical-records/ProcedureTimingFields.tsx",
   "apps/web/src/features/clinical-records/serviceRequestCommandBuilders.ts",
+  "apps/web/src/features/clinical-records/serviceRequestFormatters.ts",
   "apps/web/src/features/clinical-records/ServiceRequestForm.tsx",
   "apps/web/src/features/clinical-records/ServiceRequestPanel.tsx",
   "apps/web/src/features/clinical-records/WorkflowTaskPanel.tsx",
+  "apps/web/src/features/clinical-records/workflowTaskFormatters.ts",
   "apps/web/src/features/clinical-records/careWorkflowApi.ts",
   "apps/web/src/features/clinical-records/clinicalEntryApi.ts",
   "apps/web/src/features/clinical-records/clinicalRecordApi.ts",
@@ -976,6 +980,31 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/clinical-records/careWorkflowHandlers.ts",
     maxLines: 130,
     role: "Procedure and ServiceRequest submit handlers"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/careWorkflowFormatters.ts",
+    maxLines: 30,
+    role: "Care workflow formatter compatibility barrel"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/careWorkflowFormatterPrimitives.ts",
+    maxLines: 20,
+    role: "Care workflow formatter shared label primitive"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/serviceRequestFormatters.ts",
+    maxLines: 70,
+    role: "ServiceRequest presentation formatters"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/workflowTaskFormatters.ts",
+    maxLines: 60,
+    role: "Task presentation formatters"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/procedureFormatters.ts",
+    maxLines: 90,
+    role: "Procedure presentation formatters"
   },
   {
     path: "apps/web/src/features/clinical-records/serviceRequestCommandBuilders.ts",
