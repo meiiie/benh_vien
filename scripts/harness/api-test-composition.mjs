@@ -59,8 +59,28 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/server.patient-access.test-support.ts",
-    maxLines: 420,
+    maxLines: 130,
     role: "API patient access ABAC outside-organization fixture orchestration"
+  },
+  {
+    path: "apps/api/src/server.patient-access.outside-clinical-fixture.ts",
+    maxLines: 130,
+    role: "API patient access ABAC outside clinical record fixture"
+  },
+  {
+    path: "apps/api/src/server.patient-access.outside-medication-fixture.ts",
+    maxLines: 150,
+    role: "API patient access ABAC outside medication record fixture"
+  },
+  {
+    path: "apps/api/src/server.patient-access.outside-diagnostic-fixture.ts",
+    maxLines: 180,
+    role: "API patient access ABAC outside diagnostic and imaging record fixture"
+  },
+  {
+    path: "apps/api/src/server.patient-access.outside-sharing-fixture.ts",
+    maxLines: 80,
+    role: "API patient access ABAC outside consent and transfer fixture"
   },
   {
     path: "apps/api/src/server.patient-access.denied-request-catalog.ts",
@@ -271,6 +291,18 @@ const startupConfigBoundaryPath = resolve("apps/api/src/server.startup-config.te
 const patientRegistryBoundaryPath = resolve("apps/api/src/server.patient-registry.test.ts");
 const patientAccessBoundaryPath = resolve("apps/api/src/server.patient-access.test.ts");
 const patientAccessSupportPath = resolve("apps/api/src/server.patient-access.test-support.ts");
+const patientAccessOutsideClinicalFixturePath = resolve(
+  "apps/api/src/server.patient-access.outside-clinical-fixture.ts"
+);
+const patientAccessOutsideMedicationFixturePath = resolve(
+  "apps/api/src/server.patient-access.outside-medication-fixture.ts"
+);
+const patientAccessOutsideDiagnosticFixturePath = resolve(
+  "apps/api/src/server.patient-access.outside-diagnostic-fixture.ts"
+);
+const patientAccessOutsideSharingFixturePath = resolve(
+  "apps/api/src/server.patient-access.outside-sharing-fixture.ts"
+);
 const patientAccessDeniedRequestCatalogPath = resolve(
   "apps/api/src/server.patient-access.denied-request-catalog.ts"
 );
@@ -393,9 +425,39 @@ const requiredPatientAccessBoundaryPatterns = [
 const requiredPatientAccessSupportPatterns = [
   /createOutsidePatientAccessFixture/,
   /createOutsidePatient/,
+  /createOutsideClinicalFixture/,
+  /createOutsideMedicationFixture/,
+  /createOutsideDiagnosticFixture/,
+  /createOutsideSharingFixture/,
   /createListDeniedRequests/,
   /createReadDeniedRequests/,
   /createFhirExportDeniedRequests/
+];
+const requiredPatientAccessClinicalFixturePatterns = [
+  /createOutsideClinicalFixture/,
+  /Outside organization visit/,
+  /Allergy to penicillin/,
+  /Body temperature/
+];
+const requiredPatientAccessMedicationFixturePatterns = [
+  /createOutsideMedicationFixture/,
+  /medication-requests/,
+  /medication-dispenses/,
+  /medication-administrations/,
+  /Amoxicillin/
+];
+const requiredPatientAccessDiagnosticFixturePatterns = [
+  /createOutsideDiagnosticFixture/,
+  /service-requests/,
+  /diagnostic-reports/,
+  /imaging-studies/,
+  /workflow-tasks/,
+  /OUTSIDE-CXR-ABAC-001/
+];
+const requiredPatientAccessSharingFixturePatterns = [
+  /createOutsideSharingFixture/,
+  /record-sharing/,
+  /record-transfers/
 ];
 const requiredPatientAccessDeniedRequestCatalogPatterns = [
   /record-transfer-list-abac-denied-001/,
@@ -414,7 +476,11 @@ const requiredPatientAccessPatientFixturePatterns = [
 ];
 const retiredPatientAccessSupportPatterns = [
   /record-transfer-list-abac-denied-001/,
-  /imaging-study-export-abac-denied-001/
+  /imaging-study-export-abac-denied-001/,
+  /Outside organization visit/,
+  /medication-requests/,
+  /diagnostic-reports/,
+  /record-sharing/
 ];
 const requiredAuditBoundaryPatterns = [
   /allows auditor audit-purpose patient registry context/,
@@ -577,6 +643,22 @@ const startupConfigBoundarySource = await readFile(startupConfigBoundaryPath, "u
 const patientRegistryBoundarySource = await readFile(patientRegistryBoundaryPath, "utf8");
 const patientAccessBoundarySource = await readFile(patientAccessBoundaryPath, "utf8");
 const patientAccessSupportSource = await readFile(patientAccessSupportPath, "utf8");
+const patientAccessOutsideClinicalFixtureSource = await readFile(
+  patientAccessOutsideClinicalFixturePath,
+  "utf8"
+);
+const patientAccessOutsideMedicationFixtureSource = await readFile(
+  patientAccessOutsideMedicationFixturePath,
+  "utf8"
+);
+const patientAccessOutsideDiagnosticFixtureSource = await readFile(
+  patientAccessOutsideDiagnosticFixturePath,
+  "utf8"
+);
+const patientAccessOutsideSharingFixtureSource = await readFile(
+  patientAccessOutsideSharingFixturePath,
+  "utf8"
+);
 const patientAccessDeniedRequestCatalogSource = await readFile(
   patientAccessDeniedRequestCatalogPath,
   "utf8"
@@ -739,6 +821,38 @@ for (const required of requiredPatientAccessSupportPatterns) {
   if (!required.test(patientAccessSupportSource)) {
     throw new Error(
       "server.patient-access.test-support.ts must keep outside-organization ABAC fixture orchestration."
+    );
+  }
+}
+
+for (const required of requiredPatientAccessClinicalFixturePatterns) {
+  if (!required.test(patientAccessOutsideClinicalFixtureSource)) {
+    throw new Error(
+      "server.patient-access.outside-clinical-fixture.ts must keep outside clinical record fixture coverage."
+    );
+  }
+}
+
+for (const required of requiredPatientAccessMedicationFixturePatterns) {
+  if (!required.test(patientAccessOutsideMedicationFixtureSource)) {
+    throw new Error(
+      "server.patient-access.outside-medication-fixture.ts must keep outside medication record fixture coverage."
+    );
+  }
+}
+
+for (const required of requiredPatientAccessDiagnosticFixturePatterns) {
+  if (!required.test(patientAccessOutsideDiagnosticFixtureSource)) {
+    throw new Error(
+      "server.patient-access.outside-diagnostic-fixture.ts must keep outside diagnostic and imaging record fixture coverage."
+    );
+  }
+}
+
+for (const required of requiredPatientAccessSharingFixturePatterns) {
+  if (!required.test(patientAccessOutsideSharingFixtureSource)) {
+    throw new Error(
+      "server.patient-access.outside-sharing-fixture.ts must keep outside consent and transfer fixture coverage."
     );
   }
 }
