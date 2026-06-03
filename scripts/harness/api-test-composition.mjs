@@ -148,9 +148,24 @@ const testBudgets = [
     role: "API allergy, condition and observation clinical record scenarios"
   },
   {
-    path: "apps/api/src/server.care-workflow-boundary.test.ts",
-    maxLines: 260,
-    role: "API workflow task, procedure and service-request care workflow scenarios"
+    path: "apps/api/src/server.care-workflow.test-support.ts",
+    maxLines: 80,
+    role: "API care workflow shared boundary test support"
+  },
+  {
+    path: "apps/api/src/server.workflow-task-boundary.test.ts",
+    maxLines: 90,
+    role: "API workflow task list and FHIR Task scenarios"
+  },
+  {
+    path: "apps/api/src/server.procedure-boundary.test.ts",
+    maxLines: 150,
+    role: "API procedure list, creation and FHIR Procedure scenarios"
+  },
+  {
+    path: "apps/api/src/server.service-request-boundary.test.ts",
+    maxLines: 110,
+    role: "API service request list, creation and FHIR ServiceRequest scenarios"
   },
   {
     path: "apps/api/src/server.medication-resources-boundary.test.ts",
@@ -313,6 +328,10 @@ const retiredTestPaths = [
   {
     path: "apps/api/src/server.auth.test.ts",
     role: "legacy mixed auth/RBAC God suite"
+  },
+  {
+    path: "apps/api/src/server.care-workflow-boundary.test.ts",
+    role: "legacy mixed ServiceRequest/Task/Procedure care workflow suite"
   }
 ];
 
@@ -376,7 +395,12 @@ const providerDirectoryBoundaryPath = resolve(
   "apps/api/src/server.provider-directory-boundary.test.ts"
 );
 const clinicalResourcesBoundaryPath = resolve("apps/api/src/server.clinical-resources.test.ts");
-const careWorkflowBoundaryPath = resolve("apps/api/src/server.care-workflow-boundary.test.ts");
+const careWorkflowSupportPath = resolve("apps/api/src/server.care-workflow.test-support.ts");
+const workflowTaskBoundaryPath = resolve("apps/api/src/server.workflow-task-boundary.test.ts");
+const procedureBoundaryPath = resolve("apps/api/src/server.procedure-boundary.test.ts");
+const serviceRequestBoundaryPath = resolve(
+  "apps/api/src/server.service-request-boundary.test.ts"
+);
 const medicationResourcesBoundaryPath = resolve(
   "apps/api/src/server.medication-resources-boundary.test.ts"
 );
@@ -617,11 +641,28 @@ const requiredClinicalResourcesBoundaryPatterns = [
   /lists conditions and exports them as FHIR Condition/,
   /lists observations and exports them as FHIR Observation/
 ];
-const requiredCareWorkflowBoundaryPatterns = [
+const requiredCareWorkflowSupportPatterns = [
+  /readyCareWorkflowTestContext/,
+  /treatmentJsonHeaders/,
+  /getClinicalResourceList/,
+  /practitioner-demo-001/
+];
+const requiredWorkflowTaskBoundaryPatterns = [
   /lists workflow tasks and exports them as FHIR Task/,
+  /resourceType:\s*"Task"/,
+  /ServiceRequest\/service-request-demo-002/
+];
+const requiredProcedureBoundaryPatterns = [
   /lists procedures and exports them as FHIR Procedure/,
   /creates a procedure linked to a service request and diagnostic report/,
-  /lists service requests and exports them as FHIR ServiceRequest/
+  /resourceType:\s*"Procedure"/,
+  /DiagnosticReport\/diagnostic-report-demo-002/
+];
+const requiredServiceRequestBoundaryPatterns = [
+  /lists service requests and exports them as FHIR ServiceRequest/,
+  /creates a service request linked to a patient condition/,
+  /resourceType:\s*"ServiceRequest"/,
+  /condition-demo-002/
 ];
 const requiredMedicationResourcesBoundaryPatterns = [
   /lists medication requests and exports them as FHIR MedicationRequest/,
@@ -860,7 +901,13 @@ const clinicalResourcesBoundarySource = await readFile(
   clinicalResourcesBoundaryPath,
   "utf8"
 );
-const careWorkflowBoundarySource = await readFile(careWorkflowBoundaryPath, "utf8");
+const careWorkflowSupportSource = await readFile(careWorkflowSupportPath, "utf8");
+const workflowTaskBoundarySource = await readFile(workflowTaskBoundaryPath, "utf8");
+const procedureBoundarySource = await readFile(procedureBoundaryPath, "utf8");
+const serviceRequestBoundarySource = await readFile(
+  serviceRequestBoundaryPath,
+  "utf8"
+);
 const medicationResourcesBoundarySource = await readFile(
   medicationResourcesBoundaryPath,
   "utf8"
@@ -1196,10 +1243,34 @@ for (const required of requiredClinicalResourcesBoundaryPatterns) {
   }
 }
 
-for (const required of requiredCareWorkflowBoundaryPatterns) {
-  if (!required.test(careWorkflowBoundarySource)) {
+for (const required of requiredCareWorkflowSupportPatterns) {
+  if (!required.test(careWorkflowSupportSource)) {
     throw new Error(
-      "server.care-workflow-boundary.test.ts must keep workflow task, procedure and service-request care workflow scenarios."
+      "server.care-workflow.test-support.ts must keep shared care workflow boundary fixtures."
+    );
+  }
+}
+
+for (const required of requiredWorkflowTaskBoundaryPatterns) {
+  if (!required.test(workflowTaskBoundarySource)) {
+    throw new Error(
+      "server.workflow-task-boundary.test.ts must keep workflow task list and FHIR Task scenarios."
+    );
+  }
+}
+
+for (const required of requiredProcedureBoundaryPatterns) {
+  if (!required.test(procedureBoundarySource)) {
+    throw new Error(
+      "server.procedure-boundary.test.ts must keep procedure list, creation and FHIR Procedure scenarios."
+    );
+  }
+}
+
+for (const required of requiredServiceRequestBoundaryPatterns) {
+  if (!required.test(serviceRequestBoundarySource)) {
+    throw new Error(
+      "server.service-request-boundary.test.ts must keep service request list, creation and FHIR ServiceRequest scenarios."
     );
   }
 }
