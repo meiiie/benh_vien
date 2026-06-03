@@ -7,24 +7,33 @@ import type { FhirTask } from "./fhir-types.js";
 export const recordTransferTaskProfile = "http://hl7.org/fhir/StructureDefinition/Task";
 export const recordTransferIdentifierSystem = "urn:wiiicare:nexus:record-transfer";
 
+const fhirTaskStatusByRecordTransferStatus: Record<
+  RecordTransferStatus,
+  FhirTask["status"]
+> = {
+  cancelled: "cancelled",
+  completed: "completed",
+  "dead-lettered": "failed",
+  draft: "draft",
+  failed: "failed",
+  "in-progress": "in-progress",
+  requested: "requested",
+  ready: "ready"
+};
+
+const recordTransferStatusLabels: Record<RecordTransferStatus, string> = {
+  cancelled: "Đã hủy",
+  completed: "Đã hoàn tất",
+  "dead-lettered": "Đã đưa vào hàng lỗi cuối",
+  draft: "Bản nháp",
+  failed: "Lỗi chuyển hồ sơ",
+  "in-progress": "Đang xử lý",
+  ready: "Sẵn sàng gửi",
+  requested: "Đã yêu cầu"
+};
+
 export function mapRecordTransferStatus(status: RecordTransferStatus): FhirTask["status"] {
-  if (status === "ready") {
-    return "ready";
-  }
-
-  if (status === "completed") {
-    return "completed";
-  }
-
-  if (status === "cancelled") {
-    return "cancelled";
-  }
-
-  if (status === "failed" || status === "dead-lettered") {
-    return "failed";
-  }
-
-  return status;
+  return fhirTaskStatusByRecordTransferStatus[status];
 }
 
 export function buildRecordTransferBusinessStatus(
@@ -66,16 +75,5 @@ export function formatRecordTransferBundleOutput(
 }
 
 export function formatRecordTransferStatus(status: RecordTransferStatus): string {
-  const labels: Record<RecordTransferStatus, string> = {
-    cancelled: "Đã hủy",
-    completed: "Đã hoàn tất",
-    "dead-lettered": "Đã đưa vào hàng lỗi cuối",
-    draft: "Bản nháp",
-    failed: "Lỗi chuyển hồ sơ",
-    "in-progress": "Đang xử lý",
-    ready: "Sẵn sàng gửi",
-    requested: "Đã yêu cầu"
-  };
-
-  return labels[status];
+  return recordTransferStatusLabels[status];
 }
