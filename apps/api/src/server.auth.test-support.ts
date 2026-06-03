@@ -198,6 +198,16 @@ export function jsonRequestHeaders(
   };
 }
 
+export function requestIdHeaders(
+  headers: Record<string, string>,
+  requestId: string
+): Record<string, string> {
+  return {
+    ...headers,
+    "x-request-id": requestId
+  };
+}
+
 export function expectOperationOutcome(
   response: {
     readonly statusCode: number;

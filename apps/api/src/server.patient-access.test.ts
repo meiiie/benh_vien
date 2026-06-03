@@ -7,6 +7,7 @@ import {
   jsonRequestHeaders,
   loginForToken,
   readyServer,
+  requestIdHeaders,
   restoreAuthBoundaryEnv,
   treatmentHeaders
 } from "./server.auth.test-support.js";
@@ -83,10 +84,10 @@ describe("API patient access ABAC boundary", () => {
     const clinicianReadResponse = await app.inject({
       method: "GET",
       url: `/api/v1/patients/${outsidePatientId}`,
-      headers: {
-        ...treatmentHeaders(clinicianToken),
-        "x-request-id": "patient-abac-denied-001"
-      }
+      headers: requestIdHeaders(
+        treatmentHeaders(clinicianToken),
+        "patient-abac-denied-001"
+      )
     });
 
     expect(clinicianReadResponse.statusCode).toBe(403);
@@ -148,10 +149,7 @@ describe("API patient access ABAC boundary", () => {
       const response = await app.inject({
         method: "GET",
         url,
-        headers: {
-          ...treatmentHeaders(clinicianToken),
-          "x-request-id": requestId
-        }
+        headers: requestIdHeaders(treatmentHeaders(clinicianToken), requestId)
       });
 
       expect(response.statusCode).toBe(403);
@@ -539,10 +537,7 @@ describe("API patient access ABAC boundary", () => {
       const response = await app.inject({
         method: "GET",
         url,
-        headers: {
-          ...treatmentHeaders(clinicianToken),
-          "x-request-id": requestId
-        }
+        headers: requestIdHeaders(treatmentHeaders(clinicianToken), requestId)
       });
 
       expect(response.statusCode).toBe(403);
@@ -591,10 +586,7 @@ describe("API patient access ABAC boundary", () => {
       const response = await app.inject({
         method: "GET",
         url,
-        headers: {
-          ...treatmentHeaders(clinicianToken),
-          "x-request-id": requestId
-        }
+        headers: requestIdHeaders(treatmentHeaders(clinicianToken), requestId)
       });
 
       expect(response.statusCode).toBe(403);

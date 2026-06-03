@@ -7,6 +7,7 @@ import {
   jsonRequestHeaders,
   loginForToken,
   readyServer,
+  requestIdHeaders,
   restoreAuthBoundaryEnv,
   treatmentHeaders
 } from "./server.auth.test-support.js";
@@ -53,10 +54,10 @@ describe("API audit boundary", () => {
     const response = await app.inject({
       method: "GET",
       url: "/api/v1/patients",
-      headers: {
-        ...treatmentHeaders(accessToken),
-        "x-request-id": "access-forbidden-auditor-treatment-001"
-      }
+      headers: requestIdHeaders(
+        treatmentHeaders(accessToken),
+        "access-forbidden-auditor-treatment-001"
+      )
     });
 
     expect(response.statusCode).toBe(403);
@@ -119,10 +120,10 @@ describe("API audit boundary", () => {
     const forbiddenAuditListResponse = await app.inject({
       method: "GET",
       url: "/api/v1/audit-events",
-      headers: {
-        ...treatmentHeaders(clinicianToken),
-        "x-request-id": "global-audit-clinician-denied-001"
-      }
+      headers: requestIdHeaders(
+        treatmentHeaders(clinicianToken),
+        "global-audit-clinician-denied-001"
+      )
     });
 
     expect(forbiddenAuditListResponse.statusCode).toBe(403);
@@ -135,10 +136,10 @@ describe("API audit boundary", () => {
     const deniedResponse = await app.inject({
       method: "GET",
       url: "/api/v1/patients",
-      headers: {
-        ...treatmentHeaders(auditorToken),
-        "x-request-id": "global-audit-denied-001"
-      }
+      headers: requestIdHeaders(
+        treatmentHeaders(auditorToken),
+        "global-audit-denied-001"
+      )
     });
 
     expect(deniedResponse.statusCode).toBe(403);
@@ -184,10 +185,10 @@ describe("API audit boundary", () => {
     const readResponse = await app.inject({
       method: "GET",
       url: "/api/v1/patients/patient-demo-001",
-      headers: {
-        ...treatmentHeaders(clinicianToken),
-        "x-request-id": "audit-trace-demo-001"
-      }
+      headers: requestIdHeaders(
+        treatmentHeaders(clinicianToken),
+        "audit-trace-demo-001"
+      )
     });
     expect(readResponse.statusCode).toBe(200);
 
@@ -242,10 +243,10 @@ describe("API audit boundary", () => {
     const deniedResponse = await app.inject({
       method: "GET",
       url: `/api/v1/patients/${outsidePatientId}`,
-      headers: {
-        ...treatmentHeaders(clinicianToken),
-        "x-request-id": "patient-denied-audit-001"
-      }
+      headers: requestIdHeaders(
+        treatmentHeaders(clinicianToken),
+        "patient-denied-audit-001"
+      )
     });
 
     expect(deniedResponse.statusCode).toBe(403);
