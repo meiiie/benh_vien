@@ -90,6 +90,33 @@ describe("API clinical resource boundary", () => {
     });
   });
 
+  it("denies nurse encounter creation and finish privileges", async () => {
+    const nurseToken = await loginForToken(app, "nurse-demo-001", "nurse");
+
+    const createResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/patients/patient-demo-001/encounters",
+      headers: treatmentHeaders(nurseToken)
+    });
+
+    const finishResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/encounters/encounter-demo-001/finish",
+      headers: treatmentHeaders(nurseToken)
+    });
+
+    for (const [response, permission] of [
+      [createResponse, "encounter:create"],
+      [finishResponse, "encounter:finish"]
+    ] as const) {
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toMatchObject({
+        error: "FORBIDDEN",
+        permission
+      });
+    }
+  });
+
   it("lists workflow tasks and exports them as FHIR Task", async () => {
     const listBody = await getClinicalResourceList(
       "/api/v1/patients/patient-demo-001/workflow-tasks"
