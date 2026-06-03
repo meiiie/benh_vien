@@ -192,6 +192,7 @@ const requiredModules = [
   "apps/web/src/application/appClinicalRecordPanelHandlers.ts",
   "apps/web/src/application/appDerivedContext.ts",
   "apps/web/src/application/appFhirPreviewLoaders.ts",
+  "apps/web/src/application/appHandlerComposition.ts",
   "apps/web/src/application/appLifecycleEffects.ts",
   "apps/web/src/application/appPanelComposition.ts",
   "apps/web/src/application/appPatientRegistryHandlers.ts",
@@ -469,6 +470,7 @@ const forbiddenPageCompositionModules = [
   "apps/web/src/pages/appClinicalRecordPanelHandlers.ts",
   "apps/web/src/pages/appDerivedContext.ts",
   "apps/web/src/pages/appFhirPreviewLoaders.ts",
+  "apps/web/src/pages/appHandlerComposition.ts",
   "apps/web/src/pages/appLifecycleEffects.ts",
   "apps/web/src/pages/appPanelComposition.ts",
   "apps/web/src/pages/appPatientRegistryHandlers.ts",
@@ -499,6 +501,11 @@ const featureModuleBudgets = [
     path: "apps/web/src/application/appPanelComposition.ts",
     maxLines: 170,
     role: "Application panel composition boundary for route renderers"
+  },
+  {
+    path: "apps/web/src/application/appHandlerComposition.ts",
+    maxLines: 160,
+    role: "Application command handler composition boundary"
   },
   {
     path: "apps/web/src/application/appRuntimeEffects.ts",

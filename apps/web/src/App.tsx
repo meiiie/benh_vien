@@ -12,21 +12,18 @@ import { buildRecordTransferLoaders } from "./features/record-transfers/recordTr
 import { AuthenticatedAppExperience } from "./pages/AuthenticatedAppExperience.js";
 import { PublicAppExperience } from "./pages/PublicAppExperience.js";
 import { buildAppAuditLoaders } from "./application/appAuditLoaders.js";
-import { buildAppAuthSessionHandlers } from "./application/appAuthSessionHandlers.js";
 import {
   buildAppAccessContext,
   buildAppRouteRuntimeContext,
   buildAppWorkspaceContext
 } from "./application/appDerivedContext.js";
-import { buildAppClinicalRecordHandlers } from "./application/appClinicalRecordHandlers.js";
 import { buildAppFhirPreviewLoaders } from "./application/appFhirPreviewLoaders.js";
+import { buildAppHandlerComposition } from "./application/appHandlerComposition.js";
 import { buildAppPanelComposition } from "./application/appPanelComposition.js";
-import { buildAppPatientRegistryHandlers } from "./application/appPatientRegistryHandlers.js";
 import { buildAppPatientRegistryLoaders } from "./application/appPatientRegistryLoaders.js";
 import { buildAppPatientWorkspaceLifecycle } from "./application/appPatientWorkspaceLifecycle.js";
 import { buildAppPatientWorkspaceLoaders } from "./application/appPatientWorkspaceLoaders.js";
 import { buildAppPlatformLoaders } from "./application/appPlatformLoaders.js";
-import { buildAppRecordTransferHandlers } from "./application/appRecordTransferHandlers.js";
 import { useAppRuntimeEffects } from "./application/appRuntimeEffects.js";
 import { useAppShellState } from "./application/appShellState.js";
 import { normalizeAuthenticatedRoute } from "./config/appNavigation.js";
@@ -151,22 +148,6 @@ export function App() {
       fhirPreviewState.setRecordTransferFhirTaskPreview,
     setStatusMessage
   });
-  const {
-    loadRecordTransferDeliveryAttempts,
-    loadRecordTransferFhirTaskPreview,
-    loadRecordTransfers
-  } = recordTransferLoaders;
-  const recordTransferHandlers = buildAppRecordTransferHandlers({
-    clinicalApi,
-    ensureSelectedPatientWritable,
-    interoperabilityState,
-    loadRecordTransferDeliveryAttempts,
-    loadRecordTransferFhirTaskPreview,
-    loadRecordTransfers,
-    selectedPatient,
-    setStatusMessage
-  });
-  const { handleGatewayAcknowledgementSubmit } = recordTransferHandlers;
   const platformLoaders = buildAppPlatformLoaders({
     authSession,
     clinicalApi,
@@ -196,56 +177,43 @@ export function App() {
     platformState,
     recordTransferLoaders
   });
-  const {
-    clearPatientWorkspaceState,
-    loadPatientWorkspace
-  } = patientWorkspaceLifecycle;
-  const patientRegistryHandlers = buildAppPatientRegistryHandlers({
-    canMergePatients,
-    clinicalApi,
-    isPatientMergeConfirmationValid,
-    loadPatients: patientRegistryLoaders.loadPatients,
-    loadPatientWorkspace,
-    patientMergeConfirmationCode,
-    patientMergeTargetId,
-    patientRegistryState,
-    selectedPatient,
-    setAppRoute,
-    setStatusMessage
-  });
-  const clinicalRecordHandlers = buildAppClinicalRecordHandlers({
+  const handlerComposition = buildAppHandlerComposition({
     auditLoaders,
+    auditState,
+    canMergePatients,
     clinicalApi,
     clinicalRecordState,
     ensureSelectedPatientWritable,
     fhirPreviewLoaders,
-    patientWorkspaceLoaders,
-    selectedPatient,
-    setAppRoute,
-    setStatusMessage
-  });
-  const {
-    handleLogin,
-    handleLogout
-  } = buildAppAuthSessionHandlers({
-    auditState,
-    clearPatientWorkspaceState,
-    clinicalApi,
     interoperabilityState,
+    isPatientMergeConfirmationValid,
     loginForm,
+    patientMergeConfirmationCode,
+    patientMergeTargetId,
+    patientRegistryLoaders,
     patientRegistryState,
+    patientWorkspaceLifecycle,
+    patientWorkspaceLoaders,
     platformState,
+    recordTransferLoaders,
+    selectedPatient,
     setAppRoute,
     setAuthSession,
     setIsAuthenticated,
     setLoginError,
     setStatusMessage
   });
+  const {
+    handleLogin,
+    handleLogout
+  } = handlerComposition.authSessionHandlers;
+  const { handleGatewayAcknowledgementSubmit } =
+    handlerComposition.recordTransferHandlers;
   const routePanels = buildAppPanelComposition({
     auditLoaders,
     auditState,
     canReadAudit,
-    clinicalRecordHandlers,
+    clinicalRecordHandlers: handlerComposition.clinicalRecordHandlers,
     clinicalRecordState,
     consentLoaders,
     fhirPreviewLoaders,
@@ -256,13 +224,13 @@ export function App() {
     patientMergeCandidates,
     patientMergeConfirmationCode,
     patientMergeTargetId,
-    patientRegistryHandlers,
+    patientRegistryHandlers: handlerComposition.patientRegistryHandlers,
     patientRegistryLoaders,
     patientRegistryState,
     patientWorkspaceCollections,
     platformLoaders,
     platformState,
-    recordTransferHandlers,
+    recordTransferHandlers: handlerComposition.recordTransferHandlers,
     selectedPatient,
     selectedPatientMergeTarget,
     selectedPatientWriteDisabled,
