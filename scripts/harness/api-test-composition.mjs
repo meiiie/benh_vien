@@ -4,8 +4,18 @@ import { resolve } from "node:path";
 const testBudgets = [
   {
     path: "apps/api/src/server.auth.login.test.ts",
-    maxLines: 360,
-    role: "API login, token, session and auth error boundary scenarios"
+    maxLines: 190,
+    role: "API demo login, token TTL, bearer session and production toggle scenarios"
+  },
+  {
+    path: "apps/api/src/server.auth-error-boundary.test.ts",
+    maxLines: 160,
+    role: "API auth validation, credential, session and missing-token error scenarios"
+  },
+  {
+    path: "apps/api/src/server.auth-login-audit-boundary.test.ts",
+    maxLines: 120,
+    role: "API login success and failure audit evidence scenarios"
   },
   {
     path: "apps/api/src/server.auth-purpose-boundary.test.ts",
@@ -212,6 +222,10 @@ const retiredTestPaths = [
 ];
 
 const loginBoundaryPath = resolve("apps/api/src/server.auth.login.test.ts");
+const authErrorBoundaryPath = resolve("apps/api/src/server.auth-error-boundary.test.ts");
+const authLoginAuditBoundaryPath = resolve(
+  "apps/api/src/server.auth-login-audit-boundary.test.ts"
+);
 const authPurposeBoundaryPath = resolve("apps/api/src/server.auth-purpose-boundary.test.ts");
 const authRateLimitBoundaryPath = resolve(
   "apps/api/src/server.auth-rate-limit-boundary.test.ts"
@@ -264,8 +278,20 @@ const recordTransferCallbackBoundaryPath = resolve(
 const requiredLoginBoundaryPatterns = [
   /returns a signed demo session/,
   /uses the configured auth token TTL/,
+  /accepts case-insensitive Bearer auth schemes/,
+  /disables demo login by default in production/,
+  /allows demo login in production only when explicitly enabled/
+];
+const requiredAuthErrorBoundaryPatterns = [
   /returns request ids for auth boundary errors/,
-  /records successful and failed login attempts in the global audit trail/
+  /auth-invalid-payload-001/,
+  /auth-role-mismatch-001/,
+  /rejects patient access without a Bearer token/
+];
+const requiredAuthLoginAuditBoundaryPatterns = [
+  /records successful and failed login attempts in the global audit trail/,
+  /auth.login.failure/,
+  /usernameHash/
 ];
 const requiredAuthPurposeBoundaryPatterns = [
   /rejects invalid purpose-of-use headers instead of silently defaulting to treatment/,
@@ -444,6 +470,8 @@ for (const budget of testBudgets) {
 }
 
 const loginBoundarySource = await readFile(loginBoundaryPath, "utf8");
+const authErrorBoundarySource = await readFile(authErrorBoundaryPath, "utf8");
+const authLoginAuditBoundarySource = await readFile(authLoginAuditBoundaryPath, "utf8");
 const authPurposeBoundarySource = await readFile(authPurposeBoundaryPath, "utf8");
 const authRateLimitBoundarySource = await readFile(authRateLimitBoundaryPath, "utf8");
 const runtimeBoundarySource = await readFile(runtimeBoundaryPath, "utf8");
@@ -498,7 +526,23 @@ const recordTransferCallbackBoundarySource = await readFile(
 for (const required of requiredLoginBoundaryPatterns) {
   if (!required.test(loginBoundarySource)) {
     throw new Error(
-      "server.auth.login.test.ts must keep core login, token, session and auth error boundary scenarios."
+      "server.auth.login.test.ts must keep demo login, token TTL, bearer session and production toggle scenarios."
+    );
+  }
+}
+
+for (const required of requiredAuthErrorBoundaryPatterns) {
+  if (!required.test(authErrorBoundarySource)) {
+    throw new Error(
+      "server.auth-error-boundary.test.ts must keep auth validation, credential, session and missing-token error scenarios."
+    );
+  }
+}
+
+for (const required of requiredAuthLoginAuditBoundaryPatterns) {
+  if (!required.test(authLoginAuditBoundarySource)) {
+    throw new Error(
+      "server.auth-login-audit-boundary.test.ts must keep login success and failure audit evidence scenarios."
     );
   }
 }
