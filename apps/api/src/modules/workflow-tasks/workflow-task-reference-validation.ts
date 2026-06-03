@@ -1,4 +1,5 @@
 import type { EncounterRepository, ServiceRequestRepository } from "@benh-vien-so/domain";
+import { validatePatientOwnedReferences } from "../clinical-references/patient-owned-reference-validation.js";
 
 export type WorkflowTaskReferenceInput = {
   readonly encounterId?: string;
@@ -18,29 +19,18 @@ export async function validateWorkflowTaskReferences(
     readonly serviceRequestRepository: ServiceRequestRepository;
   }
 ): Promise<WorkflowTaskValidationError | undefined> {
-  if (input.encounterId) {
-    const encounter = await repositories.encounterRepository.findById(input.encounterId);
-
-    if (!encounter || encounter.patientId !== patientId) {
-      return {
-        error: "ENCOUNTER_MISMATCH",
-        message: "Công việc phải gắn với lượt khám thuộc cùng bệnh nhân."
-      };
+  return validatePatientOwnedReferences(patientId, [
+    {
+      id: input.encounterId,
+      repository: repositories.encounterRepository,
+      error: "ENCOUNTER_MISMATCH",
+      message: "Công việc phải gắn với lượt khám thuộc cùng bệnh nhân."
+    },
+    {
+      id: input.basedOnServiceRequestId,
+      repository: repositories.serviceRequestRepository,
+      error: "SERVICE_REQUEST_MISMATCH",
+      message: "Công việc thực thi phải gắn với y lệnh thuộc cùng bệnh nhân."
     }
-  }
-
-  if (input.basedOnServiceRequestId) {
-    const serviceRequest = await repositories.serviceRequestRepository.findById(
-      input.basedOnServiceRequestId
-    );
-
-    if (!serviceRequest || serviceRequest.patientId !== patientId) {
-      return {
-        error: "SERVICE_REQUEST_MISMATCH",
-        message: "Công việc thực thi phải gắn với y lệnh thuộc cùng bệnh nhân."
-      };
-    }
-  }
-
-  return undefined;
+  ]);
 }

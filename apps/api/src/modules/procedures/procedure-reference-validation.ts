@@ -7,18 +7,12 @@ import type {
   ProcedureRepository,
   ServiceRequestRepository
 } from "@benh-vien-so/domain";
+import { validatePatientOwnedReferences } from "../clinical-references/patient-owned-reference-validation.js";
 import { validateProcedureReportReference } from "./procedure-report-reference-validation.js";
 
 export type ProcedureValidationError = {
   readonly error: string;
   readonly message: string;
-};
-
-type PatientOwnedReferenceValidation = ProcedureValidationError & {
-  readonly id?: string;
-  readonly repository: {
-    readonly findById: (id: string) => Promise<{ readonly patientId: string } | undefined>;
-  };
 };
 
 type ValidateProcedureReferencesInput = {
@@ -42,7 +36,7 @@ export async function validateProcedureReferences({
   diagnosticReportRepository,
   clinicalDocumentRepository
 }: ValidateProcedureReferencesInput): Promise<ProcedureValidationError | undefined> {
-  for (const reference of [
+  const patientOwnedError = await validatePatientOwnedReferences(patientId, [
     {
       id: command.encounterId,
       repository: encounterRepository,
@@ -67,12 +61,10 @@ export async function validateProcedureReferences({
       error: "CONDITION_MISMATCH",
       message: "Chẩn đoán/lý do của Procedure phải thuộc cùng bệnh nhân."
     }
-  ] as const) {
-    const error = await validatePatientOwnedReference(patientId, reference);
+  ]);
 
-    if (error) {
-      return error;
-    }
+  if (patientOwnedError) {
+    return patientOwnedError;
   }
 
   for (const reportReference of command.reportReferences ?? []) {
@@ -89,19 +81,4 @@ export async function validateProcedureReferences({
   }
 
   return undefined;
-}
-
-async function validatePatientOwnedReference(
-  patientId: string,
-  reference: PatientOwnedReferenceValidation
-): Promise<ProcedureValidationError | undefined> {
-  if (!reference.id) {
-    return undefined;
-  }
-
-  const resource = await reference.repository.findById(reference.id);
-
-  return resource?.patientId === patientId
-    ? undefined
-    : { error: reference.error, message: reference.message };
 }

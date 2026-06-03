@@ -1,4 +1,5 @@
 import type { ConditionRepository, EncounterRepository } from "@benh-vien-so/domain";
+import { validatePatientOwnedReferences } from "../clinical-references/patient-owned-reference-validation.js";
 
 export type ServiceRequestReferenceInput = {
   readonly encounterId?: string;
@@ -18,29 +19,18 @@ export async function validateServiceRequestReferences(
     readonly conditionRepository: ConditionRepository;
   }
 ): Promise<ServiceRequestValidationError | undefined> {
-  if (input.encounterId) {
-    const encounter = await repositories.encounterRepository.findById(input.encounterId);
-
-    if (!encounter || encounter.patientId !== patientId) {
-      return {
-        error: "ENCOUNTER_MISMATCH",
-        message: "Chỉ định dịch vụ phải gắn với lượt khám thuộc cùng bệnh nhân."
-      };
+  return validatePatientOwnedReferences(patientId, [
+    {
+      id: input.encounterId,
+      repository: repositories.encounterRepository,
+      error: "ENCOUNTER_MISMATCH",
+      message: "Chỉ định dịch vụ phải gắn với lượt khám thuộc cùng bệnh nhân."
+    },
+    {
+      id: input.reasonConditionId,
+      repository: repositories.conditionRepository,
+      error: "CONDITION_MISMATCH",
+      message: "Chẩn đoán liên quan phải thuộc cùng bệnh nhân."
     }
-  }
-
-  if (input.reasonConditionId) {
-    const condition = await repositories.conditionRepository.findById(
-      input.reasonConditionId
-    );
-
-    if (!condition || condition.patientId !== patientId) {
-      return {
-        error: "CONDITION_MISMATCH",
-        message: "Chẩn đoán liên quan phải thuộc cùng bệnh nhân."
-      };
-    }
-  }
-
-  return undefined;
+  ]);
 }

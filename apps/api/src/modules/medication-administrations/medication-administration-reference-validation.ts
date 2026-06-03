@@ -4,6 +4,7 @@ import type {
   EncounterRepository,
   MedicationRequestRepository
 } from "@benh-vien-so/domain";
+import { validatePatientOwnedReferences } from "../clinical-references/patient-owned-reference-validation.js";
 
 export type MedicationAdministrationValidationError = {
   readonly error: string;
@@ -27,41 +28,25 @@ export async function validateMedicationAdministrationReferences({
 }: ValidateMedicationAdministrationReferencesInput): Promise<
   MedicationAdministrationValidationError | undefined
 > {
-  if (command.encounterId) {
-    const encounter = await encounterRepository.findById(command.encounterId);
-
-    if (!encounter || encounter.patientId !== patientId) {
-      return {
-        error: "ENCOUNTER_MISMATCH",
-        message: "Lần dùng thuốc phải gắn với lượt khám thuộc cùng bệnh nhân."
-      };
+  return validatePatientOwnedReferences(patientId, [
+    {
+      id: command.encounterId,
+      repository: encounterRepository,
+      error: "ENCOUNTER_MISMATCH",
+      message: "Lần dùng thuốc phải gắn với lượt khám thuộc cùng bệnh nhân."
+    },
+    {
+      id: command.medicationRequestId,
+      repository: medicationRequestRepository,
+      error: "MEDICATION_REQUEST_MISMATCH",
+      message:
+        "Lần dùng thuốc phải tham chiếu MedicationRequest thuộc cùng bệnh nhân."
+    },
+    {
+      id: command.reasonConditionId,
+      repository: conditionRepository,
+      error: "CONDITION_MISMATCH",
+      message: "Chẩn đoán/lý do dùng thuốc phải thuộc cùng bệnh nhân."
     }
-  }
-
-  if (command.medicationRequestId) {
-    const medicationRequest = await medicationRequestRepository.findById(
-      command.medicationRequestId
-    );
-
-    if (!medicationRequest || medicationRequest.patientId !== patientId) {
-      return {
-        error: "MEDICATION_REQUEST_MISMATCH",
-        message:
-          "Lần dùng thuốc phải tham chiếu MedicationRequest thuộc cùng bệnh nhân."
-      };
-    }
-  }
-
-  if (command.reasonConditionId) {
-    const condition = await conditionRepository.findById(command.reasonConditionId);
-
-    if (!condition || condition.patientId !== patientId) {
-      return {
-        error: "CONDITION_MISMATCH",
-        message: "Chẩn đoán/lý do dùng thuốc phải thuộc cùng bệnh nhân."
-      };
-    }
-  }
-
-  return undefined;
+  ]);
 }

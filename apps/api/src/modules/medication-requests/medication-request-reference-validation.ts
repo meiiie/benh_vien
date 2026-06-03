@@ -1,5 +1,6 @@
 import type { CreateMedicationRequestRequest } from "@benh-vien-so/contracts";
 import type { ConditionRepository, EncounterRepository } from "@benh-vien-so/domain";
+import { validatePatientOwnedReferences } from "../clinical-references/patient-owned-reference-validation.js";
 
 export type MedicationRequestValidationError = {
   readonly error: string;
@@ -21,27 +22,18 @@ export async function validateMedicationRequestReferences({
 }: ValidateMedicationRequestReferencesInput): Promise<
   MedicationRequestValidationError | undefined
 > {
-  if (command.encounterId) {
-    const encounter = await encounterRepository.findById(command.encounterId);
-
-    if (!encounter || encounter.patientId !== patientId) {
-      return {
-        error: "ENCOUNTER_MISMATCH",
-        message: "Chỉ định thuốc phải gắn với lượt khám thuộc cùng bệnh nhân."
-      };
+  return validatePatientOwnedReferences(patientId, [
+    {
+      id: command.encounterId,
+      repository: encounterRepository,
+      error: "ENCOUNTER_MISMATCH",
+      message: "Chỉ định thuốc phải gắn với lượt khám thuộc cùng bệnh nhân."
+    },
+    {
+      id: command.reasonConditionId,
+      repository: conditionRepository,
+      error: "CONDITION_MISMATCH",
+      message: "Chẩn đoán liên quan phải thuộc cùng bệnh nhân."
     }
-  }
-
-  if (command.reasonConditionId) {
-    const condition = await conditionRepository.findById(command.reasonConditionId);
-
-    if (!condition || condition.patientId !== patientId) {
-      return {
-        error: "CONDITION_MISMATCH",
-        message: "Chẩn đoán liên quan phải thuộc cùng bệnh nhân."
-      };
-    }
-  }
-
-  return undefined;
+  ]);
 }
