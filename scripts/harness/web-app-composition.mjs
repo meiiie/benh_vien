@@ -283,8 +283,14 @@ const requiredModules = [
   "apps/web/src/features/clinical-records/ObservationPanel.tsx",
   "apps/web/src/features/clinical-records/observationHandlers.ts",
   "apps/web/src/features/clinical-records/procedureCommandBuilders.ts",
+  "apps/web/src/features/clinical-records/ProcedureClassificationFields.tsx",
+  "apps/web/src/features/clinical-records/ProcedureCodeFields.tsx",
+  "apps/web/src/features/clinical-records/ProcedureContextFields.tsx",
   "apps/web/src/features/clinical-records/ProcedureForm.tsx",
+  "apps/web/src/features/clinical-records/ProcedureOutcomeFields.tsx",
   "apps/web/src/features/clinical-records/ProcedurePanel.tsx",
+  "apps/web/src/features/clinical-records/ProcedurePerformerFields.tsx",
+  "apps/web/src/features/clinical-records/ProcedureTimingFields.tsx",
   "apps/web/src/features/clinical-records/serviceRequestCommandBuilders.ts",
   "apps/web/src/features/clinical-records/ServiceRequestForm.tsx",
   "apps/web/src/features/clinical-records/ServiceRequestPanel.tsx",
@@ -969,8 +975,38 @@ const featureModuleBudgets = [
   },
   {
     path: "apps/web/src/features/clinical-records/ProcedureForm.tsx",
-    maxLines: 260,
-    role: "Procedure field-heavy command form"
+    maxLines: 90,
+    role: "Procedure command form composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/ProcedureContextFields.tsx",
+    maxLines: 90,
+    role: "Procedure encounter, service request and reason fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/ProcedureClassificationFields.tsx",
+    maxLines: 80,
+    role: "Procedure category and status fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/ProcedureCodeFields.tsx",
+    maxLines: 70,
+    role: "Procedure coding fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/ProcedureTimingFields.tsx",
+    maxLines: 60,
+    role: "Procedure performed period fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/ProcedurePerformerFields.tsx",
+    maxLines: 90,
+    role: "Procedure performer and recorder fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/ProcedureOutcomeFields.tsx",
+    maxLines: 95,
+    role: "Procedure body site, outcome, report and note fields"
   },
   {
     path: "apps/web/src/features/clinical-records/ServiceRequestPanel.tsx",
