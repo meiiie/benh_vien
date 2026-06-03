@@ -24,8 +24,13 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/server.patient-access.test.ts",
-    maxLines: 650,
+    maxLines: 220,
     role: "API patient access ABAC scenarios across clinical resources"
+  },
+  {
+    path: "apps/api/src/server.patient-access.test-support.ts",
+    maxLines: 560,
+    role: "API patient access ABAC outside-organization fixture and denied route catalog"
   },
   {
     path: "apps/api/src/server.audit-boundary.test.ts",
@@ -146,6 +151,7 @@ const runtimeBoundaryPath = resolve("apps/api/src/server.runtime.test.ts");
 const startupConfigBoundaryPath = resolve("apps/api/src/server.startup-config.test.ts");
 const patientRegistryBoundaryPath = resolve("apps/api/src/server.patient-registry.test.ts");
 const patientAccessBoundaryPath = resolve("apps/api/src/server.patient-access.test.ts");
+const patientAccessSupportPath = resolve("apps/api/src/server.patient-access.test-support.ts");
 const auditBoundaryPath = resolve("apps/api/src/server.audit-boundary.test.ts");
 const fhirBoundaryPath = resolve("apps/api/src/server.fhir-boundary.test.ts");
 const fhirValidationBoundaryPath = resolve(
@@ -188,6 +194,10 @@ const requiredPatientRegistryBoundaryPatterns = [
 const requiredPatientAccessBoundaryPatterns = [
   /filters treatment patient access by the actor provider organization/,
   /patient-abac-denied-001/,
+  /createOutsidePatientAccessFixture/
+];
+const requiredPatientAccessSupportPatterns = [
+  /createOutsidePatientAccessFixture/,
   /record-transfer-list-abac-denied-001/,
   /imaging-study-export-abac-denied-001/
 ];
@@ -278,6 +288,7 @@ const runtimeBoundarySource = await readFile(runtimeBoundaryPath, "utf8");
 const startupConfigBoundarySource = await readFile(startupConfigBoundaryPath, "utf8");
 const patientRegistryBoundarySource = await readFile(patientRegistryBoundaryPath, "utf8");
 const patientAccessBoundarySource = await readFile(patientAccessBoundaryPath, "utf8");
+const patientAccessSupportSource = await readFile(patientAccessSupportPath, "utf8");
 const auditBoundarySource = await readFile(auditBoundaryPath, "utf8");
 const fhirBoundarySource = await readFile(fhirBoundaryPath, "utf8");
 const fhirValidationBoundarySource = await readFile(
@@ -334,7 +345,15 @@ for (const required of requiredPatientRegistryBoundaryPatterns) {
 for (const required of requiredPatientAccessBoundaryPatterns) {
   if (!required.test(patientAccessBoundarySource)) {
     throw new Error(
-      "server.patient-access.test.ts must keep patient-scope ABAC denials across list, read and FHIR export scenarios."
+      "server.patient-access.test.ts must keep high-level patient-scope ABAC denial orchestration across list, read and FHIR export scenarios."
+    );
+  }
+}
+
+for (const required of requiredPatientAccessSupportPatterns) {
+  if (!required.test(patientAccessSupportSource)) {
+    throw new Error(
+      "server.patient-access.test-support.ts must keep outside-organization ABAC fixture and denied route catalog coverage."
     );
   }
 }
