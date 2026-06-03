@@ -8,6 +8,10 @@ import type {
 } from "@benh-vien-so/domain";
 import { recordAuditEvent } from "../audit-events/audit-context.js";
 import type { CallbackSignatureVerification } from "./record-transfer-callback-signature.js";
+import {
+  toAcknowledgementCallbackAuditMetadata,
+  toCallbackSignatureAuditMetadata
+} from "./record-transfer-acknowledgement-audit-metadata.js";
 
 type DuplicateAcknowledgementAuditInput = {
   readonly auditRepository: AuditEventRepository;
@@ -37,13 +41,7 @@ export async function recordDuplicateAcknowledgementCallbackAudit(
     patientId: input.recordTransfer.patientId,
     metadata: {
       duplicateCallback: true,
-      status: input.snapshot.status,
-      receivedAt: input.snapshot.receivedAt,
-      receivedByActorId: input.snapshot.receivedByActorId,
-      acknowledgementReference: input.snapshot.acknowledgementReference,
-      recipientOrganizationId: input.snapshot.recipientOrganizationId,
-      targetEndpointId: input.callback.targetEndpointId,
-      deliveryIdempotencyKey: input.callback.deliveryIdempotencyKey,
+      ...toAcknowledgementCallbackAuditMetadata(input.snapshot, input.callback),
       ...toCallbackSignatureAuditMetadata(input.signatureVerification)
     }
   });
@@ -61,32 +59,10 @@ export async function recordAcceptedAcknowledgementCallbackAudit(
     patientId: input.recordTransfer.patientId,
     metadata: {
       duplicateCallback: false,
-      status: snapshot.status,
       sentAt: snapshot.sentAt,
-      receivedAt: snapshot.receivedAt,
-      receivedByActorId: snapshot.receivedByActorId,
-      acknowledgementReference: snapshot.acknowledgementReference,
-      recipientOrganizationId: snapshot.recipientOrganizationId,
-      targetEndpointId: input.callback.targetEndpointId,
-      deliveryIdempotencyKey: input.callback.deliveryIdempotencyKey,
+      ...toAcknowledgementCallbackAuditMetadata(snapshot, input.callback),
       callbackActorId: input.actor.actorId,
       ...toCallbackSignatureAuditMetadata(input.signatureVerification)
     }
   });
-}
-
-function toCallbackSignatureAuditMetadata(input: CallbackSignatureVerification): {
-  readonly callbackSignatureRequired: boolean;
-  readonly callbackSignatureVerified: boolean;
-  readonly callbackSignatureTimestamp?: string;
-  readonly callbackSignatureAlgorithm?: string;
-  readonly callbackSignatureKeyId?: string;
-} {
-  return {
-    callbackSignatureRequired: input.required,
-    callbackSignatureVerified: input.verified,
-    callbackSignatureTimestamp: input.timestamp,
-    callbackSignatureAlgorithm: input.algorithm,
-    callbackSignatureKeyId: input.keyId
-  };
 }

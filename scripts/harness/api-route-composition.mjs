@@ -413,6 +413,11 @@ const routeBudgets = [
     role: "RecordTransfer acknowledgement callback audit metadata"
   },
   {
+    path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-audit-metadata.ts",
+    maxLines: 70,
+    role: "RecordTransfer acknowledgement callback shared audit metadata builders"
+  },
+  {
     path: "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-reference.ts",
     maxLines: 30,
     role: "RecordTransfer acknowledgement reference generation"
@@ -1614,7 +1619,7 @@ const forbiddenRecordTransferRouteHelperPatterns = [
   {
     pattern: /\btoCallbackSignatureAuditMetadata\b/,
     message:
-      "RecordTransfer callback signature audit metadata belongs in record-transfer-acknowledgement-audit.ts."
+      "RecordTransfer callback signature audit metadata belongs in the acknowledgement audit modules."
   },
   {
     pattern:
@@ -1644,6 +1649,9 @@ const recordTransferAcknowledgementAcceptedOutcomePath = resolve(
 );
 const recordTransferAcknowledgementAuditPath = resolve(
   "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-audit.ts"
+);
+const recordTransferAcknowledgementAuditMetadataPath = resolve(
+  "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-audit-metadata.ts"
 );
 const recordTransferAcknowledgementPolicyPath = resolve(
   "apps/api/src/modules/record-transfers/record-transfer-acknowledgement-policy.ts"
@@ -1685,7 +1693,7 @@ const forbiddenRecordTransferAcknowledgementHandlerPatterns = [
   {
     pattern: /\brecordAuditEvent\b|\btoCallbackSignatureAuditMetadata\b/,
     message:
-      "RecordTransfer acknowledgement audit metadata belongs in record-transfer-acknowledgement-audit.ts."
+      "RecordTransfer acknowledgement audit metadata belongs in the acknowledgement audit modules."
   },
   {
     pattern:
@@ -1714,7 +1722,10 @@ const requiredRecordTransferAcknowledgementPolicyHelpers = [
 ];
 const requiredRecordTransferAcknowledgementAuditHelpers = [
   "recordDuplicateAcknowledgementCallbackAudit",
-  "recordAcceptedAcknowledgementCallbackAudit",
+  "recordAcceptedAcknowledgementCallbackAudit"
+];
+const requiredRecordTransferAcknowledgementAuditMetadataHelpers = [
+  "toAcknowledgementCallbackAuditMetadata",
   "toCallbackSignatureAuditMetadata"
 ];
 const requiredRecordTransferAcknowledgementReferenceHelpers = [
@@ -2623,6 +2634,10 @@ const recordTransferAcknowledgementAuditSource = await readFile(
   recordTransferAcknowledgementAuditPath,
   "utf8"
 );
+const recordTransferAcknowledgementAuditMetadataSource = await readFile(
+  recordTransferAcknowledgementAuditMetadataPath,
+  "utf8"
+);
 const recordTransferAcknowledgementPolicySource = await readFile(
   recordTransferAcknowledgementPolicyPath,
   "utf8"
@@ -3149,7 +3164,15 @@ for (const helper of requiredRecordTransferAcknowledgementPolicyHelpers) {
 for (const helper of requiredRecordTransferAcknowledgementAuditHelpers) {
   if (!recordTransferAcknowledgementAuditSource.includes(helper)) {
     throw new Error(
-      `RecordTransfer acknowledgement audit module must expose ${helper} so callback audit metadata stays centralized.`
+      `RecordTransfer acknowledgement audit module must expose ${helper} so callback audit events stay centralized.`
+    );
+  }
+}
+
+for (const helper of requiredRecordTransferAcknowledgementAuditMetadataHelpers) {
+  if (!recordTransferAcknowledgementAuditMetadataSource.includes(helper)) {
+    throw new Error(
+      `RecordTransfer acknowledgement audit metadata module must expose ${helper} so callback metadata stays centralized.`
     );
   }
 }
