@@ -189,8 +189,23 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/server.consent-boundary.test.ts",
-    maxLines: 300,
-    role: "API consent creation, FHIR export and revocation scenarios"
+    maxLines: 120,
+    role: "API consent listing, creation and Bundle-use scenarios"
+  },
+  {
+    path: "apps/api/src/server.consent-fhir-boundary.test.ts",
+    maxLines: 90,
+    role: "API consent FHIR export scenarios"
+  },
+  {
+    path: "apps/api/src/server.consent-revocation-boundary.test.ts",
+    maxLines: 150,
+    role: "API consent revocation and sharing-block scenarios"
+  },
+  {
+    path: "apps/api/src/server.consent.test-support.ts",
+    maxLines: 90,
+    role: "API consent shared boundary test support"
   },
   {
     path: "apps/api/src/server.record-transfer-boundary.test.ts",
@@ -414,6 +429,11 @@ const diagnosticResourcesBoundaryPath = resolve(
   "apps/api/src/server.diagnostic-resources-boundary.test.ts"
 );
 const consentBoundaryPath = resolve("apps/api/src/server.consent-boundary.test.ts");
+const consentFhirBoundaryPath = resolve("apps/api/src/server.consent-fhir-boundary.test.ts");
+const consentRevocationBoundaryPath = resolve(
+  "apps/api/src/server.consent-revocation-boundary.test.ts"
+);
+const consentSupportPath = resolve("apps/api/src/server.consent.test-support.ts");
 const recordTransferBoundaryPath = resolve("apps/api/src/server.record-transfer-boundary.test.ts");
 const recordTransferDeliveryBoundaryPath = resolve(
   "apps/api/src/server.record-transfer-delivery-boundary.test.ts"
@@ -682,9 +702,29 @@ const requiredDiagnosticResourcesBoundaryPatterns = [
 ];
 const requiredConsentBoundaryPatterns = [
   /lists active patient consents for treatment users/,
-  /creates a patient consent and uses it for Bundle export/,
+  /creates a patient consent and uses it for Bundle export/
+];
+const requiredConsentFhirBoundaryPatterns = [
   /exports patient consent as FHIR Consent/,
+  /resourceType: "Consent"/,
+  /Organization\/hospital-hai-phong-referral/
+];
+const requiredConsentRevocationBoundaryPatterns = [
+  /denies consent revocation for nurse role/,
+  /permission: "consent:revoke"/,
+  /CONSENT_NOT_VALID_FOR_TRANSFER/,
   /revokes a patient consent and blocks later record sharing/
+];
+const requiredConsentSupportPatterns = [
+  /readyConsentTestContext/,
+  /createRecordSharingConsent/,
+  /revokeConsent/,
+  /record-sharing/
+];
+const retiredConsentBoundaryPatterns = [
+  /exports patient consent as FHIR Consent/,
+  /revokes a patient consent and blocks later record sharing/,
+  /denies consent revocation for nurse role/
 ];
 const requiredRecordTransferBoundaryPatterns = [
   /lists record transfer packages for a patient/,
@@ -925,6 +965,12 @@ const diagnosticResourcesBoundarySource = await readFile(
   "utf8"
 );
 const consentBoundarySource = await readFile(consentBoundaryPath, "utf8");
+const consentFhirBoundarySource = await readFile(consentFhirBoundaryPath, "utf8");
+const consentRevocationBoundarySource = await readFile(
+  consentRevocationBoundaryPath,
+  "utf8"
+);
+const consentSupportSource = await readFile(consentSupportPath, "utf8");
 const recordTransferBoundarySource = await readFile(recordTransferBoundaryPath, "utf8");
 const recordTransferDeliveryBoundarySource = await readFile(
   recordTransferDeliveryBoundaryPath,
@@ -1310,7 +1356,39 @@ for (const required of requiredDiagnosticResourcesBoundaryPatterns) {
 for (const required of requiredConsentBoundaryPatterns) {
   if (!required.test(consentBoundarySource)) {
     throw new Error(
-      "server.consent-boundary.test.ts must keep consent listing, creation, FHIR export and revocation scenarios."
+      "server.consent-boundary.test.ts must keep consent listing, creation and Bundle-use scenarios."
+    );
+  }
+}
+
+for (const required of requiredConsentFhirBoundaryPatterns) {
+  if (!required.test(consentFhirBoundarySource)) {
+    throw new Error(
+      "server.consent-fhir-boundary.test.ts must keep consent FHIR export scenarios."
+    );
+  }
+}
+
+for (const required of requiredConsentRevocationBoundaryPatterns) {
+  if (!required.test(consentRevocationBoundarySource)) {
+    throw new Error(
+      "server.consent-revocation-boundary.test.ts must keep consent revocation and sharing-block scenarios."
+    );
+  }
+}
+
+for (const required of requiredConsentSupportPatterns) {
+  if (!required.test(consentSupportSource)) {
+    throw new Error(
+      "server.consent.test-support.ts must keep shared consent boundary fixtures."
+    );
+  }
+}
+
+for (const retired of retiredConsentBoundaryPatterns) {
+  if (retired.test(consentBoundarySource)) {
+    throw new Error(
+      "server.consent-boundary.test.ts must not absorb FHIR or revocation scenarios back into the list/create suite."
     );
   }
 }
