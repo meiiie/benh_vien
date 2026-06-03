@@ -308,6 +308,31 @@ const domainBudgets = [
     role: "Procedure status, category, performer, report reference and snapshot types"
   },
   {
+    path: "packages/domain/src/procedure/procedure.test.ts",
+    maxLines: 50,
+    role: "Procedure performed clinical procedure recording test scenarios"
+  },
+  {
+    path: "packages/domain/src/procedure/procedure.fhir-mapping.test.ts",
+    maxLines: 70,
+    role: "Procedure ServiceRequest-linked FHIR mapping test scenarios"
+  },
+  {
+    path: "packages/domain/src/procedure/procedure.validation.test.ts",
+    maxLines: 70,
+    role: "Procedure performer and part-of validation test scenarios"
+  },
+  {
+    path: "packages/domain/src/procedure/procedure.rehydration.test.ts",
+    maxLines: 120,
+    role: "Procedure persisted snapshot invariant test scenarios"
+  },
+  {
+    path: "packages/domain/src/procedure/procedure.test-support.ts",
+    maxLines: 70,
+    role: "Procedure shared diagnostic procedure test fixture helpers"
+  },
+  {
     path: "packages/domain/src/record-transfer-delivery-attempt/record-transfer-delivery-attempt.ts",
     maxLines: 150,
     role: "RecordTransferDeliveryAttempt terminal update behavior"
