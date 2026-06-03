@@ -54,8 +54,14 @@ const recordTransferMetadataPath = resolve(
 const clinicalDocumentApiPath = resolve(
   "apps/web/src/features/clinical-documents/clinicalDocumentApi.ts"
 );
+const clinicalDocumentListPath = resolve(
+  "apps/web/src/features/clinical-documents/ClinicalDocumentList.tsx"
+);
 const clinicalDocumentPanelPath = resolve(
   "apps/web/src/features/clinical-documents/ClinicalDocumentPanel.tsx"
+);
+const clinicalDocumentSummaryPath = resolve(
+  "apps/web/src/features/clinical-documents/ClinicalDocumentSummary.tsx"
 );
 const encounterPanelPath = resolve("apps/web/src/features/clinical-records/EncounterPanel.tsx");
 const patientRegistryApiPath = resolve(
@@ -213,7 +219,9 @@ const requiredModules = [
   "apps/web/src/features/audit/auditPanelRenderers.tsx",
   "apps/web/src/features/audit/auditApi.ts",
   "apps/web/src/features/clinical-documents/ClinicalDocumentForm.tsx",
+  "apps/web/src/features/clinical-documents/ClinicalDocumentList.tsx",
   "apps/web/src/features/clinical-documents/ClinicalDocumentPanel.tsx",
+  "apps/web/src/features/clinical-documents/ClinicalDocumentSummary.tsx",
   "apps/web/src/features/clinical-documents/clinicalDocumentApi.ts",
   "apps/web/src/features/clinical-documents/clinicalDocumentCommandBuilders.ts",
   "apps/web/src/features/clinical-documents/clinicalDocumentFormatters.ts",
@@ -601,8 +609,18 @@ const featureModuleBudgets = [
   },
   {
     path: "apps/web/src/features/clinical-documents/ClinicalDocumentPanel.tsx",
-    maxLines: 190,
-    role: "Clinical document list, summary and form composition"
+    maxLines: 110,
+    role: "Clinical document panel composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-documents/ClinicalDocumentList.tsx",
+    maxLines: 80,
+    role: "Clinical document selectable list"
+  },
+  {
+    path: "apps/web/src/features/clinical-documents/ClinicalDocumentSummary.tsx",
+    maxLines: 100,
+    role: "Clinical document metadata and signing summary"
   },
   {
     path: "apps/web/src/features/clinical-documents/ClinicalDocumentForm.tsx",
@@ -1300,7 +1318,11 @@ const auditPanelsSource = [
 const dashboardPageSource = await readFile(dashboardPagePath, "utf8");
 const documentsPageSource = await readFile(documentsPagePath, "utf8");
 const clinicalApiSource = await readFile(allowedFetchModulePath, "utf8");
-const clinicalDocumentPanelSource = await readFile(clinicalDocumentPanelPath, "utf8");
+const clinicalDocumentPanelSource = [
+  await readFile(clinicalDocumentListPath, "utf8"),
+  await readFile(clinicalDocumentPanelPath, "utf8"),
+  await readFile(clinicalDocumentSummaryPath, "utf8")
+].join("\n");
 const encounterPanelSource = await readFile(encounterPanelPath, "utf8");
 const consentInteropPanelSource = await readFile(consentInteropPanelPath, "utf8");
 const fhirDocumentBundleSummarySource = await readFile(
