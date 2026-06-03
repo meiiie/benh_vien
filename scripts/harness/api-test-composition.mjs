@@ -39,8 +39,13 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/server.fhir-boundary.test.ts",
-    maxLines: 480,
-    role: "API FHIR export, document reference and OperationOutcome scenarios"
+    maxLines: 360,
+    role: "API FHIR metadata, bundle export and OperationOutcome scenarios"
+  },
+  {
+    path: "apps/api/src/server.fhir-document-boundary.test.ts",
+    maxLines: 170,
+    role: "API FHIR DocumentReference and Provenance scenarios"
   },
   {
     path: "apps/api/src/server.fhir-validation-boundary.test.ts",
@@ -164,6 +169,7 @@ const patientAccessBoundaryPath = resolve("apps/api/src/server.patient-access.te
 const patientAccessSupportPath = resolve("apps/api/src/server.patient-access.test-support.ts");
 const auditBoundaryPath = resolve("apps/api/src/server.audit-boundary.test.ts");
 const fhirBoundaryPath = resolve("apps/api/src/server.fhir-boundary.test.ts");
+const fhirDocumentBoundaryPath = resolve("apps/api/src/server.fhir-document-boundary.test.ts");
 const fhirValidationBoundaryPath = resolve(
   "apps/api/src/server.fhir-validation-boundary.test.ts"
 );
@@ -227,7 +233,12 @@ const requiredFhirBoundaryPatterns = [
   /serves FHIR CapabilityStatement metadata without a demo session/,
   /denies nurse FHIR export even with treatment purpose/,
   /returns a patient-record FHIR Bundle for treatment export/,
-  /exports clinical document attachment metadata as FHIR DocumentReference/
+  /negotiates auth and RBAC denials on FHIR endpoints as OperationOutcome/
+];
+const requiredFhirDocumentBoundaryPatterns = [
+  /exports signed clinical document provenance as FHIR Provenance/,
+  /exports clinical document attachment metadata as FHIR DocumentReference/,
+  /returns FHIR OperationOutcome when a FHIR DocumentReference target is missing/
 ];
 const requiredFhirValidationBoundaryPatterns = [
   /negotiates validation errors as FHIR OperationOutcome/,
@@ -315,6 +326,7 @@ const patientAccessBoundarySource = await readFile(patientAccessBoundaryPath, "u
 const patientAccessSupportSource = await readFile(patientAccessSupportPath, "utf8");
 const auditBoundarySource = await readFile(auditBoundaryPath, "utf8");
 const fhirBoundarySource = await readFile(fhirBoundaryPath, "utf8");
+const fhirDocumentBoundarySource = await readFile(fhirDocumentBoundaryPath, "utf8");
 const fhirValidationBoundarySource = await readFile(
   fhirValidationBoundaryPath,
   "utf8"
@@ -401,7 +413,15 @@ for (const required of requiredAuditBoundaryPatterns) {
 for (const required of requiredFhirBoundaryPatterns) {
   if (!required.test(fhirBoundarySource)) {
     throw new Error(
-      "server.fhir-boundary.test.ts must keep FHIR Bundle, DocumentReference and OperationOutcome access scenarios."
+      "server.fhir-boundary.test.ts must keep FHIR metadata, Bundle and OperationOutcome access scenarios."
+    );
+  }
+}
+
+for (const required of requiredFhirDocumentBoundaryPatterns) {
+  if (!required.test(fhirDocumentBoundarySource)) {
+    throw new Error(
+      "server.fhir-document-boundary.test.ts must keep FHIR DocumentReference and Provenance scenarios."
     );
   }
 }
