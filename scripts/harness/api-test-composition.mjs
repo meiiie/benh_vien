@@ -54,8 +54,13 @@ const testBudgets = [
   },
   {
     path: "apps/api/src/server.clinical-resources.test.ts",
-    maxLines: 660,
-    role: "API clinical resource list, command and FHIR export scenarios"
+    maxLines: 440,
+    role: "API workflow, procedure, allergy, condition, observation and service-request scenarios"
+  },
+  {
+    path: "apps/api/src/server.medication-resources-boundary.test.ts",
+    maxLines: 340,
+    role: "API medication request, dispense and administration scenarios"
   },
   {
     path: "apps/api/src/server.diagnostic-resources-boundary.test.ts",
@@ -166,6 +171,9 @@ const providerDirectoryBoundaryPath = resolve(
   "apps/api/src/server.provider-directory-boundary.test.ts"
 );
 const clinicalResourcesBoundaryPath = resolve("apps/api/src/server.clinical-resources.test.ts");
+const medicationResourcesBoundaryPath = resolve(
+  "apps/api/src/server.medication-resources-boundary.test.ts"
+);
 const diagnosticResourcesBoundaryPath = resolve(
   "apps/api/src/server.diagnostic-resources-boundary.test.ts"
 );
@@ -233,8 +241,13 @@ const requiredProviderDirectoryBoundaryPatterns = [
 ];
 const requiredClinicalResourcesBoundaryPatterns = [
   /lists workflow tasks and exports them as FHIR Task/,
-  /lists medication administrations and exports them as FHIR MedicationAdministration/,
+  /lists procedures and exports them as FHIR Procedure/,
   /lists service requests and exports them as FHIR ServiceRequest/
+];
+const requiredMedicationResourcesBoundaryPatterns = [
+  /lists medication requests and exports them as FHIR MedicationRequest/,
+  /lists medication dispenses and exports them as FHIR MedicationDispense/,
+  /lists medication administrations and exports them as FHIR MedicationAdministration/
 ];
 const requiredDiagnosticResourcesBoundaryPatterns = [
   /lists diagnostic reports and exports them as FHIR DiagnosticReport/,
@@ -312,6 +325,10 @@ const providerDirectoryBoundarySource = await readFile(
 );
 const clinicalResourcesBoundarySource = await readFile(
   clinicalResourcesBoundaryPath,
+  "utf8"
+);
+const medicationResourcesBoundarySource = await readFile(
+  medicationResourcesBoundaryPath,
   "utf8"
 );
 const diagnosticResourcesBoundarySource = await readFile(
@@ -408,7 +425,15 @@ for (const required of requiredProviderDirectoryBoundaryPatterns) {
 for (const required of requiredClinicalResourcesBoundaryPatterns) {
   if (!required.test(clinicalResourcesBoundarySource)) {
     throw new Error(
-      "server.clinical-resources.test.ts must keep workflow, medication and service-request resource scenarios."
+      "server.clinical-resources.test.ts must keep workflow, procedure and service-request resource scenarios."
+    );
+  }
+}
+
+for (const required of requiredMedicationResourcesBoundaryPatterns) {
+  if (!required.test(medicationResourcesBoundarySource)) {
+    throw new Error(
+      "server.medication-resources-boundary.test.ts must keep medication request, dispense and administration scenarios."
     );
   }
 }
