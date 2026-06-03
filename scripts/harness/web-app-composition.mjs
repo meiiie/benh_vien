@@ -210,8 +210,14 @@ const requiredModules = [
   "apps/web/src/features/clinical-documents/clinicalDocumentCommandBuilders.ts",
   "apps/web/src/features/clinical-documents/clinicalDocumentFormatters.ts",
   "apps/web/src/features/clinical-documents/clinicalDocumentPanelRenderers.tsx",
+  "apps/web/src/features/clinical-records/AllergyIntoleranceClassificationFields.tsx",
+  "apps/web/src/features/clinical-records/AllergyIntoleranceCodeFields.tsx",
+  "apps/web/src/features/clinical-records/AllergyIntoleranceContextFields.tsx",
   "apps/web/src/features/clinical-records/AllergyIntoleranceForm.tsx",
+  "apps/web/src/features/clinical-records/AllergyIntoleranceNoteFields.tsx",
   "apps/web/src/features/clinical-records/AllergyIntolerancePanel.tsx",
+  "apps/web/src/features/clinical-records/AllergyIntoleranceReactionFields.tsx",
+  "apps/web/src/features/clinical-records/AllergyIntoleranceRecordFields.tsx",
   "apps/web/src/features/clinical-records/allergyIntoleranceHandlers.ts",
   "apps/web/src/features/clinical-records/allergyFormatters.ts",
   "apps/web/src/features/clinical-records/carePlanCommandBuilders.ts",
@@ -906,8 +912,38 @@ const featureModuleBudgets = [
   },
   {
     path: "apps/web/src/features/clinical-records/AllergyIntoleranceForm.tsx",
-    maxLines: 230,
-    role: "AllergyIntolerance safety command form"
+    maxLines: 90,
+    role: "AllergyIntolerance safety command form composition"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/AllergyIntoleranceContextFields.tsx",
+    maxLines: 60,
+    role: "AllergyIntolerance encounter reference field"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/AllergyIntoleranceClassificationFields.tsx",
+    maxLines: 120,
+    role: "AllergyIntolerance type, category and status fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/AllergyIntoleranceCodeFields.tsx",
+    maxLines: 70,
+    role: "AllergyIntolerance agent coding fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/AllergyIntoleranceReactionFields.tsx",
+    maxLines: 90,
+    role: "AllergyIntolerance reaction manifestation and severity fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/AllergyIntoleranceRecordFields.tsx",
+    maxLines: 65,
+    role: "AllergyIntolerance recorded time and recorder fields"
+  },
+  {
+    path: "apps/web/src/features/clinical-records/AllergyIntoleranceNoteFields.tsx",
+    maxLines: 60,
+    role: "AllergyIntolerance reaction description and note fields"
   },
   {
     path: "apps/web/src/features/clinical-records/ConditionPanel.tsx",
