@@ -499,6 +499,11 @@ const featureModuleBudgets = [
     role: "Runtime effect composition with grouped loader contracts"
   },
   {
+    path: "apps/web/src/application/appPatientWorkspaceLifecycle.ts",
+    maxLines: 110,
+    role: "Patient workspace lifecycle composition with grouped loader contracts"
+  },
+  {
     path: "apps/web/src/config/demoClinicalDefaults.ts",
     maxLines: 20,
     role: "Demo defaults compatibility barrel"

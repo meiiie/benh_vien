@@ -142,7 +142,6 @@ export function App() {
     loadEncounterFhirPreview,
     loadPatientFhirBundlePreview,
     loadPatientFhirDocumentBundlePreview,
-    loadPatientFhirPreview,
     loadProviderDirectoryFhirPreview
   } = fhirPreviewLoaders;
   const auditLoaders = buildAppAuditLoaders({
@@ -156,10 +155,7 @@ export function App() {
     loadGlobalAuditEvents,
     verifyAuditIntegrity
   } = auditLoaders;
-  const {
-    handleRevokeConsent,
-    loadConsents
-  } = buildConsentLoaders({
+  const consentLoaders = buildConsentLoaders({
     clinicalApi,
     ensureSelectedPatientWritable,
     loadConsentFhirPreview,
@@ -167,6 +163,7 @@ export function App() {
     ...interoperabilityState,
     setStatusMessage
   });
+  const { handleRevokeConsent } = consentLoaders;
   const recordTransferLoaders = buildRecordTransferLoaders({
     clinicalApi,
     ...interoperabilityState,
@@ -205,7 +202,6 @@ export function App() {
   });
   const {
     loadApiRuntimeInfo,
-    loadCapabilityStatement,
     loadProviderDirectory
   } = platformLoaders;
   const patientWorkspaceLoaders = buildAppPatientWorkspaceLoaders({
@@ -230,32 +226,17 @@ export function App() {
   } = patientWorkspaceLoaders;
   const patientWorkspaceLifecycle = buildAppPatientWorkspaceLifecycle({
     auditState,
+    auditLoaders,
     canReadAudit,
     clinicalRecordState,
+    consentLoaders,
     fhirPreviewState,
+    fhirPreviewLoaders,
     interoperabilityState,
     isAuditOnlySession,
-    loadAllergyIntolerances,
-    loadAuditEvents,
-    loadClinicalDocuments,
-    loadConditions,
-    loadConsentFhirPreview,
-    loadConsents,
-    loadDiagnosticReports,
-    loadEncounters,
-    loadImagingStudies,
-    loadMedicationAdministrations,
-    loadMedicationDispenses,
-    loadMedicationRequests,
-    loadObservations,
-    loadPatientFhirBundlePreview,
-    loadPatientFhirDocumentBundlePreview,
-    loadPatientFhirPreview,
-    loadProcedures,
-    loadRecordTransfers,
-    loadServiceRequests,
-    loadWorkflowTasks,
-    platformState
+    patientWorkspaceLoaders,
+    platformState,
+    recordTransferLoaders
   });
   const {
     clearPatientWorkspaceState,
