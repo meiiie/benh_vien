@@ -503,6 +503,31 @@ const domainBudgets = [
     role: "Consent status, category, snapshot and command input types"
   },
   {
+    path: "packages/domain/src/consent/consent.test.ts",
+    maxLines: 70,
+    role: "Consent record-sharing authorization test scenarios"
+  },
+  {
+    path: "packages/domain/src/consent/consent.revocation.test.ts",
+    maxLines: 100,
+    role: "Consent revocation lifecycle test scenarios"
+  },
+  {
+    path: "packages/domain/src/consent/consent.fhir-mapping.test.ts",
+    maxLines: 100,
+    role: "Consent FHIR mapping test scenarios"
+  },
+  {
+    path: "packages/domain/src/consent/consent.rehydration.test.ts",
+    maxLines: 100,
+    role: "Consent persisted snapshot invariant test scenarios"
+  },
+  {
+    path: "packages/domain/src/consent/consent.test-support.ts",
+    maxLines: 60,
+    role: "Consent shared domain test fixture helpers"
+  },
+  {
     path: "packages/domain/src/fhir/fhir-types.ts",
     maxLines: 20,
     role: "FHIR compatibility barrel exports"

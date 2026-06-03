@@ -76,7 +76,7 @@ export function normalizePersistedConsentSnapshot(
   }
 
   if (snapshot.status !== "revoked" && (revokedByActorId || revokedAt || revocationReason)) {
-    throw new DomainError("Consent chưa thu hồi không được có metadata thu hồi.");
+    throw new DomainError("Consent chưa thu hồi không được có siêu dữ liệu thu hồi.");
   }
 
   if (revokedAt) {
