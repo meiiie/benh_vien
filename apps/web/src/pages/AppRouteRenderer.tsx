@@ -1,201 +1,93 @@
-import type { FormEvent } from "react";
-import type { LoginForm } from "../auth/demoLogin.js";
-import type {
-  ApiRuntimeInfo,
-  AuthSession
-} from "../types/appRuntime.js";
-import type { Patient } from "../types/patientRegistry.js";
-import type {
-  GatewayAcknowledgementForm,
-  RecordTransfer
-} from "../types/recordTransfers.js";
 import { AuditLogPage } from "./AuditLogPage.js";
 import { DashboardPage } from "./DashboardPage.js";
-import type {
-  AppRoutePanels,
-  FhirPreviewValues,
-  ReferenceSignal
-} from "../application/appRouteModels.js";
-import type { AuthenticatedAppRoute } from "../config/appNavigation.js";
-import type { DashboardMetrics } from "../application/dashboardMetrics.js";
-import { defaultRecordTransferForm } from "../config/demoTransferDefaults.js";
 import { DocumentsPage } from "./DocumentsPage.js";
-import { GatewayAcknowledgementPage } from "./GatewayAcknowledgementPage.js";
-import { InteropPage } from "./InteropPage.js";
-import type { ProviderDirectory } from "../types/providerDirectory.js";
+import { IntegrationGatewayRouteRenderer } from "./IntegrationGatewayRouteRenderer.js";
+import { InteropRouteRenderer } from "./InteropRouteRenderer.js";
 import { SettingsPage } from "./SettingsPage.js";
-import { WorkspacePage } from "./WorkspacePage.js";
+import { WorkspaceRouteRenderer } from "./WorkspaceRouteRenderer.js";
+import type { AppRouteRendererProps } from "./AppRouteRendererTypes.js";
 
-type AppRouteRendererProps = {
-  readonly apiBaseUrl: string;
-  readonly apiRuntimeInfo?: ApiRuntimeInfo;
-  readonly apiRuntimeWarning?: string;
-  readonly appRoute: AuthenticatedAppRoute;
-  readonly authSession?: AuthSession;
-  readonly canMergePatients: boolean;
-  readonly canViewRuntimeInfo: boolean;
-  readonly dashboardMetrics: DashboardMetrics;
-  readonly fhirPreviews: FhirPreviewValues;
-  readonly gatewayAcknowledgementForm: GatewayAcknowledgementForm;
-  readonly gatewayAcknowledgementResult?: RecordTransfer;
-  readonly isIntegrationSession: boolean;
-  readonly isSubmittingGatewayAcknowledgement: boolean;
-  readonly latestEncounterServiceType?: string;
-  readonly loginForm: LoginForm;
-  readonly panels: AppRoutePanels;
-  readonly providerDirectory?: ProviderDirectory;
-  readonly referenceSignals: readonly ReferenceSignal[];
-  readonly selectedPatient?: Patient;
-  readonly workflowSteps: readonly string[];
-  readonly onGatewayAcknowledgementFormChange: (
-    form: GatewayAcknowledgementForm
-  ) => void;
-  readonly onGatewayAcknowledgementSubmit: (
-    event: FormEvent<HTMLFormElement>
-  ) => void;
-  readonly onNavigate: (route: AuthenticatedAppRoute) => void;
-  readonly onReloadRuntimeInfo: () => void;
-};
-
-export function AppRouteRenderer({
-  apiBaseUrl,
-  apiRuntimeInfo,
-  apiRuntimeWarning,
-  appRoute,
-  authSession,
-  canMergePatients,
-  canViewRuntimeInfo,
-  dashboardMetrics,
-  fhirPreviews,
-  gatewayAcknowledgementForm,
-  gatewayAcknowledgementResult,
-  isIntegrationSession,
-  isSubmittingGatewayAcknowledgement,
-  latestEncounterServiceType,
-  loginForm,
-  panels,
-  providerDirectory,
-  referenceSignals,
-  selectedPatient,
-  workflowSteps,
-  onGatewayAcknowledgementFormChange,
-  onGatewayAcknowledgementSubmit,
-  onNavigate,
-  onReloadRuntimeInfo
-}: AppRouteRendererProps) {
-  if (isIntegrationSession) {
+export function AppRouteRenderer(props: AppRouteRendererProps) {
+  if (props.isIntegrationSession) {
     return (
-      <GatewayAcknowledgementPage
-        apiBaseUrl={apiBaseUrl}
-        authSession={authSession}
-        form={gatewayAcknowledgementForm}
-        isSubmitting={isSubmittingGatewayAcknowledgement}
-        onFormChange={onGatewayAcknowledgementFormChange}
-        onSubmit={onGatewayAcknowledgementSubmit}
-        result={gatewayAcknowledgementResult}
+      <IntegrationGatewayRouteRenderer
+        apiBaseUrl={props.apiBaseUrl}
+        authSession={props.authSession}
+        gatewayAcknowledgementForm={props.gatewayAcknowledgementForm}
+        gatewayAcknowledgementResult={props.gatewayAcknowledgementResult}
+        isSubmittingGatewayAcknowledgement={
+          props.isSubmittingGatewayAcknowledgement
+        }
+        onGatewayAcknowledgementFormChange={
+          props.onGatewayAcknowledgementFormChange
+        }
+        onGatewayAcknowledgementSubmit={props.onGatewayAcknowledgementSubmit}
       />
     );
   }
 
-  if (appRoute === "workspace") {
+  if (props.appRoute === "workspace") {
     return (
-      <WorkspacePage
-        allergyIntolerancePanel={panels.allergyIntolerance()}
-        conditionPanel={panels.condition()}
-        createPatientPanel={panels.createPatient()}
-        diagnosticReportPanel={panels.diagnosticReport()}
-        encounterPanel={panels.encounter()}
-        imagingStudyPanel={panels.imagingStudy()}
-        medicationAdministrationPanel={panels.medicationAdministration()}
-        medicationDispensePanel={panels.medicationDispense()}
-        medicationRequestPanel={panels.medicationRequest()}
-        observationPanel={panels.observation()}
-        patientDetailPanel={panels.patientDetail()}
-        patientListPanel={panels.patientList()}
-        patientMergePanel={canMergePatients ? panels.patientMerge() : undefined}
-        procedurePanel={panels.procedure()}
-        serviceRequestPanel={panels.serviceRequest()}
-        workflowTaskPanel={panels.workflowTask()}
+      <WorkspaceRouteRenderer
+        canMergePatients={props.canMergePatients}
+        panels={props.panels}
       />
     );
   }
 
-  if (appRoute === "documents") {
+  if (props.appRoute === "documents") {
     return (
       <DocumentsPage
-        documentFhirPreview={fhirPreviews.document}
-        documentPanel={panels.clinicalDocument()}
-        documentProvenanceFhirPreview={fhirPreviews.documentProvenance}
-        patientListPanel={panels.patientList()}
+        documentFhirPreview={props.fhirPreviews.document}
+        documentPanel={props.panels.clinicalDocument()}
+        documentProvenanceFhirPreview={props.fhirPreviews.documentProvenance}
+        patientListPanel={props.panels.patientList()}
       />
     );
   }
 
-  if (appRoute === "audit") {
+  if (props.appRoute === "audit") {
     return (
       <AuditLogPage
-        auditPanel={panels.audit()}
-        globalAuditPanel={panels.globalAudit()}
+        auditPanel={props.panels.audit()}
+        globalAuditPanel={props.panels.globalAudit()}
       />
     );
   }
 
-  if (appRoute === "interop") {
+  if (props.appRoute === "interop") {
     return (
-      <InteropPage
-        allergyIntoleranceFhirPreview={fhirPreviews.allergyIntolerance}
-        capabilityStatementPreview={fhirPreviews.capabilityStatement}
-        conditionFhirPreview={fhirPreviews.condition}
-        consentFhirPreview={fhirPreviews.consent}
-        consentInteropPanel={panels.consentInterop()}
-        diagnosticReportFhirPreview={fhirPreviews.diagnosticReport}
-        documentFhirPreview={fhirPreviews.document}
-        documentProvenanceFhirPreview={fhirPreviews.documentProvenance}
-        encounterFhirPreview={fhirPreviews.encounter}
-        imagingStudyFhirPreview={fhirPreviews.imagingStudy}
-        medicationAdministrationFhirPreview={fhirPreviews.medicationAdministration}
-        medicationDispenseFhirPreview={fhirPreviews.medicationDispense}
-        medicationRequestFhirPreview={fhirPreviews.medicationRequest}
-        observationFhirPreview={fhirPreviews.observation}
-        patientFhirBundlePreview={fhirPreviews.patientBundle}
-        patientFhirDocumentBundlePreview={fhirPreviews.patientDocumentBundle}
-        patientFhirPreview={fhirPreviews.patient}
-        procedureFhirPreview={fhirPreviews.procedure}
-        providerDirectory={providerDirectory}
-        providerDirectoryFhirPreview={fhirPreviews.providerDirectory}
-        providerDirectoryPanel={panels.providerDirectory()}
-        recordTransferFhirTaskPreview={fhirPreviews.recordTransferTask}
-        recordTransferInteropPanel={panels.recordTransferInterop()}
-        referenceSignals={referenceSignals}
-        serviceRequestFhirPreview={fhirPreviews.serviceRequest}
-        selectedPatient={selectedPatient}
-        transferContext={defaultRecordTransferForm}
-        workflowSteps={workflowSteps}
-        workflowTaskFhirPreview={fhirPreviews.workflowTask}
+      <InteropRouteRenderer
+        fhirPreviews={props.fhirPreviews}
+        panels={props.panels}
+        providerDirectory={props.providerDirectory}
+        referenceSignals={props.referenceSignals}
+        selectedPatient={props.selectedPatient}
+        workflowSteps={props.workflowSteps}
       />
     );
   }
 
-  if (appRoute === "settings") {
+  if (props.appRoute === "settings") {
     return (
       <SettingsPage
-        apiBaseUrl={apiBaseUrl}
-        apiRuntimeInfo={apiRuntimeInfo}
-        apiRuntimeWarning={apiRuntimeWarning}
-        authSession={authSession}
-        canViewRuntimeInfo={canViewRuntimeInfo}
-        loginForm={loginForm}
-        onReloadRuntimeInfo={onReloadRuntimeInfo}
+        apiBaseUrl={props.apiBaseUrl}
+        apiRuntimeInfo={props.apiRuntimeInfo}
+        apiRuntimeWarning={props.apiRuntimeWarning}
+        authSession={props.authSession}
+        canViewRuntimeInfo={props.canViewRuntimeInfo}
+        loginForm={props.loginForm}
+        onReloadRuntimeInfo={props.onReloadRuntimeInfo}
       />
     );
   }
 
   return (
     <DashboardPage
-      latestEncounterServiceType={latestEncounterServiceType}
-      metrics={dashboardMetrics}
-      onNavigate={onNavigate}
-      selectedPatient={selectedPatient}
+      latestEncounterServiceType={props.latestEncounterServiceType}
+      metrics={props.dashboardMetrics}
+      onNavigate={props.onNavigate}
+      selectedPatient={props.selectedPatient}
     />
   );
 }

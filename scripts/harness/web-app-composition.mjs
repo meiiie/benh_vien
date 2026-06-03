@@ -7,6 +7,7 @@ const appNavigationPath = resolve("apps/web/src/config/appNavigation.ts");
 const appRouteModelsPath = resolve("apps/web/src/application/appRouteModels.ts");
 const appRoutePanelsPath = resolve("apps/web/src/application/appRoutePanels.ts");
 const appRouteRendererPath = resolve("apps/web/src/pages/AppRouteRenderer.tsx");
+const appRouteRendererTypesPath = resolve("apps/web/src/pages/AppRouteRendererTypes.ts");
 const appShellPath = resolve("apps/web/src/components/AppShell.tsx");
 const auditLogPagePath = resolve("apps/web/src/pages/AuditLogPage.tsx");
 const auditPanelsPath = resolve("apps/web/src/features/audit/AuditPanels.tsx");
@@ -38,6 +39,13 @@ const fhirDocumentBundleSummaryPath = resolve(
 );
 const gatewayAcknowledgementPagePath = resolve(
   "apps/web/src/pages/GatewayAcknowledgementPage.tsx"
+);
+const integrationGatewayRouteRendererPath = resolve(
+  "apps/web/src/pages/IntegrationGatewayRouteRenderer.tsx"
+);
+const interopRouteRendererPath = resolve("apps/web/src/pages/InteropRouteRenderer.tsx");
+const workspaceRouteRendererPath = resolve(
+  "apps/web/src/pages/WorkspaceRouteRenderer.tsx"
 );
 const consentInteropPanelPath = resolve(
   "apps/web/src/features/consents/ConsentInteropPanel.tsx"
@@ -421,14 +429,18 @@ const requiredModules = [
   "apps/web/src/lib/fhirPreviewLoader.ts",
   "apps/web/src/lib/patientScopedCollectionLoader.ts",
   "apps/web/src/pages/AppRouteRenderer.tsx",
+  "apps/web/src/pages/AppRouteRendererTypes.ts",
   "apps/web/src/pages/AuditLogPage.tsx",
   "apps/web/src/pages/DashboardPage.tsx",
   "apps/web/src/pages/DocumentsPage.tsx",
   "apps/web/src/pages/GatewayAcknowledgementPage.tsx",
+  "apps/web/src/pages/IntegrationGatewayRouteRenderer.tsx",
+  "apps/web/src/pages/InteropRouteRenderer.tsx",
   "apps/web/src/pages/InteropPage.tsx",
   "apps/web/src/pages/LandingPage.tsx",
   "apps/web/src/pages/LoginPage.tsx",
   "apps/web/src/pages/SettingsPage.tsx",
+  "apps/web/src/pages/WorkspaceRouteRenderer.tsx",
   "apps/web/src/pages/WorkspacePage.tsx",
   "apps/web/src/types/allergies.ts",
   "apps/web/src/types/appRuntime.ts",
@@ -616,6 +628,31 @@ const featureModuleBudgets = [
     path: "apps/web/src/features/fhir-preview/selectedRecordTransferFhirPreviewEffect.ts",
     maxLines: 50,
     role: "Selected record-transfer FHIR Task and delivery-attempt effect"
+  },
+  {
+    path: "apps/web/src/pages/AppRouteRenderer.tsx",
+    maxLines: 100,
+    role: "Authenticated route shell composition"
+  },
+  {
+    path: "apps/web/src/pages/AppRouteRendererTypes.ts",
+    maxLines: 70,
+    role: "Authenticated route renderer contract"
+  },
+  {
+    path: "apps/web/src/pages/IntegrationGatewayRouteRenderer.tsx",
+    maxLines: 50,
+    role: "Integration gateway route renderer"
+  },
+  {
+    path: "apps/web/src/pages/WorkspaceRouteRenderer.tsx",
+    maxLines: 60,
+    role: "Workspace route panel composition"
+  },
+  {
+    path: "apps/web/src/pages/InteropRouteRenderer.tsx",
+    maxLines: 80,
+    role: "Interop route FHIR preview composition"
   },
   {
     path: "apps/web/src/features/audit/AuditPanels.tsx",
@@ -1369,7 +1406,13 @@ const appDerivedContextSource = await readFile(appDerivedContextPath, "utf8");
 const appNavigationSource = await readFile(appNavigationPath, "utf8");
 const appRouteModelsSource = await readFile(appRouteModelsPath, "utf8");
 const appRoutePanelsSource = await readFile(appRoutePanelsPath, "utf8");
-const appRouteRendererSource = await readFile(appRouteRendererPath, "utf8");
+const appRouteRendererSource = [
+  await readFile(appRouteRendererPath, "utf8"),
+  await readFile(appRouteRendererTypesPath, "utf8"),
+  await readFile(integrationGatewayRouteRendererPath, "utf8"),
+  await readFile(interopRouteRendererPath, "utf8"),
+  await readFile(workspaceRouteRendererPath, "utf8")
+].join("\n");
 const appShellSource = await readFile(appShellPath, "utf8");
 const auditLogPageSource = await readFile(auditLogPagePath, "utf8");
 const auditPanelsSource = [
