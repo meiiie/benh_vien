@@ -158,6 +158,26 @@ const domainBudgets = [
     role: "AccessControl role-permission catalog"
   },
   {
+    path: "packages/domain/src/access-control/access-control.test.ts",
+    maxLines: 80,
+    role: "AccessControl patient treatment organization scope test scenarios"
+  },
+  {
+    path: "packages/domain/src/access-control/access-control.active-scope.test.ts",
+    maxLines: 140,
+    role: "AccessControl active PractitionerRole and organization scope test scenarios"
+  },
+  {
+    path: "packages/domain/src/access-control/access-control.permissions.test.ts",
+    maxLines: 130,
+    role: "AccessControl audit, admin, integration and clinical permission test scenarios"
+  },
+  {
+    path: "packages/domain/src/access-control/access-control.test-support.ts",
+    maxLines: 110,
+    role: "AccessControl shared provider directory test fixture"
+  },
+  {
     path: "packages/domain/src/patient/patient.ts",
     maxLines: 230,
     role: "Patient aggregate demographic update and merge behavior"
