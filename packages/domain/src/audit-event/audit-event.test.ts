@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  mapAuditEventToFhir,
-  mapAuditEventsToFhirBundle
-} from "../fhir/map-audit-event-to-fhir.js";
+import { DomainError } from "../shared/domain-error.js";
 import { AuditEvent, buildAuditIntegrityReport, sealAuditEvent } from "./audit-event.js";
 
 describe("AuditEvent integrity chain", () => {
@@ -106,84 +103,84 @@ describe("AuditEvent integrity chain", () => {
     });
   });
 
-  it("maps sealed audit events to FHIR AuditEvent and collection Bundle", () => {
-    const sealed = sealAuditEvent(
+  it("rejects invalid audit event payloads and seal metadata", () => {
+    const baseInput = createAuditEventInput();
+    const snapshot = AuditEvent.record(baseInput).toSnapshot();
+
+    expect(() =>
       AuditEvent.record({
-        id: "audit-event-test-005",
-        occurredAt: new Date("2026-05-28T00:02:00.000Z"),
-        actorId: "auditor-test",
-        action: "audit-event.fhir-export",
-        resourceType: "AuditEvent",
-        resourceId: "patient-test-001",
-        patientId: "patient-test-001",
-        purposeOfUse: "AUDIT",
-        ipAddress: "127.0.0.1",
-        metadata: {
-          format: "Bundle.collection"
-        }
+        ...baseInput,
+        occurredAt: new Date("not-a-date")
       })
-    );
+    ).toThrow(DomainError);
 
-    expect(mapAuditEventToFhir(sealed)).toMatchObject({
-      resourceType: "AuditEvent",
-      id: "audit-event-test-005",
-      type: {
-        code: "rest"
+    expect(() =>
+      AuditEvent.record({
+        ...baseInput,
+        action: "patient.delete" as never
+      })
+    ).toThrow(DomainError);
+
+    for (const invalidSnapshot of [
+      {
+        ...snapshot,
+        occurredAt: "not-a-date"
       },
-      subtype: [
-        {
-          code: "audit-event.fhir-export"
-        }
-      ],
-      action: "R",
-      recorded: "2026-05-28T00:02:00.000Z",
-      outcome: "0",
-      agent: [
-        {
-          who: {
-            reference: "Practitioner/auditor-test"
-          },
-          requestor: true,
-          purposeOfUse: [
-            {
-              code: "AUDIT"
-            }
-          ],
-          network: {
-            address: "127.0.0.1",
-            type: "2"
-          }
-        }
-      ],
-      entity: [
-        {
-          what: {
-            reference: "AuditEvent/patient-test-001"
-          }
-        }
-      ]
-    });
+      {
+        ...snapshot,
+        action: "patient.delete" as never
+      },
+      {
+        ...snapshot,
+        resourceType: "Binary" as never
+      },
+      {
+        ...snapshot,
+        metadata: null as never
+      },
+      {
+        ...snapshot,
+        hashAlgorithm: "sha1" as never,
+        payloadHash: "a".repeat(64),
+        integrityHash: "b".repeat(64)
+      },
+      {
+        ...snapshot,
+        hashAlgorithm: "sha256" as const,
+        payloadHash: "not-a-sha256",
+        integrityHash: "b".repeat(64)
+      },
+      {
+        ...snapshot,
+        hashAlgorithm: "sha256" as const,
+        payloadHash: "a".repeat(64)
+      }
+    ]) {
+      expect(() => AuditEvent.rehydrate(invalidSnapshot)).toThrow(DomainError);
+    }
 
-    const bundle = mapAuditEventsToFhirBundle(
-      "patient-test-001",
-      [sealed],
-      new Date("2026-05-28T00:03:00.000Z")
+    expect(() => sealAuditEvent(AuditEvent.rehydrate(snapshot), "not-a-sha256")).toThrow(
+      DomainError
     );
-
-    expect(bundle).toMatchObject({
-      resourceType: "Bundle",
-      id: "patient-audit-patient-test-001",
-      type: "collection",
-      timestamp: "2026-05-28T00:03:00.000Z",
-      entry: [
-        {
-          fullUrl: "urn:wiiicare:nexus:AuditEvent:audit-event-test-005",
-          resource: {
-            resourceType: "AuditEvent",
-            id: "audit-event-test-005"
-          }
-        }
-      ]
-    });
+    expect(() =>
+      buildAuditIntegrityReport("patient-test-001", [], new Date("not-a-date"))
+    ).toThrow(DomainError);
   });
+
 });
+
+function createAuditEventInput(): Parameters<typeof AuditEvent.record>[0] {
+  return {
+    id: "audit-event-invalid-fixture",
+    occurredAt: new Date("2026-05-28T00:00:00.000Z"),
+    actorId: "auditor-test",
+    action: "patient.read",
+    resourceType: "Patient",
+    resourceId: "patient-test-001",
+    patientId: "patient-test-001",
+    purposeOfUse: "AUDIT",
+    metadata: {
+      actorRole: "auditor"
+    }
+  };
+}

@@ -12,6 +12,8 @@ export * from "./procedure/procedure.js";
 export * from "./procedure/procedure.repository.js";
 export * from "./provider-directory/provider-directory.js";
 export * from "./provider-directory/provider-directory.repository.js";
+export * from "./record-transfer-delivery-attempt/record-transfer-delivery-attempt.js";
+export * from "./record-transfer-delivery-attempt/record-transfer-delivery-attempt.repository.js";
 export * from "./record-transfer/record-transfer.js";
 export * from "./record-transfer/record-transfer.repository.js";
 export * from "./encounter/encounter.js";

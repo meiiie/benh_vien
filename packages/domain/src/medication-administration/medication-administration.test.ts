@@ -100,4 +100,127 @@ describe("MedicationAdministration", () => {
       })
     ).toThrow(DomainError);
   });
+
+  it("rejects invalid rehydrated medication administration metadata", () => {
+    const snapshot = MedicationAdministration.record({
+      id: "medication-administration-test-004",
+      patientId: "patient-test-001",
+      encounterId: "encounter-test-001",
+      medicationRequestId: "medication-request-test-001",
+      status: "completed",
+      category: "inpatient",
+      medicationCode: {
+        system: "http://www.whocc.no/atc",
+        code: "J01CA04",
+        display: "Amoxicillin"
+      },
+      effectivePeriod: {
+        start: "2026-05-27T04:30:00.000Z",
+        end: "2026-05-27T04:35:00.000Z"
+      },
+      performers: [
+        {
+          actorType: "Practitioner",
+          actorId: "nurse-test-001"
+        }
+      ],
+      dosage: {
+        text: "500 mg by mouth after meals",
+        doseQuantity: {
+          value: 500,
+          unit: "mg",
+          system: "http://unitsofmeasure.org",
+          code: "mg"
+        }
+      }
+    }).toSnapshot();
+
+    expect(() =>
+      MedicationAdministration.rehydrate({
+        ...snapshot,
+        status: "dispensed" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      MedicationAdministration.rehydrate({
+        ...snapshot,
+        category: "emergency" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      MedicationAdministration.rehydrate({
+        ...snapshot,
+        medicationCode: {
+          ...snapshot.medicationCode,
+          code: " "
+        }
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      MedicationAdministration.rehydrate({
+        ...snapshot,
+        effectivePeriod: {}
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      MedicationAdministration.rehydrate({
+        ...snapshot,
+        effectivePeriod: {
+          start: "2026-05-27T04:35:00.000Z",
+          end: "2026-05-27T04:30:00.000Z"
+        }
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      MedicationAdministration.rehydrate({
+        ...snapshot,
+        performers: [
+          {
+            actorType: "Organization" as never,
+            actorId: "ward-test-001"
+          }
+        ]
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      MedicationAdministration.rehydrate({
+        ...snapshot,
+        performers: [
+          {
+            actorType: "Practitioner",
+            actorId: " "
+          }
+        ]
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      MedicationAdministration.rehydrate({
+        ...snapshot,
+        dosage: {
+          text: "Missing administered dose"
+        }
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      MedicationAdministration.rehydrate({
+        ...snapshot,
+        createdAt: "not-a-date"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      MedicationAdministration.rehydrate({
+        ...snapshot,
+        updatedAt: "1999-01-01T00:00:00.000Z"
+      })
+    ).toThrow(DomainError);
+  });
 });

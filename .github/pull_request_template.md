@@ -4,6 +4,7 @@ Mô tả ngắn gọn thay đổi và lý do.
 
 ## Kiểm tra đã chạy
 
+- [ ] `pnpm run ci`
 - [ ] `pnpm check`
 - [ ] `pnpm test`
 - [ ] `pnpm build`
@@ -21,4 +22,3 @@ Mô tả ngắn gọn thay đổi và lý do.
 ## Ghi chú y tế/tuân thủ
 
 Nếu thay đổi liên quan bệnh án, định danh bệnh nhân, FHIR, DICOM, audit hoặc phân quyền, ghi rõ căn cứ và rủi ro còn lại.
-

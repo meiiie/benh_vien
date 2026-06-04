@@ -97,4 +97,101 @@ describe("WorkflowTask", () => {
       })
     ).toThrow(DomainError);
   });
+
+  it("rejects invalid workflow task timelines", () => {
+    const baseTask = {
+      id: "task-test-invalid-timeline-001",
+      patientId: "patient-test-001",
+      status: "accepted" as const,
+      code: {
+        system: "urn:wiiicare:nexus:task-code",
+        code: "fulfill-laboratory-order",
+        display: "Thực hiện chỉ định xét nghiệm"
+      },
+      inputReferences: [],
+      outputReferences: []
+    };
+
+    expect(() =>
+      WorkflowTask.create({
+        ...baseTask,
+        authoredOn: "2026-05-27T04:00:00.000Z",
+        lastModified: "2026-05-27T03:59:59.000Z"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      WorkflowTask.create({
+        ...baseTask,
+        authoredOn: "2026-05-27T04:00:00.000Z",
+        executionPeriod: {
+          start: "2026-05-27T03:59:59.000Z"
+        }
+      })
+    ).toThrow(DomainError);
+  });
+
+  it("rejects invalid rehydrated workflow task metadata", () => {
+    const snapshot = WorkflowTask.create({
+      id: "task-test-invalid-rehydrate-001",
+      patientId: "patient-test-001",
+      status: "accepted",
+      code: {
+        system: "urn:wiiicare:nexus:task-code",
+        code: "fulfill-imaging-order",
+        display: "Thực hiện chỉ định chẩn đoán hình ảnh"
+      },
+      authoredOn: "2026-05-27T04:00:00.000Z",
+      lastModified: "2026-05-27T04:05:00.000Z",
+      inputReferences: [],
+      outputReferences: []
+    }).toSnapshot();
+
+    expect(() =>
+      WorkflowTask.rehydrate({
+        ...snapshot,
+        status: "done" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      WorkflowTask.rehydrate({
+        ...snapshot,
+        intent: "request" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      WorkflowTask.rehydrate({
+        ...snapshot,
+        priority: "normal" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      WorkflowTask.rehydrate({
+        ...snapshot,
+        inputReferences: [
+          {
+            resourceType: "Patient" as never,
+            id: "patient-test-001"
+          }
+        ]
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      WorkflowTask.rehydrate({
+        ...snapshot,
+        lastModified: "2026-05-27T03:59:59.000Z"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      WorkflowTask.rehydrate({
+        ...snapshot,
+        updatedAt: "1999-01-01T00:00:00.000Z"
+      })
+    ).toThrow(DomainError);
+  });
 });

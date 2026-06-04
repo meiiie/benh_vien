@@ -101,6 +101,87 @@ describe("auth session tokens", () => {
     ).toBeUndefined();
   });
 
+  it("normalizes actors and rejects unsafe signed actor claims", () => {
+    const issuedAt = new Date("2026-05-27T00:00:00.000Z");
+    const now = Math.floor(issuedAt.getTime() / 1000);
+    const normalizedSession = createAccessToken(
+      {
+        actorId: "  practitioner-demo-001  ",
+        displayName: "  Bac   si   dieu tri  ",
+        role: "clinician"
+      },
+      issuedAt
+    );
+
+    expect(verifyAccessToken(normalizedSession.accessToken, issuedAt)).toMatchObject({
+      actor: {
+        actorId: "practitioner-demo-001",
+        displayName: "Bac si dieu tri",
+        role: "clinician"
+      }
+    });
+
+    for (const payload of [
+      {
+        actorId: " ",
+        displayName: "Bac si dieu tri",
+        role: "clinician" as const,
+        iat: now,
+        exp: now + 600
+      },
+      {
+        actorId: "practitioner-demo-001",
+        displayName: " ",
+        role: "clinician" as const,
+        iat: now,
+        exp: now + 600
+      },
+      {
+        actorId: "practitioner-demo-001",
+        displayName: "Bac si dieu tri",
+        role: "super-admin" as never,
+        iat: now,
+        exp: now + 600
+      }
+    ]) {
+      expect(verifyAccessToken(buildSignedToken(payload), issuedAt)).toBeUndefined();
+    }
+
+    expect(() =>
+      createAccessToken(
+        {
+          actorId: " ",
+          displayName: "Bac si dieu tri",
+          role: "clinician"
+        },
+        issuedAt
+      )
+    ).toThrow("Authenticated actor is invalid");
+  });
+
+  it("rejects invalid clock inputs", () => {
+    const validSession = createAccessToken(
+      {
+        actorId: "practitioner-demo-001",
+        displayName: "Bac si dieu tri",
+        role: "clinician"
+      },
+      new Date("2026-05-27T00:00:00.000Z")
+    );
+
+    expect(verifyAccessToken(validSession.accessToken, new Date("not-a-date"))).toBeUndefined();
+    expect(() =>
+      createAccessToken(
+        {
+          actorId: "practitioner-demo-001",
+          displayName: "Bac si dieu tri",
+          role: "clinician"
+        },
+        new Date("not-a-date")
+      )
+    ).toThrow("issued time is invalid");
+  });
+
   it("rejects oversized or malformed token segments before deep verification", () => {
     const validSession = createAccessToken(
       {

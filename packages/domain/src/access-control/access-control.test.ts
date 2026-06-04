@@ -2,70 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   canAccessPatientRecord,
   filterAccessiblePatientRecords,
-  type ActorContext,
-  type ProviderDirectorySnapshot
+  type ActorContext
 } from "../index.js";
-
-const providerDirectory: Pick<ProviderDirectorySnapshot, "organizations" | "practitionerRoles"> = {
-  organizations: [
-    {
-      id: "hospital-a",
-      identifiers: [],
-      active: true,
-      type: "hospital",
-      name: "Hospital A",
-      createdAt: "2026-05-28T00:00:00.000Z",
-      updatedAt: "2026-05-28T00:00:00.000Z"
-    },
-    {
-      id: "department-a",
-      identifiers: [],
-      active: true,
-      type: "department",
-      name: "Department A",
-      partOfOrganizationId: "hospital-a",
-      createdAt: "2026-05-28T00:00:00.000Z",
-      updatedAt: "2026-05-28T00:00:00.000Z"
-    },
-    {
-      id: "hospital-b",
-      identifiers: [],
-      active: true,
-      type: "hospital",
-      name: "Hospital B",
-      createdAt: "2026-05-28T00:00:00.000Z",
-      updatedAt: "2026-05-28T00:00:00.000Z"
-    }
-  ],
-  practitionerRoles: [
-    {
-      id: "role-practitioner-001",
-      practitionerId: "practitioner-001",
-      organizationId: "department-a",
-      active: true,
-      code: {
-        system: "urn:test",
-        code: "doctor",
-        display: "Doctor"
-      },
-      createdAt: "2026-05-28T00:00:00.000Z",
-      updatedAt: "2026-05-28T00:00:00.000Z"
-    },
-    {
-      id: "role-practitioner-inactive",
-      practitionerId: "practitioner-001",
-      organizationId: "hospital-b",
-      active: false,
-      code: {
-        system: "urn:test",
-        code: "doctor",
-        display: "Doctor"
-      },
-      createdAt: "2026-05-28T00:00:00.000Z",
-      updatedAt: "2026-05-28T00:00:00.000Z"
-    }
-  ]
-};
+import { providerDirectory } from "./access-control.test-support.js";
 
 describe("patient record access control", () => {
   it("allows treatment users only for patients managed by their active organization", () => {
@@ -86,34 +25,15 @@ describe("patient record access control", () => {
     ).toBe(false);
   });
 
-  it("keeps audit and admin access explicit", () => {
-    const auditor: ActorContext = {
-      actorId: "auditor-001",
-      role: "auditor",
-      purposeOfUse: "AUDIT"
-    };
-    const auditorWithTreatmentPurpose: ActorContext = {
-      ...auditor,
+  it("includes active child organizations when a practitioner is scoped to the parent hospital", () => {
+    const actor: ActorContext = {
+      actorId: "practitioner-hospital",
+      role: "clinician",
       purposeOfUse: "TREATMENT"
-    };
-    const admin: ActorContext = {
-      actorId: "admin-001",
-      role: "admin",
-      purposeOfUse: "OPERATIONS"
     };
 
     expect(
-      canAccessPatientRecord(auditor, { managingOrganizationId: "hospital-x" }, providerDirectory)
-    ).toBe(true);
-    expect(
-      canAccessPatientRecord(
-        auditorWithTreatmentPurpose,
-        { managingOrganizationId: "hospital-x" },
-        providerDirectory
-      )
-    ).toBe(false);
-    expect(
-      canAccessPatientRecord(admin, { managingOrganizationId: "hospital-x" }, providerDirectory)
+      canAccessPatientRecord(actor, { managingOrganizationId: "department-a" }, providerDirectory)
     ).toBe(true);
   });
 

@@ -1,112 +1,43 @@
 import { DomainError } from "../shared/domain-error.js";
+import {
+  buildRegisteredPatientProps,
+  buildRehydratedPatientProps
+} from "./patient.factory.js";
+import {
+  assertValidDate,
+  normalizeBirthDate,
+  normalizeGender,
+  normalizeIdentifier,
+  normalizeOptionalText,
+  normalizeRequiredText,
+  normalizeText
+} from "./patient.validation.js";
+import type {
+  AdministrativeGender,
+  PatientIdentifier,
+  PatientProps,
+  PatientSnapshot,
+  RegisterPatientInput
+} from "./patient.types.js";
 
-export type AdministrativeGender = "male" | "female" | "other" | "unknown";
-
-export type PatientIdentifierType =
-  | "national-id"
-  | "insurance-id"
-  | "hospital-mrn"
-  | "legacy-id";
-
-export type PatientRecordStatus = "active" | "merged" | "inactive";
-
-export type PatientIdentifier = {
-  readonly system: string;
-  readonly value: string;
-  readonly type: PatientIdentifierType;
-};
-
-export type PatientSnapshot = {
-  readonly id: string;
-  readonly identifiers: readonly PatientIdentifier[];
-  readonly fullName: string;
-  readonly birthDate?: string;
-  readonly gender: AdministrativeGender;
-  readonly address?: string;
-  readonly phone?: string;
-  readonly managingOrganizationId: string;
-  readonly status: PatientRecordStatus;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type RegisterPatientInput = {
-  readonly id: string;
-  readonly identifiers: readonly PatientIdentifier[];
-  readonly fullName: string;
-  readonly birthDate?: string;
-  readonly gender?: AdministrativeGender;
-  readonly address?: string;
-  readonly phone?: string;
-  readonly managingOrganizationId: string;
-};
-
-type PatientProps = {
-  id: string;
-  identifiers: PatientIdentifier[];
-  fullName: string;
-  birthDate?: string;
-  gender: AdministrativeGender;
-  address?: string;
-  phone?: string;
-  managingOrganizationId: string;
-  status: PatientRecordStatus;
-  createdAt: Date;
-  updatedAt: Date;
-};
+export type {
+  AdministrativeGender,
+  PatientIdentifier,
+  PatientIdentifierType,
+  PatientRecordStatus,
+  PatientSnapshot,
+  RegisterPatientInput
+} from "./patient.types.js";
 
 export class Patient {
   private constructor(private readonly props: PatientProps) {}
 
   static register(input: RegisterPatientInput): Patient {
-    const now = new Date();
-    const fullName = normalizeText(input.fullName);
-
-    if (!input.id.trim()) {
-      throw new DomainError("Mã hồ sơ bệnh nhân không được để trống.");
-    }
-
-    if (!fullName) {
-      throw new DomainError("Họ tên bệnh nhân không được để trống.");
-    }
-
-    if (input.identifiers.length === 0) {
-      throw new DomainError("Bệnh nhân cần ít nhất một định danh.");
-    }
-
-    if (!input.managingOrganizationId.trim()) {
-      throw new DomainError("Cơ sở quản lý hồ sơ không được để trống.");
-    }
-
-    return new Patient({
-      id: input.id.trim(),
-      identifiers: input.identifiers.map(normalizeIdentifier),
-      fullName,
-      birthDate: input.birthDate,
-      gender: input.gender ?? "unknown",
-      address: normalizeOptionalText(input.address),
-      phone: normalizeOptionalText(input.phone),
-      managingOrganizationId: input.managingOrganizationId.trim(),
-      status: "active",
-      createdAt: now,
-      updatedAt: now
-    });
+    return new Patient(buildRegisteredPatientProps(input));
   }
 
   static rehydrate(snapshot: PatientSnapshot): Patient {
-    return new Patient({
-      id: snapshot.id,
-      identifiers: [...snapshot.identifiers],
-      fullName: snapshot.fullName,
-      birthDate: snapshot.birthDate,
-      gender: snapshot.gender,
-      address: snapshot.address,
-      phone: snapshot.phone,
-      managingOrganizationId: snapshot.managingOrganizationId,
-      status: snapshot.status,
-      createdAt: new Date(snapshot.createdAt),
-      updatedAt: new Date(snapshot.updatedAt)
-    });
+    return new Patient(buildRehydratedPatientProps(snapshot));
   }
 
   get id(): string {
@@ -120,6 +51,8 @@ export class Patient {
     readonly address?: string;
     readonly phone?: string;
   }): void {
+    this.ensureMutable();
+
     if (input.fullName !== undefined) {
       const fullName = normalizeText(input.fullName);
       if (!fullName) {
@@ -129,11 +62,11 @@ export class Patient {
     }
 
     if (input.birthDate !== undefined) {
-      this.props.birthDate = input.birthDate;
+      this.props.birthDate = normalizeBirthDate(input.birthDate);
     }
 
     if (input.gender !== undefined) {
-      this.props.gender = input.gender;
+      this.props.gender = normalizeGender(input.gender);
     }
 
     if (input.address !== undefined) {
@@ -148,6 +81,8 @@ export class Patient {
   }
 
   addIdentifier(identifier: PatientIdentifier): void {
+    this.ensureMutable();
+
     const normalized = normalizeIdentifier(identifier);
     const existed = this.props.identifiers.some(
       (current) =>
@@ -160,8 +95,45 @@ export class Patient {
     }
   }
 
-  markMerged(): void {
+  markMerged(input: {
+    readonly targetPatientId: string;
+    readonly mergedByActorId: string;
+    readonly reason: string;
+    readonly mergedAt?: Date;
+  }): void {
+    const targetPatientId = normalizeRequiredText(
+      input.targetPatientId,
+      "Hồ sơ đích khi merge không được để trống."
+    );
+    const mergedByActorId = normalizeRequiredText(
+      input.mergedByActorId,
+      "Người thực hiện merge hồ sơ không được để trống."
+    );
+    const reason = normalizeRequiredText(
+      input.reason,
+      "Lý do merge hồ sơ không được để trống."
+    );
+
+    if (targetPatientId === this.props.id) {
+      throw new DomainError("Hồ sơ bệnh nhân không thể merge vào chính nó.");
+    }
+
+    if (this.props.status === "merged") {
+      throw new DomainError("Hồ sơ bệnh nhân đã được merge trước đó.");
+    }
+
+    const mergedAt = input.mergedAt ?? new Date();
+    assertValidDate(mergedAt, "Thời điểm merge hồ sơ không hợp lệ.");
+
+    if (mergedAt < this.props.createdAt) {
+      throw new DomainError("Thời điểm merge hồ sơ không được trước thời điểm tạo hồ sơ.");
+    }
+
     this.props.status = "merged";
+    this.props.mergedIntoPatientId = targetPatientId;
+    this.props.mergedAt = mergedAt;
+    this.props.mergedByActorId = mergedByActorId;
+    this.props.mergeReason = reason;
     this.touch();
   }
 
@@ -176,37 +148,22 @@ export class Patient {
       phone: this.props.phone,
       managingOrganizationId: this.props.managingOrganizationId,
       status: this.props.status,
+      mergedIntoPatientId: this.props.mergedIntoPatientId,
+      mergedAt: this.props.mergedAt?.toISOString(),
+      mergedByActorId: this.props.mergedByActorId,
+      mergeReason: this.props.mergeReason,
       createdAt: this.props.createdAt.toISOString(),
       updatedAt: this.props.updatedAt.toISOString()
     };
+  }
+
+  private ensureMutable(): void {
+    if (this.props.status === "merged") {
+      throw new DomainError("Hồ sơ bệnh nhân đã merge không được cập nhật trực tiếp.");
+    }
   }
 
   private touch(): void {
     this.props.updatedAt = new Date();
   }
 }
-
-function normalizeIdentifier(identifier: PatientIdentifier): PatientIdentifier {
-  const system = identifier.system.trim();
-  const value = identifier.value.trim();
-
-  if (!system || !value) {
-    throw new DomainError("Định danh bệnh nhân phải có hệ thống và giá trị.");
-  }
-
-  return {
-    system,
-    value,
-    type: identifier.type
-  };
-}
-
-function normalizeText(value: string): string {
-  return value.trim().replace(/\s+/g, " ");
-}
-
-function normalizeOptionalText(value: string | undefined): string | undefined {
-  const normalized = value?.trim().replace(/\s+/g, " ");
-  return normalized || undefined;
-}
-

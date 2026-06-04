@@ -50,6 +50,7 @@ export const CreateDiagnosticReportRequestSchema = z
     presentedFormUrl: z.string().min(1).optional(),
     presentedFormTitle: z.string().min(1).optional()
   })
+  .strict()
   .refine(
     (value) =>
       value.resultObservationIds.length > 0 ||

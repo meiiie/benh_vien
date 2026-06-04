@@ -1,140 +1,52 @@
 import { DomainError } from "../shared/domain-error.js";
-
-export type RecordTransferStatus =
-  | "draft"
-  | "requested"
-  | "ready"
-  | "in-progress"
-  | "completed"
-  | "cancelled"
-  | "failed";
-
-export type RecordTransferPriority = "routine" | "urgent" | "asap" | "stat";
-export type RecordTransferBundleType = "collection" | "document";
-
-export type RecordTransferSnapshot = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly status: RecordTransferStatus;
-  readonly priority: RecordTransferPriority;
-  readonly bundleType: RecordTransferBundleType;
-  readonly bundleId: string;
-  readonly sourceOrganizationId: string;
-  readonly recipientOrganizationId: string;
-  readonly consentReference: string;
-  readonly requestedByActorId: string;
-  readonly reason: string;
-  readonly requestedAt: string;
-  readonly sentAt?: string;
-  readonly receivedAt?: string;
-  readonly note?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type CreateRecordTransferInput = Omit<
+import {
+  buildRecordTransferSnapshot,
+  normalizePersistedRecordTransferSnapshot
+} from "./record-transfer.factory.js";
+import {
+  assertCanMarkDeadLettered,
+  assertCanMarkFailed,
+  assertCanMarkReceived,
+  assertCanMarkSent,
+  assertCanRetry
+} from "./record-transfer.lifecycle.js";
+import {
+  normalizeOptional,
+  normalizeRequired,
+  parseDate
+} from "./record-transfer.validation.js";
+import type {
+  CreateRecordTransferInput,
+  MarkRecordTransferDeadLetteredInput,
+  MarkRecordTransferFailedInput,
+  MarkRecordTransferReceivedInput,
+  MarkRecordTransferSentInput,
   RecordTransferSnapshot,
-  "status" | "priority" | "requestedAt" | "sentAt" | "receivedAt" | "createdAt" | "updatedAt"
-> & {
-  readonly status?: RecordTransferStatus;
-  readonly priority?: RecordTransferPriority;
-  readonly requestedAt?: string;
-  readonly sentAt?: string;
-  readonly receivedAt?: string;
-};
+  RetryRecordTransferInput
+} from "./record-transfer.types.js";
 
-export type MarkRecordTransferSentInput = {
-  readonly sentAt?: string;
-  readonly note?: string;
-};
-
-export type MarkRecordTransferReceivedInput = {
-  readonly receivedAt?: string;
-  readonly note?: string;
-};
+export type {
+  CreateRecordTransferInput,
+  MarkRecordTransferDeadLetteredInput,
+  MarkRecordTransferFailedInput,
+  MarkRecordTransferReceivedInput,
+  MarkRecordTransferSentInput,
+  RecordTransferBundleType,
+  RecordTransferPriority,
+  RecordTransferSnapshot,
+  RecordTransferStatus,
+  RetryRecordTransferInput
+} from "./record-transfer.types.js";
 
 export class RecordTransfer {
   private constructor(private props: RecordTransferSnapshot) {}
 
   static create(input: CreateRecordTransferInput): RecordTransfer {
-    const now = new Date();
-    const requestedAt = input.requestedAt
-      ? parseDate(input.requestedAt, "Thời điểm yêu cầu chuyển hồ sơ không hợp lệ.")
-      : now;
-    const sentAt = input.sentAt
-      ? parseDate(input.sentAt, "Thời điểm gửi hồ sơ không hợp lệ.")
-      : undefined;
-    const receivedAt = input.receivedAt
-      ? parseDate(input.receivedAt, "Thời điểm tiếp nhận hồ sơ không hợp lệ.")
-      : undefined;
-
-    const sourceOrganizationId = normalizeRequired(
-      input.sourceOrganizationId,
-      "Cần có cơ sở y tế gửi hồ sơ."
-    );
-    const recipientOrganizationId = normalizeRequired(
-      input.recipientOrganizationId,
-      "Cần có cơ sở y tế nhận hồ sơ."
-    );
-
-    if (sourceOrganizationId === recipientOrganizationId) {
-      throw new DomainError("Cơ sở gửi và cơ sở nhận hồ sơ phải khác nhau.");
-    }
-
-    if (sentAt && sentAt < requestedAt) {
-      throw new DomainError("Thời điểm gửi hồ sơ không được trước thời điểm yêu cầu.");
-    }
-
-    if (receivedAt && !sentAt) {
-      throw new DomainError("Hồ sơ chỉ được ghi nhận tiếp nhận sau khi đã có thời điểm gửi.");
-    }
-
-    if (sentAt && receivedAt && receivedAt < sentAt) {
-      throw new DomainError("Thời điểm tiếp nhận hồ sơ không được trước thời điểm gửi.");
-    }
-
-    return new RecordTransfer({
-      id: normalizeRequired(input.id, "Mã chuyển hồ sơ không được để trống."),
-      patientId: normalizeRequired(input.patientId, "Chuyển hồ sơ phải gắn với một bệnh nhân."),
-      status: input.status ?? "requested",
-      priority: input.priority ?? "routine",
-      bundleType: input.bundleType,
-      bundleId: normalizeRequired(input.bundleId, "Cần có mã FHIR Bundle dùng để chuyển hồ sơ."),
-      sourceOrganizationId,
-      recipientOrganizationId,
-      consentReference: normalizeRequired(
-        input.consentReference,
-        "Chuyển hồ sơ liên viện phải gắn với consent hợp lệ."
-      ),
-      requestedByActorId: normalizeRequired(
-        input.requestedByActorId,
-        "Cần có người hoặc cơ chế tạo yêu cầu chuyển hồ sơ."
-      ),
-      reason: normalizeRequired(input.reason, "Cần có lý do chuyển hồ sơ."),
-      requestedAt: requestedAt.toISOString(),
-      sentAt: sentAt?.toISOString(),
-      receivedAt: receivedAt?.toISOString(),
-      note: normalizeOptional(input.note),
-      createdAt: now.toISOString(),
-      updatedAt: now.toISOString()
-    });
+    return new RecordTransfer(buildRecordTransferSnapshot(input));
   }
 
   static rehydrate(snapshot: RecordTransferSnapshot): RecordTransfer {
-    return new RecordTransfer({
-      ...snapshot,
-      requestedAt: parseDate(
-        snapshot.requestedAt,
-        "Thời điểm yêu cầu chuyển hồ sơ không hợp lệ."
-      ).toISOString(),
-      sentAt: snapshot.sentAt
-        ? parseDate(snapshot.sentAt, "Thời điểm gửi hồ sơ không hợp lệ.").toISOString()
-        : undefined,
-      receivedAt: snapshot.receivedAt
-        ? parseDate(snapshot.receivedAt, "Thời điểm tiếp nhận hồ sơ không hợp lệ.").toISOString()
-        : undefined,
-      note: normalizeOptional(snapshot.note)
-    });
+    return new RecordTransfer(normalizePersistedRecordTransferSnapshot(snapshot));
   }
 
   get id(): string {
@@ -146,17 +58,7 @@ export class RecordTransfer {
   }
 
   markSent(input: MarkRecordTransferSentInput = {}): void {
-    if (this.props.status === "completed") {
-      throw new DomainError("Hồ sơ đã được tiếp nhận, không thể gửi lại.");
-    }
-
-    if (this.props.status === "cancelled" || this.props.status === "failed") {
-      throw new DomainError("Không thể gửi hồ sơ khi yêu cầu đã hủy hoặc thất bại.");
-    }
-
-    if (this.props.sentAt) {
-      throw new DomainError("Hồ sơ đã có thời điểm gửi.");
-    }
+    assertCanMarkSent(this.props.status, this.props.sentAt);
 
     const sentAt = input.sentAt
       ? parseDate(input.sentAt, "Thời điểm gửi hồ sơ không hợp lệ.")
@@ -180,22 +82,12 @@ export class RecordTransfer {
   }
 
   markReceived(input: MarkRecordTransferReceivedInput = {}): void {
-    if (this.props.status === "completed") {
-      throw new DomainError("Hồ sơ đã được ghi nhận tiếp nhận.");
-    }
-
-    if (this.props.status === "cancelled" || this.props.status === "failed") {
-      throw new DomainError("Không thể tiếp nhận hồ sơ khi yêu cầu đã hủy hoặc thất bại.");
-    }
-
-    if (!this.props.sentAt) {
-      throw new DomainError("Hồ sơ chỉ được tiếp nhận sau khi đã có thời điểm gửi.");
-    }
+    const sentAtValue = assertCanMarkReceived(this.props.status, this.props.sentAt);
 
     const receivedAt = input.receivedAt
       ? parseDate(input.receivedAt, "Thời điểm tiếp nhận hồ sơ không hợp lệ.")
       : new Date();
-    const sentAt = parseDate(this.props.sentAt, "Thời điểm gửi hồ sơ không hợp lệ.");
+    const sentAt = parseDate(sentAtValue, "Thời điểm gửi hồ sơ không hợp lệ.");
 
     if (receivedAt < sentAt) {
       throw new DomainError("Thời điểm tiếp nhận hồ sơ không được trước thời điểm gửi.");
@@ -205,8 +97,112 @@ export class RecordTransfer {
       ...this.props,
       status: "completed",
       receivedAt: receivedAt.toISOString(),
+      receivedByActorId: normalizeOptional(input.receivedByActorId) ?? this.props.receivedByActorId,
+      acknowledgementReference:
+        normalizeOptional(input.acknowledgementReference) ?? this.props.acknowledgementReference,
       note: normalizeOptional(input.note) ?? this.props.note,
       updatedAt: receivedAt.toISOString()
+    };
+  }
+
+  markFailed(input: MarkRecordTransferFailedInput): void {
+    assertCanMarkFailed(this.props.status);
+
+    const failedAt = input.failedAt
+      ? parseDate(input.failedAt, "Thời điểm lỗi chuyển hồ sơ không hợp lệ.")
+      : new Date();
+    const requestedAt = parseDate(
+      this.props.requestedAt,
+      "Thời điểm yêu cầu chuyển hồ sơ không hợp lệ."
+    );
+
+    if (failedAt < requestedAt) {
+      throw new DomainError("Thời điểm lỗi chuyển hồ sơ không được trước thời điểm yêu cầu.");
+    }
+
+    if (this.props.sentAt) {
+      const sentAt = parseDate(this.props.sentAt, "Thời điểm gửi hồ sơ không hợp lệ.");
+
+      if (failedAt < sentAt) {
+        throw new DomainError("Thời điểm lỗi chuyển hồ sơ không được trước thời điểm gửi.");
+      }
+    }
+
+    const nextRetryAt = input.nextRetryAt
+      ? parseDate(input.nextRetryAt, "Thời điểm thử gửi lại hồ sơ không hợp lệ.")
+      : undefined;
+
+    if (nextRetryAt && nextRetryAt < failedAt) {
+      throw new DomainError("Thời điểm thử gửi lại không được trước thời điểm lỗi chuyển hồ sơ.");
+    }
+
+    this.props = {
+      ...this.props,
+      status: "failed",
+      failedAt: failedAt.toISOString(),
+      failureReason: normalizeRequired(input.failureReason, "Cần có lý do lỗi chuyển hồ sơ."),
+      nextRetryAt: nextRetryAt?.toISOString(),
+      note: normalizeOptional(input.note) ?? this.props.note,
+      updatedAt: failedAt.toISOString()
+    };
+  }
+
+  retry(input: RetryRecordTransferInput = {}): void {
+    assertCanRetry(this.props.status);
+
+    const retryAt = input.retryAt
+      ? parseDate(input.retryAt, "Thời điểm thử gửi lại hồ sơ không hợp lệ.")
+      : new Date();
+
+    if (this.props.failedAt) {
+      const failedAt = parseDate(this.props.failedAt, "Thời điểm lỗi chuyển hồ sơ không hợp lệ.");
+
+      if (retryAt < failedAt) {
+        throw new DomainError("Thời điểm thử gửi lại không được trước thời điểm lỗi chuyển hồ sơ.");
+      }
+    }
+
+    this.props = {
+      ...this.props,
+      status: "ready",
+      sentAt: undefined,
+      receivedAt: undefined,
+      receivedByActorId: undefined,
+      acknowledgementReference: undefined,
+      failedAt: undefined,
+      failureReason: undefined,
+      nextRetryAt: undefined,
+      retryCount: this.props.retryCount + 1,
+      note: normalizeOptional(input.note) ?? this.props.note,
+      updatedAt: retryAt.toISOString()
+    };
+  }
+
+  markDeadLettered(input: MarkRecordTransferDeadLetteredInput = {}): void {
+    const failedAtValue = assertCanMarkDeadLettered(
+      this.props.status,
+      this.props.failedAt,
+      this.props.failureReason
+    );
+
+    const deadLetteredAt = input.deadLetteredAt
+      ? parseDate(input.deadLetteredAt, "Thời điểm đưa hồ sơ vào hàng lỗi cuối không hợp lệ.")
+      : new Date();
+    const failedAt = parseDate(failedAtValue, "Thời điểm lỗi chuyển hồ sơ không hợp lệ.");
+
+    if (deadLetteredAt < failedAt) {
+      throw new DomainError(
+        "Thời điểm đưa hồ sơ vào hàng lỗi cuối không được trước thời điểm lỗi chuyển hồ sơ."
+      );
+    }
+
+    this.props = {
+      ...this.props,
+      status: "dead-lettered",
+      nextRetryAt: undefined,
+      deadLetteredAt: deadLetteredAt.toISOString(),
+      note: normalizeOptional(input.note) ?? this.props.note,
+      updatedAt: deadLetteredAt.toISOString()
     };
   }
 
@@ -215,29 +211,4 @@ export class RecordTransfer {
       ...this.props
     };
   }
-}
-
-function normalizeRequired(value: string, message: string): string {
-  const normalized = value.trim().replace(/\s+/g, " ");
-
-  if (!normalized) {
-    throw new DomainError(message);
-  }
-
-  return normalized;
-}
-
-function normalizeOptional(value: string | undefined): string | undefined {
-  const normalized = value?.trim().replace(/\s+/g, " ");
-  return normalized || undefined;
-}
-
-function parseDate(value: string, message: string): Date {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    throw new DomainError(message);
-  }
-
-  return date;
 }

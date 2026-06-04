@@ -19,11 +19,11 @@ export const CreateConsentRequestSchema = z.object({
   evidenceDocumentId: z.string().min(1).optional(),
   validFrom: z.string().datetime(),
   validUntil: z.string().datetime().optional()
-});
+}).strict();
 
 export const RevokeConsentRequestSchema = z.object({
   reason: z.string().min(1).max(500).optional()
-});
+}).strict();
 
 export type PatientConsentsParams = z.infer<typeof PatientConsentsParamsSchema>;
 export type PatientConsentParams = z.infer<typeof PatientConsentParamsSchema>;

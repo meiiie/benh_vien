@@ -1,55 +1,33 @@
-import { DomainError } from "../shared/domain-error.js";
-
-export type ConditionClinicalStatus =
-  | "active"
-  | "recurrence"
-  | "relapse"
-  | "inactive"
-  | "remission"
-  | "resolved";
-
-export type ConditionVerificationStatus =
-  | "unconfirmed"
-  | "provisional"
-  | "differential"
-  | "confirmed"
-  | "refuted"
-  | "entered-in-error";
-
-export type ConditionCategory = "problem-list-item" | "encounter-diagnosis";
-export type ConditionSeverity = "mild" | "moderate" | "severe";
-
-export type ConditionCode = {
-  readonly system: string;
-  readonly code: string;
-  readonly display: string;
-};
-
-export type ConditionSnapshot = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly encounterId?: string;
-  readonly clinicalStatus: ConditionClinicalStatus;
-  readonly verificationStatus: ConditionVerificationStatus;
-  readonly category: ConditionCategory;
-  readonly code: ConditionCode;
-  readonly severity?: ConditionSeverity;
-  readonly onsetAt?: string;
-  readonly recordedAt: string;
-  readonly recorderPractitionerId: string;
-  readonly note?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type CreateConditionInput = Omit<
+import {
+  normalizeCategory,
+  normalizeClinicalStatus,
+  normalizeCode,
+  normalizeOptional,
+  normalizeRequired,
+  normalizeSeverity,
+  normalizeVerificationStatus,
+  parseDate,
+  validateTimeline
+} from "./condition.validation.js";
+import type {
+  ConditionCategory,
+  ConditionClinicalStatus,
+  ConditionCode,
+  ConditionSeverity,
   ConditionSnapshot,
-  "clinicalStatus" | "verificationStatus" | "recordedAt" | "createdAt" | "updatedAt"
-> & {
-  readonly clinicalStatus?: ConditionClinicalStatus;
-  readonly verificationStatus?: ConditionVerificationStatus;
-  readonly recordedAt?: string;
-};
+  ConditionVerificationStatus,
+  CreateConditionInput
+} from "./condition.types.js";
+
+export type {
+  ConditionCategory,
+  ConditionClinicalStatus,
+  ConditionCode,
+  ConditionSeverity,
+  ConditionSnapshot,
+  ConditionVerificationStatus,
+  CreateConditionInput
+} from "./condition.types.js";
 
 export class Condition {
   private constructor(private readonly props: ConditionSnapshot) {}
@@ -62,20 +40,22 @@ export class Condition {
     const recordedAt = input.recordedAt
       ? parseDate(input.recordedAt, "Thời điểm ghi nhận chẩn đoán không hợp lệ.")
       : now;
+    validateTimeline({
+      onsetAt,
+      recordedAt,
+      createdAt: now,
+      updatedAt: now
+    });
 
     return new Condition({
       id: normalizeRequired(input.id, "Mã chẩn đoán không được để trống."),
       patientId: normalizeRequired(input.patientId, "Chẩn đoán phải gắn với một bệnh nhân."),
       encounterId: normalizeOptional(input.encounterId),
-      clinicalStatus: input.clinicalStatus ?? "active",
-      verificationStatus: input.verificationStatus ?? "confirmed",
-      category: input.category,
-      code: {
-        system: normalizeRequired(input.code.system, "Hệ mã chẩn đoán không được để trống."),
-        code: normalizeRequired(input.code.code, "Mã chẩn đoán không được để trống."),
-        display: normalizeRequired(input.code.display, "Tên chẩn đoán không được để trống.")
-      },
-      severity: input.severity,
+      clinicalStatus: normalizeClinicalStatus(input.clinicalStatus ?? "active"),
+      verificationStatus: normalizeVerificationStatus(input.verificationStatus ?? "confirmed"),
+      category: normalizeCategory(input.category),
+      code: normalizeCode(input.code),
+      severity: input.severity ? normalizeSeverity(input.severity) : undefined,
       onsetAt: onsetAt?.toISOString(),
       recordedAt: recordedAt.toISOString(),
       recorderPractitionerId: normalizeRequired(
@@ -89,11 +69,43 @@ export class Condition {
   }
 
   static rehydrate(snapshot: ConditionSnapshot): Condition {
+    const onsetAt = snapshot.onsetAt
+      ? parseDate(snapshot.onsetAt, "Thời điểm khởi phát chẩn đoán không hợp lệ.")
+      : undefined;
+    const recordedAt = parseDate(
+      snapshot.recordedAt,
+      "Thời điểm ghi nhận chẩn đoán không hợp lệ."
+    );
+    const createdAt = parseDate(
+      snapshot.createdAt,
+      "Thời điểm tạo chẩn đoán không hợp lệ."
+    );
+    const updatedAt = parseDate(
+      snapshot.updatedAt,
+      "Thời điểm cập nhật chẩn đoán không hợp lệ."
+    );
+
+    validateTimeline({ onsetAt, recordedAt, createdAt, updatedAt });
+
     return new Condition({
       ...snapshot,
+      id: normalizeRequired(snapshot.id, "Mã chẩn đoán không được để trống."),
+      patientId: normalizeRequired(snapshot.patientId, "Chẩn đoán phải gắn với một bệnh nhân."),
       encounterId: normalizeOptional(snapshot.encounterId),
-      onsetAt: snapshot.onsetAt ? parseDate(snapshot.onsetAt, "Thời điểm khởi phát chẩn đoán không hợp lệ.").toISOString() : undefined,
-      note: normalizeOptional(snapshot.note)
+      clinicalStatus: normalizeClinicalStatus(snapshot.clinicalStatus),
+      verificationStatus: normalizeVerificationStatus(snapshot.verificationStatus),
+      category: normalizeCategory(snapshot.category),
+      code: normalizeCode(snapshot.code),
+      severity: snapshot.severity ? normalizeSeverity(snapshot.severity) : undefined,
+      onsetAt: onsetAt?.toISOString(),
+      recordedAt: recordedAt.toISOString(),
+      recorderPractitionerId: normalizeRequired(
+        snapshot.recorderPractitionerId,
+        "Nhân sự ghi nhận chẩn đoán không được để trống."
+      ),
+      note: normalizeOptional(snapshot.note),
+      createdAt: createdAt.toISOString(),
+      updatedAt: updatedAt.toISOString()
     });
   }
 
@@ -111,29 +123,4 @@ export class Condition {
       code: { ...this.props.code }
     };
   }
-}
-
-function normalizeRequired(value: string, message: string): string {
-  const normalized = value.trim().replace(/\s+/g, " ");
-
-  if (!normalized) {
-    throw new DomainError(message);
-  }
-
-  return normalized;
-}
-
-function normalizeOptional(value: string | undefined): string | undefined {
-  const normalized = value?.trim().replace(/\s+/g, " ");
-  return normalized || undefined;
-}
-
-function parseDate(value: string, message: string): Date {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    throw new DomainError(message);
-  }
-
-  return date;
 }

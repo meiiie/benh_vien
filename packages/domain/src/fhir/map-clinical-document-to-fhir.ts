@@ -1,23 +1,12 @@
-import type {
-  ClinicalDocument,
-  ClinicalDocumentStatus,
-  ClinicalDocumentType
-} from "../clinical-document/clinical-document.js";
+import type { ClinicalDocument } from "../clinical-document/clinical-document.js";
 import type { FhirDocumentReference } from "./fhir-types.js";
-
-const documentTypeLabels: Record<ClinicalDocumentType, string> = {
-  "admission-note": "Phiếu nhập viện",
-  "discharge-summary": "Tóm tắt ra viện",
-  "lab-report": "Phiếu kết quả xét nghiệm",
-  "imaging-report": "Phiếu kết quả chẩn đoán hình ảnh",
-  "referral-letter": "Giấy chuyển tuyến",
-  "consent-form": "Phiếu đồng ý điều trị",
-  "advance-directive": "Chỉ dẫn chăm sóc trước",
-  ccda: "Tài liệu CCDA",
-  ccr: "Hồ sơ CCR",
-  "medical-record": "Hồ sơ bệnh án",
-  "patient-information": "Thông tin bệnh nhân"
-};
+import {
+  documentReferenceFhirProfile,
+  toDocumentReferenceContent,
+  toDocumentReferenceDocStatus,
+  toDocumentReferenceStatus,
+  toDocumentReferenceType
+} from "./map-clinical-document-codings.js";
 
 export function mapClinicalDocumentToFhir(document: ClinicalDocument): FhirDocumentReference {
   const snapshot = document.toSnapshot();
@@ -26,13 +15,11 @@ export function mapClinicalDocumentToFhir(document: ClinicalDocument): FhirDocum
     resourceType: "DocumentReference",
     id: snapshot.id,
     meta: {
-      profile: ["http://hl7.org/fhir/StructureDefinition/DocumentReference"]
+      profile: [documentReferenceFhirProfile]
     },
-    status: mapDocumentReferenceStatus(snapshot.status),
-    docStatus: mapDocumentReferenceDocStatus(snapshot.status),
-    type: {
-      text: documentTypeLabels[snapshot.type]
-    },
+    status: toDocumentReferenceStatus(snapshot.status),
+    docStatus: toDocumentReferenceDocStatus(snapshot.status),
+    type: toDocumentReferenceType(snapshot.type),
     subject: {
       reference: `Patient/${snapshot.patientId}`
     },
@@ -51,41 +38,6 @@ export function mapClinicalDocumentToFhir(document: ClinicalDocument): FhirDocum
       }
     ],
     date: snapshot.signedAt ?? snapshot.updatedAt,
-    content: [
-      {
-        attachment: {
-          contentType: snapshot.attachmentContentType,
-          url: snapshot.storageUri,
-          size: snapshot.attachmentSizeBytes,
-          hash: snapshot.attachmentHashSha1Base64,
-          title: snapshot.title,
-          creation: snapshot.attachmentCreatedAt ?? snapshot.createdAt
-        }
-      }
-    ]
+    content: toDocumentReferenceContent(snapshot)
   };
-}
-
-function mapDocumentReferenceStatus(
-  status: ClinicalDocumentStatus
-): FhirDocumentReference["status"] {
-  if (status === "superseded" || status === "entered-in-error") {
-    return status;
-  }
-
-  return "current";
-}
-
-function mapDocumentReferenceDocStatus(
-  status: ClinicalDocumentStatus
-): FhirDocumentReference["docStatus"] {
-  if (status === "signed") {
-    return "final";
-  }
-
-  if (status === "entered-in-error") {
-    return "entered-in-error";
-  }
-
-  return "preliminary";
 }

@@ -14,12 +14,17 @@ export const CreatePatientRequestSchema = z.object({
   address: z.string().optional(),
   phone: z.string().optional(),
   managingOrganizationId: z.string().min(1)
-});
+}).strict();
 
 export const PatientIdParamsSchema = z.object({
   id: z.string().min(1)
 });
 
-export type CreatePatientRequest = z.infer<typeof CreatePatientRequestSchema>;
-export type PatientIdParams = z.infer<typeof PatientIdParamsSchema>;
+export const MergePatientRequestSchema = z.object({
+  targetPatientId: z.string().min(1),
+  reason: z.string().min(1).max(500)
+}).strict();
 
+export type CreatePatientRequest = z.infer<typeof CreatePatientRequestSchema>;
+export type MergePatientRequest = z.infer<typeof MergePatientRequestSchema>;
+export type PatientIdParams = z.infer<typeof PatientIdParamsSchema>;

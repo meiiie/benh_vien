@@ -1,5 +1,8 @@
 import { RecordTransfer } from "@benh-vien-so/domain";
-import type { RecordTransferRepository } from "@benh-vien-so/domain";
+import type {
+  FindDueRecordTransferRetriesInput,
+  RecordTransferRepository
+} from "@benh-vien-so/domain";
 
 export class InMemoryRecordTransferRepository implements RecordTransferRepository {
   private readonly recordTransfers = new Map<string, RecordTransfer>();
@@ -22,6 +25,68 @@ export class InMemoryRecordTransferRepository implements RecordTransferRepositor
   async findById(id: string): Promise<RecordTransfer | undefined> {
     const recordTransfer = this.recordTransfers.get(id);
     return recordTransfer ? cloneRecordTransfer(recordTransfer) : undefined;
+  }
+
+  async findDueRetries(input: FindDueRecordTransferRetriesInput): Promise<RecordTransfer[]> {
+    const dueAt = Date.parse(input.dueAt);
+    const limit = normalizeLimit(input.limit);
+    const maxRetryCount = input.maxRetryCount ?? Number.MAX_SAFE_INTEGER;
+
+    if (!Number.isFinite(dueAt) || limit === 0) {
+      return [];
+    }
+
+    return [...this.recordTransfers.values()]
+      .filter((recordTransfer) => {
+        const snapshot = recordTransfer.toSnapshot();
+
+        if (
+          snapshot.status !== "failed" ||
+          !snapshot.nextRetryAt ||
+          snapshot.retryCount >= maxRetryCount
+        ) {
+          return false;
+        }
+
+        const nextRetryAt = Date.parse(snapshot.nextRetryAt);
+        return Number.isFinite(nextRetryAt) && nextRetryAt <= dueAt;
+      })
+      .sort((left, right) =>
+        compareRetrySchedule(left.toSnapshot(), right.toSnapshot())
+      )
+      .slice(0, limit)
+      .map(cloneRecordTransfer);
+  }
+
+  async findDueDeadLetters(input: FindDueRecordTransferRetriesInput): Promise<RecordTransfer[]> {
+    const dueAt = Date.parse(input.dueAt);
+    const limit = normalizeLimit(input.limit);
+    const maxRetryCount = input.maxRetryCount ?? Number.MAX_SAFE_INTEGER;
+
+    if (!Number.isFinite(dueAt) || limit === 0) {
+      return [];
+    }
+
+    return [...this.recordTransfers.values()]
+      .filter((recordTransfer) => {
+        const snapshot = recordTransfer.toSnapshot();
+
+        if (
+          snapshot.status !== "failed" ||
+          !snapshot.nextRetryAt ||
+          snapshot.retryCount < maxRetryCount
+        ) {
+          return false;
+        }
+
+        const nextRetryAt = Date.parse(snapshot.nextRetryAt);
+        return Number.isFinite(nextRetryAt) && nextRetryAt <= dueAt;
+      })
+      .sort((left, right) =>
+        compareRetrySchedule(left.toSnapshot(), right.toSnapshot())
+      )
+      .slice(0, limit)
+      .map(cloneRecordTransfer);
   }
 
   async save(recordTransfer: RecordTransfer): Promise<void> {
@@ -51,4 +116,27 @@ export function createSeedRecordTransfers(): RecordTransfer[] {
 
 function cloneRecordTransfer(recordTransfer: RecordTransfer): RecordTransfer {
   return RecordTransfer.rehydrate(recordTransfer.toSnapshot());
+}
+
+function normalizeLimit(limit: number): number {
+  if (!Number.isInteger(limit) || limit < 1) {
+    return 0;
+  }
+
+  return limit;
+}
+
+function compareRetrySchedule(
+  left: ReturnType<RecordTransfer["toSnapshot"]>,
+  right: ReturnType<RecordTransfer["toSnapshot"]>
+): number {
+  const leftRetryAt = left.nextRetryAt ?? "";
+  const rightRetryAt = right.nextRetryAt ?? "";
+  const byRetryAt = leftRetryAt.localeCompare(rightRetryAt);
+
+  if (byRetryAt !== 0) {
+    return byRetryAt;
+  }
+
+  return left.requestedAt.localeCompare(right.requestedAt);
 }

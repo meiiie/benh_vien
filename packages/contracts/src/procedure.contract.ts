@@ -74,7 +74,7 @@ export const CreateProcedureRequestSchema = z.object({
   outcome: ProcedureCodingSchema.optional(),
   reportReferences: z.array(ProcedureReportReferenceSchema).optional(),
   note: z.string().min(1).optional()
-});
+}).strict();
 
 export type ProcedureStatus = z.infer<typeof ProcedureStatusSchema>;
 export type ProcedureCategory = z.infer<typeof ProcedureCategorySchema>;

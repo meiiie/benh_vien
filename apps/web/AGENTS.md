@@ -1,0 +1,48 @@
+# Web Agent Notes
+
+## Scope
+
+`apps/web` là client demo cho WiiiCare Nexus. Web được phép điều phối trải nghiệm người dùng, nhưng không được trở thành nơi quyết định nghiệp vụ lâm sàng, phân quyền, consent, audit hoặc mapping FHIR.
+
+## Architecture Rules
+
+- `src/App.tsx` là composition root mỏng: khởi tạo state cấp ứng dụng, tạo API client, nối các composition function, dựng auth gate và chuyển context cho route renderer.
+- `src/App.tsx` phải giữ dưới 650 dòng theo `scripts/harness/web-app-composition.mjs`; nếu cần thêm orchestration mới, ưu tiên tách sang `src/application` hoặc feature module thay vì nới budget.
+- `src/application` chứa application composition của frontend: loader wiring, command/handler wiring, runtime effect, derived context, shell state và panel context.
+- `src/pages` chỉ chứa route/page renderer và layout hiển thị. Không đặt HTTP route, FHIR mapper, consent/audit orchestration hoặc handler matrix ở đây.
+- `src/features` sở hữu UI panel, API adapter, selector, command builder và helper của từng feature.
+- Cấu hình demo không được gom lại thành God file. `src/config/demoClinicalDefaults.ts` chỉ là compatibility barrel; defaults bệnh nhân, clinical entry, thuốc, care workflow/diagnostics, chuyển hồ sơ và nội dung tham chiếu phải nằm trong các module `demo*Defaults.ts` hoặc `demoReferenceContent.ts` tương ứng.
+- Với feature chuyển hồ sơ, `RecordTransferInteropPanel.tsx` chỉ giữ composition chính; danh sách gói nằm trong `RecordTransferList.tsx`, metadata nằm trong `RecordTransferMetadata.tsx`, action lifecycle nằm trong `RecordTransferActions.tsx`, form tạo gói nằm trong `RecordTransferForm.tsx`, lịch sử delivery attempt nằm trong `RecordTransferDeliveryAttemptList.tsx`, tóm tắt vận hành nằm trong `RecordTransferOperationalSummary.tsx`. Chạy `pnpm run harness:web-app-composition` khi đổi các file này.
+- Với tài liệu bệnh án, `ClinicalDocumentPanel.tsx` giữ danh sách, tóm tắt và thao tác ký; form tạo `DocumentReference` nằm trong `ClinicalDocumentForm.tsx` để metadata tệp đính kèm không trộn vào panel hiển thị.
+- Với feature hồ sơ lâm sàng, `clinicalRecordPanelRenderers.tsx` chỉ lắp JSX cho các panel; `clinicalRecordPanelRendererTypes.ts` chỉ compose public renderer contract; collections/selections nằm trong `clinicalRecordPanelRendererDataTypes.ts`; forms/handlers nằm trong `clinicalRecordPanelRendererCommandTypes.ts`; loading/submitting nằm trong `clinicalRecordPanelRendererStatusTypes.ts` để không biến renderer hoặc type contract thành God module.
+- API adapter của hồ sơ lâm sàng không được gom lại thành God module. `clinicalRecordApi.ts` chỉ là compatibility barrel; implementation phải nằm trong `encounterApi.ts`, `clinicalEntryApi.ts`, `medicationApi.ts`, `careWorkflowApi.ts`, `diagnosticResultApi.ts` và helper HTTP điều trị trong `clinicalRecordHttp.ts`.
+- State của hồ sơ lâm sàng không được gom lại thành God hook. `clinicalRecordState.ts` chỉ là facade; collections/selected IDs nằm trong `clinicalRecordCollectionState.ts`, form command nằm trong `clinicalRecordFormState.ts`, còn loading/submitting/signing flags nằm trong `clinicalRecordStatusState.ts`.
+- Với AllergyIntolerance, `AllergyIntolerancePanel.tsx` giữ danh sách, tóm tắt cảnh báo an toàn và composition; form ghi nhận dị ứng/không dung nạp nằm trong `AllergyIntoleranceForm.tsx` để dữ liệu safety-critical không trộn vào panel hiển thị.
+- Với Condition, `ConditionPanel.tsx` giữ danh sách, tóm tắt chẩn đoán/vấn đề sức khỏe và composition; form ghi nhận chẩn đoán nằm trong `ConditionForm.tsx` để chẩn đoán làm căn cứ y lệnh/chuyển hồ sơ có boundary riêng.
+- Với Observation, `ObservationPanel.tsx` giữ danh sách, tóm tắt chỉ số/kết quả và composition; form ghi nhận giá trị nằm trong `ObservationForm.tsx` để dữ liệu đo có cấu trúc không trộn vào panel hiển thị.
+- Với MedicationDispense, `MedicationDispensePanel.tsx` giữ danh sách, tóm tắt và composition; form cấp phát nhiều trường nằm trong `MedicationDispenseForm.tsx` để không trộn form command vào panel hiển thị.
+- Với MedicationDispense, `MedicationDispenseForm.tsx` chỉ lắp các phần của form; ngữ cảnh lượt khám/chỉ định nằm trong `MedicationDispenseContextFields.tsx`, thông tin cấp phát/bàn giao nằm trong `MedicationDispenseSupplyFields.tsx`, còn hướng dẫn liều dùng nằm trong `MedicationDispenseDosageFields.tsx`.
+- Với MedicationAdministration, `MedicationAdministrationPanel.tsx` giữ danh sách, tóm tắt và composition; form dùng thuốc thực tế nằm trong `MedicationAdministrationForm.tsx` để giữ ranh giới kê đơn/cấp phát/dùng thuốc rõ ràng.
+- Với MedicationAdministration, `MedicationAdministrationForm.tsx` chỉ lắp các phần của form; ngữ cảnh chỉ định/chẩn đoán nằm trong `MedicationAdministrationContextFields.tsx`, người hoặc thiết bị xác nhận nằm trong `MedicationAdministrationPerformerFields.tsx`, còn thuốc/liều thực tế nằm trong `MedicationAdministrationDosageFields.tsx`.
+- Với MedicationRequest, `MedicationRequestPanel.tsx` giữ danh sách, tóm tắt và composition; `MedicationRequestForm.tsx` chỉ lắp các phần của form; `MedicationRequestContextFields.tsx` chỉ compose ngữ cảnh, tham chiếu lượt khám/chẩn đoán nằm trong `MedicationRequestReferenceFields.tsx`, phân loại/ưu tiên nằm trong `MedicationRequestClassificationFields.tsx`; `MedicationRequestMedicationFields.tsx` chỉ compose thông tin thuốc, mã thuốc nằm trong `MedicationRequestDrugCodeFields.tsx`, liều dùng/thời gian nằm trong `MedicationRequestDosageTimingFields.tsx`; thời điểm kê/người kê/ghi chú nằm trong `MedicationRequestPrescriptionFields.tsx` để medication workflow giữ rõ ba bước kê đơn, cấp phát và dùng thuốc.
+- Command builder của thuốc không được gom lại thành God module. `medicationCommandBuilders.ts` chỉ là compatibility barrel; logic kê đơn, cấp phát và ghi nhận dùng thuốc lần lượt nằm trong `medicationRequestCommandBuilders.ts`, `medicationDispenseCommandBuilders.ts` và `medicationAdministrationCommandBuilders.ts`.
+- Command builder của care workflow và diagnostic không được gom lại dưới tên rộng. `carePlanCommandBuilders.ts` chỉ là compatibility barrel; ServiceRequest, Procedure, DiagnosticReport và ImagingStudy lần lượt nằm trong `serviceRequestCommandBuilders.ts`, `procedureCommandBuilders.ts`, `diagnosticReportCommandBuilders.ts` và `imagingStudyCommandBuilders.ts`.
+- Với ServiceRequest, `ServiceRequestPanel.tsx` giữ danh sách, tóm tắt y lệnh dịch vụ và composition; form chỉ định xét nghiệm/hình ảnh/dịch vụ nằm trong `ServiceRequestForm.tsx` để đường LIS/RIS/PACS bắt đầu từ y lệnh có cấu trúc.
+- Với Procedure, `ProcedurePanel.tsx` giữ danh sách, tóm tắt và composition; form ghi nhận thủ thuật/hoạt động y tế nằm trong `ProcedureForm.tsx` để care workflow dễ mở rộng performer, report và body site.
+- Với DiagnosticReport, `DiagnosticReportPanel.tsx` giữ danh sách, tóm tắt LIS/RIS và composition; form gom Observation, y lệnh gốc và tệp kết quả nằm trong `DiagnosticReportForm.tsx` để đường xét nghiệm/chẩn đoán hình ảnh không trộn vào panel hiển thị.
+- Với ImagingStudy, `ImagingStudyPanel.tsx` giữ danh sách, tóm tắt PACS/DICOM và composition; form DICOM metadata nằm trong `ImagingStudyForm.tsx` để đường tích hợp PACS/DICOMweb không trộn vào panel hiển thị.
+- Formatter, selector hoặc helper chỉ phục vụ một feature phải nằm trong feature đó; không đưa ngược vào `src/lib/clinicalFormatters.ts` chỉ vì tiện import.
+- Các formatter của hồ sơ lâm sàng thuộc `src/features/clinical-records`: lượt khám nằm trong `encounterFormatters.ts`; dị ứng nằm trong `allergyFormatters.ts`; chẩn đoán/vấn đề sức khỏe nằm trong `conditionFormatters.ts`; y lệnh/tác vụ/thủ thuật nằm trong `careWorkflowFormatters.ts`; xét nghiệm/chẩn đoán hình ảnh nằm trong `diagnosticResultFormatters.ts`; thuốc nằm trong `medicationFormatters.ts`.
+- Formatter của bệnh nhân, tài liệu lâm sàng, đồng ý chia sẻ và danh bạ nhà cung cấp phải nằm trong feature tương ứng; `src/lib/clinicalFormatters.ts` chỉ giữ helper dùng chung thật sự như thời gian và runtime display.
+- Type runtime/auth/app shell nằm trong `src/types/appRuntime.ts`. Type của bệnh nhân, lượt khám, dị ứng, chẩn đoán/vấn đề sức khỏe, quan sát/kết quả đo, thuốc, y lệnh/tác vụ/thủ thuật, xét nghiệm/chẩn đoán hình ảnh, tài liệu lâm sàng, danh bạ nhà cung cấp, chuyển hồ sơ, đồng ý chia sẻ và audit nằm trong module type tương ứng dưới `src/types`; code mới không import từ `src/types/clinical.ts`, file này chỉ là compatibility barrel để giữ tương thích ngoài boundary cũ.
+- Mọi HTTP request phải đi qua `src/api/clinicalApi.ts` rồi qua feature/platform/auth API module phù hợp; không gọi `fetch` trực tiếp trong component hoặc application module.
+- CSS nền tảng như token, reset, typography, shared panel/button primitives nằm trong `src/styles/base.css`; `src/styles.css` chỉ nên compose các layer còn lại và dần tách theo shell/feature khi đủ rõ boundary.
+
+## Verification
+
+```bash
+pnpm --filter @benh-vien-so/web check
+node scripts/harness/web-app-composition.mjs
+```
+
+Khi thay đổi boundary lớn, chạy `pnpm run ci` ở root trước khi push.

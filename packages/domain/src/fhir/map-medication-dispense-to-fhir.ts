@@ -1,11 +1,12 @@
-import type { MedicationCode } from "../medication-request/medication-request.js";
-import type {
-  MedicationDispense,
-  MedicationDispenseCategory
-} from "../medication-dispense/medication-dispense.js";
+import type { MedicationDispense } from "../medication-dispense/medication-dispense.js";
 import type { FhirMedicationDispense } from "./fhir-types.js";
-
-const categorySystem = "http://terminology.hl7.org/CodeSystem/medicationdispense-category";
+import {
+  buildMedicationDispenseCategory,
+  buildMedicationDispenseIdentifier,
+  medicationDispenseFhirProfile,
+  toMedicationDispenseCodeableConcept,
+  toMedicationDispenseDosageInstruction
+} from "./map-medication-dispense-codings.js";
 
 export function mapMedicationDispenseToFhir(
   medicationDispense: MedicationDispense
@@ -16,29 +17,17 @@ export function mapMedicationDispenseToFhir(
     resourceType: "MedicationDispense",
     id: snapshot.id,
     meta: {
-      profile: ["http://hl7.org/fhir/StructureDefinition/MedicationDispense"]
+      profile: [medicationDispenseFhirProfile]
     },
-    identifier: [
-      {
-        system: "urn:wiiicare:nexus:medication-dispense",
-        value: snapshot.id
-      }
-    ],
+    identifier: [buildMedicationDispenseIdentifier(snapshot.id)],
     status: snapshot.status,
     statusReasonCodeableConcept: snapshot.statusReason
-      ? toCodeableConcept(snapshot.statusReason)
+      ? toMedicationDispenseCodeableConcept(snapshot.statusReason)
       : undefined,
-    category: {
-      coding: [
-        {
-          system: categorySystem,
-          code: snapshot.category,
-          display: formatMedicationDispenseCategory(snapshot.category)
-        }
-      ],
-      text: formatMedicationDispenseCategory(snapshot.category)
-    },
-    medicationCodeableConcept: toCodeableConcept(snapshot.medicationCode),
+    category: buildMedicationDispenseCategory(snapshot.category),
+    medicationCodeableConcept: toMedicationDispenseCodeableConcept(
+      snapshot.medicationCode
+    ),
     subject: {
       reference: `Patient/${snapshot.patientId}`
     },
@@ -80,69 +69,8 @@ export function mapMedicationDispenseToFhir(
         ]
       : undefined,
     dosageInstruction: snapshot.dosageInstruction
-      ? [
-          {
-            text: snapshot.dosageInstruction.text,
-            route: snapshot.dosageInstruction.route
-              ? {
-                  text: snapshot.dosageInstruction.route
-                }
-              : undefined,
-            timing:
-              snapshot.dosageInstruction.frequency &&
-              snapshot.dosageInstruction.period &&
-              snapshot.dosageInstruction.periodUnit
-                ? {
-                    repeat: {
-                      frequency: snapshot.dosageInstruction.frequency,
-                      period: snapshot.dosageInstruction.period,
-                      periodUnit: snapshot.dosageInstruction.periodUnit
-                    }
-                  }
-                : undefined,
-            doseAndRate: snapshot.dosageInstruction.doseQuantity
-              ? [
-                  {
-                    doseQuantity: snapshot.dosageInstruction.doseQuantity
-                  }
-                ]
-              : undefined
-          }
-        ]
+      ? [toMedicationDispenseDosageInstruction(snapshot.dosageInstruction)]
       : undefined,
     note: snapshot.note ? [{ text: snapshot.note }] : undefined
   };
-}
-
-function toCodeableConcept(coding: MedicationCode): {
-  readonly coding: readonly {
-    readonly system: string;
-    readonly code: string;
-    readonly display: string;
-  }[];
-  readonly text: string;
-} {
-  return {
-    coding: [
-      {
-        system: coding.system,
-        code: coding.code,
-        display: coding.display
-      }
-    ],
-    text: coding.display
-  };
-}
-
-function formatMedicationDispenseCategory(
-  category: MedicationDispenseCategory
-): string {
-  const labels: Record<MedicationDispenseCategory, string> = {
-    community: "Community",
-    discharge: "Discharge",
-    inpatient: "Inpatient",
-    outpatient: "Outpatient"
-  };
-
-  return labels[category];
 }

@@ -1,39 +1,21 @@
-import type {
-  DiagnosticReport,
-  DiagnosticReportCategory
-} from "../diagnostic-report/diagnostic-report.js";
+import type { DiagnosticReport } from "../diagnostic-report/diagnostic-report.js";
 import type { FhirDiagnosticReport } from "./fhir-types.js";
-
-const categoryCodings: Record<DiagnosticReportCategory, { code: string; display: string }> = {
-  imaging: {
-    code: "RAD",
-    display: "Radiology"
-  },
-  laboratory: {
-    code: "LAB",
-    display: "Laboratory"
-  },
-  other: {
-    code: "OTH",
-    display: "Other"
-  },
-  pathology: {
-    code: "PAT",
-    display: "Pathology"
-  }
-};
+import {
+  diagnosticReportFhirProfile,
+  toDiagnosticReportCategory,
+  toDiagnosticReportCodeableConcept
+} from "./map-diagnostic-report-codings.js";
 
 export function mapDiagnosticReportToFhir(
   diagnosticReport: DiagnosticReport
 ): FhirDiagnosticReport {
   const snapshot = diagnosticReport.toSnapshot();
-  const categoryCoding = categoryCodings[snapshot.category];
 
   return {
     resourceType: "DiagnosticReport",
     id: snapshot.id,
     meta: {
-      profile: ["http://hl7.org/fhir/StructureDefinition/DiagnosticReport"]
+      profile: [diagnosticReportFhirProfile]
     },
     basedOn: snapshot.basedOnServiceRequestId
       ? [
@@ -43,28 +25,8 @@ export function mapDiagnosticReportToFhir(
         ]
       : undefined,
     status: snapshot.status,
-    category: [
-      {
-        coding: [
-          {
-            system: "http://terminology.hl7.org/CodeSystem/v2-0074",
-            code: categoryCoding.code,
-            display: categoryCoding.display
-          }
-        ],
-        text: categoryCoding.display
-      }
-    ],
-    code: {
-      coding: [
-        {
-          system: snapshot.code.system,
-          code: snapshot.code.code,
-          display: snapshot.code.display
-        }
-      ],
-      text: snapshot.code.display
-    },
+    category: [toDiagnosticReportCategory(snapshot.category)],
+    code: toDiagnosticReportCodeableConcept(snapshot.code),
     subject: {
       reference: `Patient/${snapshot.patientId}`
     },

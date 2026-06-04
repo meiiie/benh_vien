@@ -1,6 +1,6 @@
 # AGENTS.md
 
-> Last updated: 2026-05-26 | Version: 0.2.0 | Status: Architecture prototype with Docker/CI harness
+> Last updated: 2026-06-01 | Version: 0.2.0 | Status: Architecture prototype with Docker/CI harness
 
 Tài liệu này là ngữ cảnh bắt buộc cho Codex, Claude Code và các agent khi làm việc trong repo. Giữ ngắn, rõ, cập nhật khi runtime hoặc quy ước thay đổi.
 
@@ -36,10 +36,12 @@ URL mặc định:
 ## Source Of Truth
 
 - Kiến trúc: `docs/ARCHITECTURE.md`
+- Quyết định kiến trúc: `docs/decisions/`
 - Chuẩn y tế: `docs/STANDARDS.md`
 - Thuật ngữ: `docs/GLOSSARY.md`
 - Roadmap: `docs/ROADMAP.md`
 - Docker: `docs/runbooks/DOCKER.md`
+- Backup/restore: `docs/runbooks/BACKUP_RESTORE.md`
 - Testing/harness: `harness/README.md`
 - Versioning: `VERSIONING.md`
 
@@ -49,7 +51,8 @@ URL mặc định:
 - `packages/domain` chứa domain model thuần, không phụ thuộc Fastify, React, database hay Docker.
 - `packages/contracts` chứa schema request/response dùng chung, ưu tiên Zod.
 - `apps/api` là adapter HTTP và orchestration nhẹ, không để business rule phình trong route handler.
-- `apps/web` là giao diện demo, không quyết định nghiệp vụ.
+- `apps/web` là giao diện demo, không quyết định nghiệp vụ; application composition của web phải nằm trong `apps/web/src/application`, page renderer nằm trong `apps/web/src/pages`, feature UI/API adapter nằm trong `apps/web/src/features`.
+- Không đưa direct `fetch`, route HTTP nghiệp vụ, mapper FHIR, consent/audit orchestration hoặc ma trận handler lớn vào `apps/web/src/App.tsx` hay `apps/web/src/pages`; xem `docs/decisions/ADR-0005-web-application-layer-boundary.md`.
 - `migrations/` là source of truth cho schema PostgreSQL; không để API tự tạo schema ngoài migration.
 - FHIR là lớp liên thông, không phải toàn bộ database nội bộ.
 - PACS/DICOM xử lý ảnh y khoa; EMR chỉ lưu metadata và liên kết cần thiết.

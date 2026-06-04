@@ -50,7 +50,16 @@ export function mapPatientToFhir(patient: Patient): FhirPatient {
       : undefined,
     managingOrganization: {
       reference: `Organization/${snapshot.managingOrganizationId}`
-    }
+    },
+    link: snapshot.mergedIntoPatientId
+      ? [
+          {
+            other: {
+              reference: `Patient/${snapshot.mergedIntoPatientId}`
+            },
+            type: "replaced-by"
+          }
+        ]
+      : undefined
   };
 }
-

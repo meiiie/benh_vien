@@ -5,14 +5,17 @@ import { mapClinicalDocumentToFhirProvenance } from "./map-clinical-document-to-
 
 describe("mapClinicalDocumentToFhirProvenance", () => {
   it("maps a signed clinical document to FHIR Provenance", () => {
-    const document = ClinicalDocument.create({
+    const document = ClinicalDocument.rehydrate({
       id: "clinical-document-provenance-001",
       patientId: "patient-provenance-001",
       encounterId: "encounter-provenance-001",
       type: "discharge-summary",
       title: "Tóm tắt ra viện",
+      status: "draft",
       storageUri: "s3://wiiicare-demo/patient-provenance-001/discharge-summary.pdf",
-      authorPractitionerId: "practitioner-provenance-001"
+      authorPractitionerId: "practitioner-provenance-001",
+      createdAt: "2026-05-28T02:59:00.000Z",
+      updatedAt: "2026-05-28T02:59:00.000Z"
     });
 
     document.sign(new Date("2026-05-28T03:00:00.000Z"));

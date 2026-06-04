@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { DicomUidSchema } from "./dicom.contract.js";
+import { FhirUnsignedIntSchema } from "./fhir-primitives.contract.js";
 
 export const ImagingStudyStatusSchema = z.enum([
   "registered",
@@ -15,11 +17,11 @@ export const ImagingStudyCodingSchema = z.object({
 });
 
 export const ImagingStudySeriesSchema = z.object({
-  uid: z.string().min(1),
-  number: z.number().int().nonnegative().optional(),
+  uid: DicomUidSchema,
+  number: FhirUnsignedIntSchema.optional(),
   modality: ImagingStudyCodingSchema,
   description: z.string().min(1).optional(),
-  numberOfInstances: z.number().int().nonnegative().optional(),
+  numberOfInstances: FhirUnsignedIntSchema.optional(),
   bodySite: ImagingStudyCodingSchema.optional(),
   startedAt: z.string().datetime().optional()
 });
@@ -38,17 +40,18 @@ export const CreateImagingStudyRequestSchema = z
     basedOnServiceRequestId: z.string().min(1).optional(),
     diagnosticReportId: z.string().min(1).optional(),
     status: ImagingStudyStatusSchema.optional(),
-    studyInstanceUid: z.string().min(1),
+    studyInstanceUid: DicomUidSchema,
     accessionNumber: z.string().min(1).optional(),
     description: z.string().min(1).optional(),
     startedAt: z.string().datetime().optional(),
     referrerPractitionerId: z.string().min(1).optional(),
     interpreterPractitionerId: z.string().min(1).optional(),
     endpointId: z.string().min(1).optional(),
-    numberOfSeries: z.number().int().nonnegative().optional(),
-    numberOfInstances: z.number().int().nonnegative().optional(),
+    numberOfSeries: FhirUnsignedIntSchema.optional(),
+    numberOfInstances: FhirUnsignedIntSchema.optional(),
     series: z.array(ImagingStudySeriesSchema).min(1)
   })
+  .strict()
   .refine((value) => value.numberOfSeries === undefined || value.numberOfSeries >= value.series.length, {
     message: "Số chuỗi ảnh không được nhỏ hơn số series đã khai báo.",
     path: ["numberOfSeries"]

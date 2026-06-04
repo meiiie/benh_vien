@@ -60,7 +60,7 @@ export const CreateServiceRequestRequestSchema = z.object({
   performerOrganizationId: z.string().min(1).optional(),
   patientInstruction: z.string().min(1).optional(),
   note: z.string().min(1).optional()
-});
+}).strict();
 
 export type ServiceRequestStatus = z.infer<typeof ServiceRequestStatusSchema>;
 export type ServiceRequestIntent = z.infer<typeof ServiceRequestIntentSchema>;

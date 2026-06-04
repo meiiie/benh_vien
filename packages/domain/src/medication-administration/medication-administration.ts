@@ -1,83 +1,44 @@
-import type { MedicationCode, MedicationQuantity } from "../medication-request/medication-request.js";
-import { DomainError } from "../shared/domain-error.js";
-
-export type MedicationAdministrationStatus =
-  | "in-progress"
-  | "not-done"
-  | "on-hold"
-  | "completed"
-  | "entered-in-error"
-  | "stopped"
-  | "unknown";
-
-export type MedicationAdministrationCategory =
-  | "inpatient"
-  | "outpatient"
-  | "community"
-  | "patient-specified";
-
-export type MedicationAdministrationPerformerActorType =
-  | "Practitioner"
-  | "PractitionerRole"
-  | "Patient"
-  | "RelatedPerson"
-  | "Device";
-
-export type MedicationAdministrationPerformer = {
-  readonly actorType: MedicationAdministrationPerformerActorType;
-  readonly actorId: string;
-  readonly function?: MedicationCode;
-};
-
-export type MedicationAdministrationEffectivePeriod = {
-  readonly start?: string;
-  readonly end?: string;
-};
-
-export type MedicationAdministrationDosage = {
-  readonly text?: string;
-  readonly route?: MedicationCode;
-  readonly doseQuantity?: MedicationQuantity;
-};
-
-export type MedicationAdministrationSnapshot = {
-  readonly id: string;
-  readonly patientId: string;
-  readonly encounterId?: string;
-  readonly medicationRequestId?: string;
-  readonly reasonConditionId?: string;
-  readonly status: MedicationAdministrationStatus;
-  readonly statusReason?: MedicationCode;
-  readonly category: MedicationAdministrationCategory;
-  readonly medicationCode: MedicationCode;
-  readonly effectivePeriod: MedicationAdministrationEffectivePeriod;
-  readonly performers: readonly MedicationAdministrationPerformer[];
-  readonly dosage?: MedicationAdministrationDosage;
-  readonly note?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type RecordMedicationAdministrationInput = Omit<
+import {
+  assertMedicationAdministrationLifecycle,
+  normalizeCoding,
+  normalizeDosage,
+  normalizeEffectivePeriod,
+  normalizeOptional,
+  normalizePerformers,
+  normalizeRequired,
+  normalizeRequiredCoding,
+  parseDate,
+  validatePersistenceTimeline
+} from "./medication-administration.validation.js";
+import {
+  normalizeCategory,
+  normalizeStatus
+} from "./medication-administration.code-set-guards.js";
+import type {
   MedicationAdministrationSnapshot,
-  "createdAt" | "updatedAt"
->;
+  RecordMedicationAdministrationInput
+} from "./medication-administration.types.js";
+
+export type {
+  MedicationAdministrationCategory,
+  MedicationAdministrationDosage,
+  MedicationAdministrationEffectivePeriod,
+  MedicationAdministrationPerformer,
+  MedicationAdministrationPerformerActorType,
+  MedicationAdministrationSnapshot,
+  MedicationAdministrationStatus,
+  RecordMedicationAdministrationInput
+} from "./medication-administration.types.js";
 
 export class MedicationAdministration {
   private constructor(private readonly props: MedicationAdministrationSnapshot) {}
 
   static record(input: RecordMedicationAdministrationInput): MedicationAdministration {
     const now = new Date();
+    const status = normalizeStatus(input.status);
     const effectivePeriod = normalizeEffectivePeriod(input.effectivePeriod);
     const performers = normalizePerformers(input.performers);
-
-    if (input.status === "completed" && !effectivePeriod.start && !effectivePeriod.end) {
-      throw new DomainError("Lần dùng thuốc đã hoàn tất cần có thời điểm dùng thuốc để truy vết.");
-    }
-
-    if (input.status === "completed" && performers.length === 0) {
-      throw new DomainError("Lần dùng thuốc đã hoàn tất cần có tối thiểu một người hoặc thiết bị thực hiện.");
-    }
+    assertMedicationAdministrationLifecycle(status, effectivePeriod, performers);
 
     return new MedicationAdministration({
       id: normalizeRequired(input.id, "Mã lần dùng thuốc không được để trống."),
@@ -85,9 +46,9 @@ export class MedicationAdministration {
       encounterId: normalizeOptional(input.encounterId),
       medicationRequestId: normalizeOptional(input.medicationRequestId),
       reasonConditionId: normalizeOptional(input.reasonConditionId),
-      status: input.status,
+      status,
       statusReason: normalizeCoding(input.statusReason),
-      category: input.category,
+      category: normalizeCategory(input.category),
       medicationCode: normalizeRequiredCoding(input.medicationCode),
       effectivePeriod,
       performers,
@@ -99,17 +60,31 @@ export class MedicationAdministration {
   }
 
   static rehydrate(snapshot: MedicationAdministrationSnapshot): MedicationAdministration {
+    const createdAt = parseDate(snapshot.createdAt, "Thời điểm tạo lần dùng thuốc không hợp lệ.");
+    const updatedAt = parseDate(snapshot.updatedAt, "Thời điểm cập nhật lần dùng thuốc không hợp lệ.");
+    const status = normalizeStatus(snapshot.status);
+    const effectivePeriod = normalizeEffectivePeriod(snapshot.effectivePeriod);
+    const performers = normalizePerformers(snapshot.performers);
+    assertMedicationAdministrationLifecycle(status, effectivePeriod, performers);
+    validatePersistenceTimeline(createdAt, updatedAt);
+
     return new MedicationAdministration({
       ...snapshot,
+      id: normalizeRequired(snapshot.id, "Mã lần dùng thuốc không được để trống."),
+      patientId: normalizeRequired(snapshot.patientId, "Lần dùng thuốc phải gắn với bệnh nhân."),
       encounterId: normalizeOptional(snapshot.encounterId),
       medicationRequestId: normalizeOptional(snapshot.medicationRequestId),
       reasonConditionId: normalizeOptional(snapshot.reasonConditionId),
+      status,
       statusReason: normalizeCoding(snapshot.statusReason),
+      category: normalizeCategory(snapshot.category),
       medicationCode: normalizeRequiredCoding(snapshot.medicationCode),
-      effectivePeriod: normalizeEffectivePeriod(snapshot.effectivePeriod),
-      performers: normalizePerformers(snapshot.performers),
+      effectivePeriod,
+      performers,
       dosage: snapshot.dosage ? normalizeDosage(snapshot.dosage) : undefined,
-      note: normalizeOptional(snapshot.note)
+      note: normalizeOptional(snapshot.note),
+      createdAt: createdAt.toISOString(),
+      updatedAt: updatedAt.toISOString()
     });
   }
 
@@ -142,99 +117,4 @@ export class MedicationAdministration {
         : undefined
     };
   }
-}
-
-function normalizeEffectivePeriod(
-  period: MedicationAdministrationEffectivePeriod
-): MedicationAdministrationEffectivePeriod {
-  const start = period.start
-    ? parseDate(period.start, "Thời điểm bắt đầu dùng thuốc không hợp lệ.").toISOString()
-    : undefined;
-  const end = period.end
-    ? parseDate(period.end, "Thời điểm kết thúc dùng thuốc không hợp lệ.").toISOString()
-    : undefined;
-
-  if (start && end && new Date(end).getTime() < new Date(start).getTime()) {
-    throw new DomainError("Thời điểm kết thúc dùng thuốc không được trước thời điểm bắt đầu.");
-  }
-
-  return { start, end };
-}
-
-function normalizePerformers(
-  performers: readonly MedicationAdministrationPerformer[]
-): readonly MedicationAdministrationPerformer[] {
-  const normalized = new Map<string, MedicationAdministrationPerformer>();
-
-  for (const performer of performers) {
-    const actorId = normalizeRequired(
-      performer.actorId,
-      "Người hoặc thiết bị thực hiện dùng thuốc không được để trống."
-    );
-    normalized.set(`${performer.actorType}/${actorId}`, {
-      actorType: performer.actorType,
-      actorId,
-      function: normalizeCoding(performer.function)
-    });
-  }
-
-  return [...normalized.values()];
-}
-
-function normalizeDosage(dosage: MedicationAdministrationDosage): MedicationAdministrationDosage {
-  return {
-    text: normalizeOptional(dosage.text),
-    route: normalizeCoding(dosage.route),
-    doseQuantity: dosage.doseQuantity ? normalizeQuantity(dosage.doseQuantity) : undefined
-  };
-}
-
-function normalizeQuantity(quantity: MedicationQuantity): MedicationQuantity {
-  if (!Number.isFinite(quantity.value) || quantity.value <= 0) {
-    throw new DomainError("Liều dùng thuốc phải là số lớn hơn 0.");
-  }
-
-  return {
-    value: quantity.value,
-    unit: normalizeRequired(quantity.unit, "Đơn vị liều dùng không được để trống."),
-    system: normalizeOptional(quantity.system),
-    code: normalizeOptional(quantity.code)
-  };
-}
-
-function normalizeRequiredCoding(code: MedicationCode): MedicationCode {
-  return {
-    system: normalizeRequired(code.system, "Hệ mã thuốc không được để trống."),
-    code: normalizeRequired(code.code, "Mã thuốc không được để trống."),
-    display: normalizeRequired(code.display, "Tên thuốc không được để trống.")
-  };
-}
-
-function normalizeCoding(code: MedicationCode | undefined): MedicationCode | undefined {
-  return code ? normalizeRequiredCoding(code) : undefined;
-}
-
-function normalizeRequired(value: string, message: string): string {
-  const normalized = value.trim().replace(/\s+/g, " ");
-
-  if (!normalized) {
-    throw new DomainError(message);
-  }
-
-  return normalized;
-}
-
-function normalizeOptional(value: string | undefined): string | undefined {
-  const normalized = value?.trim().replace(/\s+/g, " ");
-  return normalized || undefined;
-}
-
-function parseDate(value: string, message: string): Date {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    throw new DomainError(message);
-  }
-
-  return date;
 }

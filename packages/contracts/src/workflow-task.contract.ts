@@ -85,7 +85,7 @@ export const CreateWorkflowTaskRequestSchema = z.object({
   inputReferences: z.array(WorkflowTaskReferenceSchema).optional(),
   outputReferences: z.array(WorkflowTaskReferenceSchema).optional(),
   note: z.string().min(1).optional()
-});
+}).strict();
 
 export type WorkflowTaskStatus = z.infer<typeof WorkflowTaskStatusSchema>;
 export type WorkflowTaskIntent = z.infer<typeof WorkflowTaskIntentSchema>;

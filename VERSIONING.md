@@ -37,8 +37,11 @@ git tag v0.2.0
 git push origin v0.2.0
 ```
 
-Workflow `Release Images` sẽ build và push:
+Tag release phải đúng dạng `vMAJOR.MINOR.PATCH`. Workflow sẽ dừng nếu tag không khớp dạng này.
+
+Workflow `Release Images` sẽ chạy full CI gate (`pnpm run ci`) ngay trong release job trước khi đăng nhập GHCR, sau đó build và push:
 
 - `ghcr.io/meiiie/benh_vien/api:<version>`
 - `ghcr.io/meiiie/benh_vien/web:<version>`
 
+Workflow không publish tag `latest`. Môi trường triển khai phải chọn image bằng tag semantic version cụ thể để tránh nhận artifact mới ngoài kế hoạch kiểm thử. Image release cũng bật provenance attestation mức `mode=max`, SBOM attestation và OCI labels `source`/`revision`/`version` để đội vận hành truy vết nguồn build, commit và thành phần phần mềm khi đánh giá rủi ro.

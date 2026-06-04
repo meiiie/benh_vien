@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:22-alpine AS deps
+FROM node:22-alpine@sha256:968df39aedcea65eeb078fb336ed7191baf48f972b4479711397108be0966920 AS deps
 WORKDIR /app
 RUN corepack enable
 
@@ -16,7 +16,7 @@ FROM deps AS build
 COPY . .
 RUN pnpm --filter @benh-vien-so/api run build
 
-FROM node:22-alpine AS runtime
+FROM node:22-alpine@sha256:968df39aedcea65eeb078fb336ed7191baf48f972b4479711397108be0966920 AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 RUN corepack enable
@@ -34,5 +34,6 @@ COPY --from=build /app/packages/contracts/package.json ./packages/contracts/pack
 COPY --from=build /app/packages/contracts/node_modules ./packages/contracts/node_modules
 COPY --from=build /app/packages/contracts/dist ./packages/contracts/dist
 
+USER node
 EXPOSE 7310
 CMD ["node", "apps/api/dist/main.js"]

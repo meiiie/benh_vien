@@ -62,4 +62,103 @@ describe("MedicationRequest", () => {
       })
     ).toThrow(DomainError);
   });
+
+  it("rejects invalid rehydrated medication request metadata", () => {
+    const snapshot = MedicationRequest.prescribe({
+      id: "medication-request-test-003",
+      patientId: "patient-test-001",
+      encounterId: "encounter-test-001",
+      reasonConditionId: "condition-test-001",
+      category: "outpatient",
+      medicationCode: {
+        system: "http://www.whocc.no/atc",
+        code: "J01CA04",
+        display: "Amoxicillin"
+      },
+      dosageInstruction: {
+        text: "Take one tablet every 8 hours after meals for 5 days",
+        route: "Oral route",
+        doseQuantity: {
+          value: 500,
+          unit: "mg",
+          system: "http://unitsofmeasure.org",
+          code: "mg"
+        },
+        frequency: 1,
+        period: 8,
+        periodUnit: "h"
+      },
+      requesterPractitionerId: "practitioner-test-001",
+      expectedSupplyDurationDays: 5
+    }).toSnapshot();
+
+    expect(() =>
+      MedicationRequest.rehydrate({
+        ...snapshot,
+        status: "dispensed" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      MedicationRequest.rehydrate({
+        ...snapshot,
+        intent: "refill" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      MedicationRequest.rehydrate({
+        ...snapshot,
+        category: "emergency" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      MedicationRequest.rehydrate({
+        ...snapshot,
+        priority: "normal" as never
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      MedicationRequest.rehydrate({
+        ...snapshot,
+        medicationCode: {
+          ...snapshot.medicationCode,
+          code: " "
+        }
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      MedicationRequest.rehydrate({
+        ...snapshot,
+        dosageInstruction: {
+          ...snapshot.dosageInstruction,
+          periodUnit: "month" as never
+        }
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      MedicationRequest.rehydrate({
+        ...snapshot,
+        authoredOn: "not-a-date"
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      MedicationRequest.rehydrate({
+        ...snapshot,
+        requesterPractitionerId: " "
+      })
+    ).toThrow(DomainError);
+
+    expect(() =>
+      MedicationRequest.rehydrate({
+        ...snapshot,
+        updatedAt: "1999-01-01T00:00:00.000Z"
+      })
+    ).toThrow(DomainError);
+  });
 });

@@ -84,7 +84,7 @@ export const CreateMedicationRequestRequestSchema = z.object({
   requesterPractitionerId: z.string().min(1),
   expectedSupplyDurationDays: z.number().int().positive().optional(),
   note: z.string().min(1).optional()
-});
+}).strict();
 
 export type MedicationRequestStatus = z.infer<typeof MedicationRequestStatusSchema>;
 export type MedicationRequestIntent = z.infer<typeof MedicationRequestIntentSchema>;

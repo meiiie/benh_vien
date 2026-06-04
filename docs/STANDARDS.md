@@ -23,6 +23,8 @@ HL7 FHIR là chuẩn trao đổi dữ liệu y tế. Bản R4 vẫn là lựa ch
 Nguồn:
 
 - [HL7 FHIR R4 Specification](https://hl7.org/fhir/R4/)
+- [HL7 FHIR R4 Modules](https://hl7.org/fhir/R4/modules.html)
+- [HL7 FHIR R4 Security](https://hl7.org/fhir/R4/security.html)
 - [FHIR Patient Resource](https://hl7.org/fhir/R4/patient.html)
 - [FHIR Organization Resource](https://hl7.org/fhir/R4/organization.html)
 - [FHIR Practitioner Resource](https://hl7.org/fhir/R4/practitioner.html)
@@ -49,6 +51,8 @@ Nguồn:
 - [FHIR Consent Resource](https://hl7.org/fhir/R4/consent.html)
 - [FHIR AuditEvent Resource](https://hl7.org/fhir/R4/auditevent.html)
 - [FHIR CapabilityStatement Resource](https://hl7.org/fhir/R4/capabilitystatement.html)
+- [FHIR References](https://hl7.org/fhir/R4/references.html)
+- [FHIR id Data Type](https://hl7.org/fhir/R4/datatypes.html#id)
 - [HL7 Terminology - DataOperation](https://terminology.hl7.org/5.1.0/CodeSystem-v3-DataOperation.html)
 
 Hàm ý cho dự án:
@@ -69,9 +73,9 @@ Hàm ý cho dự án:
 - `MedicationAdministration` phù hợp cho sự kiện thuốc đã được dùng hoặc được xác nhận dùng cho người bệnh. Trong dự án này, resource này đóng vòng `MedicationRequest -> MedicationDispense -> MedicationAdministration`: chỉ định thuốc là “cần dùng thuốc gì”, cấp phát thuốc là “đã bàn giao thuốc gì, bao nhiêu”, còn dùng thuốc thực tế là “đã dùng lúc nào, liều bao nhiêu, ai/thiết bị nào xác nhận”.
 - `Composition` phù hợp để tạo mục lục lâm sàng cho một FHIR document. Khi `Bundle.type = document`, entry đầu tiên bắt buộc phải là `Composition`; các section của Composition nên tham chiếu các resource nằm trong Bundle.
 - `DocumentReference.content.attachment` nên có metadata kiểm tra tối thiểu: `contentType` để bên nhận biết định dạng, `size` theo kiểu FHIR `unsignedInt`, `hash` dạng SHA-1 Base64 để kiểm tra nội dung lấy từ URL không thay đổi và `creation` để biết thời điểm tệp được tạo. `hash` là checksum theo chuẩn FHIR R4, không thay thế chữ ký số pháp lý.
-- `Provenance` phù hợp để ghi nguồn gốc của một resource: ai tham gia, hoạt động gì đã xảy ra, xảy ra khi nào và resource nào là đích. Trong dự án này, tài liệu bệnh án đã ký có thể xuất `Provenance` trỏ tới `DocumentReference`, dùng `recorded`/`occurredDateTime` theo thời điểm ký và `agent.who` trỏ tới bác sĩ/người chịu trách nhiệm. Resource này không thay thế chữ ký số pháp lý; nếu triển khai chữ ký số thật thì mới bổ sung `Provenance.signature`.
+- `Provenance` phù hợp để ghi nguồn gốc của một resource: ai tham gia, hoạt động gì đã xảy ra, xảy ra khi nào và resource nào là đích. Trong dự án này, tài liệu bệnh án đã ký có thể xuất `Provenance` trỏ tới `DocumentReference`, dùng `recorded`/`occurredDateTime` theo thời điểm ký và `agent.who` trỏ tới bác sĩ/người chịu trách nhiệm. FHIR document Bundle dùng để chuyển hồ sơ cũng nhúng `Provenance` cho các tài liệu đã ký để bên nhận không chỉ thấy metadata tệp mà còn thấy nguồn gốc ký/xác nhận. Resource này không thay thế chữ ký số pháp lý; nếu triển khai chữ ký số thật thì mới bổ sung `Provenance.signature`.
 - `Consent` là hướng chuẩn FHIR để biểu diễn đồng ý, chính sách chia sẻ và trạng thái hiệu lực của đồng ý. Domain hiện dùng trạng thái nội bộ `active`, `revoked`, `expired`; khi ánh xạ sang FHIR, `active` được giữ là `active`, còn `revoked`/`expired` được biểu diễn là `inactive` kèm metadata giải thích trong extension nội bộ của prototype.
-- `AuditEvent` dùng để biểu diễn sự kiện bảo mật/kiểm toán. Domain hiện ánh xạ action nội bộ sang `AuditEvent.type`, `subtype`, `action`, `recorded`, `agent`, `source`, `entity` và các `detail` chứa hash toàn vẹn; đây là profile tối thiểu để kiểm toán viên xem log theo ngôn ngữ FHIR R4.
+- `AuditEvent` dùng để biểu diễn sự kiện bảo mật/kiểm toán. Domain hiện ánh xạ action nội bộ sang `AuditEvent.type`, `subtype`, `action`, `recorded`, `agent`, `source`, `entity` và các `detail` chứa hash toàn vẹn; đây là profile tối thiểu để kiểm toán viên xem log theo ngôn ngữ FHIR R4. Khi actor hoặc resource chỉ là định danh nội bộ không thỏa dạng `id` của FHIR, mapper dùng `Reference.identifier`/`display` thay vì tạo `Reference.reference` giả như `AuditEvent/auth/login`.
 - `CapabilityStatement` dùng để công bố năng lực FHIR của facade. Endpoint `/api/v1/fhir/metadata` hiện khai báo các resource R4 đang xuất được, chế độ `server`, định dạng `json`, endpoint triển khai và cảnh báo rằng prototype chưa phải FHIR REST server đầy đủ.
 - Khi phát triển tiếp cần bổ sung Medication Administration Record (MAR), kiểm tra barcode/5 đúng dùng thuốc, workflow duyệt đơn thuốc và ràng buộc profile cụ thể hơn.
 - Với liên thông bệnh án, `DocumentReference` và `Composition` quan trọng hơn việc chỉ gửi một file PDF rời rạc.
@@ -103,7 +107,7 @@ Hàm ý cho dự án:
 - Luồng “chuyển bệnh án giữa bệnh viện” nên hiểu là chia sẻ dữ liệu/tài liệu có metadata và định danh rõ ràng, không đơn thuần gửi file.
 - Cần Patient Registry hoặc Master Patient Index khi liên thông nhiều bệnh viện.
 - MHD là hướng phù hợp để nghiên cứu API chia sẻ tài liệu bệnh án theo FHIR.
-- `RecordTransfer` là lớp vận hành nội bộ để chuẩn bị cho MHD/XDS trong tương lai; nó không thay thế `DocumentReference`, `Composition` hoặc `Bundle`, mà chỉ theo dõi việc gửi gói hồ sơ tới bên nhận.
+- `RecordTransfer` là lớp vận hành nội bộ để chuẩn bị cho MHD/XDS trong tương lai; nó không thay thế `DocumentReference`, `Composition` hoặc `Bundle`, mà theo dõi việc gửi gói hồ sơ tới bên nhận. Trước khi tạo/gửi, đơn vị nhận phải có endpoint FHIR REST hỗ trợ `Bundle`; sau đó hệ thống ghi một delivery attempt dạng outbox cho từng lần gửi, kèm idempotency key để chống gửi trùng. Delivery worker có thể POST FHIR Bundle sang endpoint đích và ghi `succeeded/failed`; retry worker chỉ đưa gói lỗi đã đến hạn về hàng đợi gửi lại khi còn lượt thử, hoặc chuyển sang `dead-lettered` để nhân sự vận hành xử lý khi quá trần retry. Khi bên nhận xác nhận thủ công hoặc gửi callback acknowledgement hợp lệ, hệ thống lưu người xác nhận và mã biên nhận kỹ thuật; callback dùng role hẹp `integration` và có thể yêu cầu chữ ký `HMAC-SHA256` theo secret riêng từng gateway/key id để giảm giả mạo/replay ở mức prototype. Đây vẫn là biên nhận vận hành, chưa thay thế chữ ký số, giao dịch IHE MHD, mTLS/JWS gateway hai chiều hoặc registry tài liệu chuẩn hóa.
 
 ## SMART App Launch
 
@@ -119,10 +123,11 @@ Hàm ý cho dự án:
 
 ## Bảo mật và kiểm toán
 
-OWASP API Security Top 10 2023 là nền kiểm tra rủi ro API. NIST SP 800-207 là tài liệu chính thức về Zero Trust Architecture. Với hệ thống bệnh án, hai hướng này giúp tránh thiết kế dựa vào niềm tin mạng nội bộ.
+OWASP API Security Top 10 2023 là nền kiểm tra rủi ro API. OWASP ASVS 5.0.0 là baseline để biến yêu cầu bảo mật web/API thành các yêu cầu có thể kiểm chứng, thay vì chỉ nói chung chung "hệ thống an toàn". NIST SP 800-207 là tài liệu chính thức về Zero Trust Architecture. Với hệ thống bệnh án, các hướng này giúp tránh thiết kế dựa vào niềm tin mạng nội bộ.
 
 Nguồn:
 
+- [OWASP Application Security Verification Standard 5.0.0](https://owasp.org/www-project-application-security-verification-standard/)
 - [OWASP API Security Top 10 2023](https://owasp.org/API-Security/editions/2023/en/0x00-header/)
 - [NIST SP 800-207 - Zero Trust Architecture](https://www.nist.gov/publications/zero-trust-architecture-0)
 - [NIST Cybersecurity Framework](https://www.nist.gov/cyberframework)
@@ -132,6 +137,7 @@ Hàm ý cho dự án:
 - Mọi API cần xác thực, phân quyền và kiểm soát truy cập theo đối tượng dữ liệu.
 - Cần chống lộ dữ liệu quá mức, truy cập sai bệnh nhân, thiếu rate limit và thiếu logging.
 - Không mặc định tin cậy request chỉ vì nó đến từ mạng nội bộ.
+- Các yêu cầu bảo mật quan trọng nên được ghi theo mã kiểm chứng cụ thể khi có thể, ví dụ `v5.0.0-...` của ASVS, để review và audit không phụ thuộc vào diễn giải miệng.
 
 ## ISO 27799
 

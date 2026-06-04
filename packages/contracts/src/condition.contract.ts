@@ -47,7 +47,7 @@ export const CreateConditionRequestSchema = z.object({
   recordedAt: z.string().datetime().optional(),
   recorderPractitionerId: z.string().min(1),
   note: z.string().min(1).optional()
-});
+}).strict();
 
 export type ConditionClinicalStatus = z.infer<typeof ConditionClinicalStatusSchema>;
 export type ConditionVerificationStatus = z.infer<typeof ConditionVerificationStatusSchema>;

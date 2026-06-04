@@ -65,7 +65,7 @@ export const CreateMedicationDispenseRequestSchema = z.object({
   receiverPractitionerId: z.string().min(1).optional(),
   dosageInstruction: MedicationDispenseDosageInstructionSchema.optional(),
   note: z.string().min(1).optional()
-});
+}).strict();
 
 export type MedicationDispenseStatus = z.infer<typeof MedicationDispenseStatusSchema>;
 export type MedicationDispenseCategory = z.infer<typeof MedicationDispenseCategorySchema>;
