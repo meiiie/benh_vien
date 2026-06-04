@@ -1013,6 +1013,26 @@ const domainBudgets = [
     role: "FHIR patient-record document signed Provenance entries"
   },
   {
+    path: "packages/domain/src/fhir/map-patient-record-to-fhir-document-bundle.test.ts",
+    maxLines: 80,
+    role: "FHIR document Bundle Composition-first invariant test scenarios"
+  },
+  {
+    path: "packages/domain/src/fhir/map-patient-record-to-fhir-document-bundle.author.test.ts",
+    maxLines: 60,
+    role: "FHIR document Bundle author and custodian resolution test scenarios"
+  },
+  {
+    path: "packages/domain/src/fhir/map-patient-record-to-fhir-document-bundle.provenance.test.ts",
+    maxLines: 90,
+    role: "FHIR document Bundle signed-document Provenance test scenarios"
+  },
+  {
+    path: "packages/domain/src/fhir/patient-record-document-bundle.test-support.ts",
+    maxLines: 160,
+    role: "FHIR document Bundle shared patient, provider and clinical document fixtures"
+  },
+  {
     path: "packages/domain/src/fhir/map-provider-directory-to-fhir.ts",
     maxLines: 75,
     role: "FHIR ProviderDirectory public resources API and bundle orchestration"
